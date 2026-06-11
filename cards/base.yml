@@ -1,0 +1,7 @@
+version: 1
+packages:
+  - kernel
+  - systemd
+  - rpm-ostree
+  - bootc
+build: []

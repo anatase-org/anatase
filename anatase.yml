@@ -1,0 +1,20 @@
+version: 1
+
+env:
+  releasever: 44
+repos:
+  - repo: fedora
+    priority: 10
+    releasever: $releasever
+    basearch: $arch
+  - repo: fedora-updates
+    priority: 20
+    releasever: $releasever
+    basearch: $arch
+cards:
+  - cards/base
+  - cards/kde
+labels:
+  org.opencontainers.image.title: Anatase
+  org.opencontainers.image.source: https://github.com/anatase-org/anatase
+  org.opencontainers.image.description: Anatase rpm-ostree distribution built with Ludos.
