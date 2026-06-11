@@ -1,0 +1,172 @@
+version: 1
+
+priority: 10
+
+packages:
+  - NetworkManager-config-connectivity-fedora
+  - NetworkManager-ppp
+  - akonadi-server
+  - akonadi-server-mysql
+  - ark
+  - audiocd-kio
+  - aurorae
+  - bluedevil
+  - breeze-icon-theme
+  - colord-kde
+  - dolphin
+  - ffmpegthumbs
+  - filelight
+  - firewall-config
+  - flatpak-kcm
+  - fprintd-pam
+  - gdb
+  - kaccounts-integration-qt6
+  - kaccounts-providers
+  - kamera
+  - kcm-plasmalogin
+  - kcharselect
+  - kde-connect
+  - kde-gtk-config
+  - kde-inotify-survey
+  - kde-partitionmanager
+  - kde-settings-plasmalogin
+  - kde-settings-pulseaudio
+  - kdebugsettings
+  - kdegraphics-thumbnailers
+  - kdenetwork-filesharing
+  - kdeplasma-addons
+  - kdialog
+  - kdnssd
+  - kf6-baloo-file
+  - kfind
+  - khelpcenter
+  - kinfocenter
+  - kio-admin
+  - kio-gdrive
+  - kjournald
+  - kmenuedit
+  - konsole
+  - krdp
+  - krfb
+  - kscreen
+  - kscreenlocker
+  - ksshaskpass
+  - kunifiedpush
+  - kwalletmanager5
+  - kwin
+  - kwrite
+  - libappindicator-gtk3
+  - mesa-dri-drivers
+  - mesa-vulkan-drivers
+  - mobile-broadband-provider-info
+  - pam-kwallet
+  - phonon-qt6-backend-vlc
+  - pinentry-qt
+  - plasma-breeze
+  - plasma-desktop
+  - plasma-desktop-doc
+  - plasma-discover
+  - plasma-discover-notifier
+  - plasma-discover-rpm-ostree
+  - plasma-disks
+  - plasma-drkonqi
+  - plasma-keyboard
+  - plasma-login-manager
+  - plasma-nm
+  - plasma-nm-openconnect
+  - plasma-nm-openvpn
+  - plasma-nm-vpnc
+  - plasma-pa
+  - plasma-print-manager
+  - plasma-setup
+  - plasma-systemmonitor
+  - plasma-thunderbolt
+  - plasma-vault
+  - plasma-welcome
+  - plasma-welcome-fedora
+  - plasma-workspace
+  - plasma-workspace-wallpapers
+  - plymouth-system-theme
+  - polkit-kde
+  - samba-usershares
+  - signon-kwallet-extension
+  - spectacle
+  - systemd-oomd-defaults
+  - thermald
+  - udisks2
+  - vlc-plugin-gstreamer
+  - vulkan-tools
+  - xdpyinfo
+  - xwaylandvideobridge
+
+postprocess: |
+  set -eux
+
+  install -dm0755 \
+      /etc/xdg \
+      /usr/lib/systemd/system \
+      /usr/lib/systemd/system-preset \
+      /usr/libexec
+
+  # Enable weekly auto updates in Discover. In the future, Flatpaks will be
+  # updated daily. See: https://bugs.kde.org/show_bug.cgi?id=454422
+  cat > /etc/xdg/PlasmaDiscoverUpdates <<'EOF'
+  [Global]
+  UseUnattendedUpdates=true
+  RequiredNotificationInterval=604800
+  EOF
+
+  # Workaround for missing shadow and gshadow entries for plasmalogin.
+  # See: https://forge.fedoraproject.org/kde/tickets/issues/684
+  cat > /usr/lib/systemd/system/fedora-kinoite-plasmalogin-workaround.service <<'EOF'
+  [Unit]
+  Description=Workaround for missing plasmalogin entries in /etc/shadow and /etc/gshadow on Kinoite
+  Documentation=https://forge.fedoraproject.org/kde/SIG/issues/684
+  ConditionPathIsReadWrite=/etc
+  ConditionPathExists=/run/ostree-booted
+  ConditionPathExists=!/etc/.fedora-kinoite-plasmalogin-workaround
+  Before=plasmalogin.service
+
+  [Service]
+  Type=oneshot
+  RemainAfterExit=yes
+  ExecStart=/usr/libexec/fedora-kinoite-plasmalogin-workaround
+
+  [Install]
+  WantedBy=multi-user.target
+  EOF
+
+  cat > /usr/libexec/fedora-kinoite-plasmalogin-workaround <<'EOF'
+  #!/bin/sh
+  # See: https://forge.fedoraproject.org/kde/tickets/issues/684
+
+  set -eu
+
+  echo "Checking plasmalogin entries in /etc/shadow and /etc/gshadow"
+
+  if ! grep -q '^plasmalogin:' /etc/shadow; then
+      echo 'plasmalogin:!*:::::::' >> /etc/shadow
+      echo "Added missing plasmalogin entry to /etc/shadow"
+  else
+      echo "Nothing to do for /etc/shadow"
+  fi
+
+  if ! grep -q '^plasmalogin:' /etc/gshadow; then
+      echo 'plasmalogin:!*::' >> /etc/gshadow
+      echo "Added missing plasmalogin entry to /etc/gshadow"
+  else
+      echo "Nothing to do for /etc/gshadow"
+  fi
+
+  echo "Writing stamp file: /etc/.fedora-kinoite-plasmalogin-workaround"
+  touch /etc/.fedora-kinoite-plasmalogin-workaround
+  EOF
+
+  chmod a+x /usr/libexec/fedora-kinoite-plasmalogin-workaround
+
+  cat > /usr/lib/systemd/system-preset/82-kinoite.preset <<'EOF'
+  # See: https://forge.fedoraproject.org/kde/tickets/issues/684
+  enable fedora-kinoite-plasmalogin-workaround.service
+  EOF
+
+  systemctl preset fedora-kinoite-plasmalogin-workaround.service || true

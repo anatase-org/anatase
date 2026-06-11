@@ -1,0 +1,80 @@
+version: 1
+
+priority: 2
+
+packages:
+  - alsa-sof-firmware
+  - amd-gpu-firmware
+  - amd-ucode-firmware
+  - atheros-firmware
+  - brcmfmac-firmware
+  - cirrus-audio-firmware
+  - efibootmgr
+  - grub2-efi-ia32
+  - grub2-efi-x64
+  - grub2-pc
+  - intel-audio-firmware
+  - intel-gpu-firmware
+  - intel-lpmd
+  - intel-vsc-firmware
+  - iwlegacy-firmware
+  - iwlwifi-dvm-firmware
+  - iwlwifi-mvm-firmware
+  - kernel
+  - kernel-modules
+  - kernel-modules-extra
+  - libertas-firmware
+  - libva-intel-media-driver
+  - linux-firmware
+  - mcelog
+  - microcode_ctl
+  - mt7xxx-firmware
+  - nvidia-gpu-firmware
+  - nxpwireless-firmware
+  - qcom-wwan-firmware
+  - realtek-firmware
+  - shim-ia32
+  - shim-x64
+  - thermald
+  - tiwilink-firmware
+  - virtualbox-guest-additions
+
+postprocess: |
+  set -eux
+
+  install -dm0755 /usr/lib/dracut/dracut.conf.d
+
+  cat > /usr/lib/dracut/dracut.conf.d/20-atomic-nohostonly.conf <<'EOF'
+  # Default model is server-side generated initramfs
+  hostonly=no
+  EOF
+
+  cat > /usr/lib/dracut/dracut.conf.d/20-atomic-nostrip.conf <<'EOF'
+  # We do not rely on strip/eu-strip during image assembly.
+  do_strip=no
+  EOF
+
+  cat > /usr/lib/dracut/dracut.conf.d/20-atomic-tpm-luks.conf <<'EOF'
+  # Add support for systemd-cryptsetup and tpm2-tss LUKS locking
+  add_dracutmodules+=" tpm2-tss systemd-pcrphase "
+  EOF
+
+  if [ -f /usr/lib/os-release ]; then
+      . /usr/lib/os-release
+      if [ "${ID:-}" = "fedora" ] && [ "${VERSION_ID:-0}" -ge 42 ]; then
+          cat > /usr/lib/kernel/install.conf <<'EOF'
+  # kernel-install will not try to run dracut and allows the image builder to
+  # take over initramfs generation. This also tells tooling to keep one kernel.
+  layout=ostree
+  EOF
+      fi
+  fi
+
+  if [ -d /usr/share/dnf5/libdnf.conf.d ]; then
+      cat > /usr/share/dnf5/libdnf.conf.d/20-ostree-installonlypkgs.conf <<'EOF'
+  [main]
+  installonlypkgs=''
+  EOF
+  elif [ -f /etc/dnf/dnf.conf ]; then
+      echo "installonlypkgs=''" >> /etc/dnf/dnf.conf
+  fi

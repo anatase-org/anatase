@@ -17,7 +17,9 @@ repos:
     basearch: $arch
 cards:
   - cards/base
-  - cards/kde
+  - cards/base/kernel
+  - cards/base/atomic
+  - cards/de/kde
 
 labels:
   org.opencontainers.image.title: Anatase

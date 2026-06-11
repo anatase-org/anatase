@@ -1,0 +1,257 @@
+version: 1
+
+packages:
+  - NetworkManager
+  - NetworkManager-bluetooth
+  - NetworkManager-config-connectivity-fedora
+  - NetworkManager-wifi
+  - NetworkManager-wwan
+  - acl
+  - alsa-ucm
+  - alsa-utils
+  - at-spi2-atk
+  - at-spi2-core
+  - attr
+  - audit
+  - b43-fwcutter
+  - b43-openfwwf
+  - bash
+  - bash-color-prompt
+  - bash-completion
+  - bc
+  - bind-utils
+  - bluez-cups
+  - brltty
+  - btrfs-progs
+  - bzip2
+  - chrony
+  - cifs-utils
+  - colord
+  - compsize
+  - coreutils
+  - cpio
+  - cryptsetup
+  - cups
+  - cups-browsed
+  - cups-filters
+  - curl
+  - cyrus-sasl-plain
+  - default-editor
+  - default-fonts-cjk-mono
+  - default-fonts-cjk-sans
+  - default-fonts-cjk-serif
+  - default-fonts-core-emoji
+  - default-fonts-core-math
+  - default-fonts-core-mono
+  - default-fonts-core-sans
+  - default-fonts-core-serif
+  - default-fonts-other-mono
+  - default-fonts-other-sans
+  - default-fonts-other-serif
+  - dnsmasq
+  - e2fsprogs
+  - ethtool
+  - exfatprogs
+  - file
+  - filesystem
+  - firewalld
+  - flatpak
+  - fpaste
+  - fuse-overlayfs
+  - fwupd
+  - gamemode
+  - git-core
+  - git-core-doc
+  - glibc
+  - glibc-all-langpacks
+  - gnupg2
+  - gnupg2-scdaemon
+  - gstreamer1-plugin-dav1d
+  - gstreamer1-plugin-libav
+  - gstreamer1-plugins-bad-free
+  - gstreamer1-plugins-good
+  - gstreamer1-plugins-ugly-free
+  - gutenprint
+  - gutenprint-cups
+  - hfsplus-tools
+  - hostname
+  - hplip
+  - hunspell
+  - hyperv-daemons
+  - ibus-anthy
+  - ibus-chewing
+  - ibus-gtk3
+  - ibus-gtk4
+  - ibus-hangul
+  - ibus-libpinyin
+  - ibus-m17n
+  - ibus-typing-booster
+  - iproute
+  - iptables-nft
+  - iptstate
+  - iputils
+  - kbd
+  - kmscon
+  - langpacks-en
+  - less
+  - libglvnd-gles
+  - logrotate
+  - lrzsz
+  - lsof
+  - lvm2
+  - man-db
+  - man-pages
+  - mdadm
+  - mesa-dri-drivers
+  - mesa-vulkan-drivers
+  - mpage
+  - mtr
+  - ncurses
+  - nfs-utils
+  - nss-altfiles
+  - nss-mdns
+  - ntfs-3g
+  - ntfsprogs
+  - nvme-cli
+  - open-vm-tools-desktop
+  - opensc
+  - openssh-clients
+  - openssh-server
+  - orca
+  - pam_afs_session
+  - paps
+  - passwdqc
+  - pciutils
+  - pinfo
+  - pipewire-alsa
+  - pipewire-config-raop
+  - pipewire-gstreamer
+  - pipewire-pulseaudio
+  - pipewire-utils
+  - plymouth
+  - plymouth-system-theme
+  - policycoreutils
+  - policycoreutils-python-utils
+  - podman
+  - prefixdevname
+  - printer-driver-brlaser
+  - procps-ng
+  - psmisc
+  - ptouch-driver
+  - qemu-guest-agent
+  - quota
+  - realmd
+  - rootfiles
+  - rpm
+  - rsync
+  - samba-client
+  - selinux-policy-targeted
+  - setup
+  - shadow-utils
+  - skopeo
+  - slirp4netns
+  - sos
+  - speech-dispatcher
+  - spice-vdagent
+  - spice-webdavd
+  - splix
+  - sssd-common
+  - sssd-kcm
+  - sudo
+  - system-config-printer-udev
+  - systemd
+  - systemd-container
+  - systemd-oomd-defaults
+  - systemd-resolved
+  - systemd-udev
+  - tar
+  - time
+  - tree
+  - unzip
+  - uresourced
+  - usb_modeswitch
+  - usbutils
+  - util-linux
+  - vim-minimal
+  - wget2-wget
+  - which
+  - whois
+  - wireguard-tools
+  - wireplumber
+  - words
+  - wpa_supplicant
+  - xdg-desktop-portal
+  - xfsprogs
+  - zip
+  - zram-generator-defaults
+
+postprocess: |
+  set -eux
+
+  install -dm0755 /usr/lib/systemd/journald.conf.d
+  cat > /usr/lib/systemd/journald.conf.d/10-persistent.conf <<'EOF'
+  [Journal]
+  Storage=persistent
+  EOF
+
+  if command -v systemctl >/dev/null; then
+      systemctl set-default graphical.target
+  fi
+
+  if [ -e /usr/libexec/samba/cups_backend_smb ]; then
+      install -dm0755 /usr/lib/cups/backend
+      ln -snf /usr/libexec/samba/cups_backend_smb /usr/lib/cups/backend/smb
+  fi
+
+  install -dm0755 /usr/lib/systemd/system /usr/lib/systemd/system-preset
+
+  cat > /usr/lib/systemd/system/fedora-atomic-desktop-appstream-cache-refresh.service <<'EOF'
+  [Unit]
+  Description=Refresh appstream cache on Atomic Desktops
+  Documentation=https://gitlab.com/fedora/ostree/sig/-/work_items/103
+  ConditionPathIsReadWrite=/var
+  ConditionPathExists=/run/ostree-booted
+  After=local-fs.target
+
+  [Service]
+  Type=oneshot
+  RemainAfterExit=yes
+  ExecStart=appstreamcli refresh --force
+  Nice=19
+  IOWeight=10
+
+  [Install]
+  WantedBy=multi-user.target
+  EOF
+
+  cat > /usr/lib/systemd/system/fedora-atomic-desktop-mandb-update.service <<'EOF'
+  [Unit]
+  Description=Update mandb cache on Atomic Desktops
+  Documentation=https://gitlab.com/fedora/ostree/sig/-/work_items/62
+  ConditionPathIsReadWrite=/var
+  ConditionPathExists=/run/ostree-booted
+  After=local-fs.target
+
+  [Service]
+  Type=oneshot
+  RemainAfterExit=yes
+  Environment=MAN_NO_LOCALE_WARNING=1
+  ExecStart=mandb -q
+  Nice=19
+  IOWeight=10
+
+  [Install]
+  WantedBy=multi-user.target
+  EOF
+
+  cat >> /usr/lib/systemd/system-preset/81-atomic-desktop.preset <<'EOF'
+
+  # See: https://gitlab.com/fedora/ostree/sig/-/work_items/103
+  enable fedora-atomic-desktop-appstream-cache-refresh.service
+
+  # See: https://gitlab.com/fedora/ostree/sig/-/work_items/62
+  enable fedora-atomic-desktop-mandb-update.service
+  EOF
+
+  systemctl preset fedora-atomic-desktop-appstream-cache-refresh.service || true
+  systemctl preset fedora-atomic-desktop-mandb-update.service || true
