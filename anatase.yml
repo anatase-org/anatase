@@ -2,6 +2,10 @@ version: 1
 
 env:
   releasever: 44
+
+distro: fedora-$releasever
+bootstrap: quay.io/fedora/fedora:$releasever
+
 repos:
   - repo: fedora
     priority: 10
@@ -14,6 +18,7 @@ repos:
 cards:
   - cards/base
   - cards/kde
+
 labels:
   org.opencontainers.image.title: Anatase
   org.opencontainers.image.source: https://github.com/anatase-org/anatase
