@@ -3,101 +3,118 @@ version: 1
 priority: 10
 
 packages:
+  # Networking
   - NetworkManager-config-connectivity-fedora
   - NetworkManager-ppp
+
+  # KDE applications
   - akonadi-server
   - akonadi-server-mysql
   - ark
   - audiocd-kio
-  - aurorae
-  - bluedevil
-  - breeze-icon-theme
-  - colord-kde
   - dolphin
   - ffmpegthumbs
   - filelight
+  - kamera
+  - kcharselect
+  - kde-connect
+  - kdebugsettings
+  - kdegraphics-thumbnailers
+  - kdialog
+  - kdnssd
+  - kfind
+  - khelpcenter
+  - kinfocenter
+  - kio-gdrive
+  - kjournald
+  - kmenuedit
+  - konsole
+  - kunifiedpush
+  - kwalletmanager5
+  - kwrite
+  - plasma-discover
+  - plasma-discover-notifier
+  - plasma-discover-rpm-ostree
+  - plasma-systemmonitor
+  - plasma-vault
+  - plasma-welcome
+  - plasma-welcome-fedora
+  - spectacle
+
+  # Plasma desktop
+  - aurorae
+  - breeze-icon-theme
+  - kdeplasma-addons
+  - kf6-baloo-file
+  - kscreen
+  - kscreenlocker
+  - kwin
+  - plasma-breeze
+  - plasma-desktop
+  - plasma-desktop-doc
+  - plasma-drkonqi
+  - plasma-keyboard
+  - plasma-login-manager
+  - plasma-pa
+  - plasma-setup
+  - plasma-workspace
+  - plasma-workspace-wallpapers
+  - polkit-kde
+
+  # System settings
+  - colord-kde
   - firewall-config
   - flatpak-kcm
   - fprintd-pam
-  - gdb
   - kaccounts-integration-qt6
   - kaccounts-providers
-  - kamera
   - kcm-plasmalogin
-  - kcharselect
-  - kde-connect
   - kde-gtk-config
   - kde-inotify-survey
   - kde-partitionmanager
   - kde-settings-plasmalogin
   - kde-settings-pulseaudio
-  - kdebugsettings
-  - kdegraphics-thumbnailers
-  - kdenetwork-filesharing
-  - kdeplasma-addons
-  - kdialog
-  - kdnssd
-  - kf6-baloo-file
-  - kfind
-  - khelpcenter
-  - kinfocenter
   - kio-admin
-  - kio-gdrive
-  - kjournald
-  - kmenuedit
-  - konsole
+  - ksshaskpass
+  - pam-kwallet
+  - pinentry-qt
+  - plasma-disks
+  - plasma-print-manager
+  - plasma-thunderbolt
+  - udisks2
+
+  # Network integration
+  - bluedevil
+  - kdenetwork-filesharing
   - krdp
   - krfb
-  - kscreen
-  - kscreenlocker
-  - ksshaskpass
-  - kunifiedpush
-  - kwalletmanager5
-  - kwin
-  - kwrite
-  - libappindicator-gtk3
-  - mesa-dri-drivers
-  - mesa-vulkan-drivers
   - mobile-broadband-provider-info
-  - pam-kwallet
-  - phonon-qt6-backend-vlc
-  - pinentry-qt
-  - plasma-breeze
-  - plasma-desktop
-  - plasma-desktop-doc
-  - plasma-discover
-  - plasma-discover-notifier
-  - plasma-discover-rpm-ostree
-  - plasma-disks
-  - plasma-drkonqi
-  - plasma-keyboard
-  - plasma-login-manager
   - plasma-nm
   - plasma-nm-openconnect
   - plasma-nm-openvpn
   - plasma-nm-vpnc
-  - plasma-pa
-  - plasma-print-manager
-  - plasma-setup
-  - plasma-systemmonitor
-  - plasma-thunderbolt
-  - plasma-vault
-  - plasma-welcome
-  - plasma-welcome-fedora
-  - plasma-workspace
-  - plasma-workspace-wallpapers
-  - plymouth-system-theme
-  - polkit-kde
   - samba-usershares
-  - signon-kwallet-extension
-  - spectacle
-  - systemd-oomd-defaults
-  - thermald
-  - udisks2
+
+  # Graphics and media
+  - libappindicator-gtk3
+  - mesa-dri-drivers
+  - mesa-vulkan-drivers
+  - phonon-qt6-backend-vlc
   - vlc-plugin-gstreamer
   - vulkan-tools
-  - xdpyinfo
   - xwaylandvideobridge
+
+  # Boot and theme
+  - plymouth-system-theme
+  - signon-kwallet-extension
+
+  # System services
+  - systemd-oomd-defaults
+  - thermald
+
+  # Debugging and X11 tools
+  - gdb
+  - xdpyinfo
 
 postprocess: |
   set -eux

@@ -3,11 +3,16 @@ version: 1
 priority: 3
 
 packages:
+  # Atomic boot
   - bootc
   - bootupd
+
+  # Package management
   - dnf5
   - dnf5-plugins
   - fedora-repos-archive
+
+  # Image layering
   - rpm-ostree
 
 postprocess: |

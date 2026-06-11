@@ -1,42 +1,140 @@
 version: 1
 
 packages:
+  # Core system
+  - acl
+  - attr
+  - audit
+  - bash
+  - bash-color-prompt
+  - bash-completion
+  - bc
+  - bzip2
+  - coreutils
+  - cpio
+  - curl
+  - default-editor
+  - file
+  - filesystem
+  - glibc
+  - glibc-all-langpacks
+  - hostname
+  - kbd
+  - less
+  - ncurses
+  - procps-ng
+  - psmisc
+  - rootfiles
+  - rpm
+  - setup
+  - shadow-utils
+  - sudo
+  - tar
+  - time
+  - tree
+  - unzip
+  - util-linux
+  - vim-minimal
+  - wget2-wget
+  - which
+  - words
+  - zip
+
+  # System services
+  - chrony
+  - fwupd
+  - logrotate
+  - policycoreutils
+  - policycoreutils-python-utils
+  - realmd
+  - selinux-policy-targeted
+  - systemd
+  - systemd-container
+  - systemd-oomd-defaults
+  - systemd-resolved
+  - systemd-udev
+  - uresourced
+  - zram-generator-defaults
+
+  # Networking
   - NetworkManager
   - NetworkManager-bluetooth
   - NetworkManager-config-connectivity-fedora
   - NetworkManager-wifi
   - NetworkManager-wwan
-  - acl
+  - bind-utils
+  - dnsmasq
+  - ethtool
+  - firewalld
+  - iproute
+  - iptables-nft
+  - iptstate
+  - iputils
+  - mtr
+  - nfs-utils
+  - nss-mdns
+  - openssh-clients
+  - openssh-server
+  - samba-client
+  - wireguard-tools
+  - wpa_supplicant
+
+  # Storage and filesystems
+  - btrfs-progs
+  - cifs-utils
+  - compsize
+  - cryptsetup
+  - e2fsprogs
+  - exfatprogs
+  - hfsplus-tools
+  - lvm2
+  - mdadm
+  - ntfs-3g
+  - ntfsprogs
+  - nvme-cli
+  - quota
+  - xfsprogs
+
+  # Security and authentication
+  - cyrus-sasl-plain
+  - gnupg2
+  - gnupg2-scdaemon
+  - nss-altfiles
+  - opensc
+  - pam_afs_session
+  - passwdqc
+  - sssd-common
+  - sssd-kcm
+
+  # Containers
+  - flatpak
+  - fuse-overlayfs
+  - podman
+  - skopeo
+  - slirp4netns
+
+  # Graphics and media
   - alsa-ucm
   - alsa-utils
-  - at-spi2-atk
-  - at-spi2-core
-  - attr
-  - audit
-  - b43-fwcutter
-  - b43-openfwwf
-  - bash
-  - bash-color-prompt
-  - bash-completion
-  - bc
-  - bind-utils
-  - bluez-cups
-  - brltty
-  - btrfs-progs
-  - bzip2
-  - chrony
-  - cifs-utils
   - colord
-  - compsize
-  - coreutils
-  - cpio
-  - cryptsetup
-  - cups
-  - cups-browsed
-  - cups-filters
-  - curl
-  - cyrus-sasl-plain
-  - default-editor
+  - gamemode
+  - gstreamer1-plugin-dav1d
+  - gstreamer1-plugin-libav
+  - gstreamer1-plugins-bad-free
+  - gstreamer1-plugins-good
+  - gstreamer1-plugins-ugly-free
+  - libglvnd-gles
+  - mesa-dri-drivers
+  - mesa-vulkan-drivers
+  - pipewire-alsa
+  - pipewire-config-raop
+  - pipewire-gstreamer
+  - pipewire-pulseaudio
+  - pipewire-utils
+  - wireplumber
+  - xdg-desktop-portal
+
+  # Fonts and localization
   - default-fonts-cjk-mono
   - default-fonts-cjk-sans
   - default-fonts-cjk-serif
@@ -48,36 +146,13 @@ packages:
   - default-fonts-other-mono
   - default-fonts-other-sans
   - default-fonts-other-serif
-  - dnsmasq
-  - e2fsprogs
-  - ethtool
-  - exfatprogs
-  - file
-  - filesystem
-  - firewalld
-  - flatpak
-  - fpaste
-  - fuse-overlayfs
-  - fwupd
-  - gamemode
-  - git-core
-  - git-core-doc
-  - glibc
-  - glibc-all-langpacks
-  - gnupg2
-  - gnupg2-scdaemon
-  - gstreamer1-plugin-dav1d
-  - gstreamer1-plugin-libav
-  - gstreamer1-plugins-bad-free
-  - gstreamer1-plugins-good
-  - gstreamer1-plugins-ugly-free
-  - gutenprint
-  - gutenprint-cups
-  - hfsplus-tools
-  - hostname
-  - hplip
   - hunspell
-  - hyperv-daemons
+  - langpacks-en
+
+  # Input and accessibility
+  - at-spi2-atk
+  - at-spi2-core
+  - brltty
   - ibus-anthy
   - ibus-chewing
   - ibus-gtk3
@@ -86,104 +161,56 @@ packages:
   - ibus-libpinyin
   - ibus-m17n
   - ibus-typing-booster
-  - iproute
-  - iptables-nft
-  - iptstate
-  - iputils
-  - kbd
   - kmscon
-  - langpacks-en
-  - less
-  - libglvnd-gles
-  - logrotate
-  - lrzsz
-  - lsof
-  - lvm2
-  - man-db
-  - man-pages
-  - mdadm
-  - mesa-dri-drivers
-  - mesa-vulkan-drivers
-  - mpage
-  - mtr
-  - ncurses
-  - nfs-utils
-  - nss-altfiles
-  - nss-mdns
-  - ntfs-3g
-  - ntfsprogs
-  - nvme-cli
-  - open-vm-tools-desktop
-  - opensc
-  - openssh-clients
-  - openssh-server
   - orca
-  - pam_afs_session
-  - paps
-  - passwdqc
-  - pciutils
-  - pinfo
-  - pipewire-alsa
-  - pipewire-config-raop
-  - pipewire-gstreamer
-  - pipewire-pulseaudio
-  - pipewire-utils
-  - plymouth
-  - plymouth-system-theme
-  - policycoreutils
-  - policycoreutils-python-utils
-  - podman
-  - prefixdevname
-  - printer-driver-brlaser
-  - procps-ng
-  - psmisc
-  - ptouch-driver
-  - qemu-guest-agent
-  - quota
-  - realmd
-  - rootfiles
-  - rpm
-  - rsync
-  - samba-client
-  - selinux-policy-targeted
-  - setup
-  - shadow-utils
-  - skopeo
-  - slirp4netns
-  - sos
   - speech-dispatcher
-  - spice-vdagent
-  - spice-webdavd
+
+  # Printing
+  - bluez-cups
+  - cups
+  - cups-browsed
+  - cups-filters
+  - gutenprint
+  - gutenprint-cups
+  - hplip
+  - paps
+  - printer-driver-brlaser
+  - ptouch-driver
   - splix
-  - sssd-common
-  - sssd-kcm
-  - sudo
   - system-config-printer-udev
-  - systemd
-  - systemd-container
-  - systemd-oomd-defaults
-  - systemd-resolved
-  - systemd-udev
-  - tar
-  - time
-  - tree
-  - unzip
-  - uresourced
+
+  # Hardware support
+  - b43-fwcutter
+  - b43-openfwwf
+  - pciutils
+  - prefixdevname
   - usb_modeswitch
   - usbutils
-  - util-linux
-  - vim-minimal
-  - wget2-wget
-  - which
+
+  # Virtualization
+  - hyperv-daemons
+  - open-vm-tools-desktop
+  - qemu-guest-agent
+  - spice-vdagent
+  - spice-webdavd
+
+  # Boot and splash
+  - plymouth
+  - plymouth-system-theme
+
+  # Admin tools
+  - fpaste
+  - git-core
+  - git-core-doc
+  - lrzsz
+  - lsof
+  - man-db
+  - man-pages
+  - mpage
+  - pinfo
+  - rsync
+  - sos
   - whois
-  - wireguard-tools
-  - wireplumber
-  - words
-  - wpa_supplicant
-  - xdg-desktop-portal
-  - xfsprogs
-  - zip
-  - zram-generator-defaults
 
 postprocess: |
   set -eux
