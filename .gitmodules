@@ -1,0 +1,3 @@
+[submodule "ludos"]
+	path = ludos
+	url = git@github.com:anatase-org/ludos.git
