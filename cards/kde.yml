@@ -1,7 +1,13 @@
 version: 1
 
+priority: 10
+
 packages:
   - plasma-desktop
   - sddm
   - konsole
 build: []
+
+postprocess: |
+  # Testing dummy file
+  echo "This is a KDE card postprocess step" > /etc/kde-card
