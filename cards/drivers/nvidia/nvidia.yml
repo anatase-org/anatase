@@ -6,6 +6,11 @@ env:
   version: $nvidia
 
 packages:
+  # libva integration
+  - libva-nvidia-driver
+
+  # The rest are transient dependencies
+
   # Shell and service integration
   - bash
   - systemd
