@@ -24,3 +24,17 @@ packages:
   - qcom-wwan-firmware
   - realtek-firmware
   - tiwilink-firmware
+
+files:
+  - hwfirm::git+https://github.com/hhd-dev/hwfirm
+
+postprocess: |
+  set -eux
+
+  install -d /usr/lib/firmware/cirrus /usr/lib/firmware/rtl_bt
+  cp -r /files/hwfirm/cirrus/. /usr/lib/firmware/cirrus/
+  cp -r /files/hwfirm/rtl_bt/. /usr/lib/firmware/rtl_bt/
+  cp -r /files/hwfirm/awinic/. /usr/lib/firmware/
+  cp -r /files/hwfirm/tas/. /usr/lib/firmware/
+  find /files/hwfirm/xone -maxdepth 1 -type f -name 'x*' -exec cp -t /usr/lib/firmware/ {} +
+  rm -f /usr/lib/firmware/rtl_bt/rtl8822cu_config.bin.xz
