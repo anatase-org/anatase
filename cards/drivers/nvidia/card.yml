@@ -1,0 +1,17 @@
+version: 1
+
+priority: 9
+
+build-deps:
+  - git
+  - make
+  - mock
+  - mock-core-configs
+  - rpmdevtools
+  - wget
+
+hash: $version-@hash(./)
+
+build: |
+  set -eux
+  ./build.sh

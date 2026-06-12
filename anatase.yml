@@ -2,6 +2,7 @@ version: 1
 
 env:
   releasever: 44
+  nvidia: "610.43.02"
 
 distro: f$releasever
 bootstrap: quay.io/fedora/fedora:$releasever
@@ -21,6 +22,7 @@ cards:
   - cards/base/grub
   - cards/base/firmware
   - cards/base/atomic
+  - cards/drivers/nvidia
   - cards/de/kde
 
 labels:
