@@ -3,3 +3,4 @@ old
 venv
 cache
 ref
+logs/
