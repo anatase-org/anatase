@@ -37,8 +37,9 @@ packages:
   - plasma-discover-rpm-ostree
   - plasma-systemmonitor
   - plasma-vault
-  - plasma-welcome
-  - plasma-welcome-fedora
+  # A bit spammy
+  # - plasma-welcome
+  # - plasma-welcome-fedora
   - spectacle
 
   # Plasma desktop
