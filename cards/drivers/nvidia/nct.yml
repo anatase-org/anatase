@@ -3,9 +3,11 @@ version: 1
 priority: 9
 
 build-deps:
+  - gcc
   - git
   - make
   - podman
+  - which
 
 hash: >
   nct-@hash(
@@ -13,6 +15,13 @@ hash: >
     nvidia-container-toolkit
   )
 
+prepare: |
+  set -eux
+  nct_revision="$(git -C nvidia-container-toolkit rev-parse HEAD)"
+  nct_version="$(git -C nvidia-container-toolkit describe --tags --exact-match 2>/dev/null || printf '%s' "$nct_revision" | cut -c1-8)"
+  echo "nct_revision=$nct_revision" >> "$LUDOS_ENV"
+  echo "nct_version=$nct_version" >> "$LUDOS_ENV"
+
 build: |
   set -eux
-  ./build-nct.sh
+  REVISION="$nct_revision" VERSION="$nct_version" ./build-nct.sh
