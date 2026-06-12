@@ -26,3 +26,10 @@ LIB_NAME="nct" DIST_DIR="$(pwd)/build/NVT" \
 rm -rf ./build/RPMS/f$FEDORA_VERSION/nvt-$ARCH
 mkdir -p ./build/RPMS/f$FEDORA_VERSION/nvt-$ARCH
 mv build/NVT/centos8/$ARCH/*.rpm ./build/RPMS/f$FEDORA_VERSION/nvt-$ARCH
+
+# Hand binary RPMs back to Ludos. Source RPMs are intentionally ignored.
+if [ -d /rpms ]; then
+    find "build/RPMS/f${FEDORA_VERSION}/nvt-$ARCH" \
+        -type f -name "*.rpm" ! -name "*.src.rpm" \
+        -exec cp -t /rpms {} +
+fi

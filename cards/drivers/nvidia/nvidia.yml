@@ -13,7 +13,15 @@ build-deps:
   - rpmdevtools
   - wget
 
-hash: $version-@hash(./)
+hash: >
+  $version-@hash(
+    build.sh,
+    nvidia-driver,
+    nvidia-kmod-common,
+    nvidia-modprobe,
+    nvidia-persistenced,
+    nvidia-settings
+  )
 
 build: |
   set -eux

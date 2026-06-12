@@ -16,3 +16,6 @@
 [submodule "cards/drivers/nvidia/nvidia-kmod-common"]
 	path = cards/drivers/nvidia/nvidia-kmod-common
 	url = https://github.com/negativo17/nvidia-kmod-common
+[submodule "cards/drivers/nvidia/nvidia-modprobe"]
+	path = cards/drivers/nvidia/nvidia-modprobe
+	url = https://github.com/negativo17/nvidia-modprobe

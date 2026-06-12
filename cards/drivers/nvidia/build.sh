@@ -83,7 +83,8 @@ compile() {
     # Rewrite the version and drop sources for architectures not built here.
     cat $target_dir/$1.spec | \
         sed -E "s/^Version:[[:space:]]+.+$/Version: ${VERSION}/gim" | \
-        sed -E "s/Source[0-9]+:[[:space:]].+$SKIP_SOURCES.tar.xz//gim" \
+        sed -E "s/Source[0-9]+:[[:space:]].+$SKIP_SOURCES.tar.xz//gim" | \
+        sed -E "/^Requires:[[:space:]]+nvidia-kmod = /d" \
         > $SPEC_TMP
     spectool -g -C $target_dir $SPEC_TMP
     
@@ -137,6 +138,7 @@ EOF
 
 compile nvidia-kmod-common
 compile nvidia-settings
+compile nvidia-modprobe
 compile nvidia-persistenced
 compile nvidia-driver
 

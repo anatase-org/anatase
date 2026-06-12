@@ -7,7 +7,11 @@ build-deps:
   - make
   - podman
 
-hash: nct-@hash(./)
+hash: >
+  nct-@hash(
+    build-nct.sh,
+    nvidia-container-toolkit
+  )
 
 build: |
   set -eux
