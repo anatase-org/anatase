@@ -146,7 +146,21 @@ echo "$VERSION" > .driver-version
 
 # Hand binary RPMs back to Ludos. Source RPMs are intentionally ignored.
 if [ -d /rpms ]; then
-    find "build/RPMS/f${FEDORA_VERSION}" \
-        -type f -name "*.rpm" ! -name "*.src.rpm" \
+    find "build/RPMS/f${FEDORA_VERSION}" -type f \
+        \( -name "libnvidia-cfg-*.rpm" \
+        -o -name "libnvidia-fbc-*.rpm" \
+        -o -name "libnvidia-gpucomp-*.rpm" \
+        -o -name "libnvidia-ml-*.rpm" \
+        -o -name "nvidia-libXNVCtrl-[0-9]*.rpm" \
+        -o -name "nvidia-settings-[0-9]*.rpm" \
+        -o -name "nvidia-driver-*.rpm" \
+        -o -name "nvidia-kmod-common-*.rpm" \
+        -o -name "nvidia-modprobe-[0-9]*.rpm" \
+        -o -name "nvidia-persistenced-[0-9]*.rpm" \
+        -o -name "xorg-x11*.rpm" \) \
+        ! -name "*.src.rpm" \
+        ! -name "*debuginfo*.rpm" \
+        ! -name "*debugsource*.rpm" \
+        ! -name "*-devel-*.rpm" \
         -exec cp -t /rpms {} +
 fi

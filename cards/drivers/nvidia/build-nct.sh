@@ -45,9 +45,9 @@ mv build/NVT/centos8/$ARCH/*.rpm ./build/RPMS/f$FEDORA_VERSION/nvt-$ARCH
 # Hand binary RPMs back to Ludos. Source RPMs are intentionally ignored.
 if [ -d /rpms ]; then
     find "build/RPMS/f${FEDORA_VERSION}/nvt-$ARCH" -type f \
-        \( -name "nvidia-container-toolkit-1*.rpm" \
-        -o -name "nvidia-container-toolkit-base-1*.rpm" \
-        -o -name "libnvidia-container1-1*.rpm" \
-        -o -name "libnvidia-container-tools-1*.rpm" \) \
+        \( -name "nvidia-container-toolkit-[0-9]*.rpm" \
+        -o -name "nvidia-container-toolkit-base-[0-9]*.rpm" \
+        -o -name "libnvidia-container1-[0-9]*.rpm" \
+        -o -name "libnvidia-container-tools-[0-9]*.rpm" \) \
         -exec cp -t /rpms {} +
 fi

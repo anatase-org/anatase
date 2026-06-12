@@ -2,6 +2,16 @@ version: 1
 
 priority: 9
 
+packages:
+  # Shell and libc runtime
+  - bash
+  - glibc
+
+  # NVIDIA Container Toolkit runtime libraries
+  - elfutils-libelf
+  - libcap
+  - libseccomp
+
 build-deps:
   - gcc
   - git
@@ -11,6 +21,7 @@ build-deps:
 
 hash: >
   nct-@hash(
+    nct.yml,
     build-nct.sh,
     nvidia-container-toolkit
   )

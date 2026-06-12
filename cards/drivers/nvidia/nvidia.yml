@@ -5,6 +5,27 @@ priority: 9
 env:
   version: $nvidia
 
+packages:
+  # Shell and service integration
+  - bash
+  - systemd
+
+  # Driver runtime libraries
+  - cairo
+  - gdk-pixbuf2
+  - glib2
+  - gtk3
+  - jansson
+  - libtirpc
+  - libvdpau
+  - pango
+  - libwayland-client
+
+  # X11 runtime libraries
+  - libX11
+  - libXext
+  - libXxf86vm
+
 build-deps:
   - git
   - make
@@ -15,6 +36,7 @@ build-deps:
 
 hash: >
   $version-@hash(
+    nvidia.yml,
     build.sh,
     nvidia-driver,
     nvidia-kmod-common,
