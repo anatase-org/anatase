@@ -3,7 +3,7 @@ version: 1
 env:
   releasever: 44
 
-distro: fedora-$releasever
+distro: f$releasever
 bootstrap: quay.io/fedora/fedora:$releasever
 
 repos:
