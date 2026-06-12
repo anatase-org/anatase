@@ -18,6 +18,7 @@ repos:
     basearch: $arch
 cards:
   - cards/base
+  - cards/base/utils
   - cards/base/kernel
   - cards/base/grub
   - cards/base/firmware

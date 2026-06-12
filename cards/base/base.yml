@@ -194,20 +194,6 @@ packages:
   - plymouth
   - plymouth-system-theme
 
-  # Admin tools
-  - fpaste
-  - git-core
-  - git-core-doc
-  - lrzsz
-  - lsof
-  - man-db
-  - man-pages
-  - mpage
-  - pinfo
-  - rsync
-  - sos
-  - whois
-
 postprocess: |
   set -eux
 

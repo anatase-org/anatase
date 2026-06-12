@@ -1,0 +1,32 @@
+version: 1
+
+packages:
+  # Python
+  - python3
+  - python3-pip
+  - python3-venv
+
+  # Shells and editors
+  - fish
+
+  # System inspection and diagnostics
+  - htop
+  - i2c-tools
+  - libinput-utils
+  - lm_sensors
+  - lsof
+  - gnome-disk-utility
+  - stress-ng
+
+  # Admin tools
+  - fpaste
+  - git-core
+  - git-core-doc
+  - lrzsz
+  - man-db
+  - man-pages
+  - mpage
+  - pinfo
+  - rsync
+  - sos
+  - whois
