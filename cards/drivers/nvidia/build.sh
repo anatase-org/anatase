@@ -80,12 +80,16 @@ compile() {
     SPEC_TMP=build/SPECS/$target_fn-f${FEDORA_VERSION}/$1.spec
     mkdir -p $(dirname $SPEC_TMP)
 
-    # Rewrite the version and drop sources for architectures not built here.
-    cat $target_dir/$1.spec | \
-        sed -E "s/^Version:[[:space:]]+.+$/Version: ${VERSION}/gim" | \
-        sed -E "s/Source[0-9]+:[[:space:]].+$SKIP_SOURCES.tar.xz//gim" | \
-        sed -E "/^Requires:[[:space:]]+nvidia-kmod = /d" \
-        > $SPEC_TMP
+    if [ "$1" == "nvidia-driver-selinux" ]; then
+        cat $target_dir/$1.spec > $SPEC_TMP
+    else
+        # Rewrite the version and drop sources for architectures not built here.
+        cat $target_dir/$1.spec | \
+            sed -E "s/^Version:[[:space:]]+.+$/Version: ${VERSION}/gim" | \
+            sed -E "s/Source[0-9]+:[[:space:]].+$SKIP_SOURCES.tar.xz//gim" | \
+            sed -E "/^Requires:[[:space:]]+nvidia-kmod = /d" \
+            > $SPEC_TMP
+    fi
     spectool -g -C $target_dir $SPEC_TMP
     
     if [ "$1" == "nvidia-driver" ]; then
@@ -141,6 +145,7 @@ compile nvidia-settings
 compile nvidia-modprobe
 compile nvidia-persistenced
 compile nvidia-driver
+compile nvidia-driver-selinux
 
 echo "$VERSION" > .driver-version
 
@@ -154,6 +159,7 @@ if [ -d /rpms ]; then
         -o -name "nvidia-libXNVCtrl-[0-9]*.rpm" \
         -o -name "nvidia-settings-[0-9]*.rpm" \
         -o -name "nvidia-driver-*.rpm" \
+        -o -name "nvidia-driver-selinux-*.rpm" \
         -o -name "nvidia-kmod-common-*.rpm" \
         -o -name "nvidia-modprobe-[0-9]*.rpm" \
         -o -name "nvidia-persistenced-[0-9]*.rpm" \

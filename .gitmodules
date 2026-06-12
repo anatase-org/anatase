@@ -19,3 +19,6 @@
 [submodule "cards/drivers/nvidia/nvidia-modprobe"]
 	path = cards/drivers/nvidia/nvidia-modprobe
 	url = https://github.com/negativo17/nvidia-modprobe
+[submodule "cards/drivers/nvidia/nvidia-driver-selinux"]
+	path = cards/drivers/nvidia/nvidia-driver-selinux
+	url = https://github.com/negativo17/nvidia-driver-selinux

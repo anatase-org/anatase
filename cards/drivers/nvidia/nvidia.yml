@@ -31,6 +31,37 @@ packages:
   - libXext
   - libXxf86vm
 
+  # GL, EGL, Vulkan, and OpenCL integration
+  - egl-gbm
+  - egl-wayland2
+  - egl-x11
+  - libglvnd
+  - libglvnd-egl
+  - libglvnd-gles
+  - libglvnd-glx
+  - libglvnd-opengl
+  - ocl-icd
+  - opencl-filesystem
+  - vulkan-loader
+  - xorg-x11-server-Xorg
+
+  # SELinux policy scriptlets
+  - libselinux-utils
+
+  # 32-bit driver compatibility libraries
+  - egl-gbm.i686
+  - egl-wayland2.i686
+  - egl-x11.i686
+  - libX11.i686
+  - libXext.i686
+  - libglvnd.i686
+  - libglvnd-egl.i686
+  - libglvnd-gles.i686
+  - libglvnd-glx.i686
+  - libglvnd-opengl.i686
+  - libvdpau.i686
+  - vulkan-loader.i686
+
 build-deps:
   - git
   - make
@@ -44,6 +75,7 @@ hash: >
     nvidia.yml,
     build.sh,
     nvidia-driver,
+    nvidia-driver-selinux,
     nvidia-kmod-common,
     nvidia-modprobe,
     nvidia-persistenced,
