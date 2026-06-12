@@ -18,6 +18,8 @@ repos:
 cards:
   - cards/base
   - cards/base/kernel
+  - cards/base/grub
+  - cards/base/firmware
   - cards/base/atomic
   - cards/de/kde
 

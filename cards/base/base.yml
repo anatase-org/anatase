@@ -117,7 +117,6 @@ packages:
   - alsa-ucm
   - alsa-utils
   - colord
-  - gamemode
   - gstreamer1-plugin-dav1d
   - gstreamer1-plugin-libav
   - gstreamer1-plugins-bad-free
@@ -182,8 +181,12 @@ packages:
   # Hardware support
   - b43-fwcutter
   - b43-openfwwf
+  - intel-lpmd
+  - libva-intel-media-driver
+  - mcelog
   - pciutils
   - prefixdevname
+  - thermald
   - usb_modeswitch
   - usbutils
 
@@ -193,6 +196,7 @@ packages:
   - qemu-guest-agent
   - spice-vdagent
   - spice-webdavd
+  - virtualbox-guest-additions
 
   # Boot and splash
   - plymouth
