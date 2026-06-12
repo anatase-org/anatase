@@ -1,0 +1,17 @@
+#!/bin/bash
+set -eo pipefail
+
+boot_was_ro=false
+
+remount_boot_ro() {
+    if $boot_was_ro; then
+        mount -o remount,ro /boot || exit 13
+    fi
+}
+
+remount_boot_rw() {
+    if grep -q " /boot .* ro," /proc/mounts; then
+        mount -o remount,rw /boot || exit 13
+        boot_was_ro=true
+    fi
+}
