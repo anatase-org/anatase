@@ -1,0 +1,15 @@
+version: 1
+
+packages:
+  # Local virtualization backend
+  - edk2-ovmf
+  - libvirt
+  - qemu
+
+  # Guest integration
+  - hyperv-daemons
+  - open-vm-tools-desktop
+  - qemu-guest-agent
+  - spice-vdagent
+  - spice-webdavd
+  - virtualbox-guest-additions

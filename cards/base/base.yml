@@ -190,14 +190,6 @@ packages:
   - usb_modeswitch
   - usbutils
 
-  # Virtualization
-  - hyperv-daemons
-  - open-vm-tools-desktop
-  - qemu-guest-agent
-  - spice-vdagent
-  - spice-webdavd
-  - virtualbox-guest-additions
-
   # Boot and splash
   - plymouth
   - plymouth-system-theme
