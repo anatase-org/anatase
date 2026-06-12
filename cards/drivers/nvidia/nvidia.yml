@@ -2,6 +2,9 @@ version: 1
 
 priority: 9
 
+env:
+  version: $nvidia
+
 build-deps:
   - git
   - make

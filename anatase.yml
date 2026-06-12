@@ -22,7 +22,8 @@ cards:
   - cards/base/grub
   - cards/base/firmware
   - cards/base/atomic
-  - cards/drivers/nvidia
+  - cards/drivers/nvidia/nvidia
+  - cards/drivers/nvidia/nct
   - cards/de/kde
 
 labels:

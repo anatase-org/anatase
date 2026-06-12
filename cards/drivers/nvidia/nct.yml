@@ -1,0 +1,14 @@
+version: 1
+
+priority: 9
+
+build-deps:
+  - git
+  - make
+  - podman
+
+hash: nct-@hash(./)
+
+build: |
+  set -eux
+  ./build-nct.sh
