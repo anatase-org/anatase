@@ -20,7 +20,7 @@ build-deps:
   - which
 
 hash: >
-  nct-@hash(
+  @hash(
     nct.yml,
     build-nct.sh,
     nvidia-container-toolkit
