@@ -8,6 +8,8 @@ packages:
 
   # Shells and editors
   - fish
+  - zsh
+  - nano
 
   # System inspection and diagnostics
   - htop
@@ -30,3 +32,7 @@ packages:
   - rsync
   - sos
   - whois
+
+  # Terminal use
+  - tmux
+  - screen
