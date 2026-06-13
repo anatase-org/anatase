@@ -63,12 +63,31 @@ packages:
   - vulkan-loader.i686
 
 build-deps:
+  # Base
+  - bash
+  - coreutils
+  - dnf5
+  - dnf5-plugins
+  - findutils
+  - gawk
+  - grep
+  - sed
+  - tar
+  - which
+  - xz
+
+  # Driver
   - git
   - make
   - mock
   - mock-core-configs
   - rpmdevtools
   - wget
+
+  # NCT
+  - fuse-overlayfs
+  - gcc
+  - podman
 
 hash: >
   $version-@hash(

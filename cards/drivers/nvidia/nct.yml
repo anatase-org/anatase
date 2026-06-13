@@ -13,11 +13,31 @@ packages:
   - libseccomp
 
 build-deps:
-  - gcc
+  # Base
+  - bash
+  - coreutils
+  - dnf5
+  - dnf5-plugins
+  - findutils
+  - gawk
+  - grep
+  - sed
+  - tar
+  - which
+  - xz
+
+  # Driver
   - git
   - make
+  - mock
+  - mock-core-configs
+  - rpmdevtools
+  - wget
+
+  # NCT
+  - fuse-overlayfs
+  - gcc
   - podman
-  - which
 
 hash: >
   @hash(
