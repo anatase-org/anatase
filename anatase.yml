@@ -16,6 +16,9 @@ repos:
     priority: 20
     releasever: $releasever
     basearch: $arch
+
+bootstrap: cards/bootstrap.yml
+
 cards:
   - cards/base
   - cards/base/utils

@@ -1,0 +1,9 @@
+version: 1
+
+packages:
+  - bash
+  - coreutils
+  - dnf5
+  - filesystem
+  - rpm
+  - setup

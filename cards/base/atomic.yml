@@ -8,7 +8,6 @@ packages:
   - bootupd
 
   # Package management
-  - dnf5
   - dnf5-plugins
   - fedora-repos-archive
 
