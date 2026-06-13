@@ -5,7 +5,7 @@ env:
   nvidia: "610.43.02"
 
 distro: f$releasever
-bootstrap: quay.io/fedora/fedora:$releasever
+orchestrator: quay.io/fedora/fedora:$releasever
 
 repos:
   - repo: fedora
