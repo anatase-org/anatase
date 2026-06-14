@@ -26,14 +26,6 @@ build-deps:
   - which
   - xz
 
-  # Driver
-  - git
-  - make
-  - mock
-  - mock-core-configs
-  - rpmdevtools
-  - wget
-
   # NCT
   - fuse-overlayfs
   - gcc
