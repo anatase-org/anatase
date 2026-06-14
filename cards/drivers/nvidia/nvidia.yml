@@ -120,9 +120,8 @@ specs:
     replace:
       Version: $version
     upstream:
-      type: git
+      type: dist-git
       url: https://github.com/negativo17/nvidia-kmod-common
-      branch: master
 
   - spec: nvidia-settings/nvidia-settings.spec
     packages:
@@ -131,9 +130,8 @@ specs:
     replace:
       Version: $version
     upstream:
-      type: git
+      type: dist-git
       url: https://github.com/negativo17/nvidia-settings
-      branch: master
 
   - spec: nvidia-modprobe/nvidia-modprobe.spec
     packages:
@@ -141,9 +139,8 @@ specs:
     replace:
       Version: $version
     upstream:
-      type: git
+      type: dist-git
       url: https://github.com/negativo17/nvidia-modprobe
-      branch: master
 
   - spec: nvidia-persistenced/nvidia-persistenced.spec
     packages:
@@ -151,9 +148,8 @@ specs:
     replace:
       Version: $version
     upstream:
-      type: git
+      type: dist-git
       url: https://github.com/negativo17/nvidia-persistenced
-      branch: master
 
   - spec: nvidia-driver/nvidia-driver.spec
     packages:
@@ -185,14 +181,12 @@ specs:
     replace:
       Version: $version
     upstream:
-      type: git
+      type: dist-git
       url: https://github.com/negativo17/nvidia-driver
-      branch: master
 
   - spec: nvidia-driver-selinux/nvidia-driver-selinux.spec
     packages:
       - nvidia-driver-selinux
     upstream:
-      type: git
+      type: dist-git
       url: https://github.com/negativo17/nvidia-driver-selinux
-      branch: master

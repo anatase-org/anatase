@@ -1,13 +1,12 @@
-upstream:
-  nvidia-driver:
-    merge-ref: ad149cc603525725e39e6d5748e1f9be25b95fa0
-  nvidia-driver-selinux:
-    merge-ref: 4bba0e06d8b86bb1fc2066c285c1d9b5a2408561
-  nvidia-kmod-common:
-    merge-ref: e34bfa1917c7cb99ed42926490b784cf53d627ec
-  nvidia-modprobe:
-    merge-ref: 0099b0108c920091989e0560b7514a870e8e4a93
-  nvidia-persistenced:
-    merge-ref: 89943d84991a960490c91984ae2e3920be5e8e5a
-  nvidia-settings:
-    merge-ref: 8f7ddfe5e902bd9061a72496d3e8394b884ca298
+nvidia-driver:
+  upstream-sha: e2142f9d69bd4e17a62d5726df22bce633718f9e
+nvidia-driver-selinux:
+  upstream-sha: 4bba0e06d8b86bb1fc2066c285c1d9b5a2408561
+nvidia-kmod-common:
+  upstream-sha: 3c81dd9506db523cc18413f9c0ba007678580113
+nvidia-modprobe:
+  upstream-sha: 3df140d89261166fd4ba07a6c8f4bad4c0ec2b73
+nvidia-persistenced:
+  upstream-sha: 33d7267af31ba850592921a8d40dd2b32b71c1ec
+nvidia-settings:
+  upstream-sha: 8f3e5e6c317efa22b63a98cda0d31cfe4090c8ab
