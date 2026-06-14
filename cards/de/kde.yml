@@ -1,6 +1,5 @@
 version: 1
 
-priority: 10
 
 packages:
   # Networking

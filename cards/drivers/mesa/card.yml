@@ -1,6 +1,5 @@
 version: 1
 
-priority: 8
 
 build-deps:
   - bash
@@ -17,6 +16,8 @@ build-deps:
 
 packages:
   x86_64:
+    - vulkan-loader
+    - libdisplay-info
     # 32-bit runtime dependencies for the locally built Mesa multilib RPMs
     - elfutils-libelf.i686
     - expat.i686
@@ -26,7 +27,6 @@ packages:
     - libXau.i686
     - libXext.i686
     - libXxf86vm.i686
-    - libdisplay-info
     - libdisplay-info.i686
     - libdrm.i686
     - libedit.i686

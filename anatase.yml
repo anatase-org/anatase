@@ -26,14 +26,14 @@ repos:
 bootstrap: cards/bootstrap.yml
 
 cards:
-  - cards/base
-  - cards/base/utils
   - cards/base/kernel
-  - cards/base/grub
   - cards/base/firmware
+  - cards/drivers/mesa # mesa is required by base packages
+  - cards/base/base
+  - cards/base/grub
+  - cards/base/utils
   - cards/base/atomic
   - cards/base/virt
-  - cards/drivers/mesa
   - cards/drivers/nvidia/nvidia
   - cards/drivers/nvidia/nct
   - cards/de/kde
