@@ -5,7 +5,7 @@
 %global __brp_strip %{nil}
 
 Name:           nvidia-kmod-common
-Version:        595.58.03
+Version:        610.43.02
 Release:        1%{?dist}
 Summary:        Common file for NVIDIA's proprietary driver kernel modules
 Epoch:          3
@@ -61,9 +61,6 @@ install -p -m 644 -D %{SOURCE21} %{buildroot}%{_udevrulesdir}/60-nvidia.rules
 mkdir -p %{buildroot}%{_prefix}/lib/firmware/nvidia/%{version}/
 install -p -m 644 firmware/* %{buildroot}%{_prefix}/lib/firmware/nvidia/%{version}
 
-# Bug report script
-install -p -m 755 -D nvidia-bug-report.sh %{buildroot}%{_bindir}/nvidia-bug-report.sh
-
 %post
 %{_bindir}/nvidia-boot-update post
 
@@ -73,7 +70,6 @@ if [ "$1" -eq "0" ]; then
 fi ||:
 
 %files
-%{_bindir}/nvidia-bug-report.sh
 %{_dracut_conf_d}/99-nvidia.conf
 %{_modprobedir}/nvidia.conf
 %dir %{_prefix}/lib/firmware
@@ -84,6 +80,13 @@ fi ||:
 %{_udevrulesdir}/60-nvidia.rules
 
 %changelog
+* Tue May 26 2026 Simone Caronni <negativo17@gmail.com> - 3:610.43.02-1
+- Update to 610.43.02.
+- Move bug report script to nvidia-common subpackage.
+
+* Tue Apr 28 2026 Simone Caronni <negativo17@gmail.com> - 3:595.71.05-1
+- Update to 595.71.05.
+
 * Tue Mar 24 2026 Simone Caronni <negativo17@gmail.com> - 3:595.58.03-1
 - Update to 595.58.03.
 

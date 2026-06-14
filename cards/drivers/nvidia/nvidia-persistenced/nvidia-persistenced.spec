@@ -1,5 +1,5 @@
 Name:           nvidia-persistenced
-Version:        595.58.03
+Version:        610.43.02
 Release:        1%{?dist}
 Summary:        A daemon to maintain persistent software state in the NVIDIA driver
 Epoch:          3
@@ -21,7 +21,8 @@ BuildRequires:  systemd-rpm-macros
 Requires(post):     systemd
 Requires(preun):    systemd
 Requires(postun):   systemd
-Requires:           libnvidia-cfg%{?_isa} >= %{?epoch:%{epoch}:}%{version}
+# dlopened: libnvidia-cfg
+Requires:           nvidia-driver-common%{?_isa} >= %{?epoch:%{epoch}:}%{version}
 
 %description
 The %{name} utility is used to enable persistent software state in the NVIDIA
@@ -75,6 +76,12 @@ install -p -D -m 0644 %{SOURCE2} %{buildroot}%{_sysusersdir}/%{name}.conf
 %{_sysusersdir}/%{name}.conf
 
 %changelog
+* Tue May 26 2026 Simone Caronni <negativo17@gmail.com> - 3:610.43.02-1
+- Update to 610.43.02.
+
+* Tue Apr 28 2026 Simone Caronni <negativo17@gmail.com> - 3:595.71.05-1
+- Update to 595.71.05.
+
 * Tue Mar 24 2026 Simone Caronni <negativo17@gmail.com> - 3:595.58.03-1
 - Update to 595.58.03.
 
