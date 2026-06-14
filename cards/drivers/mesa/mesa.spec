@@ -96,6 +96,8 @@ Source0:        https://archive.mesa3d.org/mesa-%{ver}.tar.xz
 # Fedora opts to ignore the optional part of clause 2 and treat that code as 2 clause BSD.
 Source1:        Mesa-MLAA-License-Clarification-Email.txt
 
+Patch99:         overrides.patch
+
 # In CentOS/RHEL, Rust crates required to build NVK are vendored.
 # The minimum target versions are obtained from the .wrap files
 # https://gitlab.freedesktop.org/mesa/mesa/-/tree/main/subprojects

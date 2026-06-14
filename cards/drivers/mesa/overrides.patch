@@ -1,0 +1,317 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sat, 15 Mar 2025 16:38:53 +0100
+Subject: [NA] Developer files, readme, etc
+
+---
+ Containerfile | 117 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ sync.sh       |  93 +++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 210 insertions(+)
+ create mode 100644 Containerfile
+ create mode 100755 sync.sh
+
+diff --git a/Containerfile b/Containerfile
+new file mode 100644
+index 000000000000..9bfb6955a0fc
+--- /dev/null
++++ b/Containerfile
+@@ -0,0 +1,117 @@
++ARG FEDORA_VERSION=44
++
++FROM fedora:${FEDORA_VERSION}
++
++# noarch
++RUN dnf5 install -y \
++    meson \
++    python3-mako \
++    python3-ply \
++    python3-pycparser \
++    rust-paste-devel \
++    rust-proc-macro2-devel \
++    rust-quote-devel \
++    cargo-rpm-macros \
++    rust-syn+clone-impls-devel \
++    rust-unicode-ident-devel \
++    vulkan-headers \
++    wayland-protocols-devel \
++    xorg-x11-proto-devel \
++    && dnf5 clean all
++
++# x86_64
++RUN dnf5 install -y \
++    bindgen-cli \
++    bison \
++    cbindgen \
++    clang-devel \
++    elfutils-libelf-devel \
++    expat-devel \
++    flex \
++    gcc \
++    gettext \
++    glslang \
++    kernel-headers \
++    libX11-devel \
++    libXdamage-devel \
++    libXext-devel \
++    libXfixes-devel \
++    libXrandr-devel \
++    libXxf86vm-devel \
++    libclc-devel \
++    libdrm-devel \
++    libglvnd-core-devel \
++    libselinux-devel \
++    libunwind-devel \
++    libva-devel \
++    libvdpau-devel \
++    libxcb-devel \
++    libxshmfence-devel \
++    libzstd-devel \
++    python3-devel \
++    lm_sensors-devel \
++    python3-pyyaml \
++    valgrind-devel \
++    spirv-llvm-translator-devel \
++    spirv-tools-devel \
++    vulkan-loader-devel \
++    wayland-devel \
++    zlib-ng-compat-devel
++
++# x86
++RUN dnf5 install -y \
++    clang-devel.i686 \
++    elfutils-libelf-devel.i686 \
++    expat-devel.i686 \
++    glslang.i686 \
++    kernel-headers.i686 \
++    libX11-devel.i686 \
++    libXdamage-devel.i686 \
++    libXext-devel.i686 \
++    libXfixes-devel.i686 \
++    libXrandr-devel.i686 \
++    libXxf86vm-devel.i686 \
++    libclc-devel.i686 \
++    libdrm-devel.i686 \
++    libglvnd-core-devel.i686 \
++    libselinux-devel.i686 \
++    libunwind-devel.i686 \
++    libva-devel.i686 \
++    libvdpau-devel.i686 \
++    libxcb-devel.i686 \
++    libxshmfence-devel.i686 \
++    libzstd-devel.i686 \
++    python3-devel.i686 \
++    lm_sensors-devel.i686 \
++    valgrind-devel.i686 \
++    spirv-llvm-translator-devel.i686 \
++    spirv-tools-devel.i686 \
++    vulkan-loader-devel.i686 \
++    wayland-devel.i686 \
++    zlib-ng-compat-devel.i686 \
++    pkgconf-pkg-config.i686
++
++# these do not have an i686 version
++# bindgen-cli.i686 \
++# bison.i686 \
++# cbindgen.i686 \
++# flex.i686 \
++# gcc.i686 \
++# gettext.i686 \
++# python3-pyyaml.i686 \
++
++RUN dnf install -y ccache
++
++ARG UID=1000
++ARG GID=1000
++
++RUN groupadd -g $GID -o builder && \
++    useradd -m -u $UID -g $GID -o -s /bin/bash builder && \
++    echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder && \
++    chmod 0440 /etc/sudoers.d/builder
++
++USER builder
++
++ENV PATH="/usr/lib64/ccache/:$PATH"
++
++WORKDIR /workspace
+\ No newline at end of file
+diff --git a/sync.sh b/sync.sh
+new file mode 100755
+index 000000000000..504e273b90f7
+--- /dev/null
++++ b/sync.sh
+@@ -0,0 +1,93 @@
++if [ -z "$1" ]; then
++    echo "Usage: $0 <host>"
++    exit 1
++fi
++
++# https://gist.github.com/Venemo/a9483106565df3a83fc67a411191edbd
++
++RHOST=$1
++RSYNC="rsync -rv --exclude .git --exclude venv --exclude __pycache__ --links"
++DEVUSER=${DEVUSER:-user}
++
++# If RHOST=claw, set driver name to intel
++if [ "$RHOST" = "claw" ]; then
++    echo "Using Intel driver"
++    DRIVER_NAME=intel
++    VKICD_NAME=intel
++    GALLIUM_DRIVER=iris
++else
++    echo "Using AMD driver"
++    DRIVER_NAME=amd
++    VKICD_NAME=radeon
++    GALLIUM_DRIVER=radeonsi
++fi
++
++set -e -x
++
++sudo podman build . --tag mesa_builder \
++    --build-arg UID=$(id -u) --build-arg GID=$(id -g)
++
++PODMAN_RUN="sudo podman run --rm -v $(pwd):/workspace \
++  --env CCACHE_DIR=/workspace/.cache \
++  --env CCACHE_MAXSIZE=5G \
++  --env CCACHE_COMPRESS=1 \
++    -it mesa_builder"
++
++$PODMAN_RUN rm -rf build64 build32
++
++$PODMAN_RUN meson setup build64 --libdir lib64 --prefix /workspace/.out \
++    -Dgallium-drivers=swrast,zink,$GALLIUM_DRIVER -Dvulkan-drivers=$DRIVER_NAME \
++    -Dgallium-nine=true -Dbuildtype=release \
++    -Dvideo-codecs=h264dec,h264enc,h265dec,h265enc,vc1dec
++
++# Cross-file for arch: lib32, fedora: ./gcc-i686
++$PODMAN_RUN meson setup build32 --libdir lib --prefix /workspace/.out \
++    -Dgallium-drivers=swrast,zink,$GALLIUM_DRIVER -Dvulkan-drivers=$DRIVER_NAME \
++    -Dgallium-nine=true -Dbuildtype=release \
++    -Dvideo-codecs=h264dec,h264enc,h265dec,h265enc,vc1dec
++
++time $PODMAN_RUN ninja -C build64 install
++
++time $PODMAN_RUN ninja -C build32 install
++
++RUNCONFIG=$(cat << EOF
++
++
++MESA=/home/$DEVUSER/.out
++
++export LD_LIBRARY_PATH=\$MESA/lib64:\$MESA/lib:\$LD_LIBRARY_PATH
++export LIBGL_DRIVERS_PATH=\$MESA/lib64/dri:\$MESA/lib/dri
++export EGL_DRIVERS_PATH=\$MESA/lib64/dri:\$MESA/lib/dri
++export VK_ICD_FILENAMES=\$MESA/share/vulkan/icd.d/${VKICD_NAME}_icd.x86_64.json:\$MESA/share/vulkan/icd.d/${VKICD_NAME}_icd.i686.json
++export LIBVA_DRIVERS_PATH=\$MESA/lib64/dri:\$MESA/lib/dri
++export VDPAU_DRIVER_PATH=\$MESA/lib64/vdpau
++export D3D_MODULE_PATH=\$MESA/lib64/d3d/d3dadapter9.so.1:\$MESA/lib/d3d/d3dadapter9.so.1
++# export ENABLE_GAMESCOPE_WSI=0
++
++EOF
++)
++
++ssh $RHOST /bin/bash << EOF
++    rm -rf .out
++    mkdir -p .out
++EOF
++
++echo "$RUNCONFIG" > .out/runconfig
++
++# Fixup vunkan_icd install dir
++sed -i "s|/workspace/.out|/home/$DEVUSER/.out|g" .out/share/vulkan/icd.d/*.json
++
++$RSYNC .out/ $RHOST:.out/
++
++ssh $RHOST /bin/bash << EOF
++    sudo rpm-ostree usroverlay --hotfix
++
++    # check if session does not have D3D_MODULE_PATH
++    if ! grep -q D3D_MODULE_PATH /usr/share/gamescope-session-plus/device-quirks; then
++        cat ~/.out/runconfig | sudo tee -a /usr/share/gamescope-session-plus/device-quirks
++    fi
++
++    # sudo rsync -r -v ~/.out/* /usr/
++    
++    sudo reboot
++EOF
+-- 
+2.54.0
+
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sat, 15 Mar 2025 16:39:08 +0100
+Subject: [BEGIN] SteamOS Changes
+
+-- 
+2.54.0
+
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bas Nieuwenhuizen <bas@basnieuwenhuizen.nl>
+Date: Fri, 14 Jan 2022 15:58:45 +0100
+Subject: STEAMOS: radv: min image count override for FH5
+
+Otherwise in combination with the vblank time reservation in
+gamescope the game could get stuck in low power states.
+---
+ src/util/00-radv-defaults.conf | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/util/00-radv-defaults.conf b/src/util/00-radv-defaults.conf
+index 7dcb1644293c..a6dec2989d15 100644
+--- a/src/util/00-radv-defaults.conf
++++ b/src/util/00-radv-defaults.conf
+@@ -336,5 +336,9 @@ Application bugs worked around in this file:
+         <application name="No Man's Sky" application_name_match="No Man's Sky">
+             <option name="radv_app_layer" value="no_mans_sky" />
+         </application>
++
++        <application name="Forza Horizon 5" application_name_match="ForzaHorizon5.exe">
++            <option name="vk_x11_override_min_image_count" value="4" />
++        </application>
+     </device>
+ </driconf>
+-- 
+2.54.0
+
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Samuel Pitoiset <samuel.pitoiset@gmail.com>
+Date: Mon, 1 Jun 2026 14:11:29 +0200
+Subject: STEAMOS: radv: enable radv_vm_explicit_sync for Forza Horizon 4
+
+It's likely also affected but it's unverified.
+
+Signed-off-by: Samuel Pitoiset <samuel.pitoiset@gmail.com>
+---
+ src/util/00-radv-defaults.conf | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/util/00-radv-defaults.conf b/src/util/00-radv-defaults.conf
+index a6dec2989d15..5854b9613c4c 100644
+--- a/src/util/00-radv-defaults.conf
++++ b/src/util/00-radv-defaults.conf
+@@ -251,6 +251,11 @@ Application bugs worked around in this file:
+             <option name="radv_gfx12_hiz_wa" value="partial" />
+         </application>
+ 
++        <application name="Forza Horizon 4" application_name_match="ForzaHorizon4.exe">
++            <!-- Use explicit sync to mitigate stutters in gameplay -->
++            <option name="radv_vm_explicit_sync" value="true" />
++        </application>
++
+         <application name="Forza Horizon 5" application_name_match="ForzaHorizon5.exe">
+             <!-- The full WA hurts performance too much, use the partial one
+                  that seems fine overall. -->
+-- 
+2.54.0
+
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sun, 14 Jun 2026 14:18:09 +0200
+Subject: [BEGIN] Our backports
+
+-- 
+2.54.0
+
