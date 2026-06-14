@@ -1,2 +1,3 @@
 mesa:
   upstream-sha: a33f6a69c6889e61c9d30e59a3e12a02ed009f2a
+  patch-sha: 97341aa7d7c340c9a4dbec192795dadd733b5846
