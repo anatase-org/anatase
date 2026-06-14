@@ -123,8 +123,6 @@ packages:
   - gstreamer1-plugins-good
   - gstreamer1-plugins-ugly-free
   - libglvnd-gles
-  - mesa-dri-drivers
-  - mesa-vulkan-drivers
   - pipewire-alsa
   - pipewire-config-raop
   - pipewire-gstreamer

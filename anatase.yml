@@ -7,6 +7,11 @@ env:
 releasever: $releasever
 distro: f$releasever-$arch
 orchestrator: quay.io/fedora/fedora:$releasever
+orchestrator-deps:
+  # Required for rpmbuild deps to resolve correctly
+  # particularly in mesa
+  - redhat-rpm-config
+  - cargo-rpm-macros
 
 repos:
   - repo: fedora
@@ -28,6 +33,7 @@ cards:
   - cards/base/firmware
   - cards/base/atomic
   - cards/base/virt
+  - cards/drivers/mesa
   - cards/drivers/nvidia/nvidia
   - cards/drivers/nvidia/nct
   - cards/de/kde

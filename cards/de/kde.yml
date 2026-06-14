@@ -97,8 +97,6 @@ packages:
 
   # Graphics and media
   - libappindicator-gtk3
-  - mesa-dri-drivers
-  - mesa-vulkan-drivers
   - phonon-qt6-backend-vlc
   - vlc-plugin-gstreamer
   - vulkan-tools
