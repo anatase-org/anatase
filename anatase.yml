@@ -2,7 +2,7 @@ version: 1
 
 env:
   releasever: 44
-  nvidia: "595.58.03"
+  nvidia: "610.43.02"
 
 releasever: $releasever
 distro: f$releasever-$arch
