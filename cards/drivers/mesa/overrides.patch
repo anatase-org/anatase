@@ -233,18 +233,11 @@ index 000000000000..504e273b90f7
 +    
 +    sudo reboot
 +EOF
--- 
-2.54.0
-
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
 Date: Sat, 15 Mar 2025 16:39:08 +0100
 Subject: [BEGIN] SteamOS Changes
-
--- 
-2.54.0
-
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Bas Nieuwenhuizen <bas@basnieuwenhuizen.nl>
@@ -258,22 +251,20 @@ gamescope the game could get stuck in low power states.
  1 file changed, 4 insertions(+)
 
 diff --git a/src/util/00-radv-defaults.conf b/src/util/00-radv-defaults.conf
-index 7dcb1644293c..a6dec2989d15 100644
+index 9df6d0434b31..7ed750907036 100644
 --- a/src/util/00-radv-defaults.conf
 +++ b/src/util/00-radv-defaults.conf
-@@ -336,5 +336,9 @@ Application bugs worked around in this file:
-         <application name="No Man's Sky" application_name_match="No Man's Sky">
-             <option name="radv_app_layer" value="no_mans_sky" />
+@@ -338,6 +338,10 @@ Application bugs worked around in this file:
+             <option name="radv_zero_vram" value="true"/>
          </application>
-+
+ 
 +        <application name="Forza Horizon 5" application_name_match="ForzaHorizon5.exe">
 +            <option name="vk_x11_override_min_image_count" value="4" />
 +        </application>
-     </device>
- </driconf>
--- 
-2.54.0
-
++
+         <application name="No Man's Sky" application_name_match="No Man's Sky">
+             <option name="radv_app_layer" value="no_mans_sky" />
+         </application>
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Samuel Pitoiset <samuel.pitoiset@gmail.com>
@@ -288,7 +279,7 @@ Signed-off-by: Samuel Pitoiset <samuel.pitoiset@gmail.com>
  1 file changed, 5 insertions(+)
 
 diff --git a/src/util/00-radv-defaults.conf b/src/util/00-radv-defaults.conf
-index a6dec2989d15..5854b9613c4c 100644
+index 7ed750907036..5e38ca34dd88 100644
 --- a/src/util/00-radv-defaults.conf
 +++ b/src/util/00-radv-defaults.conf
 @@ -251,6 +251,11 @@ Application bugs worked around in this file:
@@ -303,15 +294,8 @@ index a6dec2989d15..5854b9613c4c 100644
          <application name="Forza Horizon 5" application_name_match="ForzaHorizon5.exe">
              <!-- The full WA hurts performance too much, use the partial one
                   that seems fine overall. -->
--- 
-2.54.0
-
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
 Date: Sun, 14 Jun 2026 14:18:09 +0200
 Subject: [BEGIN] Our backports
-
--- 
-2.54.0
-
