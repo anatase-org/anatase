@@ -1,24 +1,6 @@
 [submodule "ludos"]
 	path = ludos
 	url = git@github.com:anatase-org/ludos.git
-[submodule "cards/drivers/nvidia/nvidia-driver"]
-	path = cards/drivers/nvidia/nvidia-driver
-	url = https://github.com/negativo17/nvidia-driver
-[submodule "cards/drivers/nvidia/nvidia-settings"]
-	path = cards/drivers/nvidia/nvidia-settings
-	url = https://github.com/negativo17/nvidia-settings
-[submodule "cards/drivers/nvidia/nvidia-persistenced"]
-	path = cards/drivers/nvidia/nvidia-persistenced
-	url = https://github.com/negativo17/nvidia-persistenced
 [submodule "cards/drivers/nvidia/nvidia-container-toolkit"]
 	path = cards/drivers/nvidia/nvidia-container-toolkit
 	url = https://github.com/NVIDIA/nvidia-container-toolkit
-[submodule "cards/drivers/nvidia/nvidia-kmod-common"]
-	path = cards/drivers/nvidia/nvidia-kmod-common
-	url = https://github.com/negativo17/nvidia-kmod-common
-[submodule "cards/drivers/nvidia/nvidia-modprobe"]
-	path = cards/drivers/nvidia/nvidia-modprobe
-	url = https://github.com/negativo17/nvidia-modprobe
-[submodule "cards/drivers/nvidia/nvidia-driver-selinux"]
-	path = cards/drivers/nvidia/nvidia-driver-selinux
-	url = https://github.com/negativo17/nvidia-driver-selinux

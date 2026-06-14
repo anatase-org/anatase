@@ -63,44 +63,136 @@ packages:
   - vulkan-loader.i686
 
 build-deps:
-  # Base
   - bash
   - coreutils
-  - dnf5
-  - dnf5-plugins
   - findutils
   - gawk
   - grep
+  - make
+  - rpm-build
+  - rpmdevtools
   - sed
   - tar
-  - which
+  - wget
   - xz
 
-  # Driver
-  - git
-  - make
-  - mock
-  - mock-core-configs
-  - rpmdevtools
-  - wget
-
-  # NCT
-  - fuse-overlayfs
-  - gcc
-  - podman
-
-hash: >
-  $version-@hash(
-    nvidia.yml,
-    build.sh,
-    nvidia-driver,
-    nvidia-driver-selinux,
-    nvidia-kmod-common,
-    nvidia-modprobe,
-    nvidia-persistenced,
-    nvidia-settings
-  )
-
-build: |
+prepare: |
   set -eux
-  ./build.sh
+  VERSION="${version}"
+  driver_dir="nvidia-driver"
+
+  mkdir -p /cache/artifacts
+  find /cache/artifacts -maxdepth 1 -type f -name 'NVIDIA-*.run' \
+    -exec cp -n -t "$driver_dir" {} + || true
+  find /cache/artifacts -maxdepth 1 -type f -name '*.tar.xz' \
+    -exec cp -n -t "$driver_dir" {} + || true
+
+  if [ "$arch" = "aarch64" ]; then
+    driver_arches="aarch64"
+  else
+    driver_arches="x86_64"
+  fi
+
+  have_sources() {
+    [ -f "$driver_dir/nvidia-kmod-common-${VERSION}.tar.xz" ] || return 1
+    if [ "$arch" = "aarch64" ]; then
+      [ -f "$driver_dir/nvidia-driver-${VERSION}-aarch64.tar.xz" ] || return 1
+    else
+      [ -f "$driver_dir/nvidia-driver-${VERSION}-x86_64.tar.xz" ] || return 1
+      [ -f "$driver_dir/nvidia-driver-${VERSION}-i386.tar.xz" ] || return 1
+    fi
+  }
+
+  if ! have_sources; then
+    (cd "$driver_dir" && ARCHES="$driver_arches" VERSION="$VERSION" bash ./nvidia-generate-tarballs.sh)
+  fi
+
+  find "$driver_dir" -maxdepth 1 -type f -name 'NVIDIA-*.run' \
+    -exec cp -n -t /cache/artifacts {} + || true
+  find "$driver_dir" -maxdepth 1 -type f -name '*.tar.xz' \
+    -exec cp -n -t /cache/artifacts {} + || true
+  cp -f "$driver_dir/nvidia-kmod-common-${VERSION}.tar.xz" nvidia-kmod-common/
+
+specs:
+  - spec: nvidia-kmod-common/nvidia-kmod-common.spec
+    packages:
+      - nvidia-kmod-common
+    replace:
+      Version: $version
+    upstream:
+      type: git
+      url: https://github.com/negativo17/nvidia-kmod-common
+      branch: master
+
+  - spec: nvidia-settings/nvidia-settings.spec
+    packages:
+      - nvidia-settings
+      - nvidia-libXNVCtrl
+    replace:
+      Version: $version
+    upstream:
+      type: git
+      url: https://github.com/negativo17/nvidia-settings
+      branch: master
+
+  - spec: nvidia-modprobe/nvidia-modprobe.spec
+    packages:
+      - nvidia-modprobe
+    replace:
+      Version: $version
+    upstream:
+      type: git
+      url: https://github.com/negativo17/nvidia-modprobe
+      branch: master
+
+  - spec: nvidia-persistenced/nvidia-persistenced.spec
+    packages:
+      - nvidia-persistenced
+    replace:
+      Version: $version
+    upstream:
+      type: git
+      url: https://github.com/negativo17/nvidia-persistenced
+      branch: master
+
+  - spec: nvidia-driver/nvidia-driver.spec
+    packages:
+      aarch64:
+        - nvidia-driver
+        - nvidia-driver-libs
+        - nvidia-driver-cuda
+        - nvidia-driver-cuda-libs
+        - libnvidia-cfg
+        - libnvidia-fbc
+        - libnvidia-gpucomp
+        - libnvidia-ml
+        - xorg-x11-nvidia
+      x86_64:
+        - nvidia-driver
+        - nvidia-driver-libs
+        - nvidia-driver-cuda
+        - nvidia-driver-cuda-libs
+        - libnvidia-cfg
+        - libnvidia-fbc
+        - libnvidia-gpucomp
+        - libnvidia-ml
+        - xorg-x11-nvidia
+        - nvidia-driver-libs.i686
+        - nvidia-driver-cuda-libs.i686
+        - libnvidia-fbc.i686
+        - libnvidia-gpucomp.i686
+        - libnvidia-ml.i686
+    replace:
+      Version: $version
+    upstream:
+      type: git
+      url: https://github.com/negativo17/nvidia-driver
+      branch: master
+
+  - spec: nvidia-driver-selinux/nvidia-driver-selinux.spec
+    packages:
+      - nvidia-driver-selinux
+    upstream:
+      type: git
+      url: https://github.com/negativo17/nvidia-driver-selinux
+      branch: master
