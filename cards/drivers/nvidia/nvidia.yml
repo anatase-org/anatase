@@ -158,26 +158,21 @@ specs:
         - nvidia-driver-libs
         - nvidia-driver-cuda
         - nvidia-driver-cuda-libs
-        - libnvidia-cfg
+        - nvidia-driver-common
         - libnvidia-fbc
-        - libnvidia-gpucomp
-        - libnvidia-ml
         - xorg-x11-nvidia
       x86_64:
         - nvidia-driver
         - nvidia-driver-libs
         - nvidia-driver-cuda
         - nvidia-driver-cuda-libs
-        - libnvidia-cfg
+        - nvidia-driver-common
         - libnvidia-fbc
-        - libnvidia-gpucomp
-        - libnvidia-ml
         - xorg-x11-nvidia
         - nvidia-driver-libs.i686
         - nvidia-driver-cuda-libs.i686
+        - nvidia-driver-common.i686
         - libnvidia-fbc.i686
-        - libnvidia-gpucomp.i686
-        - libnvidia-ml.i686
     replace:
       Version: $version
     upstream:
