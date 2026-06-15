@@ -1,34 +1,33 @@
 version: 1
 
-
 packages:
-  - efibootmgr
-  - grub2-efi-ia32
-  - grub2-efi-x64
-  - grub2-pc
-  - shim-ia32
-  - shim-x64
+    - efibootmgr
+    - grub2-efi-ia32
+    - grub2-efi-x64
+    - grub2-pc
+    - shim-ia32
+    - shim-x64
 
 files:
-  - grub-boot-remount
-  - grub-boot-success
-  - grub-boot-success.service
-  - grub-boot-success.timer
+    - grub-boot-remount
+    - grub-boot-success
+    - grub-boot-success.service
+    - grub-boot-success.timer
 
 postprocess: |
-  set -eux
+    set -eux
 
-  install -Dm0755 /files/grub-boot-remount \
-      /usr/libexec/grub-boot-remount
-  install -Dm0755 /files/grub-boot-success \
-      /usr/libexec/grub-boot-success
-  install -Dm0644 /files/grub-boot-success.service \
-      /usr/lib/systemd/system/grub-boot-success.service
-  install -Dm0644 /files/grub-boot-success.timer \
-      /usr/lib/systemd/system/grub-boot-success.timer
+    install -Dm0755 /files/grub-boot-remount \
+        /usr/libexec/grub-boot-remount
+    install -Dm0755 /files/grub-boot-success \
+        /usr/libexec/grub-boot-success
+    install -Dm0644 /files/grub-boot-success.service \
+        /usr/lib/systemd/system/grub-boot-success.service
+    install -Dm0644 /files/grub-boot-success.timer \
+        /usr/lib/systemd/system/grub-boot-success.timer
 
-  systemctl enable grub-boot-success.timer
-  systemctl enable grub-boot-success.service
+    systemctl enable grub-boot-success.timer
+    systemctl enable grub-boot-success.service
 
-  systemctl --global disable grub-boot-success.timer || true
-  systemctl disable grub-boot-indeterminate.service || true
+    systemctl --global disable grub-boot-success.timer || true
+    systemctl disable grub-boot-indeterminate.service || true

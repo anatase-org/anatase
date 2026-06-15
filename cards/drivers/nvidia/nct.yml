@@ -1,6 +1,5 @@
 version: 1
 
-
 packages:
   # Shell and libc runtime
   - bash

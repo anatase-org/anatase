@@ -1,5 +1,4 @@
 version: 1
-
 packages:
   # Local virtualization backend
   - edk2-ovmf

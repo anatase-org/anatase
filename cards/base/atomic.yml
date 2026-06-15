@@ -1,60 +1,59 @@
 version: 1
 
-
 packages:
-  # Atomic boot
-  - bootc
-  - bootupd
+    # Atomic boot
+    - bootc
+    - bootupd
 
-  # Package management
-  - dnf5-plugins
-  - fedora-repos-archive
+    # Package management
+    - dnf5-plugins
+    - fedora-repos-archive
 
-  # Image layering
-  - rpm-ostree
+    # Image layering
+    - rpm-ostree
 
 postprocess: |
-  set -eux
+    set -eux
 
-  install -dm0755 /usr/lib/ostree
-  cat > /usr/lib/ostree/prepare-root.conf <<'EOF'
-  [sysroot]
-  readonly = true
+    install -dm0755 /usr/lib/ostree
+    cat > /usr/lib/ostree/prepare-root.conf <<'EOF'
+    [sysroot]
+    readonly = true
 
-  [composefs]
-  enabled = yes
-  EOF
+    [composefs]
+    enabled = yes
+    EOF
 
-  for glibc_post_upgrade in /usr/sbin/glibc_post_upgrade.*; do
-      if [ -f "${glibc_post_upgrade}" ]; then
-          ln -srf /usr/bin/true "${glibc_post_upgrade}"
-      fi
-  done
+    for glibc_post_upgrade in /usr/sbin/glibc_post_upgrade.*; do
+        if [ -f "${glibc_post_upgrade}" ]; then
+            ln -srf /usr/bin/true "${glibc_post_upgrade}"
+        fi
+    done
 
-  rm -rf /usr/lib/ostree-boot/loader
+    rm -rf /usr/lib/ostree-boot/loader
 
-  rm -rf /etc/systemd/system/*
-  systemctl preset-all || true
-  rm -rf /etc/systemd/user/*
-  systemctl --user --global preset-all || true
+    rm -rf /etc/systemd/system/*
+    systemctl preset-all || true
+    rm -rf /etc/systemd/user/*
+    systemctl --user --global preset-all || true
 
-  install -dm0755 /usr/lib/systemd/system-preset /usr/lib/tmpfiles.d
-  cat > /usr/lib/tmpfiles.d/90-atomic-desktops-ownership-fixes.conf <<'EOF'
-  Z /var/lib/passim - passim passim
-  Z /var/log/passim - passim passim
-  Z /etc/colord/    - colord colord
-  EOF
+    install -dm0755 /usr/lib/systemd/system-preset /usr/lib/tmpfiles.d
+    cat > /usr/lib/tmpfiles.d/90-atomic-desktops-ownership-fixes.conf <<'EOF'
+    Z /var/lib/passim - passim passim
+    Z /var/log/passim - passim passim
+    Z /etc/colord/    - colord colord
+    EOF
 
-  if [ -d /usr/lib/ostree-boot ] && command -v bootupctl >/dev/null; then
-      bootupctl backend generate-update-metadata || true
-  fi
+    if [ -d /usr/lib/ostree-boot ] && command -v bootupctl >/dev/null; then
+        bootupctl backend generate-update-metadata || true
+    fi
 
-  install -dm0755 /usr/lib/systemd/system/bootloader-update.service.d
-  cat > /usr/lib/systemd/system/bootloader-update.service.d/migrate-static-grub-config.conf <<'EOF'
-  [Service]
-  ExecStart=/usr/bin/bootupctl migrate-static-grub-config
-  EOF
+    install -dm0755 /usr/lib/systemd/system/bootloader-update.service.d
+    cat > /usr/lib/systemd/system/bootloader-update.service.d/migrate-static-grub-config.conf <<'EOF'
+    [Service]
+    ExecStart=/usr/bin/bootupctl migrate-static-grub-config
+    EOF
 
-  if command -v semanage >/dev/null; then
-      semanage permissive --noreload --add bootupd_t || true
-  fi
+    if command -v semanage >/dev/null; then
+        semanage permissive --noreload --add bootupd_t || true
+    fi

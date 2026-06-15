@@ -1,6 +1,5 @@
 version: 1
 
-
 packages:
   - alsa-sof-firmware
   - amd-gpu-firmware

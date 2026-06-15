@@ -1,186 +1,185 @@
 version: 1
 
-
 packages:
-  # Networking
-  - NetworkManager-config-connectivity-fedora
-  - NetworkManager-ppp
+    # Networking
+    - NetworkManager-config-connectivity-fedora
+    - NetworkManager-ppp
 
-  # KDE applications
-  - akonadi-server
-  - akonadi-server-mysql
-  - ark
-  - audiocd-kio
-  - dolphin
-  - ffmpegthumbs
-  - filelight
-  - kamera
-  - kcharselect
-  - kde-connect
-  - kdebugsettings
-  - kdegraphics-thumbnailers
-  - kdialog
-  - kdnssd
-  - kfind
-  - khelpcenter
-  - kinfocenter
-  - kio-gdrive
-  - kjournald
-  - kmenuedit
-  - konsole
-  - kunifiedpush
-  - kwalletmanager5
-  - kwrite
-  - plasma-discover
-  - plasma-discover-notifier
-  - plasma-discover-rpm-ostree
-  - plasma-systemmonitor
-  - plasma-vault
-  # A bit spammy
-  # - plasma-welcome
-  # - plasma-welcome-fedora
-  - spectacle
+    # KDE applications
+    - akonadi-server
+    - akonadi-server-mysql
+    - ark
+    - audiocd-kio
+    - dolphin
+    - ffmpegthumbs
+    - filelight
+    - kamera
+    - kcharselect
+    - kde-connect
+    - kdebugsettings
+    - kdegraphics-thumbnailers
+    - kdialog
+    - kdnssd
+    - kfind
+    - khelpcenter
+    - kinfocenter
+    - kio-gdrive
+    - kjournald
+    - kmenuedit
+    - konsole
+    - kunifiedpush
+    - kwalletmanager5
+    - kwrite
+    - plasma-discover
+    - plasma-discover-notifier
+    - plasma-discover-rpm-ostree
+    - plasma-systemmonitor
+    - plasma-vault
+    # A bit spammy
+    # - plasma-welcome
+    # - plasma-welcome-fedora
+    - spectacle
 
-  # Plasma desktop
-  - aurorae
-  - breeze-icon-theme
-  - kdeplasma-addons
-  - kf6-baloo-file
-  - kscreen
-  - kscreenlocker
-  - kwin
-  - plasma-breeze
-  - plasma-desktop
-  - plasma-desktop-doc
-  - plasma-drkonqi
-  - plasma-keyboard
-  - plasma-login-manager
-  - plasma-pa
-  - plasma-setup
-  - plasma-workspace
-  - plasma-workspace-wallpapers
-  - polkit-kde
+    # Plasma desktop
+    - aurorae
+    - breeze-icon-theme
+    - kdeplasma-addons
+    - kf6-baloo-file
+    - kscreen
+    - kscreenlocker
+    - kwin
+    - plasma-breeze
+    - plasma-desktop
+    - plasma-desktop-doc
+    - plasma-drkonqi
+    - plasma-keyboard
+    - plasma-login-manager
+    - plasma-pa
+    - plasma-setup
+    - plasma-workspace
+    - plasma-workspace-wallpapers
+    - polkit-kde
 
-  # System settings
-  - colord-kde
-  - firewall-config
-  - flatpak-kcm
-  - fprintd-pam
-  - kaccounts-integration-qt6
-  - kaccounts-providers
-  - kcm-plasmalogin
-  - kde-gtk-config
-  - kde-inotify-survey
-  - kde-settings-plasmalogin
-  - kde-settings-pulseaudio
-  - kio-admin
-  - ksshaskpass
-  - pam-kwallet
-  - pinentry-qt
-  - plasma-disks
-  - plasma-print-manager
-  - plasma-thunderbolt
-  - udisks2
+    # System settings
+    - colord-kde
+    - firewall-config
+    - flatpak-kcm
+    - fprintd-pam
+    - kaccounts-integration-qt6
+    - kaccounts-providers
+    - kcm-plasmalogin
+    - kde-gtk-config
+    - kde-inotify-survey
+    - kde-settings-plasmalogin
+    - kde-settings-pulseaudio
+    - kio-admin
+    - ksshaskpass
+    - pam-kwallet
+    - pinentry-qt
+    - plasma-disks
+    - plasma-print-manager
+    - plasma-thunderbolt
+    - udisks2
 
-  # Network integration
-  - bluedevil
-  - kdenetwork-filesharing
-  - krdp
-  - krfb
-  - mobile-broadband-provider-info
-  - plasma-nm
-  - plasma-nm-openconnect
-  - plasma-nm-openvpn
-  - plasma-nm-vpnc
-  - samba-usershares
+    # Network integration
+    - bluedevil
+    - kdenetwork-filesharing
+    - krdp
+    - krfb
+    - mobile-broadband-provider-info
+    - plasma-nm
+    - plasma-nm-openconnect
+    - plasma-nm-openvpn
+    - plasma-nm-vpnc
+    - samba-usershares
 
-  # Graphics and media
-  - libappindicator-gtk3
-  - phonon-qt6-backend-vlc
-  - vlc-plugin-gstreamer
-  - vulkan-tools
-  - xwaylandvideobridge
+    # Graphics and media
+    - libappindicator-gtk3
+    - phonon-qt6-backend-vlc
+    - vlc-plugin-gstreamer
+    - vulkan-tools
+    - xwaylandvideobridge
 
-  # Boot and theme
-  - plymouth-system-theme
-  - signon-kwallet-extension
+    # Boot and theme
+    - plymouth-system-theme
+    - signon-kwallet-extension
 
-  # System services
-  - systemd-oomd-defaults
-  - thermald
+    # System services
+    - systemd-oomd-defaults
+    - thermald
 
-  # Debugging and X11 tools
-  - gdb
-  - xdpyinfo
+    # Debugging and X11 tools
+    - gdb
+    - xdpyinfo
 
 postprocess: |
-  set -eux
+    set -eux
 
-  install -dm0755 \
-      /etc/xdg \
-      /usr/lib/systemd/system \
-      /usr/lib/systemd/system-preset \
-      /usr/libexec
+    install -dm0755 \
+        /etc/xdg \
+        /usr/lib/systemd/system \
+        /usr/lib/systemd/system-preset \
+        /usr/libexec
 
-  # Enable weekly auto updates in Discover. In the future, Flatpaks will be
-  # updated daily. See: https://bugs.kde.org/show_bug.cgi?id=454422
-  cat > /etc/xdg/PlasmaDiscoverUpdates <<'EOF'
-  [Global]
-  UseUnattendedUpdates=true
-  RequiredNotificationInterval=604800
-  EOF
+    # Enable weekly auto updates in Discover. In the future, Flatpaks will be
+    # updated daily. See: https://bugs.kde.org/show_bug.cgi?id=454422
+    cat > /etc/xdg/PlasmaDiscoverUpdates <<'EOF'
+    [Global]
+    UseUnattendedUpdates=true
+    RequiredNotificationInterval=604800
+    EOF
 
-  # Workaround for missing shadow and gshadow entries for plasmalogin.
-  # See: https://forge.fedoraproject.org/kde/tickets/issues/684
-  cat > /usr/lib/systemd/system/fedora-kinoite-plasmalogin-workaround.service <<'EOF'
-  [Unit]
-  Description=Workaround for missing plasmalogin entries in /etc/shadow and /etc/gshadow on Kinoite
-  Documentation=https://forge.fedoraproject.org/kde/SIG/issues/684
-  ConditionPathIsReadWrite=/etc
-  ConditionPathExists=/run/ostree-booted
-  ConditionPathExists=!/etc/.fedora-kinoite-plasmalogin-workaround
-  Before=plasmalogin.service
+    # Workaround for missing shadow and gshadow entries for plasmalogin.
+    # See: https://forge.fedoraproject.org/kde/tickets/issues/684
+    cat > /usr/lib/systemd/system/fedora-kinoite-plasmalogin-workaround.service <<'EOF'
+    [Unit]
+    Description=Workaround for missing plasmalogin entries in /etc/shadow and /etc/gshadow on Kinoite
+    Documentation=https://forge.fedoraproject.org/kde/SIG/issues/684
+    ConditionPathIsReadWrite=/etc
+    ConditionPathExists=/run/ostree-booted
+    ConditionPathExists=!/etc/.fedora-kinoite-plasmalogin-workaround
+    Before=plasmalogin.service
 
-  [Service]
-  Type=oneshot
-  RemainAfterExit=yes
-  ExecStart=/usr/libexec/fedora-kinoite-plasmalogin-workaround
+    [Service]
+    Type=oneshot
+    RemainAfterExit=yes
+    ExecStart=/usr/libexec/fedora-kinoite-plasmalogin-workaround
 
-  [Install]
-  WantedBy=multi-user.target
-  EOF
+    [Install]
+    WantedBy=multi-user.target
+    EOF
 
-  cat > /usr/libexec/fedora-kinoite-plasmalogin-workaround <<'EOF'
-  #!/bin/sh
-  # See: https://forge.fedoraproject.org/kde/tickets/issues/684
+    cat > /usr/libexec/fedora-kinoite-plasmalogin-workaround <<'EOF'
+    #!/bin/sh
+    # See: https://forge.fedoraproject.org/kde/tickets/issues/684
 
-  set -eu
+    set -eu
 
-  echo "Checking plasmalogin entries in /etc/shadow and /etc/gshadow"
+    echo "Checking plasmalogin entries in /etc/shadow and /etc/gshadow"
 
-  if ! grep -q '^plasmalogin:' /etc/shadow; then
-      echo 'plasmalogin:!*:::::::' >> /etc/shadow
-      echo "Added missing plasmalogin entry to /etc/shadow"
-  else
-      echo "Nothing to do for /etc/shadow"
-  fi
+    if ! grep -q '^plasmalogin:' /etc/shadow; then
+        echo 'plasmalogin:!*:::::::' >> /etc/shadow
+        echo "Added missing plasmalogin entry to /etc/shadow"
+    else
+        echo "Nothing to do for /etc/shadow"
+    fi
 
-  if ! grep -q '^plasmalogin:' /etc/gshadow; then
-      echo 'plasmalogin:!*::' >> /etc/gshadow
-      echo "Added missing plasmalogin entry to /etc/gshadow"
-  else
-      echo "Nothing to do for /etc/gshadow"
-  fi
+    if ! grep -q '^plasmalogin:' /etc/gshadow; then
+        echo 'plasmalogin:!*::' >> /etc/gshadow
+        echo "Added missing plasmalogin entry to /etc/gshadow"
+    else
+        echo "Nothing to do for /etc/gshadow"
+    fi
 
-  echo "Writing stamp file: /etc/.fedora-kinoite-plasmalogin-workaround"
-  touch /etc/.fedora-kinoite-plasmalogin-workaround
-  EOF
+    echo "Writing stamp file: /etc/.fedora-kinoite-plasmalogin-workaround"
+    touch /etc/.fedora-kinoite-plasmalogin-workaround
+    EOF
 
-  chmod a+x /usr/libexec/fedora-kinoite-plasmalogin-workaround
+    chmod a+x /usr/libexec/fedora-kinoite-plasmalogin-workaround
 
-  cat > /usr/lib/systemd/system-preset/82-kinoite.preset <<'EOF'
-  # See: https://forge.fedoraproject.org/kde/tickets/issues/684
-  enable fedora-kinoite-plasmalogin-workaround.service
-  EOF
+    cat > /usr/lib/systemd/system-preset/82-kinoite.preset <<'EOF'
+    # See: https://forge.fedoraproject.org/kde/tickets/issues/684
+    enable fedora-kinoite-plasmalogin-workaround.service
+    EOF
 
-  systemctl preset fedora-kinoite-plasmalogin-workaround.service || true
+    systemctl preset fedora-kinoite-plasmalogin-workaround.service || true

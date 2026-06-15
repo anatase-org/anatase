@@ -1,47 +1,46 @@
 version: 1
 
-
 packages:
-  - kernel
-  - kernel-modules
-  - kernel-modules-extra
+    - kernel
+    - kernel-modules
+    - kernel-modules-extra
 
 postprocess: |
-  set -eux
+    set -eux
 
-  install -dm0755 /usr/lib/dracut/dracut.conf.d
+    install -dm0755 /usr/lib/dracut/dracut.conf.d
 
-  cat > /usr/lib/dracut/dracut.conf.d/20-atomic-nohostonly.conf <<'EOF'
-  # Default model is server-side generated initramfs
-  hostonly=no
-  EOF
+    cat > /usr/lib/dracut/dracut.conf.d/20-atomic-nohostonly.conf <<'EOF'
+    # Default model is server-side generated initramfs
+    hostonly=no
+    EOF
 
-  cat > /usr/lib/dracut/dracut.conf.d/20-atomic-nostrip.conf <<'EOF'
-  # We do not rely on strip/eu-strip during image assembly.
-  do_strip=no
-  EOF
+    cat > /usr/lib/dracut/dracut.conf.d/20-atomic-nostrip.conf <<'EOF'
+    # We do not rely on strip/eu-strip during image assembly.
+    do_strip=no
+    EOF
 
-  cat > /usr/lib/dracut/dracut.conf.d/20-atomic-tpm-luks.conf <<'EOF'
-  # Add support for systemd-cryptsetup and tpm2-tss LUKS locking
-  add_dracutmodules+=" tpm2-tss systemd-pcrphase "
-  EOF
+    cat > /usr/lib/dracut/dracut.conf.d/20-atomic-tpm-luks.conf <<'EOF'
+    # Add support for systemd-cryptsetup and tpm2-tss LUKS locking
+    add_dracutmodules+=" tpm2-tss systemd-pcrphase "
+    EOF
 
-  if [ -f /usr/lib/os-release ]; then
-      . /usr/lib/os-release
-      if [ "${ID:-}" = "fedora" ] && [ "${VERSION_ID:-0}" -ge 42 ]; then
-          cat > /usr/lib/kernel/install.conf <<'EOF'
-  # kernel-install will not try to run dracut and allows the image builder to
-  # take over initramfs generation. This also tells tooling to keep one kernel.
-  layout=ostree
-  EOF
-      fi
-  fi
+    if [ -f /usr/lib/os-release ]; then
+        . /usr/lib/os-release
+        if [ "${ID:-}" = "fedora" ] && [ "${VERSION_ID:-0}" -ge 42 ]; then
+            cat > /usr/lib/kernel/install.conf <<'EOF'
+    # kernel-install will not try to run dracut and allows the image builder to
+    # take over initramfs generation. This also tells tooling to keep one kernel.
+    layout=ostree
+    EOF
+        fi
+    fi
 
-  if [ -d /usr/share/dnf5/libdnf.conf.d ]; then
-      cat > /usr/share/dnf5/libdnf.conf.d/20-ostree-installonlypkgs.conf <<'EOF'
-  [main]
-  installonlypkgs=''
-  EOF
-  elif [ -f /etc/dnf/dnf.conf ]; then
-      echo "installonlypkgs=''" >> /etc/dnf/dnf.conf
-  fi
+    if [ -d /usr/share/dnf5/libdnf.conf.d ]; then
+        cat > /usr/share/dnf5/libdnf.conf.d/20-ostree-installonlypkgs.conf <<'EOF'
+    [main]
+    installonlypkgs=''
+    EOF
+    elif [ -f /etc/dnf/dnf.conf ]; then
+        echo "installonlypkgs=''" >> /etc/dnf/dnf.conf
+    fi
