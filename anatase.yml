@@ -29,6 +29,7 @@ cards:
   - cards/base/kernel
   - cards/base/firmware
   - cards/drivers/mesa # mesa is required by base packages
+  - cards/drivers/mesa/lib32
   - cards/base/base
   - cards/base/grub
   - cards/base/utils

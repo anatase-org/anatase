@@ -1,0 +1,64 @@
+version: 1
+
+
+build-deps:
+  - bash
+  - cmake
+  - coreutils
+  - findutils
+  - rpm-build
+  - rpmdevtools
+  # Crates that need dynamic resolving
+  - rust-paste+default-devel
+  - rust-rustc-hash+default-devel
+  - rust-syn+clone-impls-devel
+  - rust-syn+default-devel
+
+packages:
+  x86_64:
+    - elfutils-libelf.i686
+    - expat.i686
+    - glibc.i686
+    - libX11.i686
+    - libX11-xcb.i686
+    - libXau.i686
+    - libXext.i686
+    - libXxf86vm.i686
+    - libdisplay-info.i686
+    - libdrm.i686
+    - libedit.i686
+    - libffi.i686
+    - libgcc.i686
+    - libglvnd.i686
+    - libglvnd-egl.i686
+    - libglvnd-glx.i686
+    - libpciaccess.i686
+    - libstdc++.i686
+    - libwayland-client.i686
+    - libxcb.i686
+    - libxml2.i686
+    - libxshmfence.i686
+    - libzstd.i686
+    - llvm-filesystem.i686
+    - llvm-libs.i686
+    - lm_sensors-libs.i686
+    - ncurses-libs.i686
+    - spirv-tools-libs.i686
+    - systemd-libs.i686
+    - vulkan-loader.i686
+    - xz-libs.i686
+    - zlib-ng-compat.i686
+
+specs:
+  - spec: ./mesa.spec
+    files:
+      - Mesa-MLAA-License-Clarification-Email.txt
+      - "*.patch"
+    packages:
+      x86_64:
+        - mesa-filesystem.i686
+        - mesa-libEGL.i686
+        - mesa-libGL.i686
+        - mesa-libgbm.i686
+        - mesa-dri-drivers.i686
+        - mesa-vulkan-drivers.i686
