@@ -1,0 +1,11 @@
+diff -Naur gamescope-3.16.1.old/src/reshade/source/effect_token.hpp gamescope-3.16.1/src/reshade/source/effect_token.hpp
+--- gamescope-3.16.1.old/src/reshade/source/effect_token.hpp	2025-01-16 11:09:26.563500356 +0100
++++ gamescope-3.16.1/src/reshade/source/effect_token.hpp	2025-01-16 11:09:34.005593114 +0100
+@@ -5,6 +5,7 @@
+ 
+ #pragma once
+ 
++#include <cstdint>
+ #include <string>
+ #include <vector>
+ #include <cstdint>
