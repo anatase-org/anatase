@@ -1,0 +1,829 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sat, 8 Nov 2025 18:11:08 +0100
+Subject: [NA]: Update readme + CI
+
+---
+ .gitignore    |   1 +
+ Containerfile |  19 +++++++
+ README.md     | 143 +-------------------------------------------------
+ sync.sh       |  26 +++++++++
+ 4 files changed, 47 insertions(+), 142 deletions(-)
+ create mode 100644 Containerfile
+ create mode 100755 sync.sh
+
+diff --git a/.gitignore b/.gitignore
+index 4e8c2af2b9c5..ab6af6b986bd 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,2 +1,3 @@
++vendor
+ /target
+ /tarpaulin-report.html
+diff --git a/Containerfile b/Containerfile
+new file mode 100644
+index 000000000000..538e5abf408c
+--- /dev/null
++++ b/Containerfile
+@@ -0,0 +1,19 @@
++ARG FEDORA_VERSION=42
++
++FROM fedora:${FEDORA_VERSION:-43}
++
++RUN dnf install -y mock mock-core-configs spectool rust2rpm git
++
++ARG UID=1000
++ARG GID=1000
++
++RUN groupadd -g $GID -o builder && \
++    useradd -m -u $UID -g $GID -G mock -o -s /bin/bash builder && \
++    echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder && \
++    chmod 0440 /etc/sudoers.d/builder
++
++USER builder
++
++WORKDIR /workspace
++
++ENTRYPOINT [ "env" ]
+\ No newline at end of file
+diff --git a/README.md b/README.md
+index 1f892b76f1f2..5d866b62ac02 100644
+--- a/README.md
++++ b/README.md
+@@ -1,144 +1,3 @@
+ # SteamOS Manager
+ 
+-SteamOS Manager is a system daemon that aims to abstract Steam's interactions
+-with the operating system. The goal is to have a standardized interface so that
+-SteamOS specific features in the Steam client, e.g. TDP management, can be
+-exposed in any Linux distro that provides an implementation of this DBus API.
+-
+-The interface may be fully or partially implemented. The Steam client will
+-check which which features are available at startup and restrict the settings
+-it presents to the user based on feature availability.
+-
+-Some of the features that SteamOS Manager enables include:
+-- GPU clock management
+-- TDP management
+-- BIOS/Dock updates
+-- Storage device maintenance tasks
+-- External storage device formatting
+-  - Steam generally performs device enumeration via UDisks2, but formatting
+-	happens via SteamOSManager
+-
+-For a full list of features please refer to the [interface specification](https://gitlab.steamos.cloud/holo/steamos-manager/-/blob/main/data/interfaces/com.steampowered.SteamOSManager1.xml).
+-
+-Other notable dbus interfaces used by the Steam Client include:
+-- org.freedesktop.UDisks2
+-- org.freedesktop.portal.desktop
+-- org.freedesktop.login1
+-- org.bluez
+-
+-# Building
+-
+-This project is written in Rust, so you will need an implementation for the
+-device you're using for building. The [Arch wiki
+-article](https://wiki.archlinux.org/title/rust) has some good guidelines for
+-this, but this mostly consists of installing `rustup` from the
+-`rustup` package (if you're on Arch) and running `rustup default stable` to get
+-an initial toolchain, or just installing the regular `rust` package for a
+-system-managed installation.
+-
+-Once you have that and `cargo` is in your path, to build the project you can
+-use `cargo build`.
+-
+-# Developing
+-
+-As far as IDEs go, Visual Studio Code works pretty well for giving errors about
+-things you are changing and has plugins for vim mode, etc. if you are used to
+-those keybindings. Most/all IDEs that work with language servers should do that
+-fine though.
+-
+-For VS Code, these extensions help: `rust` and `rust-analyzer`.
+-
+-Before committing code, please run `cargo fmt` to make sure that your code
+-matches the preferred code style, and `cargo clippy` can help with common
+-mistakes and idiomatic code.
+-
+-To perform tests, run `cargo test`. This will compile a test configuration of
+-the project and run the built-in test suite.
+-
+-## Interface compatibility notes
+-
+-SteamOS Manager and the Steam client are normally updated independently of each
+-other, thus the interface must remain binary compatible across releases.
+-
+-In general, when making changes to the interface please consider the following:
+-- Method signatures must not be altered
+-  - Instead, prefer exposing a new symbol and add a compatibility adapter to
+-	the previous interface
+-- Changes in behaviour should be avoided
+-  - Consider how a change would affect the beta and stable release of the Steam
+-	client
+-- Features must have a mechanism to discover if they are available or not
+-  - E.g. for a feature exposed as a property if the property is not present on
+-	the bus it means the feature is unsupported.
+-
+-Note that while SteamOS Manager must never break binary compatibility of
+-the interface, the Steam client makes no guarantees that older versions of
+-an interface will be used if available. As a rule of thumb, the client will
+-always provide full support for the SteamOS Manager interface version available
+-in the Stable release of SteamOS.
+-
+-Another pitfall is that while most of the properties do signal when they are
+-changed by SteamOS Manager itself, several of these properties can also change
+-out from under SteamOS Manager if something on the system bypasses it. While
+-this should never be the case if the user doesn't prod at the underlying system
+-manually, it's something that interface users should be aware of.
+-
+-## Implementation details
+-
+-SteamOS Manager is compromised of two daemons: one runs as the logged in user
+-and exposes a public DBus API on the session bus, and the second daemon runs as
+-the `root` user. The root daemon exposes a limited DBus API on the system bus
+-for tasks that require elevated permissions to execute.
+-
+-The DBus API exposed on the system bus is considered a private implementation
+-detail of SteamOS Manager and it may be changed at any moment and without
+-warning. For this reason, we don't provide an XML schema for the system
+-daemon's interface and clients shouldn't use it directly.
+-
+-## Extending the API
+-
+-To extend the API with a new method or property update the XML schema and
+-extend the user daemon's DBus API, which is implemented in
+-`src/manager/user.rs`. Make sure to also update the proxy implementation in
+-`src/proxy.rs` and expose it in steamosctl, in `src/bin/steamosctl.rs`.
+-
+-If the new functionality requires elevated privileges, instead extend the
+-system daemon's DBus API in `src/manager/root.rs` with the necessary helpers to
+-complete the task. However, you should keep as much logic as possible in the
+-user daemon.
+-
+-# Interoperability
+-
+-While SteamOS Manager aims to support as broad of a range of hardware
+-internally as possible, sometimes external tools support things better. To that
+-end, external daemon an register their own remote implementation of various
+-interfaces that SteamOS Manager will relay DBus traffic to and from. At the
+-current time a remote implementation cannot override a local implementation;
+-they can only fill in holes where a local implementation does not exist.
+-
+-To register a remote interface, the daemon must place a TOML file in either
+-`/usr/share/steamos-manager/remotes.d` or `/etc/steamos-manager/remotes.d`
+-specifying information about the remote. The TOML file should contain sections
+-named based on the interface it implements, along with a `bus_name` key
+-specifying the well-known bus name of the remote and an `object_path` key
+-specifying the path on that remote to the object that implements the interface.
+-Currently the remote must be on the system bus, not the session bus.
+-
+-New remote configurations cannot be added or removed at runtime, but existing
+-remotes configured as above will be dynamically detected at runtime and added or
+-removed as appropriate.
+-
+-The following interfaces can be implemented remotely. Others will be added in
+-the future.
+-
+-- BatteryChargeLimit1
+-- CpuBoost1
+-- FactoryReset1
+-- FanControl1
+-- GpuPerformanceLevel1
+-- GpuPowerProfile1
+-- PerformanceProfile1
+-- Storage1
+-- TdpLimit1
+-- UpdateBios1
+-- UpdateDock1
++Simple fork of [Steamos-manager](https://gitlab.steamos.cloud/holo/steamos-manager) that allows stubbing tdp calls with Handheld Daemon, plus some other minor fixups.
+diff --git a/sync.sh b/sync.sh
+new file mode 100755
+index 000000000000..b24cdda3eb84
+--- /dev/null
++++ b/sync.sh
+@@ -0,0 +1,26 @@
++if [ -z "$1" ]; then
++    echo "Usage: $0 <host>"
++    exit 1
++fi
++
++set -e
++
++HOST=$1
++RSYNC="rsync -rv --exclude .git --exclude venv --exclude __pycache__'"
++USER=${2:-bazzite}
++
++cargo build -p steamos-manager
++$RSYNC target/debug/steamos-manager $HOST:
++
++ssh $HOST /bin/bash << EOF
++    sudo rpm-ostree usroverlay --hotfix
++    sudo mv steamos-manager /usr/bin/steamos-manager
++    sudo chmod +x /usr/bin/steamos-manager
++    sudo chcon -R -u system_u -r object_r --type=bin_t /usr/bin/steamos-manager
++
++    sudo systemctl stop steamos-manager.service
++    systemctl --user stop steamos-manager.service
++    sudo systemctl start steamos-manager.service
++    systemctl --user start steamos-manager.service
++    bazzite-session-select gamescope
++EOF
+\ No newline at end of file
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sat, 8 Nov 2025 19:05:02 +0100
+Subject: feat: add support for running concurrently with Handheld Daemon
+
+Add passthrough for TDP limit to handheld daemon. Then, if Handheld
+Daemon is active, disable CPU/GPU/battery conservation features in
+SteamOS Manager to avoid conflicts. If Handheld Daemon is inactive,
+SteamOS Manager will manage power features as before.
+
+In addition, re-use the conflict detection of Decky plugins from
+handheld daemon to disable power features if they are detected.
+---
+ steamos-manager/src/gpu.rs          | 130 ++++++++++++++++++++++++++-
+ steamos-manager/src/manager/user.rs |  68 ++++++++------
+ steamos-manager/src/power.rs        | 132 +++++++++++++++++++++++++---
+ 3 files changed, 293 insertions(+), 37 deletions(-)
+
+diff --git a/steamos-manager/src/gpu.rs b/steamos-manager/src/gpu.rs
+index a828071f60bd..85f8fe51ebcb 100644
+--- a/steamos-manager/src/gpu.rs
++++ b/steamos-manager/src/gpu.rs
+@@ -18,10 +18,11 @@ use std::sync::LazyLock;
+ use strum::{Display, EnumString, VariantNames};
+ use tokio::fs::{self, File, try_exists};
+ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
++use tokio::process::Command;
+ use tracing::{debug, error};
+ 
+ use crate::hardware::{device_config, device_type};
+-use crate::power::find_hwmon;
++use crate::power::{find_hwmon, HhdStatus, HHD_CMD};
+ use crate::{path, write_synced};
+ 
+ pub(crate) const AMDGPU_HWMON_NAME: &str = "amdgpu";
+@@ -150,7 +151,134 @@ pub(crate) async fn gpu_power_profile_driver() -> Result<Box<dyn GpuPowerProfile
+     })
+ }
+ 
++async fn get_hhd_status() -> HhdStatus {
++    let output = Command::new(HHD_CMD)
++        .arg("steamos-gpu")
++        .arg("get")
++        .output()
++        .await;
++
++    if output.is_err() {
++        return HhdStatus::Inactive;
++    }
++
++    let code = output.unwrap().status.code().unwrap_or(0);
++    match code {
++        1 => HhdStatus::Inactive,
++        2 => HhdStatus::Conflicts,
++        _ => HhdStatus::Active,
++    }
++}
++
++#[derive(Debug)]
++pub(crate) struct HhdPerformanceLevelDriver {}
++
++impl AmdgpuGpuPerfDriver for HhdPerformanceLevelDriver {}
++
++#[async_trait]
++impl GpuPerformanceLevelDriver for HhdPerformanceLevelDriver {
++    fn performance_level_from_str(&self, value: &str) -> Result<GpuPerformanceLevel> {
++        Ok(GpuPerformanceLevel::Intel(IntelPerformanceLevel::from_str(
++            value,
++        )?))
++    }
++
++    async fn get_available_performance_levels(&self) -> Result<Vec<GpuPerformanceLevel>> {
++        Ok(vec![
++            GpuPerformanceLevel::Intel(IntelPerformanceLevel::Auto),
++            GpuPerformanceLevel::Intel(IntelPerformanceLevel::Manual),
++        ])
++    }
++
++    async fn get_performance_level(&self) -> Result<GpuPerformanceLevel> {
++        // Just lie so that we always get a trigger to auto
++        Ok(GpuPerformanceLevel::Intel(IntelPerformanceLevel::Manual))
++    }
++
++    async fn get_clocks(&self) -> Result<u32> {
++        // Dummy value
++        Ok(1200)
++    }
++
++    async fn set_performance_level(&self, level: GpuPerformanceLevel) -> Result<()> {
++        if level == GpuPerformanceLevel::Intel(IntelPerformanceLevel::Manual) {
++            return Ok(());
++        }
++        let output = Command::new(HHD_CMD)
++            .arg("steamos-gpu")
++            .arg("clear")
++            .output()
++            .await
++            .map_err(|e| anyhow!("Failed to clear gpu limit: {e}"))?;
++
++        ensure!(
++            output.status.success(),
++            "hhd.steamos steamos-tdp exited with status {status}",
++            status = output.status
++        );
++
++        Ok(())
++    }
++
++    async fn get_clocks_range(&self) -> Result<RangeInclusive<u32>> {
++        let output = Command::new(HHD_CMD)
++            .arg("steamos-gpu")
++            .arg("get")
++            .output()
++            .await
++            .map_err(|e| anyhow!("Failed to execute hhd.steamos steamos-tdp get: {e}"))?;
++
++        ensure!(
++            output.status.success(),
++            "hhd.steamos get exited with status {status}",
++            status = output.status
++        );
++
++        let stdout = String::from_utf8(output.stdout)
++            .map_err(|e| anyhow!("Invalid UTF-8 from hhd.steamos steamos-tdp get: {e}"))?;
++
++        let mut parts = stdout.split_whitespace();
++        let min: u32 = parts
++            .next()
++            .ok_or_else(|| anyhow!("Missing min value"))?
++            .parse()
++            .map_err(|e| anyhow!("Failed to parse min value: {e}"))?;
++        let max: u32 = parts
++            .next()
++            .ok_or_else(|| anyhow!("Missing max value"))?
++            .parse()
++            .map_err(|e| anyhow!("Failed to parse max value: {e}"))?;
++        Ok(min..=max)
++    }
++
++    async fn set_clocks(&self, clocks: u32) -> Result<()> {
++        let output = Command::new(HHD_CMD)
++            .arg("steamos-gpu")
++            .arg(clocks.to_string())
++            .output()
++            .await
++            .map_err(|e| anyhow!("Failed to execute hhd.steamos steamos-tdp {clocks}: {e}"))?;
++
++        ensure!(
++            output.status.success(),
++            "hhd.steamos steamos-tdp exited with status {status}",
++            status = output.status
++        );
++
++        Ok(())
++    }
++}
++
+ pub(crate) async fn gpu_performance_level_driver() -> Result<Box<dyn GpuPerformanceLevelDriver>> {
++    let hhd_status = get_hhd_status().await;
++
++    if hhd_status == HhdStatus::Active {
++        debug!("Using handheld daemon for TDP limiting");
++        return Ok(Box::new(HhdPerformanceLevelDriver {}));
++    } else if hhd_status == HhdStatus::Conflicts {
++        bail!("Conflicting GPU controls found");
++    }
++
+     let config = device_config().await?;
+     let config = config
+         .as_ref()
+diff --git a/steamos-manager/src/manager/user.rs b/steamos-manager/src/manager/user.rs
+index 083389fdc7c9..4f1f4b83466c 100644
+--- a/steamos-manager/src/manager/user.rs
++++ b/steamos-manager/src/manager/user.rs
+@@ -49,10 +49,7 @@ use crate::manager::{MANAGER_PATH, RemoteInterface, RemoteInterfaceConfig, Remot
+ use crate::path;
+ use crate::platform::platform_config;
+ use crate::power::{
+-    BATTERY_DEFAULT_SUGGESTED_MINIMUM_LIMIT, CpuSchedulerManager, TdpManagerCommand,
+-    get_available_cpu_scaling_governors, get_available_platform_profiles, get_cpu_boost_state,
+-    get_cpu_scaling_governor, get_max_charge_level, get_platform_profile, register_tdp_limit1,
+-    unregister_tdp_limit1,
++    BATTERY_DEFAULT_SUGGESTED_MINIMUM_LIMIT, CpuSchedulerManager, TdpManagerCommand, enable_power_features, get_available_cpu_scaling_governors, get_available_platform_profiles, get_cpu_boost_state, get_cpu_scaling_governor, get_max_charge_level, get_platform_profile, register_tdp_limit1, unregister_tdp_limit1
+ };
+ use crate::proxy::{
+     BatteryChargeLimit1Proxy, CpuBoost1Proxy, FactoryReset1Proxy, FanControl1Proxy,
+@@ -1737,11 +1734,8 @@ async fn create_device_interfaces(
+     proxy: &Proxy<'static>,
+     object_server: &ObjectServer,
+     tdp_manager: Option<UnboundedSender<TdpManagerCommand>>,
++    power_features: bool,
+ ) -> Result<()> {
+-    let Some(config) = device_config().await? else {
+-        return Ok(());
+-    };
+-
+     let performance_profile = PerformanceProfile1 {
+         proxy: proxy.clone(),
+         tdp_limit_manager: tdp_manager.clone(),
+@@ -1751,14 +1745,8 @@ async fn create_device_interfaces(
+         let low_power_mode = LowPowerMode1 {
+             manager: manager.clone(),
+         };
+-        if config
+-            .tdp_limit
+-            .as_ref()
+-            .and_then(|config| config.download_mode_limit)
+-            .is_some()
+-        {
+-            object_server.at(MANAGER_PATH, low_power_mode).await?;
+-        }
++
++        object_server.at(MANAGER_PATH, low_power_mode).await?;
+ 
+         let object_server = object_server.clone();
+         spawn(async move {
+@@ -1775,6 +1763,14 @@ async fn create_device_interfaces(
+         });
+     }
+ 
++    if !power_features {
++        return Ok(());
++    }
++
++    let Some(config) = device_config().await? else {
++        return Ok(());
++    };
++
+     if let Some(config) = config.performance_profile.as_ref()
+         && !get_available_platform_profiles(&config.platform_profile_name)
+             .await
+@@ -1868,7 +1864,9 @@ pub(crate) async fn create_interfaces(
+ 
+     let object_server = session.object_server();
+ 
+-    if let Err(e) = create_device_interfaces(&proxy, object_server, tdp_manager.clone()).await {
++    let power_features = enable_power_features().await;
++
++    if let Err(e) = create_device_interfaces(&proxy, object_server, tdp_manager.clone(), power_features).await {
+         error!("Failed to initalize device-specific interfaces: {e}");
+     }
+ 
+@@ -1891,17 +1889,35 @@ pub(crate) async fn create_interfaces(
+         object_server.at(MANAGER_PATH, wifi_debug_dump).await?;
+     }
+ 
+-    if get_max_charge_level().await.is_ok() {
+-        object_server.at(MANAGER_PATH, battery_charge_limit).await?;
+-    }
++    if power_features {
++        if get_max_charge_level().await.is_ok() {
++            object_server.at(MANAGER_PATH, battery_charge_limit).await?;
++        }
+ 
+-    if get_cpu_boost_state().await.is_ok() {
+-        object_server.at(MANAGER_PATH, cpu_boost).await?;
+-    }
++        if get_cpu_boost_state().await.is_ok() {
++            object_server.at(MANAGER_PATH, cpu_boost).await?;
++        }
+ 
+-    object_server.at(MANAGER_PATH, cpu_scaling).await?;
+-    if CpuSchedulerManager::is_supported().await? {
+-        object_server.at(MANAGER_PATH, cpu_scheduler).await?;
++        object_server.at(MANAGER_PATH, cpu_scaling).await?;
++        if CpuSchedulerManager::is_supported().await? {
++            object_server.at(MANAGER_PATH, cpu_scheduler).await?;
++        }
++
++        match gpu_power_profile_driver().await {
++            Ok(driver) => {
++                object_server
++                    .at(
++                        MANAGER_PATH,
++                        GpuPowerProfile1 {
++                            proxy: proxy.clone(),
++                            driver,
++                            order: SerialOrderValidator::default(),
++                        },
++                    )
++                    .await?;
++            }
++            Err(e) => warn!("Can't add GpuPowerProfile1 interface: {e}"),
++        }
+     }
+ 
+     match gpu_performance_level_driver().await {
+diff --git a/steamos-manager/src/power.rs b/steamos-manager/src/power.rs
+index 52554283ee48..168fa6c19faa 100644
+--- a/steamos-manager/src/power.rs
++++ b/steamos-manager/src/power.rs
+@@ -10,6 +10,7 @@ use async_trait::async_trait;
+ use nix::errno::Errno;
+ use num_enum::TryFromPrimitive;
+ use serde::Deserialize;
++use tokio::process::Command;
+ use std::collections::HashMap;
+ use std::collections::hash_map::Entry;
+ use std::num::NonZeroU32;
+@@ -24,7 +25,7 @@ use tokio::net::unix::pipe;
+ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+ use tokio::sync::oneshot;
+ use tokio::task::JoinSet;
+-use tracing::{debug, error, warn};
++use tracing::{debug, error, info, warn};
+ use zbus::names::OwnedBusName;
+ use zbus::zvariant::OwnedObjectPath;
+ use zbus::{Connection, ObjectServer, fdo};
+@@ -149,6 +150,8 @@ pub(crate) struct RemoteInterfaceLimitManager<'proxy> {
+     proxy: Option<TdpLimit1Proxy<'proxy>>,
+ }
+ 
++pub(crate) struct HhdTdpManager {}
++
+ #[async_trait]
+ pub(crate) trait TdpLimitManager: Send + Sync {
+     async fn get_tdp_limit(&self) -> Result<u32>;
+@@ -169,6 +172,15 @@ pub(crate) trait TdpLimitManager: Send + Sync {
+ }
+ 
+ pub(crate) async fn tdp_limit_manager(system: &Connection) -> Result<Box<dyn TdpLimitManager>> {
++    let hhd_status = get_hhd_status().await;
++
++    if hhd_status == HhdStatus::Active {
++        debug!("Using handheld daemon for TDP limiting");
++        return Ok(Box::new(HhdTdpManager {}));
++    } else if hhd_status == HhdStatus::Conflicts {
++        bail!("Conflicting TDP limiting method found");
++    }
++
+     let config = device_config().await?;
+     if let Some(config) = config.as_ref().and_then(|config| config.tdp_limit.as_ref()) {
+         Ok(match &config.method {
+@@ -661,6 +673,102 @@ impl<'proxy> TdpLimitManager for RemoteInterfaceLimitManager<'proxy> {
+     }
+ }
+ 
++
++#[derive(PartialEq, Debug)]
++pub(crate) enum HhdStatus {
++    Inactive,
++    Active,
++    Conflicts,
++}
++
++pub(crate) const HHD_CMD: &str = "hhd.steamos"; // "/home/bazzite/hhd-dev/hhd/venv/bin/hhd.steamos";
++
++async fn get_hhd_status() -> HhdStatus {
++    let output = Command::new(HHD_CMD)
++        .arg("steamos-tdp")
++        .arg("get")
++        .output()
++        .await;
++
++    if output.is_err() {
++        return HhdStatus::Inactive;
++    }
++
++    let code = output.unwrap().status.code().unwrap_or(0);
++    match code {
++        1 => HhdStatus::Inactive,
++        2 => HhdStatus::Conflicts,
++        _ => HhdStatus::Active,
++    }
++}
++
++pub(crate) async fn enable_power_features() -> bool {
++    let hhd_status = get_hhd_status().await;
++    info!("Handheld daemon TDP status: {:?}", hhd_status);
++    hhd_status == HhdStatus::Inactive
++}
++
++impl HhdTdpManager {}
++
++#[async_trait]
++impl TdpLimitManager for HhdTdpManager {
++    async fn get_tdp_limit(&self) -> Result<u32> {
++        anyhow::bail!("Getting TDP from handheld daemon is not implemented.");
++    }
++
++    async fn set_tdp_limit(&self, limit: u32) -> Result<()> {
++        let output = Command::new(HHD_CMD)
++            .arg("steamos-tdp")
++            .arg(limit.to_string())
++            .output()
++            .await
++            .map_err(|e| anyhow!("Failed to execute hhd.steamos steamos-tdp {limit}: {e}"))?;
++
++        ensure!(
++            output.status.success(),
++            "hhd.steamos steamos-tdp exited with status {status}",
++            status = output.status
++        );
++
++        Ok(())
++    }
++
++    async fn get_tdp_limit_range(&self) -> Result<RangeInclusive<u32>> {
++        let output = Command::new(HHD_CMD)
++            .arg("steamos-tdp")
++            .arg("get")
++            .output()
++            .await
++            .map_err(|e| anyhow!("Failed to execute hhd.steamos steamos-tdp get: {e}"))?;
++
++        ensure!(
++            output.status.success(),
++            "hhd.steamos steamos-tdp get exited with status {status}",
++            status = output.status
++        );
++
++        let stdout = String::from_utf8(output.stdout)
++            .map_err(|e| anyhow!("Invalid UTF-8 from hhd.steamos steamos-tdp get: {e}"))?;
++
++        let mut parts = stdout.split_whitespace();
++        let min: u32 = parts
++            .next()
++            .ok_or_else(|| anyhow!("Missing min value"))?
++            .parse()
++            .map_err(|e| anyhow!("Failed to parse min value: {e}"))?;
++        let max: u32 = parts
++            .next()
++            .ok_or_else(|| anyhow!("Missing max value"))?
++            .parse()
++            .map_err(|e| anyhow!("Failed to parse max value: {e}"))?;
++        Ok(min..=max)
++    }
++
++    async fn is_active(&self) -> Result<bool> {
++        Ok(true)
++    }
++}
++
+ async fn find_battery_charge_path() -> Result<PathBuf> {
+     let config = device_config().await?;
+     let config = config
+@@ -805,15 +913,19 @@ impl TdpManagerService {
+         system: &Connection,
+         session: &Connection,
+     ) -> Result<TdpManagerService> {
+-        let config = device_config().await?;
+-        let download_mode_limit = config
+-            .as_ref()
+-            .and_then(|config| config.tdp_limit.as_ref())
+-            .and_then(|config| config.download_mode_limit);
+-        let download_mode_fan_speed = config
+-            .as_ref()
+-            .and_then(|config| config.fan_speed.as_ref())
+-            .and_then(|config| config.download_mode_fan_speed);
++        let (download_mode_limit, download_mode_fan_speed) = match device_config().await {
++            Ok(Some(config)) => (
++                config
++                    .tdp_limit
++                    .as_ref()
++                    .and_then(|tdp| tdp.download_mode_limit),
++                config
++                    .fan_speed
++                    .as_ref()
++                    .and_then(|fan| fan.download_mode_fan_speed),
++            ),
++            _ => (None, None),
++        };
+ 
+         let manager = tdp_limit_manager(system).await?;
+         let proxy = RootManagerProxy::new(system).await?;
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Thu, 5 Feb 2026 21:30:25 +0100
+Subject: fix: add targets to ensure this starts before hhd and steam
+
+Signed-off-by: Antheas Kapenekakis <git@antheas.dev>
+---
+ data/system/steamos-manager.service | 4 ++++
+ data/user/steamos-manager.service   | 4 ++++
+ 2 files changed, 8 insertions(+)
+
+diff --git a/data/system/steamos-manager.service b/data/system/steamos-manager.service
+index e49ea157d6a3..08f77ccab1e0 100644
+--- a/data/system/steamos-manager.service
++++ b/data/system/steamos-manager.service
+@@ -2,6 +2,10 @@
+ Description=SteamOS Manager Daemon
+ Wants=steamos-log-submitter.service
+ After=steamos-log-submitter.service
++Wants=hhd.service
++Wants=hhdl.service
++After=hhd.service
++After=hhdl.service
+ StartLimitIntervalSec=120
+ StartLimitBurst=5
+ 
+diff --git a/data/user/steamos-manager.service b/data/user/steamos-manager.service
+index c6dc9febe6c9..bdbca489c0df 100644
+--- a/data/user/steamos-manager.service
++++ b/data/user/steamos-manager.service
+@@ -1,5 +1,9 @@
+ [Unit]
+ Description=SteamOS Manager Daemon
++Before=graphical-session.target
++After=hhd.service
++After=hhdl.service
++Before=gamescope-session-plus@steam.service
+ StartLimitIntervalSec=120
+ StartLimitBurst=5
+ 
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Tue, 16 Jun 2026 00:17:16 +0200
+Subject: fix: align HDMI CEC setters with zbus interface
+
+---
+ steamos-manager/src/manager/user.rs | 19 +++++++++----------
+ 1 file changed, 9 insertions(+), 10 deletions(-)
+
+diff --git a/steamos-manager/src/manager/user.rs b/steamos-manager/src/manager/user.rs
+index 4f1f4b83466c..dec2233c3eb3 100644
+--- a/steamos-manager/src/manager/user.rs
++++ b/steamos-manager/src/manager/user.rs
+@@ -627,13 +627,13 @@ impl HdmiCec2 {
+     }
+ 
+     #[zbus(property)]
+-    async fn set_enable_control(&self, enable: bool) -> fdo::Result<()> {
++    async fn set_enable_control(&self, enable: bool) -> zbus::Result<()> {
+         self.hdmi_cec
+             .lock()
+             .await
+             .set_enable_control(enable)
+             .await
+-            .map_err(to_zbus_fdo_error)
++            .map_err(to_zbus_error)
+     }
+ 
+     #[zbus(property)]
+@@ -647,13 +647,13 @@ impl HdmiCec2 {
+     }
+ 
+     #[zbus(property)]
+-    async fn set_suspend_tv(&self, enable: bool) -> fdo::Result<()> {
++    async fn set_suspend_tv(&self, enable: bool) -> zbus::Result<()> {
+         self.hdmi_cec
+             .lock()
+             .await
+             .set_suspend_tv(enable)
+             .await
+-            .map_err(to_zbus_fdo_error)
++            .map_err(to_zbus_error)
+     }
+ 
+     #[zbus(property)]
+@@ -667,13 +667,13 @@ impl HdmiCec2 {
+     }
+ 
+     #[zbus(property)]
+-    async fn set_suspend_device(&self, enable: bool) -> fdo::Result<()> {
++    async fn set_suspend_device(&self, enable: bool) -> zbus::Result<()> {
+         self.hdmi_cec
+             .lock()
+             .await
+             .set_suspend_device(enable)
+             .await
+-            .map_err(to_zbus_fdo_error)
++            .map_err(to_zbus_error)
+     }
+ 
+     #[zbus(property)]
+@@ -687,13 +687,13 @@ impl HdmiCec2 {
+     }
+ 
+     #[zbus(property)]
+-    async fn set_wake_tv(&self, enable: bool) -> fdo::Result<()> {
++    async fn set_wake_tv(&self, enable: bool) -> zbus::Result<()> {
+         self.hdmi_cec
+             .lock()
+             .await
+             .set_wake_tv(enable)
+             .await
+-            .map_err(to_zbus_fdo_error)
++            .map_err(to_zbus_error)
+     }
+ 
+     #[zbus(property)]
+@@ -714,11 +714,10 @@ impl HdmiCec2 {
+     }
+ 
+     #[zbus(property)]
+-    async fn set_wake_device(&self, enable: bool) -> fdo::Result<()> {
++    async fn set_wake_device(&self, enable: bool) -> zbus::Result<()> {
+         self.manager
+             .set_hdmi_cec_awaken(enable)
+             .await
+-            .map_err(to_zbus_fdo_error)
+     }
+ 
+     #[zbus(property(emits_changed_signal = "const"))]

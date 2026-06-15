@@ -5,3 +5,5 @@ mangohud:
   upstream-sha: 83471e0529dbdf23bdba1e2cd6e5d0b7883fd46a
 xserver:
   patch-sha: af4b3d7250366e1a3822919e41fcf66da4966af2
+steamos-manager:
+  patch-sha: 244e21225379af4037aeeabdc6efd5b71984e7dd

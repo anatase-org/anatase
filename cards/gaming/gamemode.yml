@@ -8,6 +8,7 @@ build-deps:
   - rpm-build
   - rpmdevtools
   - ccache
+  - sccache
 
 packages:
   - gamescope
@@ -59,4 +60,16 @@ specs:
       type: git
       url: https://gitlab.freedesktop.org/xorg/xserver.git
       ref: xwayland-${spec:Version}
+      file: overrides.patch
+
+  - spec: steamos-manager/steamos-manager.spec
+    files:
+      - steamos-manager.spec
+      - overrides.patch
+    packages:
+      - steamos-manager
+    patch:
+      type: git
+      url: https://github.com/evlav/steamos-manager
+      ref: v${spec:Version}
       file: overrides.patch
