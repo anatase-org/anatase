@@ -37,6 +37,7 @@ cards:
   - cards/drivers/nvidia/nvidia
   - cards/drivers/nvidia/nct
   - cards/de/kde
+  - cards/gaming/hhd
 
 labels:
   org.opencontainers.image.title: Anatase

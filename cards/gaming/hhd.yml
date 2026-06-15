@@ -1,0 +1,36 @@
+version: 1
+
+build-deps:
+  - bash
+  - cmake
+  - coreutils
+  - findutils
+  - rpm-build
+  - rpmdevtools
+
+packages:
+  - hidapi
+  - python3-evdev
+  - python3-markdown-it-py
+  - python3-mdurl
+  - python3-pygments
+  - python3-pyroute2
+  - python3-pyserial
+  - python3-rich
+  - python3-setuptools
+  - python3-six
+  - python3-xlib
+
+specs:
+  - spec: git+https://github.com/hhd-dev/hhd:hhd.spec
+    files:
+      - hhd.spec
+    packages:
+      - hhd
+  # - spec: git+https://github.com/hhd-dev/hhd:hhd-git.spec
+  #   hash-revision: true
+  #   packages:
+  #     - hhd-git
+  - spec: git+https://github.com/hhd-dev/hhd-ui-copr:hhd-ui.spec
+    packages:
+      - hhd-ui
