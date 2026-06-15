@@ -14,8 +14,30 @@ build-deps:
   - rust-syn+default-devel
 
 packages:
+  - libX11-xcb
   - vulkan-loader
   - libdisplay-info
+  - elfutils-libelf
+  - expat
+  - hwdata
+  - libX11
+  - libX11-common
+  - libXau
+  - libXext
+  - libXxf86vm
+  - libdrm
+  - libedit
+  - libglvnd
+  - libglvnd-egl
+  - libglvnd-glx
+  - libpciaccess
+  - libwayland-client
+  - libxcb
+  - libxshmfence
+  - llvm-filesystem
+  - llvm-libs
+  - lm_sensors-libs
+  - spirv-tools-libs
 
 specs:
   - spec: ./mesa.spec
