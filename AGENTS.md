@@ -2,7 +2,7 @@ This repository contains the source code for Anatase, a bootc based distribution
 
 Ludos uses podman and so will you for running containers for testing. It builds an orchestrator image to run fedora commands, and it is available in user storage with the name orchestrator, it can be used for rpm / cargo commands.
 
-You can use `ludos build anatase.yml` to build the distribution. But it is noisy, so you should pipe it to /dev/null and instead poll ./logs/ludos.log for progress.
+You can use `ludos build anatase.yml` to build the distribution. But it is noisy, so you should pipe it to /dev/null and instead poll ./logs/ludos.log for progress. When the user posts an error, it will be in that log (or ludos.log.N if another run rotated it).
 
 Anatase uses the concept of manifests and cards to build images. ./anatase.yml is the manifest which specifies which cards to use, and e.g., ./cards/base/scx/card.yml is a build card for scx. It lists the runtime dependencies of the packages, the build dependencies that cannot be automatically infered, the specs locations, and how to update them.
 
