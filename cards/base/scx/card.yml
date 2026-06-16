@@ -1,5 +1,10 @@
 version: 1
 
+packages:
+  - jq
+  - oniguruma
+  - protobuf
+
 build-deps:
   - bash
   - cmake
