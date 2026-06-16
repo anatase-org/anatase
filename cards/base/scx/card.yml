@@ -1,0 +1,33 @@
+version: 1
+
+build-deps:
+  - bash
+  - cmake
+  - coreutils
+  - findutils
+  - rpm-build
+  - rpmdevtools
+  - ccache
+  - sccache
+
+specs:
+  - spec: scx-tools.spec
+    files:
+      - scx-tools.spec
+    packages:
+      - scx-tools
+    upstream:
+      type: dist-git
+      url: https://github.com/CachyOS/copr-linux-cachyos
+      branch: master
+      subdir: sources/scx-tools
+  - spec: scx-scheds.spec
+    files:
+      - scx-scheds.spec
+    packages:
+      - scx-scheds
+    upstream:
+      type: dist-git
+      url: https://github.com/CachyOS/copr-linux-cachyos
+      branch: master
+      subdir: sources/scx-scheds

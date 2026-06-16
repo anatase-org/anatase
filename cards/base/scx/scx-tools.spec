@@ -1,0 +1,73 @@
+%define _disable_source_fetch 0
+
+%if 0%{?rhel}
+%global debug_package %{nil}
+%endif
+
+Name:           scx-tools
+Version:        1.1.1
+Release:        1%{?dist}
+Summary:        Sched_ext Tools
+
+License:        GPL=2.0
+URL:            https://github.com/sched-ext/scx-loader
+Source0:        %{URL}/archive/refs/tags/v%{version}.tar.gz
+
+BuildRequires:  gcc
+BuildRequires:  git
+BuildRequires:  python
+BuildRequires:  cargo
+BuildRequires:  rust
+BuildRequires:  clang >= 17
+BuildRequires:  llvm >= 17
+BuildRequires:  lld >= 17
+BuildRequires:  systemd
+BuildRequires:  bpftool
+BuildRequires:  libseccomp-devel
+Requires:  scx-scheds
+Obsoletes: scxctl = 0.3.4
+Provides: scxctl = %{version}
+Conflicts: scx-tools-git
+
+%description
+scx_loader: A DBUS Interface for Managing sched_ext Schedulers
+
+%prep
+%autosetup -n scx-loader-%{version}
+sed -i 's/^sysinfo = "0\.39\.2"/sysinfo = "0.38.4"/' crates/scx_loader/Cargo.toml
+cargo update -p sysinfo --precise 0.38.4
+
+%build
+export CARGO_HOME=%{_builddir}/.cargo
+cargo fetch --locked
+cargo build --release --frozen --all-features --workspace
+
+%install
+
+# Install all built executables (skip .so and .d files)
+find target/release \
+    -maxdepth 1 -type f -executable ! -name '*.so' ! -name 'xtask' \
+    -exec install -Dm755 -t %{buildroot}%{_bindir} {} +
+
+# Install runtime assets via xtask
+# (systemd units, D-Bus services, configs, sample files)
+./target/release/xtask install --destdir %{buildroot}
+
+%files
+
+# Binaries
+%{_bindir}/*
+
+# Systemd service
+%{_unitdir}/scx_loader.service
+
+# DBus service and configuration
+%{_datadir}/dbus-1/system-services/org.scx.Loader.service
+%{_datadir}/dbus-1/system.d/org.scx.Loader.conf
+%{_datadir}/dbus-1/interfaces/org.scx.Loader.xml
+
+# Polkit authorization policy for scx-loader
+%{_datadir}/polkit-1/actions/org.scx.Loader.policy
+
+# Configuration files
+%{_datadir}/scx_loader/config.toml
