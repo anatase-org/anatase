@@ -31,3 +31,10 @@ postprocess: |
 
     systemctl --global disable grub-boot-success.timer || true
     systemctl disable grub-boot-indeterminate.service || true
+
+    # Tweak grub2-mkconfig target to work on ostree systems
+    if [ -f /usr/bin/grub2-mkconfig ] && \
+        grep -q 'grub_probe} --target=device /`' /usr/bin/grub2-mkconfig; then
+        sed -i 's|grub_probe} --target=device /`|grub_probe} --target=device /sysroot`|' \
+            /usr/bin/grub2-mkconfig
+    fi
