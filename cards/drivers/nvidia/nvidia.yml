@@ -183,3 +183,14 @@ specs:
     upstream:
       type: dist-git
       url: https://github.com/negativo17/nvidia-driver-selinux
+
+postprocess: |
+  set -eux
+
+  # Drop Nouveau's ICD JSON files to force using nvidia.
+  rm -f /usr/share/vulkan/icd.d/nouveau_icd.*.json
+
+  # Some NVML consumers dlopen the unversioned name, add a symlink.
+  if [ -e /usr/lib64/libnvidia-ml.so.1 ]; then
+      ln -snf libnvidia-ml.so.1 /usr/lib64/libnvidia-ml.so
+  fi
