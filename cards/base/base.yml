@@ -123,7 +123,6 @@ packages:
   - gstreamer1-plugins-ugly-free
   - libglvnd-gles
   - pipewire-alsa
-  - pipewire-config-raop
   - pipewire-gstreamer
   - pipewire-pulseaudio
   - pipewire-utils
