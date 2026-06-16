@@ -1,0 +1,45 @@
+version: 1
+
+files:
+  - sysctl.conf
+  - memlock.conf
+  - modules-load.conf
+  - zram-generator.conf
+  - dev-hugepages1G.mount
+
+postprocess: |
+  set -eux
+
+  #
+  # System policy
+  #
+
+  # Various configs
+  install -Dm0644 /files/sysctl.conf \
+      /usr/lib/sysctl.d/80-anatase.conf
+  install -Dm0644 /files/memlock.conf \
+      /etc/security/limits.d/80-anatase-memlock.conf
+  install -Dm0644 /files/modules-load.conf \
+      /usr/lib/modules-load.d/80-anatase.conf
+
+  # Add zram and huge pages
+  install -Dm0644 /files/zram-generator.conf \
+      /etc/systemd/zram-generator.conf
+  install -Dm0644 /files/dev-hugepages1G.mount \
+      /usr/lib/systemd/system/dev-hugepages1G.mount
+
+  #
+  # Stubs
+  #
+
+  # Stub pulseaudio as a compatibility shim (probably not needed anymore)
+  if [ ! -e /usr/bin/pulseaudio ]; then
+      ln -s /usr/bin/true /usr/bin/pulseaudio
+  fi
+  # Fix SteamVR probing for unversioned libdrm names at runtime
+  if [ -e /usr/lib/libdrm.so.2 ] && [ ! -e /usr/lib/libdrm.so ]; then
+      cp --no-dereference --preserve=links /usr/lib/libdrm.so.2 /usr/lib/libdrm.so
+  fi
+  if [ -e /usr/lib64/libdrm.so.2 ] && [ ! -e /usr/lib64/libdrm.so ]; then
+      cp --no-dereference --preserve=links /usr/lib64/libdrm.so.2 /usr/lib64/libdrm.so
+  fi

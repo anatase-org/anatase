@@ -47,6 +47,7 @@ cards:
   - cards/de/kde
   - cards/gaming/gamemode
   - cards/gaming/hhd
+  - cards/base/tweaks
 
 labels:
   org.opencontainers.image.title: Anatase

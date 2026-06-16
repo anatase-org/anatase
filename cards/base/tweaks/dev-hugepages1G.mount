@@ -1,0 +1,18 @@
+[Unit]
+Description=1GB Huge Pages File System
+Documentation=https://docs.kernel.org/admin-guide/mm/hugetlbpage.html
+Documentation=https://www.freedesktop.org/wiki/Software/systemd/APIFileSystems
+ConditionPathExists=/sys/kernel/mm/hugepages
+DefaultDependencies=no
+ConditionCapability=CAP_SYS_ADMIN
+ConditionVirtualization=!private-users
+ConditionKernelCommandLine=hugepagesz=1G
+
+[Install]
+WantedBy=multi-user.target
+
+[Mount]
+What=hugetlbfs
+Where=/dev/hugepages1G
+Type=hugetlbfs
+Options=pagesize=1G
