@@ -11,6 +11,13 @@ orchestrator-deps:
   # particularly in mesa
   - redhat-rpm-config
   - cargo-rpm-macros
+  # Tooling for local checks
+  - rust
+  - cargo
+  - rpm-build
+  - rpmdevtools
+  - ripgrep
+  - python3
 
 repos:
   - repo: fedora
