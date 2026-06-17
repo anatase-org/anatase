@@ -1,4 +1,4 @@
-This repository contains the source code for Anatase, a bootc based distribution. Anatase is built using ludos, a python tool vendored in this repository under ./ludos and installed editable under venv/bin/ludos, with source code under ./ludos/src/ludos where changes are reflected instantly.
+This repository contains the source code for Anatase, a bootc based distribution. Anatase is built using ludos, a python tool vendored as a git submodule under ./ludos and installed editable under venv/bin/ludos, with source code under ./ludos/src/ludos where changes are reflected instantly.
 
 Ludos uses podman and so will you for running containers for testing. It builds an orchestrator image to run fedora commands, and it is available in user storage with the name orchestrator, it can be used for rpm / cargo commands.
 
