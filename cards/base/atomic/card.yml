@@ -2,7 +2,6 @@ version: 1
 
 packages:
     # Atomic boot
-    - bootc
     - bootupd
 
     # Package management
@@ -11,6 +10,32 @@ packages:
 
     # Image layering
     - rpm-ostree
+
+build-deps:
+  - bash
+  - cmake
+  - coreutils
+  - findutils
+  - rpm-build
+  - rpmdevtools
+  - ccache
+  - sccache
+
+specs:
+  - spec: bootc/bootc.spec
+    files:
+      - sources
+    packages:
+      - bootc
+    upstream:
+      type: dist-git
+      url: https://src.fedoraproject.org/rpms/bootc
+      branch: rawhide
+    patch:
+      type: git
+      url: https://github.com/bootc-dev/bootc
+      ref: v${spec:Version}
+      file: overrides.patch
 
 postprocess: |
     set -eux
