@@ -53,6 +53,12 @@ postprocess: |
     enabled = yes
     EOF
 
+    install -dm0755 /usr/lib/dracut/dracut.conf.d
+    cat > /usr/lib/dracut/dracut.conf.d/20-atomic-bootc.conf <<'EOF'
+    # Include the bootc/ostree root setup path in the generated initramfs.
+    add_dracutmodules+=" ostree bootc fido2 "
+    EOF
+
     for glibc_post_upgrade in /usr/sbin/glibc_post_upgrade.*; do
         if [ -f "${glibc_post_upgrade}" ]; then
             ln -srf /usr/bin/true "${glibc_post_upgrade}"
@@ -81,4 +87,31 @@ postprocess: |
 
     if command -v semanage >/dev/null; then
         semanage permissive --noreload --add bootupd_t || true
+    fi
+
+    #
+    # Prepare boot
+    #
+
+    # This is slightly risky if postprocess steps after this card modify
+    # dracut, but lets the postprocess steps in later cards run faster
+
+    # Generate proper initramfs under /usr/lib/modules/${kver}/
+    rm -rf "/boot/initramfs-*.img"
+    for kernel in /usr/lib/modules/*/vmlinuz; do
+        [ -e "${kernel}" ] || continue
+        kver=${kernel%/vmlinuz}
+        kver=${kver##*/}
+        /usr/bin/dracut --no-hostonly --kver "${kver}" \
+            --reproducible --zstd -v --force \
+            "/usr/lib/modules/${kver}/initramfs.img"
+        chmod 0600 "/usr/lib/modules/${kver}/initramfs.img"
+    done
+
+    # Move boot into /usr/lib/ostree-boot
+    rm -rf /usr/lib/ostree-boot
+    mv /boot /usr/lib/ostree-boot
+
+    if command -v bootupctl >/dev/null; then
+        bootupctl backend generate-update-metadata || true
     fi
