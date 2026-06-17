@@ -13,6 +13,7 @@ VM_CPUS=${VM_CPUS:-4}
 VM_SSH_PORT=${VM_SSH_PORT:-2222}
 QEMU_BIN=${QEMU_BIN:-qemu-system-x86_64}
 QEMU_DISPLAY=${QEMU_DISPLAY:-gtk}
+QEMU_VGA=${QEMU_VGA:-virtio}
 
 cache_dir="${repo_root}/cache"
 vm_dir="${cache_dir}/vm"
@@ -96,7 +97,7 @@ log "Installing ${IMAGE} to ${disk}"
         --wipe \
         --via-loopback \
         --generic-image \
-        --filesystem xfs \
+        --filesystem btrfs \
         --target-transport containers-storage \
         --target-imgref "${IMAGE}" \
         --skip-fetch-check \
@@ -117,5 +118,6 @@ exec "${QEMU_BIN}" \
     -drive "file=${disk},format=raw,if=virtio" \
     -netdev "user,id=net0,hostfwd=tcp::${VM_SSH_PORT}-:22" \
     -device virtio-net-pci,netdev=net0 \
+    -vga "${QEMU_VGA}" \
     -display "${QEMU_DISPLAY}" \
     -serial mon:stdio
