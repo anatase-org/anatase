@@ -92,6 +92,7 @@ packages:
   - ntfsprogs
   - nvme-cli
   - quota
+  - tpm2-tools
   - xfsprogs
 
   # Security and authentication
