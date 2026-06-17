@@ -11,6 +11,9 @@ packages:
     # Image layering
     - rpm-ostree
 
+    # Basic disk helpers
+    - dosfstools
+
 build-deps:
   - bash
   - cmake

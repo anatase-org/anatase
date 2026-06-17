@@ -5,10 +5,10 @@ Subject: add support for pulling from local ostree remote
 
 ---
  crates/lib/src/cli.rs           | 129 +++++++++++++++++-
- crates/lib/src/deploy.rs        | 115 +++++++++++++++-
+ crates/lib/src/deploy.rs        | 114 +++++++++++++++-
  crates/lib/src/install.rs       | 234 +++++++++++++++++++++++++++++++-
  crates/lib/src/install/aleph.rs |  19 +++
- 4 files changed, 488 insertions(+), 9 deletions(-)
+ 4 files changed, 487 insertions(+), 9 deletions(-)
 
 diff --git a/crates/lib/src/cli.rs b/crates/lib/src/cli.rs
 index dd80fd6a..0cc07b05 100644
@@ -187,7 +187,7 @@ index dd80fd6a..0cc07b05 100644
      fn test_parse_opts() {
          assert!(matches!(
 diff --git a/crates/lib/src/deploy.rs b/crates/lib/src/deploy.rs
-index c15f6cb7..a62c5d5b 100644
+index c15f6cb7..e51f0083 100644
 --- a/crates/lib/src/deploy.rs
 +++ b/crates/lib/src/deploy.rs
 @@ -48,10 +48,12 @@ use std::collections::HashSet;
@@ -204,7 +204,7 @@ index c15f6cb7..a62c5d5b 100644
  use cap_std::fs::{Dir, MetadataExt};
  use cap_std_ext::cap_std;
  use cap_std_ext::dirext::CapStdExtDirExt;
-@@ -136,6 +138,117 @@ impl ImageState {
+@@ -136,6 +138,116 @@ impl ImageState {
      }
  }
  
@@ -214,10 +214,10 @@ index c15f6cb7..a62c5d5b 100644
 +
 +fn ostree_pull_url(repo_path: &Utf8PathBuf, source: &str, ostree_ref: &str) -> Result<String> {
 +    let remote = ostree_ref_remote_name();
++    let repo_arg = format!("--repo={repo_path}");
 +    Command::new("ostree")
 +        .args([
-+            "--repo",
-+            repo_path.as_str(),
++            repo_arg.as_str(),
 +            "remote",
 +            "add",
 +            "--no-gpg-verify",
@@ -229,14 +229,14 @@ index c15f6cb7..a62c5d5b 100644
 +
 +    let remote_ref = format!("{remote}:{ostree_ref}");
 +    let pull_result = Command::new("ostree")
-+        .args(["--repo", repo_path.as_str(), "pull", &remote, ostree_ref])
++        .args([repo_arg.as_str(), "pull", &remote, ostree_ref])
 +        .run_capture_stderr()
 +        .with_context(|| format!("Pulling ostree ref {remote}:{ostree_ref}"));
 +    let commit_result =
 +        pull_result.and_then(|_| ostree_rev_parse(repo_path, std::slice::from_ref(&remote_ref)));
 +
 +    let delete_result = Command::new("ostree")
-+        .args(["--repo", repo_path.as_str(), "remote", "delete", &remote])
++        .args([repo_arg.as_str(), "remote", "delete", &remote])
 +        .run_capture_stderr()
 +        .with_context(|| format!("Deleting temporary ostree remote {remote}"));
 +
@@ -249,10 +249,10 @@ index c15f6cb7..a62c5d5b 100644
 +fn ostree_pull_local(repo_path: &Utf8PathBuf, source: &str, ostree_ref: &str) -> Result<String> {
 +    let source_repo = Utf8PathBuf::from(source);
 +    let source_commit = ostree_rev_parse(&source_repo, &[ostree_ref.to_string()])?;
++    let repo_arg = format!("--repo={repo_path}");
 +    Command::new("ostree")
 +        .args([
-+            "--repo",
-+            repo_path.as_str(),
++            repo_arg.as_str(),
 +            "pull-local",
 +            source,
 +            ostree_ref,
@@ -264,13 +264,12 @@ index c15f6cb7..a62c5d5b 100644
 +
 +fn ostree_rev_parse(repo_path: &Utf8PathBuf, refspecs: &[String]) -> Result<String> {
 +    let mut last_error = None;
++    let repo_arg = format!("--repo={repo_path}");
 +    for refspec in refspecs {
 +        let result = Command::new("ostree")
 +            .args([
-+                "--repo",
-+                repo_path.as_str(),
++                repo_arg.as_str(),
 +                "rev-parse",
-+                "--single",
 +                refspec,
 +            ])
 +            .run_get_string()
