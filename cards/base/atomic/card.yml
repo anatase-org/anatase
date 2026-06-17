@@ -73,10 +73,6 @@ postprocess: |
     Z /etc/colord/    - colord colord
     EOF
 
-    if [ -d /usr/lib/ostree-boot ] && command -v bootupctl >/dev/null; then
-        bootupctl backend generate-update-metadata || true
-    fi
-
     install -dm0755 /usr/lib/systemd/system/bootloader-update.service.d
     cat > /usr/lib/systemd/system/bootloader-update.service.d/migrate-static-grub-config.conf <<'EOF'
     [Service]

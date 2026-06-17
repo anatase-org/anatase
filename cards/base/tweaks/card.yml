@@ -43,3 +43,30 @@ postprocess: |
   if [ -e /usr/lib64/libdrm.so.2 ] && [ ! -e /usr/lib64/libdrm.so ]; then
       cp --no-dereference --preserve=links /usr/lib64/libdrm.so.2 /usr/lib64/libdrm.so
   fi
+
+  #
+  # Prepare boot
+  #
+
+  # This is the last step so we do it here
+
+  # kernel-install generates /boot/initramfs-${kver}.img during package
+  # installation; ostree expects the modules layout to use initramfs.img.
+  for kernel in /usr/lib/modules/*/vmlinuz; do
+    [ -e "${kernel}" ] || continue
+    kver=${kernel%/vmlinuz}
+    kver=${kver##*/}
+    if [ -e "/boot/initramfs-${kver}.img" ]; then
+      install -Dm0644 "/boot/initramfs-${kver}.img" \
+        "/usr/lib/modules/${kver}/initramfs.img"
+      rm -f "/boot/initramfs-${kver}.img"
+    fi
+  done
+
+  # Move boot into /usr/lib/ostree-boot
+  rm -rf /usr/lib/ostree-boot
+  mv /boot /usr/lib/ostree-boot
+
+  if command -v bootupctl >/dev/null; then
+    bootupctl backend generate-update-metadata || true
+  fi
