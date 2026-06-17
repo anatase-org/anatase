@@ -31,3 +31,5 @@ ludos patch apply cards/gaming/gamemode.yml:xserver
 # skip the spec at the end to build all of the card specs
 ludos build anatase.yml --card cards/gaming/gamemode:xserver
 ```
+
+If your working tree changes, this is because the human reviewer is staging and committing, or modifying your changes as you go. Do not reimplement reverted changes unless you are told to or get confused because of this.

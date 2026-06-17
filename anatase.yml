@@ -18,6 +18,7 @@ orchestrator-deps:
   - rpmdevtools
   - ripgrep
   - python3
+  - bootc
 
 repos:
   - repo: fedora
