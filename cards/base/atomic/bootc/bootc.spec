@@ -1,4 +1,4 @@
-%bcond_without check
+%bcond_with check
 %bcond_with tests
 %if 0%{?rhel} >= 9 || 0%{?fedora} > 41
     %bcond_without ostree_ext
@@ -39,6 +39,7 @@ License:        Apache-2.0 AND BSD-3-Clause AND MIT AND (Apache-2.0 OR BSL-1.0) 
 URL:            https://github.com/bootc-dev/bootc
 Source0:        %{url}/releases/download/v%{version}/bootc-%{version}.tar.zstd
 Source1:        %{url}/releases/download/v%{version}/bootc-%{version}-vendor.tar.zstd
+Patch0:         overrides.patch
 
 # https://fedoraproject.org/wiki/Changes/EncourageI686LeafRemoval
 ExcludeArch:    %{ix86}
