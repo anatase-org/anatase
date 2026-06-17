@@ -97,7 +97,7 @@ postprocess: |
     # dracut, but lets the postprocess steps in later cards run faster
 
     # Generate proper initramfs under /usr/lib/modules/${kver}/
-    rm -rf "/boot/initramfs-*.img"
+    rm -rf /boot/initramfs-*.img
     for kernel in /usr/lib/modules/*/vmlinuz; do
         [ -e "${kernel}" ] || continue
         kver=${kernel%/vmlinuz}
