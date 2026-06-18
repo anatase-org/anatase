@@ -1,0 +1,740 @@
+version: 1
+distro: fedora
+
+max_layers: 69
+layer_prefill_ratio: 0.4
+layer_max_ratio: 1.3
+
+meta:
+  #
+  # Us
+  #
+  hhd-ui:
+    # HHD-UI is 110mb compressed :/
+    packages:
+      - hhd-ui
+  topgrade:
+    files:
+      - /usr/bin/topgrade
+    dedicated: False
+  # Random stuff
+  unpackaged:
+    files:
+      - /usr/share/distribution-gpg-keys*
+      # This small dir is affected by multiple packages
+      - /usr/src/kernels/*scripts*
+
+  #
+  # Core
+  #
+  initramfs:
+    files:
+      - /usr/lib/modules/*/initramfs.img
+  kernel:
+    packages:
+      - kernel*
+    files:
+      - /usr/lib/modules/*vmlinuz*
+      - /usr/lib/modules/*ko.xz
+      - /usr/lib/modules/*/System.map
+  mesa-va:
+    packages:
+      - mesa-va-drivers*
+      - mesa-vdpau-drivers*
+  mesa:
+    packages:
+      - mesa*
+  firmware:
+    packages:
+      - linux-firmware*
+      - "*-firmware*"
+  wine:
+    packages:
+      - wine*
+  cups:
+    packages:
+      - cups*
+    dedicated: False
+  samba:
+    packages:
+      - samba*
+      - libwbclient
+      - libsmbclient
+      - libnetapi # FIXME: does this belong here?
+    dedicated: False
+  # Cosmic
+  cosmic:
+    packages:
+      - cosmic*
+
+  #
+  # Plasma
+  #
+  kwin:
+    packages:
+      - kwin*
+    dedicated: False
+  qt6-base:
+    packages:
+      - qt6-qtbase*
+      - qt6-qtdeclarative*
+      - qt6-qtlanguage*
+      - qt6-qtmultimedia*
+      - qt6-qtshadertools*
+  qt6:
+    packages:
+      - qt6*
+  qt5:
+    packages:
+      - qt5*
+  fcitx5:
+    packages:
+      - fcitx5*
+    dedicated: False
+  kio:
+    # Make kio which is from git get these packages to not invalidate kf6
+    packages:
+      - kf6-kio*
+    dedicated: False
+  kf6:
+    packages:
+      - kf6*
+      - breeze-icon-theme*
+  kf5:
+    packages:
+      - kf5*
+  kde-apps:
+    packages:
+      - libkexiv2-qt6
+      - signon-kwallet-extension
+      - kdegraphics-mobipocket
+      - kde-inotify-survey
+      - kpmcore
+      - libkgapi
+      - libkdcraw
+      - libkexiv2-qt5
+      - libkcompactdisc
+      - kio-extras
+      - libkcddb-doc
+      - libkcddb
+      - audiocd-kio-doc
+      - audiocd-kio
+      - baloo-widgets
+      - dolphin-libs
+      - keditbookmarks-libs
+      - keditbookmarks
+      - dolphin-plugins
+      - dolphin
+      - kate-libs
+      - ark
+      - ark-libs
+      - kaccounts-integration-qt6
+      - kaccounts-providers
+      - akonadi-server-mysql
+      - akonadi-server
+      - kio-gdrive
+      - kwrite
+      - colord-kde
+      - kamera
+      - kfind
+      - kio-admin
+      - ffmpegthumbs
+      - kde-partitionmanager
+      - kdegraphics-thumbnailers
+      - kwalletmanager5
+      - kdialog
+      - kdnssd
+      - kcharselect
+      - kdebugsettings
+      - kate-plugins
+      - kate
+      - kcron
+  kde:
+    packages:
+      - breeze-gtk-common
+      - plasma-breeze-common
+      - breeze-gtk-gtk3
+      - breeze-gtk-gtk4
+      - breeze-cursor-theme
+      - ocean-sound-theme
+      - plasma-activities
+      - kwayland
+      - layer-shell-qt
+      - kdecoration
+      - plasma-activities-stats
+      - libkscreen
+      - plasma5support
+      - kwayland-integration
+      - qqc2-breeze-style
+      - plasma-breeze-qt6
+      - kwrited
+      - plasma-milou
+      - libksysguard-common
+      - polkit-kde
+      - breeze-gtk-gtk2
+      - libksysguard
+      - plasma-breeze-qt5
+      - kpipewire
+      - libplasma
+      - kde-cli-tools
+      - kscreenlocker
+      - plasma-systemsettings
+      - plasma-nm
+      - kglobalacceld
+      - ksystemstats
+      - powerdevil
+      - kmenuedit
+      - flatpak-kcm
+      - plasma-breeze
+      - plasma-pa
+      - kactivitymanagerd
+      - plasma-discover-libs
+      - plasma-browser-integration
+      - plasma-desktop
+      - plasma-discover
+      - plasma-discover-flatpak
+      - plasma-print-manager-libs
+      - plasma-print-manager
+      - plasma-discover-notifier
+      - kdeplasma-addons
+      - plasma-drkonqi
+      - plasma-systemmonitor
+      - sddm-kcm
+      - plasma-nm-openconnect
+      - plasma-nm-openvpn
+      - plasma-nm-vpnc
+      - kinfocenter
+      - kde-gtk-config
+      - plasma-vault
+      - plasma-disks
+      - plasma-thunderbolt
+      - pam-kwallet
+      - plasma-workspace-wallpapers
+      - plasma-desktop-doc
+      - kate-krunner-plugin
+      - ksshaskpass
+  plasma:
+    packages:
+      - plasma-workspace*
+      - plasma-lookandfeel*
+      - sddm-breeze*
+      - libkworkspace*
+      - sddm-wayland*
+
+  #
+  # Gnome
+  #
+  webkit:
+    packages:
+      - webkit2gtk*
+      - webkitgtk*
+      - javascriptcoregtk*
+  gnome-utils:
+    packages:
+      - gnome-remote-desktop
+      - gnome-keyring
+      - gnome-keyring-pam
+      - gnome-user-docs
+      - gnome-tweaks
+  gnome-shell:
+    packages:
+      - gnome-control-center-filesystem
+      - adwaita-icon-theme-legacy
+      - nautilus-extensions
+      - xdg-desktop-portal-gnome
+      - nautilus
+      - gnome-software
+      - gnome-control-center
+      - gnome-shell*
+      - gnome-shell-extension*
+  gtk3:
+    packages:
+      - gtk3
+      - gtk-update-icon-cache
+  gnome-session:
+    packages:
+      - gsettings-desktop-schemas
+      - gnome-settings-daemon
+      - gnome-session
+      - gnome-session-wayland-session
+      - gnome-session-xsession
+      - gnome-shell-extension-background-logo
+      - gnome-system-monitor
+      - gnome-disk-utility
+      - gnome-backgrounds
+  gutenprint:
+    packages:
+      - gutenprint*
+    dedicated: False
+  libcanberra:
+    packages:
+      - libcanberra*
+    dedicated: False
+  gdk-pixbuf:
+    packages:
+      - gdk-pixbuf*
+    dedicated: False
+
+  #
+  # Toolchains
+  #
+  cosign:
+    packages:
+      - cosign*
+  llvm-libs:
+    packages:
+      - llvm-libs*
+  llvm:
+    packages:
+      - llvm*
+      - clang*
+  glibc:
+    packages:
+      - glibc*
+      - libsnl*
+  libgcc:
+    packages:
+      - libgcc*
+      - libstdc++
+      - libgomp
+      - libobjc
+      - cpp
+      - libatomic
+      - libgfortran
+      - gcc
+      - libgcc
+      - libstdc++
+      - libatomic
+      - gcc-plugin-annobin
+      - libgomp
+      - libstdc++-devel
+      - gcc-c++
+  qemu:
+    packages:
+      - qemu*
+  fluidsynth:
+    packages:
+      - fluid-soundfont*
+      - fluidsynth
+  cmake:
+    packages:
+      - cmake*
+    dedicated: False
+  mingw-libgcc:
+    packages:
+      - mingw*-lib*
+  mingw-sdl:
+    packages:
+      - mingw*-SDL*
+    dedicated: False
+  mingw-vkd3d:
+    packages:
+      - mingw*-vkd3d*
+    dedicated: False
+  mingw-libjpeg:
+    packages:
+      - mingw*-libjpeg-turbo
+      - libjpeg-turbo
+    dedicated: False
+  mingw-crt:
+    packages:
+      - mingw*-crt*
+    dedicated: False
+  google-fonts:
+    packages:
+      - google-noto-*
+  ghostscript:
+    packages:
+      - ghostscript*
+  mariadb:
+    packages:
+      - mariadb*
+  cldr-emoji:
+    packages:
+      - cldr-emoji-annotation*
+    dedicated: False
+  cldr:
+    packages:
+      - cldr
+  python3:
+    packages:
+      - python3
+      - python3-libs
+      - python3-tkinter
+      - python-unversioned-command
+  python3-botocore:
+    packages:
+      - python3-botocore*
+  boost:
+    packages:
+      - boost-*
+      - boost
+    dedicated: False
+  flatpak:
+    packages:
+      - flatpak
+      - flatpak-session-helper
+      - flatpak-selinux
+      - flatpak-libs
+    dedicated: False
+  libtracker:
+    packages:
+      - libtracker-sparql
+      - tracker
+      - tracker-miners
+    dedicated: False
+  ibus-anthy:
+    packages:
+      - ibus-anthy
+      - ibus-anthy-python
+    dedicated: False
+  perl:
+    packages:
+      - perl-libs
+      - perl-interpreter
+    dedicated: False
+  coreutils:
+    packages:
+      - coreutils*
+    dedicated: False
+  git:
+    packages:
+      - git*
+  #
+  # Nvidia
+  #
+  nvidia-xorg:
+    packages:
+      - nvidia-modprobe
+      - nvidia-persistenced
+      - nvidia-settings
+      - xorg-x11-drv*
+  gvisor:
+    packages:
+      - gvisor*
+    dedicated: False
+
+  #
+  # Apps
+  #
+  vlc:
+    packages:
+      - vlc*
+  vim:
+    packages:
+      - vim*
+      - xxd*
+    dedicated: False
+  intel-driver:
+    packages:
+      - libva*
+      - intel-media-driver*
+  systemd:
+    packages:
+      - systemd*
+    dedicated: False
+  gstreamer-bad:
+    packages:
+      - gstreamer1-plugins-bad*
+    dedicated: False
+  gstreamer:
+    packages:
+      - gstreamer1*
+    dedicated: False
+  speech:
+    packages:
+      - speech-dispatcher*
+      - python3-speechd*
+    dedicated: False
+  sane:
+    packages:
+      - sane-backends*
+    dedicated: False
+  networkmanager:
+    packages:
+      - NetworkManager*
+    dedicated: False
+  pipewire:
+    packages:
+      - pipewire*
+    dedicated: False
+  ibus:
+    packages:
+      - ibus*
+  cockpit:
+    packages:
+      - cockpit*
+    dedicated: False
+  firewalld:
+    packages:
+      - firewalld*
+      - python3-firewall
+      - firewall-config
+    dedicated: False
+  libwayland:
+    packages:
+      - libwayland*
+    dedicated: False
+  p11:
+    packages:
+      - p11-kit*
+    dedicated: False
+  protobuf:
+    packages:
+      - protobuf*
+    dedicated: False
+  xapps:
+    packages:
+      - xapps
+      - python3-xapps*
+    dedicated: False
+  ostree:
+    packages:
+      - ostree*
+    dedicated: False
+  grub2:
+    packages:
+      - grub2*
+    files:
+      - "*grubx64.efi"
+      - "*grubia32.efi"
+      - /usr/lib/ostree-boot/grub2/fonts*
+    dedicated: False
+  hplip:
+    packages:
+      - hplip*
+    dedicated: False
+  lxc:
+    packages:
+      - lxc*
+    dedicated: False
+  glib2:
+    packages:
+      - glib2*
+    dedicated: False
+  fedora-background:
+    packages:
+      - f*-backgrounds-*
+    dedicated: False
+  rocm:
+    packages:
+      - rocm*
+  openssl:
+    packages:
+      - openssl*
+    dedicated: False
+  pyqt6:
+    packages:
+      - python*-pyqt6*
+    dedicated: False
+  wx:
+    packages:
+      - wx*
+    dedicated: False
+  liblouis:
+    packages:
+      - liblouis*
+      - python3-louis
+    dedicated: False
+  adwaita-theme:
+    packages:
+      - adwaita-cursor-theme
+      - adwaita-icon-theme
+    dedicated: False
+  urw:
+    packages:
+      - urw-*
+    dedicated: False
+  nss:
+    packages:
+      - nss*
+    dedicated: False
+  libsemanage:
+    packages:
+      - libsepol
+      - libsemanage
+      - checkpolicy
+      - python3-libsemanage
+      - policycoreutils
+      - python3-policycoreutils
+      - policycoreutils-python-utils
+      - libsepol
+    dedicated: False
+  file:
+    packages:
+      - file
+      - file-libs
+      - python3-file-magic
+    dedicated: False
+  cracklib:
+    packages:
+      - cracklib
+      - cracklib-dicts
+    dedicated: False
+  imagemagick:
+    packages:
+      - ImageMagick*
+    dedicated: False
+  fwupd:
+    packages:
+      - fwupd*
+    dedicated: False
+  exiv2:
+    packages:
+      - exiv2*
+    dedicated: False
+  pulseaudio:
+    packages:
+      - pulseaudio*
+    dedicated: False
+  libjxl:
+    packages:
+      - libjxl*
+      - jxl*
+    dedicated: False
+  kde-connect:
+    packages:
+      - kde-connect*
+      - kdeconnectd
+    dedicated: False
+  sss:
+    packages:
+      - sssd*
+      - libsss*
+    dedicated: False
+  gnutls:
+    packages:
+      - gnutls*
+    dedicated: False
+  xorg:
+    packages:
+      - xorg-x11*
+    dedicated: False
+  system-printer:
+    packages:
+      - system-config-printer*
+    dedicated: False
+  libdnf:
+    packages:
+      - libdnf*
+    dedicated: False
+  alsa:
+    packages:
+      - alsa-*
+    dedicated: False
+  libx11:
+    packages:
+      - libX11*
+    dedicated: False
+  libglvnd:
+    packages:
+      - libglvnd*
+    dedicated: False
+  elfutils:
+    packages:
+      - elfutils*
+    dedicated: False
+  libn13:
+    packages:
+      - libn13*
+    dedicated: False
+  rom-properties:
+    packages:
+      - rom-properties*
+    dedicated: False
+  dbus:
+    packages:
+      - dbus*
+    dedicated: False
+  plymouth:
+    packages:
+      - plymouth*
+    dedicated: False
+  poppler:
+    packages:
+      - poppler*
+    dedicated: False
+  liberation-fonts:
+    packages:
+      - liberation-*
+    dedicated: False
+  mozilla-fira:
+    packages:
+      - mozilla-fira-*
+    dedicated: False
+  sqlite:
+    packages:
+      - sqlite*
+    dedicated: False
+  udisks2:
+    packages:
+      - udisks2*
+      - libudisks2
+    dedicated: False
+  malliit:
+    packages:
+      - malliit*
+    dedicated: False
+  avahi:
+    packages:
+      - avahi*
+    dedicated: False
+  libobs:
+    packages:
+      - libobs*
+      - obs-vkcapture
+    dedicated: False
+  gvfs:
+    packages:
+      - gvfs*
+    dedicated: False
+  hardbuzz:
+    packages:
+      - hardbuzz*
+    dedicated: False
+  httd:
+    packages:
+      - httpd*
+      - mod_lua
+      - mod_ssl
+    dedicated: False
+  shim:
+    packages:
+      - shim*
+    dedicated: False
+  lvm2:
+    packages:
+      - lvm2*
+    dedicated: False
+  libqmi:
+    packages:
+      - libqmi*
+    dedicated: False
+  zed:
+    files:
+      - /usr/lib/zed.app/*
+  argyllcms:
+    packages:
+      - argyllcms*
+  geolite2:
+    packages:
+      - geolite2*
+    dedicated: False
+  rclone:
+    packages:
+      - rclone*
+  code:
+    packages:
+      - code*
+  docker-compose-plugin:
+    packages:
+      - docker-compose-plugin*
+  emacs:
+    packages:
+      - emacs*
+  1password:
+    packages:
+      - 1password*
+  tailscale:
+    files:
+      - /usr/bin/tailscaled
