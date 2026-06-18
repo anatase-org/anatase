@@ -5,7 +5,11 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo_root=$(cd -- "${script_dir}/.." && pwd)
 cd "${repo_root}"
 
-IMAGE=${IMAGE:-localhost/anatase:f44-x86_64}
+MANIFEST=${MANIFEST:-anatase.yml}
+manifest_image=${MANIFEST##*/}
+manifest_image=${manifest_image%.yml}
+manifest_image=${manifest_image%.yaml}
+IMAGE=${IMAGE:-localhost/${manifest_image}:f44-x86_64}
 OSTREE_REF=${OSTREE_REF:-master}
 DISK_SIZE=${DISK_SIZE:-40G}
 VM_ROOT_SSH_KEY=${VM_ROOT_SSH_KEY:-${HOME:-}/.ssh/id_rsa.pub}
@@ -133,6 +137,9 @@ EOF
         shopt -u nullglob
     fi
 }
+
+log "Building ${MANIFEST}"
+"${ludos[@]}" build "${MANIFEST}"
 
 mkdir -p "${vm_dir}"
 
