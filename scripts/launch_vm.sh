@@ -12,9 +12,13 @@ QEMU_BIN=${QEMU_BIN:-qemu-system-x86_64}
 QEMU_DISPLAY=${QEMU_DISPLAY:-gtk}
 QEMU_VGA=${QEMU_VGA:-virtio}
 VM_KERNEL_ARGS=${VM_KERNEL_ARGS:-}
+VM_OSTREE_SHARE=${VM_OSTREE_SHARE:-1}
+VM_OSTREE_MOUNT_TAG=${VM_OSTREE_MOUNT_TAG:-anatase-ostree}
+VM_OSTREE_MOUNT_POINT=${VM_OSTREE_MOUNT_POINT:-/run/anatase/ostree}
 
 cache_dir="${repo_root}/cache"
 vm_dir="${cache_dir}/vm"
+ostree_dir="${cache_dir}/ostree"
 disk="${vm_dir}/anatase.raw"
 
 log() {
@@ -84,14 +88,27 @@ fi
 append_vm_kernel_args
 
 log "Launching ${disk} with ${QEMU_BIN}"
-exec "${QEMU_BIN}" \
-    -enable-kvm \
-    -cpu host \
-    -m "${VM_MEMORY}" \
-    -smp "${VM_CPUS}" \
-    -drive "file=${disk},format=raw,if=virtio" \
-    -netdev "user,id=net0,hostfwd=tcp::${VM_SSH_PORT}-:22" \
-    -device virtio-net-pci,netdev=net0 \
-    -vga "${QEMU_VGA}" \
-    -display "${QEMU_DISPLAY}" \
+qemu_args=(
+    -enable-kvm
+    -cpu host
+    -m "${VM_MEMORY}"
+    -smp "${VM_CPUS}"
+    -drive "file=${disk},format=raw,if=virtio"
+    -netdev "user,id=net0,hostfwd=tcp::${VM_SSH_PORT}-:22"
+    -device virtio-net-pci,netdev=net0
+    -vga "${QEMU_VGA}"
+    -display "${QEMU_DISPLAY}"
     -serial mon:stdio
+)
+
+if [[ "${VM_OSTREE_SHARE}" == "1" ]]; then
+    mkdir -p "${ostree_dir}"
+    log "Sharing ${ostree_dir} as 9p tag ${VM_OSTREE_MOUNT_TAG}"
+    log "Mount in the VM with: sudo mkdir -p ${VM_OSTREE_MOUNT_POINT} && sudo mount -t 9p -o trans=virtio,version=9p2000.L,msize=104857600 ${VM_OSTREE_MOUNT_TAG} ${VM_OSTREE_MOUNT_POINT}"
+    qemu_args+=(
+        -fsdev "local,id=ostree,path=${ostree_dir},security_model=none,multidevs=remap"
+        -device "virtio-9p-pci,fsdev=ostree,mount_tag=${VM_OSTREE_MOUNT_TAG}"
+    )
+fi
+
+exec "${QEMU_BIN}" "${qemu_args[@]}"
