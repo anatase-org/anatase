@@ -123,7 +123,7 @@ build-deps:
   - sccache
 
 specs:
-  - spec: setup/plasma-setup.spec
+  - spec: plasma-setup/plasma-setup.spec
     files:
       - overrides.patch
       - plasma-setup-*.patch
