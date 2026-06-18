@@ -1,7 +1,7 @@
 version: 1
 distro: fedora
 
-max_layers: 69
+max_layers: 44
 layer_prefill_ratio: 0.4
 layer_max_ratio: 1.3
 
@@ -13,9 +13,15 @@ meta:
     # HHD-UI is 110mb compressed :/
     packages:
       - hhd-ui
-  topgrade:
-    files:
-      - /usr/bin/topgrade
+  gamemode:
+    packages:
+      - gamescope
+      - steamos-manager
+    dedicated: False
+  scx:
+    packages:
+      - scx-tools
+      - scx-scheds
     dedicated: False
   # Random stuff
   unpackaged:
@@ -37,6 +43,11 @@ meta:
       - /usr/lib/modules/*vmlinuz*
       - /usr/lib/modules/*ko.xz
       - /usr/lib/modules/*/System.map
+      - /usr/lib/modules/*/modules.alias
+      - /usr/lib/modules/*/modules.alias.bin
+      - /usr/lib/modules/*/modules.dep.bin
+      - /usr/lib/modules/*/modules.symbols.bin
+      - /usr/lib/modules/*/modules.symbols
   mesa-va:
     packages:
       - mesa-va-drivers*
@@ -112,7 +123,7 @@ meta:
       - kpmcore
       - libkgapi
       - libkdcraw
-      - libkexiv2-qt5
+      - libkexiv2-qt*
       - libkcompactdisc
       - kio-extras
       - libkcddb-doc
@@ -173,7 +184,7 @@ meta:
       - polkit-kde
       - breeze-gtk-gtk2
       - libksysguard
-      - plasma-breeze-qt5
+      - plasma-breeze-qt*
       - kpipewire
       - libplasma
       - kde-cli-tools
@@ -346,6 +357,7 @@ meta:
   ghostscript:
     packages:
       - ghostscript*
+    dedicated: False
   mariadb:
     packages:
       - mariadb*
@@ -403,12 +415,21 @@ meta:
   #
   # Nvidia
   #
-  nvidia-xorg:
+  nct:
     packages:
-      - nvidia-modprobe
-      - nvidia-persistenced
-      - nvidia-settings
-      - xorg-x11-drv*
+      - nvidia-container*
+      - libnvidia-container*
+    dedicated: False
+  nvidia:
+    packages:
+      - nvidia-driver
+      - nvidia-driver-libs
+      - nvidia-driver-cuda
+      - nvidia-driver-cuda-libs
+      - nvidia-driver-common
+      - libnvidia-fbc
+      - xorg-x11-nvidia
+      - nvidia-kmod-common
   gvisor:
     packages:
       - gvisor*
@@ -726,6 +747,7 @@ meta:
   code:
     packages:
       - code*
+    dedicated: False
   docker-compose-plugin:
     packages:
       - docker-compose-plugin*
