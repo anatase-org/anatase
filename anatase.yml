@@ -21,11 +21,11 @@ orchestrator-deps:
 
 repos:
   - repo: fedora
-    priority: 10
+    priority: 20
     releasever: $releasever
     basearch: $arch
   - repo: fedora-updates
-    priority: 20
+    priority: 10
     releasever: $releasever
     basearch: $arch
 
