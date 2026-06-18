@@ -63,6 +63,7 @@ if ! mountpoint -q "${ostree_mount_point}"; then
     sudo mount -t 9p -o trans=virtio,version=9p2000.L,msize=104857600 "${ostree_mount_tag}" "${ostree_mount_point}"
 fi
 
-sudo bootc switch --ostree-repo "${ostree_mount_point}" --ostree-ref "${ostree_ref}"
+sudo ostree pull-local "${ostree_mount_point}" "${ostree_ref}"
+sudo ostree admin deploy "${ostree_ref}"
 sudo reboot
 EOF
