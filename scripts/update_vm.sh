@@ -34,7 +34,6 @@ log() {
 ssh_args=(
     -p "${VM_SSH_PORT}"
     -o StrictHostKeyChecking=no
-    -o UserKnownHostsFile=/dev/null
 )
 
 if [[ -n "${VM_SSH_KEY}" && -r "${VM_SSH_KEY}" ]]; then
