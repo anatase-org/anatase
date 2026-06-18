@@ -64,80 +64,6 @@ copy_image_to_rootful_storage() {
     podman save "${IMAGE}" | "${rootful_podman[@]}" load
 }
 
-configure_root_ssh() {
-    if [[ ! -s "${VM_ROOT_SSH_KEY}" ]]; then
-        return
-    fi
-
-    local loop=""
-    local mount_dir=""
-    trap 'set +e; if [[ -n "${mount_dir}" ]] && mountpoint -q "${mount_dir}"; then sudo umount "${mount_dir}"; fi; if [[ -n "${loop}" ]]; then sudo losetup -d "${loop}"; fi; if [[ -n "${mount_dir}" ]]; then rmdir "${mount_dir}" 2>/dev/null; fi; trap - RETURN' RETURN
-
-    log "Configuring root SSH access with ${VM_ROOT_SSH_KEY}"
-    loop=$(sudo losetup --find --show --partscan "${disk}")
-    mount_dir=$(mktemp -d "${TMPDIR:-/tmp}/anatase-vm.XXXXXX")
-    sudo mount "${loop}p3" "${mount_dir}"
-
-    local key
-    key=$(<"${VM_ROOT_SSH_KEY}")
-
-    local nullglob_was_set=0
-    if shopt -q nullglob; then
-        nullglob_was_set=1
-    fi
-
-    local stateroot ssh_dir auth_keys
-    shopt -s nullglob
-    for stateroot in "${mount_dir}"/ostree/deploy/*; do
-        [[ -d "${stateroot}/var" ]] || continue
-
-        ssh_dir="${stateroot}/var/roothome/.ssh"
-        auth_keys="${ssh_dir}/authorized_keys"
-
-        sudo install -d -m 0700 -o root -g root "${ssh_dir}"
-        sudo touch "${auth_keys}"
-        if ! sudo grep -Fxq -- "${key}" "${auth_keys}"; then
-            printf '%s\n' "${key}" | sudo tee -a "${auth_keys}" >/dev/null
-        fi
-        sudo chmod 0600 "${auth_keys}"
-        sudo chown root:root "${auth_keys}"
-    done
-
-    local deployment wants sshd_config_dir restorecon_unit
-    for deployment in "${mount_dir}"/ostree/deploy/*/deploy/*.0; do
-        [[ -d "${deployment}/etc" ]] || continue
-
-        wants="${deployment}/etc/systemd/system/multi-user.target.wants"
-        sudo install -d -m 0755 "${wants}"
-        sudo ln -sfn /usr/lib/systemd/system/sshd.service "${wants}/sshd.service"
-        sudo ln -sfn /etc/systemd/system/anatase-vm-root-ssh-restorecon.service "${wants}/anatase-vm-root-ssh-restorecon.service"
-
-        sshd_config_dir="${deployment}/etc/ssh/sshd_config.d"
-        sudo install -d -m 0755 "${sshd_config_dir}"
-        printf 'PermitRootLogin prohibit-password\n' | sudo tee "${sshd_config_dir}/10-anatase-vm-root-login.conf" >/dev/null
-        sudo chmod 0644 "${sshd_config_dir}/10-anatase-vm-root-login.conf"
-
-        restorecon_unit="${deployment}/etc/systemd/system/anatase-vm-root-ssh-restorecon.service"
-        sudo tee "${restorecon_unit}" >/dev/null <<'EOF'
-[Unit]
-Description=Relabel VM root SSH access files
-Before=sshd.service
-ConditionPathExists=/var/roothome/.ssh/authorized_keys
-
-[Service]
-Type=oneshot
-ExecStart=/usr/sbin/restorecon -RF /var/roothome/.ssh /etc/ssh/sshd_config.d/10-anatase-vm-root-login.conf
-
-[Install]
-WantedBy=multi-user.target
-EOF
-        sudo chmod 0644 "${restorecon_unit}"
-    done
-    if ((nullglob_was_set == 0)); then
-        shopt -u nullglob
-    fi
-}
-
 log "Building ${MANIFEST}"
 "${ludos[@]}" build "${MANIFEST}"
 
@@ -152,28 +78,171 @@ log "Creating ${disk} (${DISK_SIZE})"
 rm -f "${disk}"
 truncate -s "${DISK_SIZE}" "${disk}"
 
+root_ssh_authorized_key=""
+if [[ -s "${VM_ROOT_SSH_KEY}" ]]; then
+    log "Configuring root SSH access with ${VM_ROOT_SSH_KEY}"
+    root_ssh_authorized_key=$(<"${VM_ROOT_SSH_KEY}")
+fi
+
 log "Installing ${IMAGE} to ${disk}"
 "${rootful_podman[@]}" run --rm --privileged --pid=host --ipc=host \
     --security-opt label=type:unconfined_t \
-    -v /var/lib/containers:/var/lib/containers \
     -v /dev:/dev \
     -v /run/udev:/run/udev \
     -v /var/tmp:/var/tmp \
     -v "${vm_dir}:/output" \
     -v "${ostree_dir}:/ludos/ostree:ro" \
+    -e "OSTREE_REF=${OSTREE_REF}" \
+    -e "VM_ROOT_SSH_AUTHORIZED_KEY=${root_ssh_authorized_key}" \
     "${IMAGE}" \
-    bootc install to-disk \
-        --wipe \
-        --via-loopback \
-        --generic-image \
-        --filesystem btrfs \
-        --target-transport containers-storage \
-        --target-imgref "${IMAGE}" \
-        --skip-fetch-check \
-        --ostree-repo /ludos/ostree \
-        --ostree-ref "${OSTREE_REF}" \
-        /output/anatase.raw
+    bash -ceu '
+disk=/output/anatase.raw
+mnt=$(mktemp -d "${TMPDIR:-/var/tmp}/anatase-install.XXXXXX")
+loop=""
+
+cleanup() {
+    set +e
+    if mountpoint -q "${mnt}/boot/efi"; then
+        umount "${mnt}/boot/efi"
+    fi
+    if mountpoint -q "${mnt}/boot"; then
+        umount "${mnt}/boot"
+    fi
+    if mountpoint -q "${mnt}"; then
+        umount "${mnt}"
+    fi
+    if [ -n "${loop}" ]; then
+        losetup -d "${loop}"
+    fi
+    rmdir "${mnt}/boot/efi" "${mnt}/boot" "${mnt}" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+configure_root_ssh() {
+    if [ -z "${VM_ROOT_SSH_AUTHORIZED_KEY:-}" ]; then
+        return
+    fi
+
+    for stateroot in "${mnt}"/ostree/deploy/*; do
+        [ -d "${stateroot}/var" ] || continue
+
+        ssh_dir="${stateroot}/var/roothome/.ssh"
+        auth_keys="${ssh_dir}/authorized_keys"
+
+        install -d -m 0700 -o root -g root "${ssh_dir}"
+        touch "${auth_keys}"
+        if ! grep -Fxq -- "${VM_ROOT_SSH_AUTHORIZED_KEY}" "${auth_keys}"; then
+            printf "%s\n" "${VM_ROOT_SSH_AUTHORIZED_KEY}" >>"${auth_keys}"
+        fi
+        chmod 0600 "${auth_keys}"
+        chown root:root "${auth_keys}"
+    done
+
+    for deployment in "${mnt}"/ostree/deploy/*/deploy/*.0; do
+        [ -d "${deployment}/etc" ] || continue
+
+        wants="${deployment}/etc/systemd/system/multi-user.target.wants"
+        install -d -m 0755 "${wants}"
+        ln -sfn /usr/lib/systemd/system/sshd.service "${wants}/sshd.service"
+        ln -sfn /etc/systemd/system/anatase-vm-root-ssh-restorecon.service "${wants}/anatase-vm-root-ssh-restorecon.service"
+
+        sshd_config_dir="${deployment}/etc/ssh/sshd_config.d"
+        install -d -m 0755 "${sshd_config_dir}"
+        printf "PermitRootLogin prohibit-password\n" >"${sshd_config_dir}/10-anatase-vm-root-login.conf"
+        chmod 0644 "${sshd_config_dir}/10-anatase-vm-root-login.conf"
+
+        restorecon_unit="${deployment}/etc/systemd/system/anatase-vm-root-ssh-restorecon.service"
+        cat >"${restorecon_unit}" <<UNIT_EOF
+[Unit]
+Description=Relabel VM root SSH access files
+Before=sshd.service
+ConditionPathExists=/var/roothome/.ssh/authorized_keys
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/restorecon -RF /var/roothome/.ssh /etc/ssh/sshd_config.d/10-anatase-vm-root-login.conf
+
+[Install]
+WantedBy=multi-user.target
+UNIT_EOF
+        chmod 0644 "${restorecon_unit}"
+    done
+}
+
+loop=$(losetup --find --show --partscan "${disk}")
+
+parted -s "${loop}" mklabel gpt
+parted -s "${loop}" mkpart bios_grub 1MiB 2MiB
+parted -s "${loop}" set 1 bios_grub on
+parted -s "${loop}" mkpart EFI fat32 2MiB 514MiB
+parted -s "${loop}" set 2 esp on
+parted -s "${loop}" mkpart boot ext4 514MiB 2562MiB
+parted -s "${loop}" mkpart root btrfs 2562MiB 100%
+partprobe "${loop}" || true
+udevadm settle || true
+
+mkfs.vfat -F32 -n ANATASE_EFI "${loop}p2"
+mkfs.ext4 -F -L ANATASE_BOOT "${loop}p3"
+mkfs.btrfs -f -L ANATASE_ROOT "${loop}p4"
+
+mount "${loop}p4" "${mnt}"
+mkdir -p "${mnt}/boot"
+mount "${loop}p3" "${mnt}/boot"
+mkdir -p "${mnt}/boot/efi"
+mount "${loop}p2" "${mnt}/boot/efi"
+
+ostree admin init-fs --modern "${mnt}"
+ostree admin stateroot-init --sysroot="${mnt}" anatase
+ostree --repo="${mnt}/ostree/repo" pull-local /ludos/ostree "${OSTREE_REF}"
+
+root_uuid=$(blkid -s UUID -o value "${loop}p4")
+boot_uuid=$(blkid -s UUID -o value "${loop}p3")
+esp_uuid=$(blkid -s UUID -o value "${loop}p2")
+
+ostree admin deploy \
+    --sysroot="${mnt}" \
+    --os=anatase \
+    --karg-none \
+    --karg="root=UUID=${root_uuid}" \
+    --karg=rw \
+    "${OSTREE_REF}"
+
+deployment=$(find "${mnt}/ostree/deploy/anatase/deploy" -maxdepth 1 -type d -name "*.0" | head -n1)
+if [ -z "${deployment}" ]; then
+    echo "No OSTree deployment was created" >&2
+    exit 1
+fi
+
+install -d -m 0755 "${deployment}/etc"
+cat > "${deployment}/etc/fstab" <<EOF
+UUID=${boot_uuid} /boot ext4 defaults 0 2
+UUID=${esp_uuid} /boot/efi vfat umask=0077,shortname=winnt 0 2
+EOF
+
+configure_root_ssh
+
+install -d -m 0755 "${mnt}/boot/grub2" "${mnt}/boot/efi/EFI"
+cat /usr/lib/bootupd/grub2-static/grub-static-pre.cfg \
+    /usr/lib/bootupd/grub2-static/configs.d/*.cfg \
+    > "${mnt}/boot/grub2/grub.cfg"
+printf "set BOOT_UUID=%s\n" "${boot_uuid}" > "${mnt}/boot/grub2/bootuuid.cfg"
+
+grub2-install --target=i386-pc --boot-directory="${mnt}/boot" --recheck "${loop}"
+
+cp -a /usr/lib/efi/shim/*/EFI/. "${mnt}/boot/efi/EFI/"
+cp -a /usr/lib/efi/grub2/*/EFI/. "${mnt}/boot/efi/EFI/"
+install -d -m 0755 "${mnt}/boot/efi/EFI/BOOT" "${mnt}/boot/efi/EFI/fedora"
+if [ -f "${mnt}/boot/efi/EFI/fedora/grubx64.efi" ]; then
+    cp -f "${mnt}/boot/efi/EFI/fedora/grubx64.efi" "${mnt}/boot/efi/EFI/BOOT/grubx64.efi"
+fi
+for grub_cfg in "${mnt}/boot/efi/EFI/fedora/grub.cfg" "${mnt}/boot/efi/EFI/BOOT/grub.cfg"; do
+    cat > "${grub_cfg}" <<EOF
+search --fs-uuid ${boot_uuid} --set boot --no-floppy
+set prefix=(\$boot)/grub2
+configfile \$prefix/grub.cfg
+EOF
+done
+'
 
 log "Created ${disk}"
-configure_root_ssh
 exec "${script_dir}/launch_vm.sh"

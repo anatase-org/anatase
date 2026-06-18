@@ -39,12 +39,14 @@ append_vm_kernel_args() {
 
     local loop=""
     local mount_dir=""
-    trap 'set +e; if [[ -n "${mount_dir}" ]] && mountpoint -q "${mount_dir}"; then sudo umount "${mount_dir}"; fi; if [[ -n "${loop}" ]]; then sudo losetup -d "${loop}"; fi; if [[ -n "${mount_dir}" ]]; then rmdir "${mount_dir}" 2>/dev/null; fi; trap - RETURN' RETURN
+    trap 'set +e; if [[ -n "${mount_dir}" ]] && mountpoint -q "${mount_dir}/boot"; then sudo umount "${mount_dir}/boot"; fi; if [[ -n "${mount_dir}" ]] && mountpoint -q "${mount_dir}"; then sudo umount "${mount_dir}"; fi; if [[ -n "${loop}" ]]; then sudo losetup -d "${loop}"; fi; if [[ -n "${mount_dir}" ]]; then rmdir "${mount_dir}/boot" "${mount_dir}" 2>/dev/null; fi; trap - RETURN' RETURN
 
     log "Adding VM kernel args: ${VM_KERNEL_ARGS}"
     loop=$(sudo losetup --find --show --partscan "${disk}")
     mount_dir=$(mktemp -d "${TMPDIR:-/tmp}/anatase-vm.XXXXXX")
-    sudo mount "${loop}p3" "${mount_dir}"
+    sudo mount "${loop}p4" "${mount_dir}"
+    sudo mkdir -p "${mount_dir}/boot"
+    sudo mount "${loop}p3" "${mount_dir}/boot"
 
     local entries=()
     shopt -s nullglob
