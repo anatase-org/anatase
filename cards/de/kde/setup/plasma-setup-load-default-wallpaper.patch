@@ -1,0 +1,35 @@
+From 487401508b4b6a7be9d5d25f621ebef66de75655 Mon Sep 17 00:00:00 2001
+From: Neal Gompa <ngompa@fedoraproject.org>
+Date: Mon, 25 May 2026 09:36:36 -0400
+Subject: [PATCH] src/qml: LandingComponent: Use the distribution default
+ wallpaper
+
+This ensures that Plasma Setup starts up with the correct wallpaper
+branding.
+---
+ src/qml/LandingComponent.qml | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/qml/LandingComponent.qml b/src/qml/LandingComponent.qml
+index fec30ab..4af56a1 100644
+--- a/src/qml/LandingComponent.qml
++++ b/src/qml/LandingComponent.qml
+@@ -43,11 +43,11 @@ Item {
+         readonly property bool isLandscape: width >= height
+ 
+         source: {
+-            const landscapeFile = "5120x2880.png";
+-            const portraitFile  = "1440x2960.png";
++            const landscapeFile = "5120x2880.jxl";
++            const portraitFile  = "1440x2960.jxl";
+ 
+-            const lightFolder = "wallpapers/Next/contents/images/";
+-            const darkFolder  = "wallpapers/Next/contents/images_dark/";
++            const lightFolder = "wallpapers/Default/contents/images/";
++            const darkFolder  = "wallpapers/Default/contents/images_dark/";
+             const themedFolder = Prepare.PrepareUtil.usingDarkTheme ? darkFolder : lightFolder;
+ 
+             function locate(file) {
+-- 
+2.54.0
+

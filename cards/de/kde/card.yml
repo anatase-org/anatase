@@ -112,6 +112,33 @@ packages:
     - gdb
     - xdpyinfo
 
+build-deps:
+  - bash
+  - cmake
+  - coreutils
+  - findutils
+  - rpm-build
+  - rpmdevtools
+  - ccache
+  - sccache
+
+specs:
+  - spec: setup/plasma-setup.spec
+    files:
+      - overrides.patch
+      - plasma-setup-*.patch
+    packages:
+      - plasma-setup
+    upstream:
+      type: dist-git
+      url: https://src.fedoraproject.org/rpms/plasma-setup
+      branch: f$releasever
+    patch:
+      type: git
+      url: https://invent.kde.org/plasma/plasma-setup
+      ref: v${spec:Version}
+      file: overrides.patch
+
 postprocess: |
     set -eux
 

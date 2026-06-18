@@ -1,0 +1,31 @@
+From 511242ebe730b9a16b4a07e1edfcf0673857998d Mon Sep 17 00:00:00 2001
+From: Neal Gompa <ngompa@fedoraproject.org>
+Date: Fri, 5 Dec 2025 16:55:33 -0500
+Subject: [PATCH] modules/prepareutil: Use Fedora look and feel for
+ light/dark toggle
+
+This ensures that the user look and feel is correctly set with the
+correct wallpaper.
+---
+ modules/prepareutil/prepareutil.cpp | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/modules/prepareutil/prepareutil.cpp b/modules/prepareutil/prepareutil.cpp
+index 7c9d768..e6b2f05 100644
+--- a/modules/prepareutil/prepareutil.cpp
++++ b/modules/prepareutil/prepareutil.cpp
+@@ -93,9 +93,9 @@ void PrepareUtil::setUsingDarkTheme(bool usingDarkTheme)
+ {
+     // use plasma-apply-lookandfeel since it has logic for notifying the shell of changes
+     if (usingDarkTheme) {
+-        QProcess::execute(u"plasma-apply-lookandfeel"_s, {QStringLiteral("--apply"), QStringLiteral("org.kde.breezedark.desktop")});
++        QProcess::execute(u"plasma-apply-lookandfeel"_s, {QStringLiteral("--apply"), QStringLiteral("org.fedoraproject.fedoradark.desktop")});
+     } else {
+-        QProcess::execute(u"plasma-apply-lookandfeel"_s, {QStringLiteral("--apply"), QStringLiteral("org.kde.breeze.desktop")});
++        QProcess::execute(u"plasma-apply-lookandfeel"_s, {QStringLiteral("--apply"), QStringLiteral("org.fedoraproject.fedora.desktop")});
+     }
+ 
+     m_usingDarkTheme = usingDarkTheme;
+-- 
+2.52.0
+

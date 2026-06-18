@@ -1,0 +1,3 @@
+setup:
+  upstream-sha: 81678c593fccdaed0a97bbf13c85424a303d2c8a
+  patch-sha: 45f67a552db7127f9e6553557088ea6a1bec9532
