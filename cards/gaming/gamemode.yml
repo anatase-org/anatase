@@ -29,7 +29,7 @@ specs:
     upstream:
       type: dist-git
       url: https://src.fedoraproject.org/rpms/gamescope
-      branch: rawhide
+      branch: f$releasever
     patch:
       type: git
       url: https://github.com/ValveSoftware/gamescope.git
@@ -45,7 +45,7 @@ specs:
     upstream:
       type: dist-git
       url: https://src.fedoraproject.org/rpms/mangohud
-      branch: rawhide
+      branch: f$releasever
 
   - spec: xserver/xorg-x11-server-Xwayland.spec
     files:
@@ -55,7 +55,7 @@ specs:
     upstream:
       type: dist-git
       url: https://src.fedoraproject.org/rpms/xorg-x11-server-Xwayland
-      branch: rawhide
+      branch: f$releasever
     patch:
       type: git
       url: https://gitlab.freedesktop.org/xorg/xserver.git
