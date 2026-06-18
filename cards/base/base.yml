@@ -50,6 +50,7 @@ packages:
   - systemd
   - systemd-container
   - systemd-oomd-defaults
+  - systemd-pam
   - systemd-resolved
   - systemd-udev
   - uresourced
