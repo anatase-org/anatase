@@ -17,7 +17,7 @@ packages:
   - linux-firmware
   - microcode_ctl
   - mt7xxx-firmware
-  - nvidia-gpu-firmware
+  # - nvidia-gpu-firmware
   - nxpwireless-firmware
   - qcom-wwan-firmware
   - realtek-firmware
