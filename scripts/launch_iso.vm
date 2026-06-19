@@ -76,7 +76,8 @@ qemu_args=(
     -cpu host
     -m "${VM_MEMORY}"
     -smp "${VM_CPUS}"
-    -drive "file=${disk},format=raw,if=virtio"
+    -drive "if=none,id=install0,file=${disk},format=raw,cache=writeback"
+    -device "virtio-blk-pci,drive=install0,serial=ANATASE-INSTALL-TARGET"
     -drive "file=${iso},format=raw,media=cdrom,readonly=on"
     -boot d
     -netdev user,id=net0

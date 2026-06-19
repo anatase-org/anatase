@@ -51,6 +51,14 @@ cards:
   - cards/gaming/hhd
   - cards/base/tweaks
 
+installer:
+  files:
+    - installer/anatase.ks
+    - installer/anatase-webui.desktop
+    - installer/build.sh
+  build: |
+    /usr/bin/bash /files/installer/build.sh
+
 labels:
   org.opencontainers.image.title: Anatase
   org.opencontainers.image.source: https://github.com/anatase-org/anatase

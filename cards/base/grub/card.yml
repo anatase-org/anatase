@@ -7,6 +7,7 @@ packages:
     - grub2-pc
     - shim-ia32
     - shim-x64
+    - grub2-tools-extra
 
 files:
     - grub-boot-remount

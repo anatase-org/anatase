@@ -13,16 +13,20 @@ packages:
 
     # Basic disk helpers
     - dosfstools
+    - libblockdev-btrfs
+    - libblockdev-dm
+    - libblockdev-lvm
+    - libblockdev-mpath
 
     # Installer
-    - anaconda
+    - anaconda-webui
+    - anaconda-live
+    - slitherer
     - dracut-live
     - xorriso
     - dosfstools
     - mtools
     - erofs-utils
-    - grub2-pc
-    - grub2-tools-extra
 
 build-deps:
   - bash

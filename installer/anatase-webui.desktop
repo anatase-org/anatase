@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Anatase Installer
+Exec=liveinst
+Terminal=false
+Icon=/usr/share/icons/hicolor/256x256/apps/anaconda.png
+StartupNotify=true
+X-GNOME-Autostart-enabled=true
