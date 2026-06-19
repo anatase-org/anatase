@@ -66,6 +66,16 @@ if [ -f /etc/libreport/workflows.d/anaconda_event.conf ]; then
         /etc/libreport/workflows.d/anaconda_event.conf
 fi
 
+# Drop the Fedora feedback QR block from the Anaconda Web UI.
+webui_dir=/usr/share/cockpit/anaconda-webui
+if [ -f "${webui_dir}/index.css.gz" ]; then
+    tmp_css=$(mktemp)
+    gzip -cd "${webui_dir}/index.css.gz" > "${tmp_css}"
+    printf '\n.feedback-section{display:none!important}\n' >> "${tmp_css}"
+    gzip -n -c "${tmp_css}" > "${webui_dir}/index.css.gz"
+    rm -f "${tmp_css}"
+fi
+
 cat > /etc/plasmalogin.conf <<'EOF'
 [Autologin]
 User=anatase
