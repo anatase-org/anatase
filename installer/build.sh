@@ -27,51 +27,22 @@ install -dm0755 -o anatase -g anatase /home/anatase
 install -Dm0755 -o anatase -g anatase /files/installer/anatase-webui.desktop \
     /home/anatase/Desktop/anatase-webui.desktop
 
-# Defer to KDE for user creation
-install -dm0755 /etc/anaconda/conf.d
-cat > /etc/anaconda/conf.d/90-anatase-installer.conf <<'EOF'
-[User Interface]
-hidden_spokes =
-    PasswordSpoke
-    UserSpoke
-hidden_webui_pages =
-    anaconda-screen-accounts
-can_change_root = False
-can_change_users = False
-EOF
+install -Dm0644 /files/installer/anaconda.conf \
+    /etc/anaconda/conf.d/90-anatase-installer.conf
 
-# Kill the reporting flow for bugzilla
-rm -f \
-    /etc/libreport/events/report_Bugzilla.conf \
-    /etc/libreport/events.d/bugzilla_anaconda_event.conf \
-    /etc/libreport/events.d/bugzilla_event.conf \
-    /etc/libreport/plugins/bugzilla.conf \
-    /etc/libreport/plugins/bugzilla_format.conf \
-    /etc/libreport/plugins/bugzilla_format_anaconda.conf \
-    /etc/libreport/plugins/bugzilla_format_analyzer_libreport.conf \
-    /etc/libreport/plugins/bugzilla_format_kernel.conf \
-    /etc/libreport/plugins/bugzilla_formatdup.conf \
-    /etc/libreport/plugins/bugzilla_formatdup_anaconda.conf \
-    /etc/libreport/plugins/bugzilla_formatdup_analyzer_libreport.conf \
-    /usr/bin/reporter-bugzilla \
-    /usr/sbin/reporter-bugzilla \
-    /usr/share/libreport/conf.d/plugins/bugzilla.conf \
-    /usr/share/libreport/events/report_Bugzilla.xml \
-    /usr/share/libreport/events/watch_Bugzilla.xml \
-    /usr/share/libreport/workflows/workflow_AnacondaFedora.xml
-if [ -f /etc/libreport/workflows.d/anaconda_event.conf ]; then
-    sed -i \
-        -e '/workflow_AnacondaFedora/d' \
-        -e '/workflow_AnacondaRHELBugzilla/d' \
-        /etc/libreport/workflows.d/anaconda_event.conf
-fi
-
-# Drop the Fedora feedback QR block from the Anaconda Web UI.
+# Drop Fedora feedback/reporting UI from the Anaconda Web UI.
 webui_dir=/usr/share/cockpit/anaconda-webui
 if [ -f "${webui_dir}/index.css.gz" ]; then
     tmp_css=$(mktemp)
     gzip -cd "${webui_dir}/index.css.gz" > "${tmp_css}"
-    printf '\n.feedback-section{display:none!important}\n' >> "${tmp_css}"
+    cat >> "${tmp_css}" <<'EOF'
+
+.feedback-section{display:none!important}
+[id$="-bz-report-modal"] form > *:has(a[href*="bugzilla"]){display:none!important}
+[id$="-bz-report-modal"] form > :is(hr,[role="separator"]):has(+ *:has(a[href*="bugzilla"])){display:none!important}
+[id$="-bz-report-modal"] form > *:has([id$="-bz-report-modal-details"]) + :is(hr,[role="separator"]) + *,[id$="-bz-report-modal"] form > *:has([id$="-bugzilla-apikey"]){display:none!important}
+[id$="-bz-report-modal"] form > *:has([id$="-bz-report-modal-details"]) + :is(hr,[role="separator"]){display:none!important}
+EOF
     gzip -n -c "${tmp_css}" > "${webui_dir}/index.css.gz"
     rm -f "${tmp_css}"
 fi
