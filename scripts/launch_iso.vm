@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+repo_root=$(cd -- "${script_dir}/.." && pwd)
+cd "${repo_root}"
+
+VM_MEMORY=${VM_MEMORY:-4096}
+VM_CPUS=${VM_CPUS:-4}
+VM_DISK_SIZE=${VM_DISK_SIZE:-40G}
+VM_FIRMWARE=${VM_FIRMWARE:-bios}
+VM_RESET_DISK=${VM_RESET_DISK:-0}
+QEMU_BIN=${QEMU_BIN:-qemu-system-x86_64}
+QEMU_DISPLAY=${QEMU_DISPLAY:-gtk}
+QEMU_VGA=${QEMU_VGA:-virtio}
+
+cache_dir="${repo_root}/cache"
+vm_dir="${cache_dir}/vm/iso"
+disk=${VM_DISK:-"${vm_dir}/installer.raw"}
+ovmf_vars=${VM_OVMF_VARS:-"${vm_dir}/installer-ovmf-vars.fd"}
+
+usage() {
+    printf 'Usage: %s <installer.iso>\n' "$0" >&2
+    exit 2
+}
+
+log() {
+    printf '==> %s\n' "$*"
+}
+
+require_command() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        printf 'Required command not found: %s\n' "$1" >&2
+        exit 1
+    fi
+}
+
+first_existing() {
+    local path
+    for path in "$@"; do
+        if [[ -e "${path}" ]]; then
+            printf '%s\n' "${path}"
+            return 0
+        fi
+    done
+    return 1
+}
+
+if (($# != 1)); then
+    usage
+fi
+
+if [[ ! -f "$1" ]]; then
+    printf 'Installer ISO not found: %s\n' "$1" >&2
+    exit 1
+fi
+iso=$(realpath "$1")
+
+require_command "${QEMU_BIN}"
+
+mkdir -p "$(dirname -- "${disk}")" "$(dirname -- "${ovmf_vars}")"
+if [[ "${VM_RESET_DISK}" == "1" ]]; then
+    log "Resetting installer target disk: ${disk}"
+    rm -f "${disk}"
+fi
+
+if [[ ! -e "${disk}" ]]; then
+    log "Creating installer target disk: ${disk} (${VM_DISK_SIZE})"
+    truncate -s "${VM_DISK_SIZE}" "${disk}"
+else
+    log "Using installer target disk: ${disk}"
+fi
+
+qemu_args=(
+    -enable-kvm
+    -cpu host
+    -m "${VM_MEMORY}"
+    -smp "${VM_CPUS}"
+    -drive "file=${disk},format=raw,if=virtio"
+    -drive "file=${iso},format=raw,media=cdrom,readonly=on"
+    -boot d
+    -netdev user,id=net0
+    -device virtio-net-pci,netdev=net0
+    -vga "${QEMU_VGA}"
+    -display "${QEMU_DISPLAY}"
+    -serial mon:stdio
+)
+
+case "${VM_FIRMWARE}" in
+    bios)
+        ;;
+    uefi)
+        ovmf_code=${QEMU_OVMF_CODE:-}
+        if [[ -z "${ovmf_code}" ]]; then
+            ovmf_code=$(first_existing \
+                /usr/share/edk2/x64/OVMF_CODE.4m.fd \
+                /usr/share/edk2/ovmf/OVMF_CODE.fd \
+                /usr/share/OVMF/OVMF_CODE.fd || true)
+        fi
+
+        ovmf_template=${QEMU_OVMF_VARS_TEMPLATE:-}
+        if [[ -z "${ovmf_template}" ]]; then
+            ovmf_template=$(first_existing \
+                /usr/share/edk2/x64/OVMF_VARS.4m.fd \
+                /usr/share/edk2/ovmf/OVMF_VARS.fd \
+                /usr/share/OVMF/OVMF_VARS.fd || true)
+        fi
+
+        if [[ ! -f "${ovmf_code}" ]]; then
+            printf 'OVMF code file not found. Set QEMU_OVMF_CODE or install edk2-ovmf.\n' >&2
+            exit 1
+        fi
+        if [[ ! -f "${ovmf_template}" ]]; then
+            printf 'OVMF vars template not found. Set QEMU_OVMF_VARS_TEMPLATE or install edk2-ovmf.\n' >&2
+            exit 1
+        fi
+
+        if [[ ! -e "${ovmf_vars}" ]]; then
+            log "Creating OVMF variables store: ${ovmf_vars}"
+            cp "${ovmf_template}" "${ovmf_vars}"
+        fi
+
+        qemu_args=(
+            -drive "if=pflash,format=raw,readonly=on,file=${ovmf_code}"
+            -drive "if=pflash,format=raw,file=${ovmf_vars}"
+            "${qemu_args[@]}"
+        )
+        ;;
+    *)
+        printf 'Unsupported VM_FIRMWARE: %s\n' "${VM_FIRMWARE}" >&2
+        printf 'Use VM_FIRMWARE=bios or VM_FIRMWARE=uefi.\n' >&2
+        exit 1
+        ;;
+esac
+
+log "Launching ${iso} with ${QEMU_BIN} (${VM_FIRMWARE})"
+exec "${QEMU_BIN}" "${qemu_args[@]}"

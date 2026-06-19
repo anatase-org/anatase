@@ -3,8 +3,10 @@ env:
   releasever: 44
   nvidia: "610.43.02"
 
+name: Anatase
 releasever: $releasever
 distro: f$releasever-$arch
+
 orchestrator: quay.io/fedora/fedora:$releasever
 orchestrator-deps:
   # Required for rpmbuild deps to resolve correctly

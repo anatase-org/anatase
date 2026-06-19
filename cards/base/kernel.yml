@@ -21,8 +21,8 @@ postprocess: |
     EOF
 
     cat > /usr/lib/dracut/dracut.conf.d/20-atomic-tpm-luks.conf <<'EOF'
-    # Add support for systemd-cryptsetup and tpm2-tss LUKS locking
-    add_dracutmodules+=" tpm2-tss systemd-pcrphase "
+    # Add support for systemd-cryptsetup and tpm2-tss/fido2 LUKS locking
+    add_dracutmodules+=" tpm2-tss fido2 systemd-pcrphase "
     EOF
 
     if [ -f /usr/lib/os-release ]; then

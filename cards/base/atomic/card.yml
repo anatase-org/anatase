@@ -14,6 +14,16 @@ packages:
     # Basic disk helpers
     - dosfstools
 
+    # Installer
+    - anaconda
+    - dracut-live
+    - xorriso
+    - dosfstools
+    - mtools
+    - erofs-utils
+    - grub2-pc
+    - grub2-tools-extra
+
 build-deps:
   - bash
   - cmake
@@ -56,7 +66,12 @@ postprocess: |
     install -dm0755 /usr/lib/dracut/dracut.conf.d
     cat > /usr/lib/dracut/dracut.conf.d/20-atomic-bootc.conf <<'EOF'
     # Include the bootc/ostree root setup path in the generated initramfs.
-    add_dracutmodules+=" ostree bootc fido2 "
+    add_dracutmodules+=" ostree bootc "
+    EOF
+
+    cat > /usr/lib/dracut/dracut.conf.d/20-installer.conf <<'EOF'
+    # Add installer dracut modules so we do not need to regenerate initramfs
+    add_dracutmodules+=" dmsquash-live "
     EOF
 
     for glibc_post_upgrade in /usr/sbin/glibc_post_upgrade.*; do
@@ -84,10 +99,6 @@ postprocess: |
     [Service]
     ExecStart=/usr/bin/bootupctl migrate-static-grub-config
     EOF
-
-    if command -v semanage >/dev/null; then
-        semanage permissive --noreload --add bootupd_t || true
-    fi
 
     #
     # Prepare boot
