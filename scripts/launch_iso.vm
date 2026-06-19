@@ -79,7 +79,7 @@ qemu_args=(
     -drive "if=none,id=install0,file=${disk},format=raw,cache=writeback"
     -device "virtio-blk-pci,drive=install0,serial=ANATASE-INSTALL-TARGET"
     -drive "file=${iso},format=raw,media=cdrom,readonly=on"
-    -boot d
+    -boot order=cd,once=d
     -netdev user,id=net0
     -device virtio-net-pci,netdev=net0
     -vga "${QEMU_VGA}"
