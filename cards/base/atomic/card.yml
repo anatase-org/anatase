@@ -93,6 +93,12 @@ postprocess: |
 
     install -dm0755 /usr/lib/systemd/system-preset /usr/lib/tmpfiles.d
 
+    # Remove the rules trying to create the symlinked dirs and emitting errors
+    rm -f /usr/lib/tmpfiles.d/home.conf
+    if [ -f /usr/lib/tmpfiles.d/provision.conf ]; then
+        sed -i 's|^d- /root :0700 root :root -$|# d- /root :0700 root :root -|' /usr/lib/tmpfiles.d/provision.conf
+    fi
+
     install -dm0755 /usr/lib/systemd/system/bootloader-update.service.d
     cat > /usr/lib/systemd/system/bootloader-update.service.d/migrate-static-grub-config.conf <<'EOF'
     [Service]
