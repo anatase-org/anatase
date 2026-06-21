@@ -33,3 +33,5 @@ ludos build anatase.yml --card cards/gaming/gamemode:xserver
 ```
 
 If your working tree changes, this is because the human reviewer is staging and committing, or modifying your changes as you go. Do not reimplement reverted changes unless you are told to or get confused because of this.
+
+Do not use /tmp or memory databases to write images or large files or you will crash the system. Images are too large for in-memory tests.
