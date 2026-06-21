@@ -9,22 +9,11 @@ if [ ! -d "$flatpak_source" ]; then
     exit 0
 fi
 
-read -r osname checksum serial < <(
-    ostree admin --sysroot=/mnt/sysimage status --json |
-        python3 -c 'import json, sys
-deployment = json.load(sys.stdin)["deployments"][0]
-print(deployment["osname"], deployment["checksum"], deployment.get("deployserial", deployment.get("serial", "")))
-'
-)
-
-deploy_dir="/mnt/sysimage/ostree/deploy/${osname}/deploy/${checksum}.${serial}"
-if [ -z "$serial" ] || [ ! -d "$deploy_dir" ]; then
-    deploy_dir=$(find "/mnt/sysimage/ostree/deploy/${osname}/deploy" \
-        -maxdepth 1 -type d -name "${checksum}.*" | sort | head -n 1)
-fi
+deployment="$(ostree rev-parse --repo=/mnt/sysimage/ostree/repo ostree/0/1/0)"
+deploy_dir="/mnt/sysimage/ostree/deploy/anatase/deploy/${deployment}.0"
 
 if [ -z "$deploy_dir" ] || [ ! -d "$deploy_dir" ]; then
-    echo "failed to find installed OSTree deployment for ${osname}:${checksum}" >&2
+    echo "failed to find installed OSTree deployment for ${deployment}" >&2
     exit 1
 fi
 
@@ -36,6 +25,6 @@ sync "$target"
 
 %post --erroronfail --log=/tmp/anaconda-flatpak-selinux.log
 if [ -d /var/lib/flatpak ]; then
-    chcon -R -t var_lib_t /var/lib/flatpak
+    restorecon -RFv /var/lib/flatpak
 fi
 %end
