@@ -32,6 +32,27 @@ install -Dm0755 -o anatase -g anatase /files/installer/anatase-webui.desktop \
 install -Dm0644 /files/installer/anaconda.conf \
     /etc/anaconda/conf.d/90-anatase-installer.conf
 
+# Anaconda's automatic partitioning reuses an existing ESP if one is present on
+# the selected boot disk. This can cause losing the boot option if the bios resets
+# in dual boot scenarios
+python3 <<'PY'
+from glob import glob
+
+path, = glob("/usr/lib*/python*/site-packages/pyanaconda/modules/storage/partitioning/automatic/utils.py")
+with open(path) as f:
+    text = f.read()
+old = '''elif request.fstype in ("prepboot", "efi", "macefi", "hfs+") and \\
+                (storage.bootloader.skip_bootloader or stage1_device):'''
+new = '''elif request.fstype in ("prepboot", "efi", "macefi", "hfs+") and \\
+                (storage.bootloader.skip_bootloader):'''
+if new not in text:
+    if old not in text:
+        raise SystemExit(f"failed to find Anaconda ESP reuse check in {path}")
+    with open(path, "w") as f:
+        f.write(text.replace(old, new))
+PY
+rm -rf /usr/lib*/python*/site-packages/pyanaconda/modules/storage/partitioning/automatic/__pycache__
+
 # Drop Fedora feedback/reporting UI from the Anaconda Web UI.
 webui_dir=/usr/share/cockpit/anaconda-webui
 if [ -f "${webui_dir}/index.css.gz" ]; then
