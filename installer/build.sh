@@ -1,9 +1,11 @@
 #!/usr/bin/bash
 set -eux
 
+# Sanity checks
 command -v liveinst >/dev/null
 command -v slitherer-anaconda >/dev/null
 
+# Add Installer user and skeleton
 install -Dm0644 /files/installer/anatase.ks \
     /usr/share/anatase-installer/anatase.ks
 install -Dm0644 /files/installer/anatase.ks \
@@ -47,6 +49,7 @@ EOF
     rm -f "${tmp_css}"
 fi
 
+# Enable user
 cat > /etc/plasmalogin.conf <<'EOF'
 [Autologin]
 User=anatase
@@ -66,6 +69,7 @@ polkit.addRule(function(action, subject) {
 });
 EOF
 
+# Prepare remote
 repo=/ostree/repo
 if [ ! -d "${repo}/objects" ]; then
     echo "installer OSTree repo is missing objects: ${repo}" >&2
@@ -99,3 +103,16 @@ if ostree --repo="${repo}" refs | grep -qx master; then
 fi
 ostree --repo="${repo}" refs --create=master "${newest_commit}"
 ostree --repo="${repo}" summary --update
+
+# Install flathub apps
+flatpak remote-add --system --if-not-exists --title "Flathub" \
+    flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak remote-modify --system --enable flathub
+
+flatpak_arch=$(uname -m)
+flatpak install --system -y --noninteractive flathub \
+    "app/org.kde.kcalc/${flatpak_arch}/stable" \
+    "app/org.kde.okular/${flatpak_arch}/stable" \
+    "app/org.kde.gwenview/${flatpak_arch}/stable" \
+    "app/org.kde.kate/${flatpak_arch}/stable" \
+    "app/org.kde.ark/${flatpak_arch}/stable"

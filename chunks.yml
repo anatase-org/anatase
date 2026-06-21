@@ -199,14 +199,12 @@ meta:
       - plasma-breeze
       - plasma-pa
       - kactivitymanagerd
-      - plasma-discover-libs
+      - plasma-discover
+      - plasma-discover-*
       - plasma-browser-integration
       - plasma-desktop
-      - plasma-discover
-      - plasma-discover-flatpak
       - plasma-print-manager-libs
       - plasma-print-manager
-      - plasma-discover-notifier
       - kdeplasma-addons
       - plasma-drkonqi
       - plasma-systemmonitor

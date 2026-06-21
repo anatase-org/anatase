@@ -8,12 +8,10 @@ packages:
     # KDE applications
     - akonadi-server
     - akonadi-server-mysql
-    - ark
     - audiocd-kio
     - dolphin
     - ffmpegthumbs
     - filelight
-    - kamera
     - kcharselect
     - kde-connect
     - kdebugsettings
@@ -31,6 +29,7 @@ packages:
     - kwalletmanager5
     - kwrite
     - plasma-discover
+    - plasma-discover-flatpak
     - plasma-discover-notifier
     - plasma-discover-rpm-ostree
     - plasma-systemmonitor

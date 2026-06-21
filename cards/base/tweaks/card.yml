@@ -6,9 +6,22 @@ files:
   - modules-load.conf
   - zram-generator.conf
   - dev-hugepages1G.mount
+  - flatpaks.service
 
 postprocess: |
   set -eux
+
+  #
+  # Flatpaks
+  #
+
+  # Disable flatpak fedora remotes (they come from the flatpak package)
+  rm -rf /etc/systemd/system/multi-user.target.wants/flatpak-add-fedora-repos.service \
+    /usr/lib/systemd/system/flatpak-add-fedora-repos.service
+  # Add flathub with similar service
+  cp /files/flatpaks.service \
+    /usr/lib/systemd/system/anatase-flatpaks.service
+  systemctl enable anatase-flatpaks
 
   #
   # System policy
