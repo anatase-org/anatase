@@ -92,11 +92,6 @@ postprocess: |
     systemctl --user --global preset-all || true
 
     install -dm0755 /usr/lib/systemd/system-preset /usr/lib/tmpfiles.d
-    cat > /usr/lib/tmpfiles.d/90-atomic-desktops-ownership-fixes.conf <<'EOF'
-    Z /var/lib/passim - passim passim
-    Z /var/log/passim - passim passim
-    Z /etc/colord/    - colord colord
-    EOF
 
     install -dm0755 /usr/lib/systemd/system/bootloader-update.service.d
     cat > /usr/lib/systemd/system/bootloader-update.service.d/migrate-static-grub-config.conf <<'EOF'
