@@ -3,6 +3,12 @@
 ostreesetup --osname="anatase" --remote="anatase" --url="file:///ostree/repo" --ref="master" --nogpg
 
 %post --erroronfail --nochroot --interpreter=/usr/bin/bash --log=/tmp/anaconda-flatpaks.log
+flatpak_source="/var/lib/flatpak-installer"
+if [ ! -d "$flatpak_source" ]; then
+    echo "no installer Flatpak snapshot found at $flatpak_source; skipping"
+    exit 0
+fi
+
 read -r osname checksum serial < <(
     ostree admin --sysroot=/mnt/sysimage status --json |
         python3 -c 'import json, sys
@@ -22,9 +28,9 @@ if [ -z "$deploy_dir" ] || [ ! -d "$deploy_dir" ]; then
     exit 1
 fi
 
-target="${deploy_dir}/var/lib"
+target="${deploy_dir}/var/lib/flatpak"
 mkdir -p "$target"
-rsync -aAXUHK --open-noatime /var/lib/flatpak "$target"
+rsync -aAXUHK --delete --open-noatime "$flatpak_source/" "$target/"
 sync "$target"
 %end
 
