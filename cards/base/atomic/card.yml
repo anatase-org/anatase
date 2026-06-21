@@ -106,6 +106,13 @@ postprocess: |
     EOF
 
     #
+    # Installer fixups
+    #
+
+    # Mute socket motd
+    rm -rf /etc/motd.d/cockpit
+
+    #
     # Prepare boot
     #
 
