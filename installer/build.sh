@@ -137,6 +137,7 @@ flatpak install --system -y --noninteractive flathub \
     "app/org.kde.gwenview/${flatpak_arch}/stable" \
     "app/org.kde.kate/${flatpak_arch}/stable" \
     "app/org.kde.ark/${flatpak_arch}/stable"
+flatpak update --system --appstream -y --noninteractive
 
 rm -rf /var/lib/flatpak-installer
 cp -alT /var/lib/flatpak /var/lib/flatpak-installer
