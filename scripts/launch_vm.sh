@@ -5,7 +5,7 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo_root=$(cd -- "${script_dir}/.." && pwd)
 cd "${repo_root}"
 
-VM_MEMORY=${VM_MEMORY:-4096}
+VM_MEMORY=${VM_MEMORY:-8192}
 VM_CPUS=${VM_CPUS:-4}
 VM_SSH_PORT=${VM_SSH_PORT:-2222}
 QEMU_BIN=${QEMU_BIN:-qemu-system-x86_64}
