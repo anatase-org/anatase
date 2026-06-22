@@ -1,5 +1,7 @@
 version: 1
 
+env:
+  tag: $tag
 
 build-deps:
   - bash
@@ -11,6 +13,16 @@ build-deps:
   - ccache
   - sccache
 
+# Prevent env invalidating the build hash
+hash: >
+  @hash(
+    anatase-logos.spec,
+    COPYING,
+    ./favicon.svg,
+    letterhead-onblack.svg,
+    letterhead-onwhite.svg
+  )
+
 specs:
   - spec: anatase-logos.spec
     files:
@@ -19,3 +31,24 @@ specs:
     packages:
       - anatase-logos
       - fedora-logos
+
+postprocess: |
+  echo "OS Release file (/etc/os-release):"
+  cat | tee /usr/lib/os-release <<'EOF'
+  NAME="Anatase Linux"
+  VERSION="$releasever"
+  RELEASE_TYPE=stable
+  ID=anatase
+  ID_LIKE=fedora
+  VERSION_ID=$releasever
+  VERSION_CODENAME=""
+  PRETTY_NAME="Anatase Linux ($tag)"
+  ANSI_COLOR="1;38;2;248;221;11"
+  LOGO=anatase-logo-icon
+  CPE_NAME="cpe:/o:fedoraproject:fedora:$releasever"
+  DEFAULT_HOSTNAME="anatase"
+  HOME_URL="https://anatase.org/"
+  DOCUMENTATION_URL="https://docs.anatase.org/"
+  SUPPORT_URL="https://ask.fedoraproject.org/"
+  BUG_REPORT_URL="https://github.com/anatase-org/anatase/issues"
+  EOF

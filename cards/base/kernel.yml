@@ -25,17 +25,6 @@ postprocess: |
     add_dracutmodules+=" tpm2-tss fido2 systemd-pcrphase "
     EOF
 
-    if [ -f /usr/lib/os-release ]; then
-        . /usr/lib/os-release
-        if [ "${ID:-}" = "fedora" ] && [ "${VERSION_ID:-0}" -ge 42 ]; then
-            cat > /usr/lib/kernel/install.conf <<'EOF'
-    # kernel-install will not try to run dracut and allows the image builder to
-    # take over initramfs generation. This also tells tooling to keep one kernel.
-    layout=ostree
-    EOF
-        fi
-    fi
-
     if [ -d /usr/share/dnf5/libdnf.conf.d ]; then
         cat > /usr/share/dnf5/libdnf.conf.d/20-ostree-installonlypkgs.conf <<'EOF'
     [main]
