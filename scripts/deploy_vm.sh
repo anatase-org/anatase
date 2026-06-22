@@ -229,8 +229,10 @@ printf "set BOOT_UUID=%s\n" "${boot_uuid}" > "${mnt}/boot/grub2/bootuuid.cfg"
 
 grub2-install --target=i386-pc --boot-directory="${mnt}/boot" --recheck "${loop}"
 
-cp -a /usr/lib/efi/shim/*/EFI/. "${mnt}/boot/efi/EFI/"
-cp -a /usr/lib/efi/grub2/*/EFI/. "${mnt}/boot/efi/EFI/"
+# The source EFI trees may contain hard-linked fallback binaries. The VM ESP is
+# vfat, so copy file contents instead of preserving hard-link relationships.
+cp -R --no-preserve=links /usr/lib/efi/shim/*/EFI/. "${mnt}/boot/efi/EFI/"
+cp -R --no-preserve=links /usr/lib/efi/grub2/*/EFI/. "${mnt}/boot/efi/EFI/"
 install -d -m 0755 "${mnt}/boot/efi/EFI/BOOT" "${mnt}/boot/efi/EFI/fedora"
 if [ -f "${mnt}/boot/efi/EFI/fedora/grubx64.efi" ]; then
     cp -f "${mnt}/boot/efi/EFI/fedora/grubx64.efi" "${mnt}/boot/efi/EFI/BOOT/grubx64.efi"
