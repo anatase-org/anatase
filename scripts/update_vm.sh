@@ -41,7 +41,7 @@ if [[ -n "${VM_SSH_KEY}" && -r "${VM_SSH_KEY}" ]]; then
 fi
 
 log "Building ${MANIFEST}"
-"${ludos[@]}" build "${MANIFEST}"
+"${ludos[@]}" build "${MANIFEST}" $@
 
 mkdir -p "${ostree_dir}"
 
