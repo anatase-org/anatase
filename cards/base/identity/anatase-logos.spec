@@ -5,9 +5,10 @@ Release:	4%{?dist}
 
 License:	LicenseRef-Anatase-Logos
 Source0:	favicon.svg
-Source1:	letterhead-onblack.svg
-Source2:	letterhead-onwhite.svg
-Source3:	COPYING
+Source1:	borderless.svg
+Source2:	letterhead-onblack.svg
+Source3:	letterhead-onwhite.svg
+Source4:	COPYING
 Provides:	redhat-logos = %{version}-%{release}
 Provides:	gnome-logos = %{version}-%{release}
 Provides:	system-logos = %{version}-%{release}
@@ -22,24 +23,28 @@ distributed with anything but unmodified Anatase images and images for
 personal and internal organisation use.
 
 %prep
-cp -p %{SOURCE3} COPYING
+cp -p %{SOURCE4} COPYING
 
 %build
 builddir=%{_builddir}/%{name}-generated
 rm -rf "$builddir"
 mkdir -p "$builddir"/icons/hicolor/scalable/apps
+mkdir -p "$builddir"/icons/hicolor/scalable/places
 mkdir -p "$builddir"/pixmaps
 mkdir -p "$builddir"/plymouth/themes/spinner
 
 cp -p %{SOURCE0} "$builddir"/icons/hicolor/scalable/apps/anatase-logo-icon.svg
+cp -p %{SOURCE1} "$builddir"/icons/hicolor/scalable/apps/start-here.svg
 
 rsvg-convert -a -w 252 -h 252 -o "$builddir"/pixmaps/anatase-logo-sprite.png %{SOURCE0}
-rsvg-convert -a -w 252 -h 252 -o "$builddir"/pixmaps/system-logo-white.png %{SOURCE1}
-rsvg-convert -a -w 149 -h 43 -o "$builddir"/plymouth/themes/spinner/watermark.png %{SOURCE1}
+rsvg-convert -a -w 252 -h 252 -o "$builddir"/pixmaps/system-logo-white.png %{SOURCE0}
+rsvg-convert -a -w 149 -h 43 -o "$builddir"/plymouth/themes/spinner/watermark.png %{SOURCE2}
 
 for size in 16 22 24 32 36 48 96 256 ; do
   mkdir -p "$builddir"/icons/hicolor/${size}x${size}/apps
+  mkdir -p "$builddir"/icons/hicolor/${size}x${size}/places
   rsvg-convert -a -w "$size" -h "$size" -o "$builddir"/icons/hicolor/${size}x${size}/apps/anatase-logo-icon.png %{SOURCE0}
+  rsvg-convert -a -w "$size" -h "$size" -o "$builddir"/icons/hicolor/${size}x${size}/places/start-here.png %{SOURCE1}
 done
 
 %install
@@ -55,7 +60,7 @@ popd
 mkdir -p $RPM_BUILD_ROOT%{_datadir}/plymouth/themes/spinner
 install -p -m 644 %{_builddir}/%{name}-generated/plymouth/themes/spinner/watermark.png $RPM_BUILD_ROOT%{_datadir}/plymouth/themes/spinner/watermark.png
 
-# Logo icons used by os-release LOGO and as the Plasma launcher icon.
+# Logo icons used by os-release LOGO.
 for size in 16x16 22x22 24x24 32x32 36x36 48x48 96x96 256x256 ; do
   mkdir -p $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/$size/apps
   install -p -m 644 %{_builddir}/%{name}-generated/icons/hicolor/$size/apps/anatase-logo-icon.png $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/$size/apps/
@@ -64,11 +69,10 @@ for size in 16x16 22x22 24x24 32x32 36x36 48x48 96x96 256x256 ; do
   popd
 done
 
+# Plasma launcher icon.
 for i in 16 22 24 32 36 48 96 256 ; do
   mkdir -p $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/${i}x${i}/places
-  pushd $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/${i}x${i}/places
-    ln -s ../apps/anatase-logo-icon.png start-here.png
-  popd
+  install -p -m 644 %{_builddir}/%{name}-generated/icons/hicolor/${i}x${i}/places/start-here.png $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/${i}x${i}/places/
 done
 
 # Favicon path used by Cockpit's Fedora branding symlink.
@@ -82,7 +86,7 @@ mkdir -p $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/scalable/apps
 install -p -m 644 %{_builddir}/%{name}-generated/icons/hicolor/scalable/apps/anatase-logo-icon.svg $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/scalable/apps/
 pushd $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/scalable/apps
   ln -s anatase-logo-icon.svg fedora-logo-icon.svg
-  ln -s anatase-logo-icon.svg start-here.svg
+  install -p -m 644 %{_builddir}/%{name}-generated/icons/hicolor/scalable/apps/start-here.svg .
 popd
 mkdir -p $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/scalable/places/
 pushd $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/scalable/places/

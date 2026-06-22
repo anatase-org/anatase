@@ -44,7 +44,7 @@
        id="page12"
        margin="0"
        bleed="0"
-       inkscape:export-filename="appicon.png"
+       inkscape:export-filename="favicon.svg"
        inkscape:export-xdpi="96"
        inkscape:export-ydpi="96" />
   </sodipodi:namedview>
@@ -275,7 +275,7 @@
      id="g12"
      transform="translate(-187.37211,-203.31815)">
     <rect
-       style="display:inline;fill:url(#linearGradient14);stroke-width:1.11414;stroke-miterlimit:5.2"
+       style="display:none;fill:url(#linearGradient14);stroke-width:1.11414;stroke-miterlimit:5.2"
        id="rect13"
        width="272.436"
        height="269.14468"
