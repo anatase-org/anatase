@@ -4,3 +4,4 @@ cache
 ref
 logs/
 patchwork
+.env
