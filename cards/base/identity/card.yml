@@ -1,0 +1,21 @@
+version: 1
+
+
+build-deps:
+  - bash
+  - cmake
+  - coreutils
+  - findutils
+  - rpm-build
+  - rpmdevtools
+  - ccache
+  - sccache
+
+specs:
+  - spec: anatase-logos.spec
+    files:
+      - "*.svg"
+      - COPYING
+    packages:
+      - anatase-logos
+      - fedora-logos
