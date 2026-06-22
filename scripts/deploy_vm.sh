@@ -205,6 +205,8 @@ ostree admin deploy \
     --karg-none \
     --karg="root=UUID=${root_uuid}" \
     --karg=rw \
+    --karg=quiet \
+    --karg=rhgb \
     "${OSTREE_REF}"
 
 deployment=$(find "${mnt}/ostree/deploy/anatase/deploy" -maxdepth 1 -type d -name "*.0" | head -n1)
