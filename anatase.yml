@@ -67,3 +67,4 @@ labels:
   org.opencontainers.image.title: Anatase
   org.opencontainers.image.source: https://github.com/anatase-org/anatase
   org.opencontainers.image.description: Anatase distribution built with Ludos.
+  org.opencontainers.image.version: $tag

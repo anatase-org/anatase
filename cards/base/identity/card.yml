@@ -39,13 +39,13 @@ postprocess: |
   echo "OS Release file (/etc/os-release):"
   cat | tee /usr/lib/os-release <<'EOF'
   NAME="Anatase"
-  VERSION="$releasever"
+  VERSION="$tag"
   RELEASE_TYPE=stable
   ID=anatase
   ID_LIKE=fedora
   VERSION_ID=$releasever
   VERSION_CODENAME=""
-  PRETTY_NAME="Anatase ($tag)"
+  PRETTY_NAME="Anatase"
   ANSI_COLOR="1;38;2;248;221;11"
   LOGO=anatase-logo-icon
   CPE_NAME="cpe:/o:fedoraproject:fedora:$releasever"
