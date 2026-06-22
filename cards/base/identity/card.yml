@@ -37,7 +37,7 @@ specs:
 
 postprocess: |
   echo "OS Release file (/etc/os-release):"
-  cat | tee /usr/lib/os-release <<'EOF'
+  tee /usr/lib/os-release <<'EOF'
   NAME="Anatase"
   VERSION="$tag"
   RELEASE_TYPE=stable
