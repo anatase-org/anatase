@@ -13,6 +13,9 @@ build-deps:
   - ccache
   - sccache
 
+files:
+  - cockpit-branding.css
+
 # Prevent env invalidating the build hash
 hash: >
   @hash(
@@ -52,3 +55,14 @@ postprocess: |
   SUPPORT_URL="https://ask.fedoraproject.org/"
   BUG_REPORT_URL="https://github.com/anatase-org/anatase/issues"
   EOF
+
+  # Cockpit selects branding by os-release ID. Anatase uses ID=anatase, so give
+  # Cockpit and the Anaconda WebUI a matching branding directory.
+  install -Dm0644 /files/cockpit-branding.css \
+      /usr/share/cockpit/branding/anatase/branding.css
+  ln -sfn ../../../pixmaps/system-logo-white.png \
+      /usr/share/cockpit/branding/anatase/logo.png
+  ln -sfn ../../../pixmaps/anatase-logo-sprite.png \
+      /usr/share/cockpit/branding/anatase/apple-touch-icon.png
+  ln -sfn ../../../../../etc/favicon.png \
+      /usr/share/cockpit/branding/anatase/favicon.ico
