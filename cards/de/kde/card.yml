@@ -59,7 +59,6 @@ packages:
 
     # System settings
     - colord-kde
-    - firewall-config
     - flatpak-kcm
     - fprintd-pam
     - kaccounts-integration-qt6

@@ -65,7 +65,6 @@ packages:
   - bind-utils
   - dnsmasq
   - ethtool
-  - firewalld
   - iproute
   - iptables-nft
   - iptstate
@@ -78,6 +77,7 @@ packages:
   - samba-client
   - wireguard-tools
   - wpa_supplicant
+  - ufw
 
   # Storage and filesystems
   - btrfs-progs

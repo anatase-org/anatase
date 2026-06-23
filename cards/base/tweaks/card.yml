@@ -56,3 +56,46 @@ postprocess: |
   if [ -e /usr/lib64/libdrm.so.2 ] && [ ! -e /usr/lib64/libdrm.so ]; then
       cp --no-dereference --preserve=links /usr/lib64/libdrm.so.2 /usr/lib64/libdrm.so
   fi
+
+  #
+  # Firewall
+  #
+
+  # Enable our custom rules
+  # Specifically, we want to allow input to ports 1025:65535
+  for ufw_family in user user6; do
+      if [ "${ufw_family}" = user ]; then
+          ufw_rules=/usr/share/ufw/iptables/user.rules
+          ufw_chain=ufw-user-input
+          ufw_addr=0.0.0.0/0
+      else
+          ufw_rules=/usr/share/ufw/iptables/user6.rules
+          ufw_chain=ufw6-user-input
+          ufw_addr=::/0
+      fi
+
+      for ufw_protocol in tcp udp; do
+          ufw_rule="-A ${ufw_chain} -p ${ufw_protocol} -m multiport --dports 1025:65535 -j ACCEPT"
+          ufw_tuple="### tuple ### allow ${ufw_protocol} 1025:65535 ${ufw_addr} any ${ufw_addr} in"
+
+          if ! grep -qF -- "${ufw_rule}" "${ufw_rules}"; then
+              sed -i "/^### END RULES ###/i\\${ufw_tuple}\\n${ufw_rule}\\n" "${ufw_rules}"
+          fi
+      done
+  done
+
+  # Configure ufw to use /etc/ufw/lib for local state instead of /var
+  install -dm0755 /etc/ufw/lib /usr/lib/tmpfiles.d
+  install -Dm0644 /usr/share/ufw/iptables/user.rules /etc/ufw/lib/user.rules
+  install -Dm0644 /usr/share/ufw/iptables/user6.rules /etc/ufw/lib/user6.rules
+
+  cat > /usr/lib/tmpfiles.d/anatase-ufw.conf <<'EOF'
+  L+ /var/lib/ufw - - - - /etc/ufw/lib
+  EOF
+
+  # Just for the container (Dangerous)
+  rm -rf /var/lib/ufw
+  ln -s /etc/ufw/lib /var/lib/ufw
+
+  # Enable
+  systemctl enable ufw.service
