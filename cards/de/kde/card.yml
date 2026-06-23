@@ -136,8 +136,9 @@ specs:
 files:
     - color-schemes/AnataseDark.colors
     - color-schemes/AnataseLight.colors
-    - splash-preview.png
-    - splash.qml
+    - theme/defaults
+    - theme/splash-preview.png
+    - theme/splash.qml
 
 postprocess: |
     set -eux
@@ -242,24 +243,31 @@ postprocess: |
     # Anatase defaults to dark, while anataselight uses Breeze.
     cp -a "${lookandfeel_dir}/org.kde.breezedark.desktop"/. "${lookandfeel_dir}/org.anatase.anatase.desktop"
 
-    # Do not use upstream plasma wallpaper
-    sed -i -E 's/^Image=.*/Image=Default/' \
-        "${lookandfeel_dir}/org.anatase.anatase.desktop/contents/defaults" \
-        "${lookandfeel_dir}/org.anatase.anataselight.desktop/contents/defaults"
+    write_anatase_defaults() {
+        theme_dir="${1}"
+        color_scheme="${2}"
+        icon_theme="${3}"
+        splash_theme="${4}"
+        defaults_file="${theme_dir}/contents/defaults"
 
-    # Use a special palette for dark
-    sed -i -E 's/^ColorScheme=.*/ColorScheme=AnataseDark/' \
-        "${lookandfeel_dir}/org.anatase.anatase.desktop/contents/defaults"
+        install -m0644 /files/theme/defaults "${defaults_file}"
+        sed -i \
+            -e "s|@COLOR_SCHEME@|${color_scheme}|g" \
+            -e "s|@ICON_THEME@|${icon_theme}|g" \
+            -e "s|@SPLASH_THEME@|${splash_theme}|g" \
+            "${defaults_file}"
+    }
 
-    # Use a special palette for light
-    sed -i -E 's/^ColorScheme=.*/ColorScheme=AnataseLight/' \
-        "${lookandfeel_dir}/org.anatase.anataselight.desktop/contents/defaults"
-
-    # Select the matching splash screen when the global theme is applied.
-    sed -i -E 's/^Theme=.*/Theme=org.anatase.anatase.desktop/' \
-        "${lookandfeel_dir}/org.anatase.anatase.desktop/contents/defaults"
-    sed -i -E 's/^Theme=.*/Theme=org.anatase.anataselight.desktop/' \
-        "${lookandfeel_dir}/org.anatase.anataselight.desktop/contents/defaults"
+    write_anatase_defaults \
+        "${lookandfeel_dir}/org.anatase.anatase.desktop" \
+        AnataseDark \
+        breeze-dark \
+        org.anatase.anatase.desktop
+    write_anatase_defaults \
+        "${lookandfeel_dir}/org.anatase.anataselight.desktop" \
+        AnataseLight \
+        breeze \
+        org.anatase.anataselight.desktop
 
     write_start_here_plasmoid_setup() {
         theme_dir="${1}"
@@ -287,8 +295,8 @@ postprocess: |
         install -dm0755 "${splash_dir}/images"
         install -m0644 /usr/share/icons/hicolor/scalable/apps/anatase-splash.svg \
             "${splash_dir}/images/anatase.svg"
-        install -m0644 /files/splash.qml "${splash_dir}/Splash.qml"
-        install -Dm0644 /files/splash-preview.png "${preview_dir}/splash.png"
+        install -m0644 /files/theme/splash.qml "${splash_dir}/Splash.qml"
+        install -Dm0644 /files/theme/splash-preview.png "${preview_dir}/splash.png"
     }
 
     write_anatase_splash "${lookandfeel_dir}/org.anatase.anatase.desktop"
@@ -320,6 +328,11 @@ postprocess: |
 
     write_anatase_lookandfeel_metadata "org.anatase.anatase" "Anatase" "Anatase theme"
     write_anatase_lookandfeel_metadata "org.anatase.anataselight" "Anatase Light" "Anatase Light theme"
+
+    # Make sure the default splash is ours
+    sed -i -E \
+        's|<default>org\.kde\.breeze\.desktop</default>|<default>org.anatase.anatase.desktop</default>|' \
+        /usr/share/config.kcfg/splashscreensettings.kcfg
 
     # Apply our theme as a default
     kdeglobals=/usr/share/kde-settings/kde-profile/default/xdg/kdeglobals
