@@ -17,9 +17,8 @@ VM_OSTREE_MOUNT_TAG=${VM_OSTREE_MOUNT_TAG:-anatase-ostree}
 VM_OSTREE_MOUNT_POINT=${VM_OSTREE_MOUNT_POINT:-/run/anatase/ostree}
 
 cache_dir="${repo_root}/cache"
-vm_dir="${cache_dir}/vm"
 ostree_dir="${cache_dir}/ostree"
-disk="${vm_dir}/anatase.raw"
+disk="${cache_dir}/vm.raw"
 
 log() {
     printf '==> %s\n' "$*"

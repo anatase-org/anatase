@@ -15,9 +15,8 @@ QEMU_DISPLAY=${QEMU_DISPLAY:-gtk}
 QEMU_VGA=${QEMU_VGA:-virtio}
 
 cache_dir="${repo_root}/cache"
-vm_dir="${cache_dir}/vm/iso"
-disk=${VM_DISK:-"${vm_dir}/installer.raw"}
-ovmf_vars=${VM_OVMF_VARS:-"${vm_dir}/installer-ovmf-vars.fd"}
+disk=${VM_DISK:-"${cache_dir}/vm.raw"}
+ovmf_vars=${VM_OVMF_VARS:-"${cache_dir}/vm-ovmf-vars.fd"}
 
 usage() {
     printf 'Usage: %s <installer.iso>\n' "$0" >&2

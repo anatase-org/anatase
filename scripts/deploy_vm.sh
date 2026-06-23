@@ -15,9 +15,8 @@ DISK_SIZE=${DISK_SIZE:-40G}
 VM_ROOT_SSH_KEY=${VM_ROOT_SSH_KEY:-${HOME:-}/.ssh/id_rsa.pub}
 
 cache_dir="${repo_root}/cache"
-vm_dir="${cache_dir}/vm"
 ostree_dir="${cache_dir}/ostree"
-disk="${vm_dir}/anatase.raw"
+disk="${cache_dir}/vm.raw"
 
 if [[ -x "${repo_root}/venv/bin/ludos" ]]; then
     ludos=("${repo_root}/venv/bin/ludos")
@@ -67,7 +66,7 @@ copy_image_to_rootful_storage() {
 log "Building ${MANIFEST}"
 "${ludos[@]}" build "${MANIFEST}"
 
-mkdir -p "${vm_dir}"
+mkdir -p "${cache_dir}"
 
 log "Importing ${IMAGE} into ${ostree_dir}"
 "${ludos[@]}" bootc ostree-import "${IMAGE}"
@@ -90,13 +89,13 @@ log "Installing ${IMAGE} to ${disk}"
     -v /dev:/dev \
     -v /run/udev:/run/udev \
     -v /var/tmp:/var/tmp \
-    -v "${vm_dir}:/output" \
+    -v "${cache_dir}:/output" \
     -v "${ostree_dir}:/ludos/ostree:ro" \
     -e "OSTREE_REF=${OSTREE_REF}" \
     -e "VM_ROOT_SSH_AUTHORIZED_KEY=${root_ssh_authorized_key}" \
     "${IMAGE}" \
     bash -ceu '
-disk=/output/anatase.raw
+disk=/output/vm.raw
 mnt=$(mktemp -d "${TMPDIR:-/var/tmp}/anatase-install.XXXXXX")
 loop=""
 
