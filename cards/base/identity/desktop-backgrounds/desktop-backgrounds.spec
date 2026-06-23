@@ -207,8 +207,8 @@ install_wallpaper() {
 EOF
 }
 
-install_wallpaper formation %{wallpaper_id} "Anatase"
-install_wallpaper crystal Anatase_Crystal "Anatase Crystal"
+install_wallpaper crystal %{wallpaper_id} "Anatase Crystal"
+install_wallpaper formation Anatase_Formation "Anatase Formation"
 install_wallpaper strata Anatase_Strata "Anatase Strata"
 
 pushd "${wallpaper_root}"
@@ -233,7 +233,7 @@ popd
 %files kde
 %dir %{_datadir}/wallpapers
 %{_datadir}/wallpapers/%{wallpaper_id}
-%{_datadir}/wallpapers/Anatase_Crystal
+%{_datadir}/wallpapers/Anatase_Formation
 %{_datadir}/wallpapers/Anatase_Strata
 %{_datadir}/wallpapers/Default
 

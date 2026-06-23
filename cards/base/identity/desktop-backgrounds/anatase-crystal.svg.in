@@ -27,5 +27,5 @@
   <path d="M470 1740 L1050 2080 L0 2160 L0 1855 Z" fill="@SHADOW@" opacity="0.50"/>
   <path d="M910 1045 L1175 1220 L1540 930 L2140 500 L2680 220" fill="none" stroke="@ACCENT@" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity="0.82"/>
   <path d="M2295 1220 L3170 970 M2295 1220 L2860 2040 M1780 1850 L2295 1220 M1175 1220 L1780 1850" stroke="@HIGHLIGHT@" stroke-width="5" opacity="0.24"/>
-  <path d="M0 2160 L3840 2160 L3840 1880 C3080 2020 2520 1930 1900 2020 C1210 2120 710 2040 0 2115 Z" fill="@SHADOW@" opacity="0.18"/>
+  <!-- <path d="M0 2160 L3840 2160 L3840 1880 C3080 2020 2520 1930 1900 2020 C1210 2120 710 2040 0 2115 Z" fill="@SHADOW@" opacity="0.18"/> -->
 </svg>
