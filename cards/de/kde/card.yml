@@ -209,3 +209,48 @@ postprocess: |
     EOF
 
     systemctl preset fedora-kinoite-plasmalogin-workaround.service || true
+
+    #
+    # Themes
+    #
+    lookandfeel_dir=/usr/share/plasma/look-and-feel
+
+    rm -rf \
+        "${lookandfeel_dir}/org.fedoraproject.fedora.desktop" \
+        "${lookandfeel_dir}/org.fedoraproject.fedoradark.desktop" \
+        "${lookandfeel_dir}/org.fedoraproject.fedoralight.desktop"
+
+    # Start from complete Breeze packages, then overlay the variant settings.
+    cp -a "${lookandfeel_dir}/org.kde.breeze.desktop" "${lookandfeel_dir}/org.anatase.anatase.desktop"
+    cp -a "${lookandfeel_dir}/org.kde.breeze.desktop" "${lookandfeel_dir}/org.anatase.anataselight.desktop"
+
+    # Anatase defaults to dark, while anataselight uses Breeze Twilight.
+    cp -a "${lookandfeel_dir}/org.kde.breezedark.desktop"/. "${lookandfeel_dir}/org.anatase.anatase.desktop"
+    cp -a "${lookandfeel_dir}/org.kde.breezetwilight.desktop"/. "${lookandfeel_dir}/org.anatase.anataselight.desktop"
+
+    write_anatase_lookandfeel_metadata() {
+        id="${1}"
+        name="${2}"
+        description="${3}"
+
+        cat > "${lookandfeel_dir}/${id}.desktop/metadata.json" <<EOF
+    {
+        "KPackageStructure": "Plasma/LookAndFeel",
+        "KPlugin": {
+            "Authors": [
+                {
+                    "Name": "Anatase"
+                }
+            ],
+            "Category": "",
+            "Description": "${description}",
+            "Id": "${id}.desktop",
+            "License": "GPLv2+",
+            "Name": "${name}"
+        }
+    }
+    EOF
+    }
+
+    write_anatase_lookandfeel_metadata "org.anatase.anatase" "Anatase" "Anatase theme"
+    write_anatase_lookandfeel_metadata "org.anatase.anataselight" "Anatase Light" "Anatase Light theme"
