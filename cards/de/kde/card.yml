@@ -136,6 +136,8 @@ specs:
 files:
     - color-schemes/AnataseDark.colors
     - color-schemes/AnataseLight.colors
+    - konsole/Anatase.profile
+    - konsole/AnataseDark.colorscheme
     - theme/defaults
     - theme/splash-preview.png
     - theme/splash.qml
@@ -230,6 +232,10 @@ postprocess: |
         /usr/share/color-schemes/AnataseDark.colors
     install -Dm0644 /files/color-schemes/AnataseLight.colors \
         /usr/share/color-schemes/AnataseLight.colors
+    install -Dm0644 /files/konsole/AnataseDark.colorscheme \
+        /usr/share/konsole/AnataseDark.colorscheme
+    install -Dm0644 /files/konsole/Anatase.profile \
+        /usr/share/konsole/Anatase.profile
 
     rm -rf \
         "${lookandfeel_dir}/org.fedoraproject.fedora.desktop" \
@@ -336,6 +342,7 @@ postprocess: |
 
     # Apply our theme as a default
     kdeglobals=/usr/share/kde-settings/kde-profile/default/xdg/kdeglobals
+    konsolerc=/etc/xdg/konsolerc
     ksplashrc=/usr/share/kde-settings/kde-profile/default/xdg/ksplashrc
 
     kwriteconfig6 --file "${kdeglobals}" --group KDE --key LookAndFeelPackage org.anatase.anatase.desktop
@@ -343,5 +350,6 @@ postprocess: |
     kwriteconfig6 --file "${kdeglobals}" --group KDE --key DefaultLightLookAndFeel org.anatase.anataselight.desktop
     kwriteconfig6 --file "${kdeglobals}" --group General --key ColorScheme AnataseDark
     kwriteconfig6 --file "${kdeglobals}" --group Icons --key Theme breeze-dark
+    kwriteconfig6 --file "${konsolerc}" --group "Desktop Entry" --key DefaultProfile Anatase.profile
     kwriteconfig6 --file "${ksplashrc}" --group KSplash --key Engine KSplashQML
     kwriteconfig6 --file "${ksplashrc}" --group KSplash --key Theme org.anatase.anatase.desktop
