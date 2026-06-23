@@ -11,14 +11,12 @@ packages:
     - audiocd-kio
     - dolphin
     - ffmpegthumbs
-    - filelight
     - kcharselect
     - kde-connect
     - kdebugsettings
     - kdegraphics-thumbnailers
     - kdialog
     - kdnssd
-    - kfind
     - khelpcenter
     - kinfocenter
     - kio-gdrive
@@ -254,3 +252,12 @@ postprocess: |
 
     write_anatase_lookandfeel_metadata "org.anatase.anatase" "Anatase" "Anatase theme"
     write_anatase_lookandfeel_metadata "org.anatase.anataselight" "Anatase Light" "Anatase Light theme"
+
+    # Apply our theme as a default
+    kdeglobals=/usr/share/kde-settings/kde-profile/default/xdg/kdeglobals
+
+    kwriteconfig6 --file "${kdeglobals}" --group KDE --key LookAndFeelPackage org.anatase.anatase.desktop
+    kwriteconfig6 --file "${kdeglobals}" --group KDE --key DefaultDarkLookAndFeel org.anatase.anatase.desktop
+    kwriteconfig6 --file "${kdeglobals}" --group KDE --key DefaultLightLookAndFeel org.anatase.anataselight.desktop
+    kwriteconfig6 --file "${kdeglobals}" --group General --key ColorScheme BreezeDark
+    kwriteconfig6 --file "${kdeglobals}" --group Icons --key Theme breeze-dark
