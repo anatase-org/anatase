@@ -64,7 +64,7 @@ copy_image_to_rootful_storage() {
 }
 
 log "Building ${MANIFEST}"
-"${ludos[@]}" build "${MANIFEST}"
+"${ludos[@]}" build "${MANIFEST}" $@
 
 mkdir -p "${cache_dir}"
 
