@@ -11,16 +11,12 @@ packages:
     - audiocd-kio
     - dolphin
     - ffmpegthumbs
-    - kcharselect
     - kde-connect
-    - kdebugsettings
     - kdegraphics-thumbnailers
     - kdialog
     - kdnssd
-    - khelpcenter
     - kinfocenter
     - kio-gdrive
-    - kjournald
     - kmenuedit
     - konsole
     - kunifiedpush
@@ -136,6 +132,11 @@ specs:
       ref: v${spec:Version}
       file: overrides.patch
 
+
+files:
+    - color-schemes/AnataseDark.colors
+    - color-schemes/AnataseLight.colors
+
 postprocess: |
     set -eux
 
@@ -222,6 +223,11 @@ postprocess: |
     #
     lookandfeel_dir=/usr/share/plasma/look-and-feel
 
+    install -Dm0644 /files/color-schemes/AnataseDark.colors \
+        /usr/share/color-schemes/AnataseDark.colors
+    install -Dm0644 /files/color-schemes/AnataseLight.colors \
+        /usr/share/color-schemes/AnataseLight.colors
+
     rm -rf \
         "${lookandfeel_dir}/org.fedoraproject.fedora.desktop" \
         "${lookandfeel_dir}/org.fedoraproject.fedoradark.desktop" \
@@ -237,6 +243,14 @@ postprocess: |
     # Do not use upstream plasma wallpaper
     sed -i -E 's/^Image=.*/Image=Default/' \
         "${lookandfeel_dir}/org.anatase.anatase.desktop/contents/defaults" \
+        "${lookandfeel_dir}/org.anatase.anataselight.desktop/contents/defaults"
+
+    # Use a special palette for dark
+    sed -i -E 's/^ColorScheme=.*/ColorScheme=AnataseDark/' \
+        "${lookandfeel_dir}/org.anatase.anatase.desktop/contents/defaults"
+
+    # Use a special palette for light
+    sed -i -E 's/^ColorScheme=.*/ColorScheme=AnataseLight/' \
         "${lookandfeel_dir}/org.anatase.anataselight.desktop/contents/defaults"
 
     write_start_here_plasmoid_setup() {
@@ -290,5 +304,5 @@ postprocess: |
     kwriteconfig6 --file "${kdeglobals}" --group KDE --key LookAndFeelPackage org.anatase.anatase.desktop
     kwriteconfig6 --file "${kdeglobals}" --group KDE --key DefaultDarkLookAndFeel org.anatase.anatase.desktop
     kwriteconfig6 --file "${kdeglobals}" --group KDE --key DefaultLightLookAndFeel org.anatase.anataselight.desktop
-    kwriteconfig6 --file "${kdeglobals}" --group General --key ColorScheme BreezeDark
+    kwriteconfig6 --file "${kdeglobals}" --group General --key ColorScheme AnataseDark
     kwriteconfig6 --file "${kdeglobals}" --group Icons --key Theme breeze-dark
