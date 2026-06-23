@@ -7,6 +7,23 @@ files:
   - zram-generator.conf
   - dev-hugepages1G.mount
   - flatpaks.service
+  - override-zsh.sh
+  - fonts/MesloLGS-NF-Regular.ttf::https://raw.githubusercontent.com/romkatv/powerlevel10k-media/master/MesloLGS%20NF%20Regular.ttf
+  - fonts/MesloLGS-NF-Bold.ttf::https://raw.githubusercontent.com/romkatv/powerlevel10k-media/master/MesloLGS%20NF%20Bold.ttf
+  - fonts/MesloLGS-NF-Italic.ttf::https://raw.githubusercontent.com/romkatv/powerlevel10k-media/master/MesloLGS%20NF%20Italic.ttf
+  - fonts/MesloLGS-NF-Bold-Italic.ttf::https://raw.githubusercontent.com/romkatv/powerlevel10k-media/master/MesloLGS%20NF%20Bold%20Italic.ttf
+
+build-deps:
+  - rpm-build
+  - rpmdevtools
+  - tar
+
+specs:
+  - spec: zsh/zsh-anatase.spec
+    files:
+      - anatase.sh
+    packages:
+      - zsh-anatase
 
 postprocess: |
   set -eux
@@ -42,6 +59,23 @@ postprocess: |
       /usr/lib/systemd/system/dev-hugepages1G.mount
 
   #
+  # Shell integration
+  #
+
+  install -Dm0644 /files/override-zsh.sh \
+      /etc/profile.d/override-zsh.sh
+
+  touch /etc/zshrc
+  if ! grep -qF "source /usr/share/anatase/zsh/anatase.sh" /etc/zshrc; then
+      {
+          printf '\n%s\n' '# Source Anatase zsh defaults.'
+          printf '%s\n' 'if [ -r /usr/share/anatase/zsh/anatase.sh ]; then'
+          printf '%s\n' '    source /usr/share/anatase/zsh/anatase.sh'
+          printf '%s\n' 'fi'
+      } >> /etc/zshrc
+  fi
+
+  #
   # Stubs
   #
 
@@ -55,6 +89,16 @@ postprocess: |
   fi
   if [ -e /usr/lib64/libdrm.so.2 ] && [ ! -e /usr/lib64/libdrm.so ]; then
       cp --no-dereference --preserve=links /usr/lib64/libdrm.so.2 /usr/lib64/libdrm.so
+  fi
+
+  #
+  # Fonts
+  #
+
+  install -dm0755 /usr/share/fonts/anatase
+  install -m0644 /files/fonts/MesloLGS-NF-*.ttf /usr/share/fonts/anatase/
+  if command -v fc-cache >/dev/null 2>&1; then
+      fc-cache -f /usr/share/fonts/anatase
   fi
 
   #
