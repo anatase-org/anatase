@@ -123,8 +123,10 @@ specs:
 
   - spec: nvidia-settings/nvidia-settings.spec
     packages:
-      - nvidia-settings
-      - nvidia-libXNVCtrl
+      # Keep nvidia-settings so we have it in sync
+      # but don't build/install it
+      # - nvidia-settings
+      # - nvidia-libXNVCtrl
     replace:
       Version: $version
     upstream:
