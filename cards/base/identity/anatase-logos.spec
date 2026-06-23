@@ -5,10 +5,11 @@ Release:	4%{?dist}
 
 License:	LicenseRef-Anatase-Logos
 Source0:	favicon.svg
-Source1:	borderless.svg
-Source2:	letterhead-onblack.svg
-Source3:	letterhead-onwhite.svg
-Source4:	COPYING
+Source1:	borderless-onblack.svg
+Source2:	borderless-onwhite.svg
+Source3:	letterhead-onblack.svg
+Source4:	letterhead-onwhite.svg
+Source5:	COPYING
 Provides:	redhat-logos = %{version}-%{release}
 Provides:	gnome-logos = %{version}-%{release}
 Provides:	system-logos = %{version}-%{release}
@@ -23,7 +24,7 @@ distributed with anything but unmodified Anatase images and images for
 personal and internal organisation use.
 
 %prep
-cp -p %{SOURCE4} COPYING
+cp -p %{SOURCE5} COPYING
 
 %build
 builddir=%{_builddir}/%{name}-generated
@@ -38,7 +39,7 @@ cp -p %{SOURCE1} "$builddir"/icons/hicolor/scalable/apps/start-here.svg
 
 rsvg-convert -a -w 252 -h 252 -o "$builddir"/pixmaps/anatase-logo-sprite.png %{SOURCE0}
 rsvg-convert -a -w 252 -h 252 -o "$builddir"/pixmaps/system-logo-white.png %{SOURCE0}
-rsvg-convert -a -w 149 -h 43 -o "$builddir"/plymouth/themes/spinner/watermark.png %{SOURCE2}
+rsvg-convert -a -w 149 -h 43 -o "$builddir"/plymouth/themes/spinner/watermark.png %{SOURCE3}
 
 for size in 16 22 24 32 36 48 96 256 ; do
   mkdir -p "$builddir"/icons/hicolor/${size}x${size}/apps
@@ -73,6 +74,18 @@ done
 for i in 16 22 24 32 36 48 96 256 ; do
   mkdir -p $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/${i}x${i}/places
   install -p -m 644 %{_builddir}/%{name}-generated/icons/hicolor/${i}x${i}/places/start-here.png $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/${i}x${i}/places/
+done
+
+# Breeze launcher icons. Breeze is used on light surfaces, Breeze Dark is used
+# on dark surfaces.
+for i in 16 22 24 32 48 64 96 ; do
+  mkdir -p \
+    $RPM_BUILD_ROOT%{_datadir}/icons/breeze/places/${i} \
+    $RPM_BUILD_ROOT%{_datadir}/icons/breeze-dark/places/${i}
+  install -p -m 644 %{SOURCE2} $RPM_BUILD_ROOT%{_datadir}/icons/breeze/places/${i}/start-here.svg
+  pushd $RPM_BUILD_ROOT%{_datadir}/icons/breeze-dark/places/${i}
+    ln -s ../../../hicolor/scalable/apps/start-here.svg start-here.svg
+  popd
 done
 
 # Favicon path used by Cockpit's Fedora branding symlink.
@@ -112,8 +125,28 @@ hardlink -vv %{buildroot}/usr
 %{_datadir}/icons/hicolor/scalable/apps/fedora-logo-icon.svg
 %{_datadir}/icons/hicolor/scalable/apps/start-here.svg
 %{_datadir}/icons/hicolor/scalable/places/start-here.svg
+%{_datadir}/icons/breeze/places/*/start-here.svg
+%{_datadir}/icons/breeze-dark/places/*/start-here.svg
 # we multi-own these directories, so as not to require the packages that
 # provide them, thereby dragging in excess dependencies.
+%dir %{_datadir}/icons/breeze/
+%dir %{_datadir}/icons/breeze/places/
+%dir %{_datadir}/icons/breeze/places/16/
+%dir %{_datadir}/icons/breeze/places/22/
+%dir %{_datadir}/icons/breeze/places/24/
+%dir %{_datadir}/icons/breeze/places/32/
+%dir %{_datadir}/icons/breeze/places/48/
+%dir %{_datadir}/icons/breeze/places/64/
+%dir %{_datadir}/icons/breeze/places/96/
+%dir %{_datadir}/icons/breeze-dark/
+%dir %{_datadir}/icons/breeze-dark/places/
+%dir %{_datadir}/icons/breeze-dark/places/16/
+%dir %{_datadir}/icons/breeze-dark/places/22/
+%dir %{_datadir}/icons/breeze-dark/places/24/
+%dir %{_datadir}/icons/breeze-dark/places/32/
+%dir %{_datadir}/icons/breeze-dark/places/48/
+%dir %{_datadir}/icons/breeze-dark/places/64/
+%dir %{_datadir}/icons/breeze-dark/places/96/
 %dir %{_datadir}/icons/hicolor/
 %dir %{_datadir}/icons/hicolor/16x16/
 %dir %{_datadir}/icons/hicolor/16x16/apps/

@@ -1,38 +1,646 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
 Date: Tue, 23 Jun 2026 14:50:40 +0200
-Subject: Hide finished page mascot artwork
+Subject: Use Anatase icon on finished page
 
 ---
- modules/finished/contents/ui/main.qml | 11 -----------
- 1 file changed, 11 deletions(-)
+ modules/finished/contents/ui/main.qml | 12 +++++-------
+ 1 file changed, 5 insertions(+), 7 deletions(-)
 
 diff --git a/modules/finished/contents/ui/main.qml b/modules/finished/contents/ui/main.qml
-index 92c1d9fafc39..671eb162287a 100644
+index 92c1d9fafc39..4cd7f14dc032 100644
 --- a/modules/finished/contents/ui/main.qml
 +++ b/modules/finished/contents/ui/main.qml
-@@ -7,8 +7,6 @@ import QtQuick
- import QtQuick.Controls
+@@ -8,7 +8,6 @@ import QtQuick.Controls
  import QtQuick.Layouts
  
--import org.kde.kirigami as Kirigami
+ import org.kde.kirigami as Kirigami
 -
  import org.kde.plasmasetup.components as PlasmaSetupComponents
  import org.kde.plasmasetup
  
-@@ -51,15 +49,6 @@ PlasmaSetupComponents.SetupModule {
-                 wrapMode: Text.Wrap
+@@ -52,13 +51,12 @@ PlasmaSetupComponents.SetupModule {
                  horizontalAlignment: Text.AlignHCenter
              }
--
+ 
 -            Image {
 -                Layout.fillWidth: true
--                Layout.alignment: Qt.AlignHCenter
++            Kirigami.Icon {
+                 Layout.alignment: Qt.AlignHCenter
 -                Layout.topMargin: Kirigami.Units.gridUnit
 -                Layout.maximumHeight: mainColumn.height - finishedMessage.height - Kirigami.Units.gridUnit
 -                fillMode: Image.PreserveAspectFit
 -                source: "konqi-calling.png"
--            }
++                Layout.topMargin: Kirigami.Units.gridUnit * 2
++                implicitWidth: Kirigami.Units.iconSizes.huge * 2
++                implicitHeight: implicitWidth
++                source: "anatase-logo-icon"
+             }
          }
      }
- }
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Tue, 23 Jun 2026 15:05:03 +0200
+Subject: Use Anatase logo on setup button
+
+---
+ src/qml/LandingComponent.qml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/qml/LandingComponent.qml b/src/qml/LandingComponent.qml
+index fec30abf1a15..36870aec5698 100644
+--- a/src/qml/LandingComponent.qml
++++ b/src/qml/LandingComponent.qml
+@@ -138,7 +138,7 @@ Item {
+ 
+                 opacity: root.contentOpacity
+                 text: i18n("Begin Setup")
+-                icon.name: "plasma-symbolic"
++                icon.name: "start-here"
+ 
+                 onClicked: {
+                     backgroundImage.scale = scaleSteps;
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Tue, 23 Jun 2026 15:19:41 +0200
+Subject: Update desktop welcome text + translations
+
+---
+ po/ar/org.kde.plasmasetup.po          | 4 ++--
+ po/az/org.kde.plasmasetup.po          | 4 ++--
+ po/ca/org.kde.plasmasetup.po          | 4 ++--
+ po/ca@valencia/org.kde.plasmasetup.po | 4 ++--
+ po/cs/org.kde.plasmasetup.po          | 4 ++--
+ po/de/org.kde.plasmasetup.po          | 4 ++--
+ po/en_GB/org.kde.plasmasetup.po       | 4 ++--
+ po/es/org.kde.plasmasetup.po          | 4 ++--
+ po/eu/org.kde.plasmasetup.po          | 4 ++--
+ po/fi/org.kde.plasmasetup.po          | 4 ++--
+ po/fr/org.kde.plasmasetup.po          | 4 ++--
+ po/ga/org.kde.plasmasetup.po          | 4 ++--
+ po/gl/org.kde.plasmasetup.po          | 4 ++--
+ po/he/org.kde.plasmasetup.po          | 4 ++--
+ po/hu/org.kde.plasmasetup.po          | 4 ++--
+ po/ia/org.kde.plasmasetup.po          | 4 ++--
+ po/it/org.kde.plasmasetup.po          | 4 ++--
+ po/ka/org.kde.plasmasetup.po          | 4 ++--
+ po/ko/org.kde.plasmasetup.po          | 4 ++--
+ po/lt/org.kde.plasmasetup.po          | 4 ++--
+ po/lv/org.kde.plasmasetup.po          | 4 ++--
+ po/nb/org.kde.plasmasetup.po          | 4 ++--
+ po/nl/org.kde.plasmasetup.po          | 4 ++--
+ po/nn/org.kde.plasmasetup.po          | 4 ++--
+ po/pl/org.kde.plasmasetup.po          | 4 ++--
+ po/pt_BR/org.kde.plasmasetup.po       | 4 ++--
+ po/ro/org.kde.plasmasetup.po          | 4 ++--
+ po/ru/org.kde.plasmasetup.po          | 4 ++--
+ po/sk/org.kde.plasmasetup.po          | 4 ++--
+ po/sl/org.kde.plasmasetup.po          | 4 ++--
+ po/sv/org.kde.plasmasetup.po          | 4 ++--
+ po/tr/org.kde.plasmasetup.po          | 4 ++--
+ po/uk/org.kde.plasmasetup.po          | 4 ++--
+ po/zh_CN/org.kde.plasmasetup.po       | 4 ++--
+ po/zh_TW/org.kde.plasmasetup.po       | 4 ++--
+ src/qml/LandingComponent.qml          | 2 +-
+ 36 files changed, 71 insertions(+), 71 deletions(-)
+
+diff --git a/po/ar/org.kde.plasmasetup.po b/po/ar/org.kde.plasmasetup.po
+index 8fa6b0a17d40..41c662b5b7d7 100644
+--- a/po/ar/org.kde.plasmasetup.po
++++ b/po/ar/org.kde.plasmasetup.po
+@@ -347,8 +347,8 @@ msgstr "مرحبًا في<br/><b>بلازما الجوال</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "مرحبًا بك في <br/><b>سطح مكتب البلازما</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "مرحبًا بك في<br/><b>سطح مكتبك الجديد</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/az/org.kde.plasmasetup.po b/po/az/org.kde.plasmasetup.po
+index 4556f5ae98bc..b0d0dc40d262 100644
+--- a/po/az/org.kde.plasmasetup.po
++++ b/po/az/org.kde.plasmasetup.po
+@@ -351,8 +351,8 @@ msgstr "<br/><b>Plasma Mobile</b> Sizi Salamlayır"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "<br/><b>Plasma Masaüstü</b> Sizi Salamlayır"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "<br/><b>Yeni Masaüstünüz</b> Sizi Salamlayır"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/ca/org.kde.plasmasetup.po b/po/ca/org.kde.plasmasetup.po
+index 437fd6530d26..cf464932f288 100644
+--- a/po/ca/org.kde.plasmasetup.po
++++ b/po/ca/org.kde.plasmasetup.po
+@@ -352,8 +352,8 @@ msgstr "Us donem la benvinguda al<br/><b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Us donem la benvinguda a <br/>l'<b>escriptori Plasma </b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Us donem la benvinguda al<br/><b>vostre escriptori nou</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/ca@valencia/org.kde.plasmasetup.po b/po/ca@valencia/org.kde.plasmasetup.po
+index 6c0ec6c6fd3a..e30846dabab9 100644
+--- a/po/ca@valencia/org.kde.plasmasetup.po
++++ b/po/ca@valencia/org.kde.plasmasetup.po
+@@ -355,8 +355,8 @@ msgstr "Us donem la benvinguda a<br/><b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Us donem la benvinguda a <br/>l'<b>escriptori Plasma </b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Us donem la benvinguda al<br/><b>vostre escriptori nou</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/cs/org.kde.plasmasetup.po b/po/cs/org.kde.plasmasetup.po
+index 7a8f4a298494..cc0920d3b6b8 100644
+--- a/po/cs/org.kde.plasmasetup.po
++++ b/po/cs/org.kde.plasmasetup.po
+@@ -350,8 +350,8 @@ msgstr "Vítejte v prostředí<br/><b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Vítejte v prostředí <br/><b>Pracovní plochy Plasma</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Vítejte na<br/><b>své nové ploše</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/de/org.kde.plasmasetup.po b/po/de/org.kde.plasmasetup.po
+index b0e895a0d006..6c8a2fd1547d 100644
+--- a/po/de/org.kde.plasmasetup.po
++++ b/po/de/org.kde.plasmasetup.po
+@@ -353,8 +353,8 @@ msgstr "Willkommen bei<br/><b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Willkommen bei<br/><b>Plasma Desktop</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Willkommen bei<br/><b>Ihrem neuen Desktop</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/en_GB/org.kde.plasmasetup.po b/po/en_GB/org.kde.plasmasetup.po
+index 9c7cb907a1c0..7841011ebb9b 100644
+--- a/po/en_GB/org.kde.plasmasetup.po
++++ b/po/en_GB/org.kde.plasmasetup.po
+@@ -342,8 +342,8 @@ msgstr ""
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr ""
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Welcome to<br/><b>Your New Desktop</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, fuzzy, kde-format
+diff --git a/po/es/org.kde.plasmasetup.po b/po/es/org.kde.plasmasetup.po
+index db06fb59e572..a29875b63b10 100644
+--- a/po/es/org.kde.plasmasetup.po
++++ b/po/es/org.kde.plasmasetup.po
+@@ -355,8 +355,8 @@ msgstr "Bienvenido a<br/><b>Plasma Móvil</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Bienvenido al<br/><b>Escritorio Plasma</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Bienvenido a<br/><b>tu nuevo escritorio</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/eu/org.kde.plasmasetup.po b/po/eu/org.kde.plasmasetup.po
+index ddc021083962..fbbe152df76f 100644
+--- a/po/eu/org.kde.plasmasetup.po
++++ b/po/eu/org.kde.plasmasetup.po
+@@ -350,8 +350,8 @@ msgstr "Ongi etorri <br/><b>Plasma Mugikorrera</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Ongietorri <br/><b>Plasma mahaigainera</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Ongi etorri<br/><b>zure mahaigain berrira</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/fi/org.kde.plasmasetup.po b/po/fi/org.kde.plasmasetup.po
+index 32b39c98929b..e2fff1a99671 100644
+--- a/po/fi/org.kde.plasmasetup.po
++++ b/po/fi/org.kde.plasmasetup.po
+@@ -345,8 +345,8 @@ msgstr "Tervetuloa<br/><b>Plasma Mobileen</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Tervetuloa<br/><b>Plasma-työpöydälle</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Tervetuloa<br/><b>uudelle työpöydällesi</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/fr/org.kde.plasmasetup.po b/po/fr/org.kde.plasmasetup.po
+index 9d8011e61c81..c8ad4e1802ad 100644
+--- a/po/fr/org.kde.plasmasetup.po
++++ b/po/fr/org.kde.plasmasetup.po
+@@ -353,8 +353,8 @@ msgstr "Bienvenue sur<br/><b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Bienvenue sur<br/><b>Plasma Desktop</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Bienvenue sur<br/><b>votre nouveau bureau</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/ga/org.kde.plasmasetup.po b/po/ga/org.kde.plasmasetup.po
+index f65926ff6cf5..ada2aa2a1684 100644
+--- a/po/ga/org.kde.plasmasetup.po
++++ b/po/ga/org.kde.plasmasetup.po
+@@ -338,8 +338,8 @@ msgstr ""
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr ""
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Fáilte chuig<br/><b>do dheasc nua</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/gl/org.kde.plasmasetup.po b/po/gl/org.kde.plasmasetup.po
+index 4ba8b56f357c..1abc2d013551 100644
+--- a/po/gl/org.kde.plasmasetup.po
++++ b/po/gl/org.kde.plasmasetup.po
+@@ -351,8 +351,8 @@ msgstr "Benvida a<br/><b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Benvida ao<br/><b>escritorio Plasma</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Benvida ao<br/><b>teu novo escritorio</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/he/org.kde.plasmasetup.po b/po/he/org.kde.plasmasetup.po
+index 44b63a9422da..81c9d0bcc492 100644
+--- a/po/he/org.kde.plasmasetup.po
++++ b/po/he/org.kde.plasmasetup.po
+@@ -347,8 +347,8 @@ msgstr "ברוך בואך אל<br/><b>פלזמה לניידים</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "ברוך בואך<br/><b>לשולחן העבודה פלזמה</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "ברוך בואך<br/><b>לשולחן העבודה החדש שלך</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/hu/org.kde.plasmasetup.po b/po/hu/org.kde.plasmasetup.po
+index 3e2c93f032bc..c0f4fef3b5a0 100644
+--- a/po/hu/org.kde.plasmasetup.po
++++ b/po/hu/org.kde.plasmasetup.po
+@@ -350,8 +350,8 @@ msgstr "Üdvözli a<br/><b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Üdvözli a <br/><b>Plasma Asztal</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Üdvözli az<br/><b>új asztala</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/ia/org.kde.plasmasetup.po b/po/ia/org.kde.plasmasetup.po
+index fd70e0c80381..5d59a049eb6f 100644
+--- a/po/ia/org.kde.plasmasetup.po
++++ b/po/ia/org.kde.plasmasetup.po
+@@ -349,8 +349,8 @@ msgstr "Benvenite a <br/><b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Benvenite a <br/><b>Plasma Desktop (Scriptorio de Plasma)</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Benvenite a<br/><b>tu nove scriptorio</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/it/org.kde.plasmasetup.po b/po/it/org.kde.plasmasetup.po
+index ff24aa08b3b3..87a5faf244ab 100644
+--- a/po/it/org.kde.plasmasetup.po
++++ b/po/it/org.kde.plasmasetup.po
+@@ -349,8 +349,8 @@ msgstr "Benvenuto in<br/><b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Benvenuto in<br/><b>Plasma Desktop</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Benvenuto nel<br/><b>tuo nuovo desktop</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/ka/org.kde.plasmasetup.po b/po/ka/org.kde.plasmasetup.po
+index bd07ae47ca74..8f943b5d8001 100644
+--- a/po/ka/org.kde.plasmasetup.po
++++ b/po/ka/org.kde.plasmasetup.po
+@@ -349,8 +349,8 @@ msgstr "მოგესალმებათ <b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "მოგესალმებათ<br/><b>Plasma Desktop</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "მოგესალმებათ<br/><b>თქვენი ახალი სამუშაო მაგიდა</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/ko/org.kde.plasmasetup.po b/po/ko/org.kde.plasmasetup.po
+index a54648563e02..e0da368eed9d 100644
+--- a/po/ko/org.kde.plasmasetup.po
++++ b/po/ko/org.kde.plasmasetup.po
+@@ -350,8 +350,8 @@ msgstr "<b>Plasma 모바일</b>에<br/>오신 것을 환영합니다"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "<b>Plasma 데스크톱</b>에<br/>오신 것을 환영합니다"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "<b>새 데스크톱</b>에<br/>오신 것을 환영합니다"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/lt/org.kde.plasmasetup.po b/po/lt/org.kde.plasmasetup.po
+index bbf208bd84b0..af672e3eb841 100644
+--- a/po/lt/org.kde.plasmasetup.po
++++ b/po/lt/org.kde.plasmasetup.po
+@@ -356,8 +356,8 @@ msgstr "Jus sveikina<br/><b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Jus sveikina<br/><b>Plasma darbalaukis</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Jus sveikina<br/><b>jūsų naujas darbalaukis</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/lv/org.kde.plasmasetup.po b/po/lv/org.kde.plasmasetup.po
+index b984e5f6fc19..7197d599e000 100644
+--- a/po/lv/org.kde.plasmasetup.po
++++ b/po/lv/org.kde.plasmasetup.po
+@@ -349,8 +349,8 @@ msgstr "Laipni lūgti <br/><b>Plasma Mobile</b>!"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Laipni lūgti<br/><b>„Plasma“ darbvirsmā</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Laipni lūgti<br/><b>jūsu jaunajā darbvirsmā</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/nb/org.kde.plasmasetup.po b/po/nb/org.kde.plasmasetup.po
+index 103d20d82156..e3892dfa33f2 100644
+--- a/po/nb/org.kde.plasmasetup.po
++++ b/po/nb/org.kde.plasmasetup.po
+@@ -348,8 +348,8 @@ msgstr "Velkommen til<br/><b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Velkommen til<br/><b>Plasma-skrivebordet</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Velkommen til<br/><b>det nye skrivebordet ditt</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/nl/org.kde.plasmasetup.po b/po/nl/org.kde.plasmasetup.po
+index 6b9c7224dcf0..c15c72f108bd 100644
+--- a/po/nl/org.kde.plasmasetup.po
++++ b/po/nl/org.kde.plasmasetup.po
+@@ -350,8 +350,8 @@ msgstr "Welkome bij<br/><b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Welkom bij<br/><b>Plasma bureaublad</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Welkom bij<br/><b>uw nieuwe bureaublad</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/nn/org.kde.plasmasetup.po b/po/nn/org.kde.plasmasetup.po
+index 0bce4a997e15..4bc7b467920d 100644
+--- a/po/nn/org.kde.plasmasetup.po
++++ b/po/nn/org.kde.plasmasetup.po
+@@ -340,8 +340,8 @@ msgstr ""
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr ""
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Velkomen til<br/><b>det nye skrivebordet ditt</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/pl/org.kde.plasmasetup.po b/po/pl/org.kde.plasmasetup.po
+index 1e61a3562c98..4b8d8d298cd9 100644
+--- a/po/pl/org.kde.plasmasetup.po
++++ b/po/pl/org.kde.plasmasetup.po
+@@ -352,8 +352,8 @@ msgstr "Witaj w<br/><b>Przenośnej Plazmie</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Witaj w<br/><b>Biurkowej Plazmie</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Witaj na<br/><b>swoim nowym pulpicie</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/pt_BR/org.kde.plasmasetup.po b/po/pt_BR/org.kde.plasmasetup.po
+index 8075c74ef44f..37b0cc561605 100644
+--- a/po/pt_BR/org.kde.plasmasetup.po
++++ b/po/pt_BR/org.kde.plasmasetup.po
+@@ -349,8 +349,8 @@ msgstr "Bem-vindo ao<br/><b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Bem-vindo ao<br/><b>Plasma Desktop</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Bem-vindo à<br/><b>sua nova área de trabalho</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/ro/org.kde.plasmasetup.po b/po/ro/org.kde.plasmasetup.po
+index a86a46e2f53c..32e6d74f1a24 100644
+--- a/po/ro/org.kde.plasmasetup.po
++++ b/po/ro/org.kde.plasmasetup.po
+@@ -352,8 +352,8 @@ msgstr "Bun venit la<br/><b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Bun venit la<br/><b>Biroul Plasma</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Bun venit la<br/><b>noul tău birou</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/ru/org.kde.plasmasetup.po b/po/ru/org.kde.plasmasetup.po
+index dbaec8cf9393..fa50e85d0b24 100644
+--- a/po/ru/org.kde.plasmasetup.po
++++ b/po/ru/org.kde.plasmasetup.po
+@@ -350,8 +350,8 @@ msgstr "Добро пожаловать в<br/><b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Добро пожаловать в <br/><b>KDE Plasma</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Добро пожаловать в<br/><b>ваш новый рабочий стол</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/sk/org.kde.plasmasetup.po b/po/sk/org.kde.plasmasetup.po
+index d7818f8fcc5e..fdc5ae1f64a5 100644
+--- a/po/sk/org.kde.plasmasetup.po
++++ b/po/sk/org.kde.plasmasetup.po
+@@ -345,8 +345,8 @@ msgstr "Vitajte v<br/><b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Vitajte v<br/><b>Plasma Desktop</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Vitajte na<br/><b>svojej novej ploche</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/sl/org.kde.plasmasetup.po b/po/sl/org.kde.plasmasetup.po
+index 0b8b9da3d0d9..b0a80ef1f148 100644
+--- a/po/sl/org.kde.plasmasetup.po
++++ b/po/sl/org.kde.plasmasetup.po
+@@ -346,8 +346,8 @@ msgstr "Dobrodošli v<br/><b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Dobrodošli v<br/><b>Plasma Desktop</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Dobrodošli na<br/><b>svojem novem namizju</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/sv/org.kde.plasmasetup.po b/po/sv/org.kde.plasmasetup.po
+index 505abc5ada21..13a136598059 100644
+--- a/po/sv/org.kde.plasmasetup.po
++++ b/po/sv/org.kde.plasmasetup.po
+@@ -347,8 +347,8 @@ msgstr "Välkommen till <br/><b>Plasma Mobil</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Välkommen till<br/><b>Plasma skrivbord</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Välkommen till<br/><b>ditt nya skrivbord</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/tr/org.kde.plasmasetup.po b/po/tr/org.kde.plasmasetup.po
+index 04465d2118db..4bef0e9b3feb 100644
+--- a/po/tr/org.kde.plasmasetup.po
++++ b/po/tr/org.kde.plasmasetup.po
+@@ -352,8 +352,8 @@ msgstr "<b>Plasma Cep</b>’e<br/>hoş geldiniz"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "<b>Plasma Masaüstü</b>’ne<br/>hoş geldiniz"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "<b>Yeni Masaüstünüz</b>’e<br/>hoş geldiniz"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/uk/org.kde.plasmasetup.po b/po/uk/org.kde.plasmasetup.po
+index e9d7b74532b2..3929af03ce72 100644
+--- a/po/uk/org.kde.plasmasetup.po
++++ b/po/uk/org.kde.plasmasetup.po
+@@ -349,8 +349,8 @@ msgstr "Вітаємо у<br/><b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "Вітаємо у<br/><b>стільниці Плазми</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "Вітаємо на<br/><b>вашій новій стільниці</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/zh_CN/org.kde.plasmasetup.po b/po/zh_CN/org.kde.plasmasetup.po
+index d9ae7d787d56..ca4e6653739e 100644
+--- a/po/zh_CN/org.kde.plasmasetup.po
++++ b/po/zh_CN/org.kde.plasmasetup.po
+@@ -341,8 +341,8 @@ msgstr "欢迎使用<br/><b>Plasma Mobile</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "欢迎使用<br/><b>Plasma 桌面</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "欢迎使用<br/><b>您的新桌面</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/po/zh_TW/org.kde.plasmasetup.po b/po/zh_TW/org.kde.plasmasetup.po
+index a879a8dd75ee..227cc36b3d48 100644
+--- a/po/zh_TW/org.kde.plasmasetup.po
++++ b/po/zh_TW/org.kde.plasmasetup.po
+@@ -341,8 +341,8 @@ msgstr "歡迎來到<br/><b>Plasma 行動</b>"
+ 
+ #: src/qml/LandingComponent.qml:126
+ #, kde-format
+-msgid "Welcome to<br/><b>Plasma Desktop</b>"
+-msgstr "歡迎來到<br/><b>Plasma 桌面</b>"
++msgid "Welcome to<br/><b>Your New Desktop</b>"
++msgstr "歡迎使用<br/><b>您的新桌面</b>"
+ 
+ #: src/qml/LandingComponent.qml:140
+ #, kde-format
+diff --git a/src/qml/LandingComponent.qml b/src/qml/LandingComponent.qml
+index 36870aec5698..ee43949791da 100644
+--- a/src/qml/LandingComponent.qml
++++ b/src/qml/LandingComponent.qml
+@@ -123,7 +123,7 @@ Item {
+                 Layout.fillWidth: true
+                 text: Kirigami.Settings.isMobile
+                     ? i18n("Welcome to<br/><b>Plasma Mobile</b>")
+-                    : i18n("Welcome to<br/><b>Plasma Desktop</b>")
++                    : i18n("Welcome to<br/><b>Your New Desktop</b>")
+ 
+                 horizontalAlignment: Text.AlignHCenter
+                 wrapMode: Text.Wrap

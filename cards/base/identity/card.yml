@@ -22,7 +22,8 @@ hash: >
     anatase-logos.spec,
     COPYING,
     ./favicon.svg,
-    ./borderless.svg,
+    ./borderless-onblack.svg,
+    ./borderless-onwhite.svg,
     letterhead-onblack.svg,
     letterhead-onwhite.svg,
     desktop-backgrounds
