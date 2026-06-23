@@ -5,3 +5,4 @@ ref
 logs/
 patchwork
 .env
+__pycache__
