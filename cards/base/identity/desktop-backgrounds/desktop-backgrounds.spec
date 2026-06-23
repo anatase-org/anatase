@@ -27,7 +27,8 @@ desktop background images.
 %package        gnome
 Summary:        The default Anatase wallpaper for GNOME
 Requires:       %{name} = %{version}-%{release}
-Requires:       gsettings-desktop-schemas >= 2.91.92
+# TODO: Make sure we add this manually if required
+# Requires:       gsettings-desktop-schemas >= 2.91.92
 Provides:       system-backgrounds-gnome = %{version}-%{release}
 
 %description    gnome
