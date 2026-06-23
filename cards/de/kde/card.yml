@@ -232,6 +232,24 @@ postprocess: |
         "${lookandfeel_dir}/org.anatase.anatase.desktop/contents/defaults" \
         "${lookandfeel_dir}/org.anatase.anataselight.desktop/contents/defaults"
 
+    write_start_here_plasmoid_setup() {
+        theme_dir="${1}"
+        setup_dir="${theme_dir}/contents/plasmoidsetupscripts"
+
+        install -dm0755 "${setup_dir}"
+        for plasmoid in org.kde.plasma.kickoff org.kde.plasma.kicker org.kde.plasma.kickerdash; do
+            printf '%s\n' \
+                'if ( applet.readConfig("icon", "start-here-kde") == "start-here-kde" ) {' \
+                '  applet.currentConfigGroup = ["General"]' \
+                '  applet.writeConfig("icon", "start-here");' \
+                '}' \
+                > "${setup_dir}/${plasmoid}.js"
+        done
+    }
+
+    write_start_here_plasmoid_setup "${lookandfeel_dir}/org.anatase.anatase.desktop"
+    write_start_here_plasmoid_setup "${lookandfeel_dir}/org.anatase.anataselight.desktop"
+
     write_anatase_lookandfeel_metadata() {
         id="${1}"
         name="${2}"
