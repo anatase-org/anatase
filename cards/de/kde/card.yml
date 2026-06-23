@@ -227,6 +227,11 @@ postprocess: |
     cp -a "${lookandfeel_dir}/org.kde.breezedark.desktop"/. "${lookandfeel_dir}/org.anatase.anatase.desktop"
     cp -a "${lookandfeel_dir}/org.kde.breezetwilight.desktop"/. "${lookandfeel_dir}/org.anatase.anataselight.desktop"
 
+    # Do not use upstream plasma wallpaper
+    sed -i -E 's/^Image=.*/Image=Default/' \
+        "${lookandfeel_dir}/org.anatase.anatase.desktop/contents/defaults" \
+        "${lookandfeel_dir}/org.anatase.anataselight.desktop/contents/defaults"
+
     write_anatase_lookandfeel_metadata() {
         id="${1}"
         name="${2}"
