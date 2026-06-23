@@ -144,6 +144,7 @@ postprocess: |
         /etc/xdg \
         /usr/lib/systemd/system \
         /usr/lib/systemd/system-preset \
+        /usr/lib/tmpfiles.d \
         /usr/libexec
 
     # Enable weekly auto updates in Discover. In the future, Flatpaks will be
@@ -152,6 +153,14 @@ postprocess: |
     [Global]
     UseUnattendedUpdates=true
     RequiredNotificationInterval=604800
+    EOF
+
+    # Keep Discover's update notifier out of the temporary first-run setup
+    # session, while preserving the global update defaults for real users.
+    cat > /usr/lib/tmpfiles.d/zz-anatase-plasma-setup-discover.conf <<'EOF'
+    # Disable Discover update checks in the ephemeral plasma-setup session.
+    f /run/plasma-setup/.config/PlasmaDiscoverUpdates 0644 plasma-setup plasma-setup - [Global]\nUseUnattendedUpdates=false\nRequiredNotificationInterval=0
+    f /run/plasma-setup/.config/autostart/org.kde.discover.notifier.desktop 0644 plasma-setup plasma-setup - [Desktop Entry]\nHidden=true
     EOF
 
     # Workaround for missing shadow and gshadow entries for plasmalogin.
