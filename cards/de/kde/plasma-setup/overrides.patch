@@ -644,3 +644,117 @@ index 36870aec5698..ee43949791da 100644
  
                  horizontalAlignment: Text.AlignHCenter
                  wrapMode: Text.Wrap
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Tue, 23 Jun 2026 16:11:42 +0200
+Subject: Allow passwordless user setup
+
+---
+ modules/account/contents/ui/main.qml |  2 +-
+ src/auth/authhelper.cpp              | 65 +++++++++++++++++++---------
+ 2 files changed, 45 insertions(+), 22 deletions(-)
+
+diff --git a/modules/account/contents/ui/main.qml b/modules/account/contents/ui/main.qml
+index d44340be4931..c942408a3e1b 100644
+--- a/modules/account/contents/ui/main.qml
++++ b/modules/account/contents/ui/main.qml
+@@ -28,7 +28,7 @@ PlasmaSetupComponents.SetupModule {
+     */
+     property string usernameValidationMessage: AccountController.usernameValidationMessage(usernameField.text)
+ 
+-    nextEnabled: root.usernameValid && passwordField.text.length > 0 && repeatField.text === passwordField.text
++    nextEnabled: root.usernameValid && repeatField.text === passwordField.text
+ 
+     function onPageActivated() {
+         fullNameField.forceActiveFocus();
+diff --git a/src/auth/authhelper.cpp b/src/auth/authhelper.cpp
+index 652a80052176..25f48f44daee 100644
+--- a/src/auth/authhelper.cpp
++++ b/src/auth/authhelper.cpp
+@@ -183,13 +183,6 @@ ActionReply PlasmaSetupAuthHelper::createuser(const QVariantMap &args)
+ 
+     QByteArray password = args.value(QStringLiteral("password")).toByteArray();
+ 
+-    // Validate password is not empty
+-    if (password.isEmpty()) {
+-        // Clear password data from memory for security
+-        std::fill(password.begin(), password.end(), '\0');
+-        return makeErrorReply(QStringLiteral("Password cannot be empty."));
+-    }
+-
+     // Build useradd command arguments
+     QStringList useraddArguments;
+ 
+@@ -239,6 +232,49 @@ ActionReply PlasmaSetupAuthHelper::createuser(const QVariantMap &args)
+         return extraGroupReply;
+     }
+ 
++    const auto userInfoReply = [this, &username]() -> ActionReply {
++        try {
++            UserInfo userInfo = getUserInfo(username);
++            ActionReply reply = ActionReply::SuccessReply();
++            reply.setData({
++                {QStringLiteral("username"), userInfo.username},
++                {QStringLiteral("homePath"), userInfo.homePath},
++                {QStringLiteral("uid"), userInfo.uid},
++                {QStringLiteral("gid"), userInfo.gid},
++            });
++            return reply;
++        } catch (const std::runtime_error &e) {
++            return makeErrorReply(QStringLiteral("User created but failed to retrieve user info: ") + QString::fromStdString(e.what()));
++        }
++    };
++
++    if (password.isEmpty()) {
++        const QString passwdBinary = findExecutable(QStringLiteral("passwd"));
++        if (passwdBinary.isEmpty()) {
++            return makeErrorReply(QStringLiteral("User created but could not locate passwd executable."));
++        }
++
++        QProcess passwdProcess;
++        passwdProcess.start(passwdBinary, {QStringLiteral("-d"), username});
++
++        if (!passwdProcess.waitForStarted()) {
++            return makeErrorReply(QStringLiteral("Failed to start passwd: ") + passwdProcess.errorString());
++        }
++
++        if (!passwdProcess.waitForFinished()) {
++            passwdProcess.kill();
++            passwdProcess.waitForFinished();
++            return makeErrorReply(QStringLiteral("passwd timed out."));
++        }
++
++        if (passwdProcess.exitStatus() != QProcess::NormalExit || passwdProcess.exitCode() != 0) {
++            const QString stderrOutput = QString::fromLocal8Bit(passwdProcess.readAllStandardError()).trimmed();
++            return makeErrorReply(QStringLiteral("passwd failed with exit code %1: %2").arg(passwdProcess.exitCode()).arg(stderrOutput));
++        }
++
++        return userInfoReply();
++    }
++
+     // We set the password separately using chpasswd to avoid exposing it in command-line arguments
+     // that could be listened to in process listings.
+     //
+@@ -295,20 +331,7 @@ ActionReply PlasmaSetupAuthHelper::createuser(const QVariantMap &args)
+         return makeErrorReply(QStringLiteral("chpasswd failed with exit code %1: %2").arg(chpasswdProcess.exitCode()).arg(stderrOutput));
+     }
+ 
+-    // Retrieve and return the newly created user's information
+-    try {
+-        UserInfo userInfo = getUserInfo(username);
+-        ActionReply reply = ActionReply::SuccessReply();
+-        reply.setData({
+-            {QStringLiteral("username"), userInfo.username},
+-            {QStringLiteral("homePath"), userInfo.homePath},
+-            {QStringLiteral("uid"), userInfo.uid},
+-            {QStringLiteral("gid"), userInfo.gid},
+-        });
+-        return reply;
+-    } catch (const std::runtime_error &e) {
+-        return makeErrorReply(QStringLiteral("User created but failed to retrieve user info: ") + QString::fromStdString(e.what()));
+-    }
++    return userInfoReply();
+ }
+ 
+ ActionReply PlasmaSetupAuthHelper::createflagfile(const QVariantMap &args)
