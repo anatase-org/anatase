@@ -25,7 +25,6 @@ packages:
     - konsole
     - kunifiedpush
     - kwalletmanager5
-    - kwrite
     - plasma-discover
     - plasma-discover-flatpak
     - plasma-discover-notifier
