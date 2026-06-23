@@ -75,6 +75,8 @@ packages:
     - plasma-disks
     - plasma-print-manager
     - plasma-thunderbolt
+    - plasma-firewall
+    - plasma-firewall-ufw
     - udisks2
 
     # Network integration
