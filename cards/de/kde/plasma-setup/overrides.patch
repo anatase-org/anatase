@@ -758,3 +758,26 @@ index 652a80052176..25f48f44daee 100644
  }
  
  ActionReply PlasmaSetupAuthHelper::createflagfile(const QVariantMap &args)
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Wed, 24 Jun 2026 00:17:22 +0200
+Subject: do not hardcode BreezeDark for the initial m_usingDarkTheme
+
+---
+ modules/prepareutil/prepareutil.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/modules/prepareutil/prepareutil.cpp b/modules/prepareutil/prepareutil.cpp
+index 7c9d7682be52..e569b9cc77c2 100644
+--- a/modules/prepareutil/prepareutil.cpp
++++ b/modules/prepareutil/prepareutil.cpp
+@@ -36,7 +36,7 @@ PrepareUtil::PrepareUtil(QObject *parent)
+     });
+ 
+     // set property initially
+-    m_usingDarkTheme = m_colorsSettings->colorScheme() == u"BreezeDark"_s;
++    m_usingDarkTheme = m_colorsSettings->colorScheme().endsWith(u"Dark"_s);
+ }
+ 
+ int PrepareUtil::scaling() const
