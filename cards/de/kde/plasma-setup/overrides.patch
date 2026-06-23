@@ -1,0 +1,38 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Tue, 23 Jun 2026 14:50:40 +0200
+Subject: Hide finished page mascot artwork
+
+---
+ modules/finished/contents/ui/main.qml | 11 -----------
+ 1 file changed, 11 deletions(-)
+
+diff --git a/modules/finished/contents/ui/main.qml b/modules/finished/contents/ui/main.qml
+index 92c1d9fafc39..671eb162287a 100644
+--- a/modules/finished/contents/ui/main.qml
++++ b/modules/finished/contents/ui/main.qml
+@@ -7,8 +7,6 @@ import QtQuick
+ import QtQuick.Controls
+ import QtQuick.Layouts
+ 
+-import org.kde.kirigami as Kirigami
+-
+ import org.kde.plasmasetup.components as PlasmaSetupComponents
+ import org.kde.plasmasetup
+ 
+@@ -51,15 +49,6 @@ PlasmaSetupComponents.SetupModule {
+                 wrapMode: Text.Wrap
+                 horizontalAlignment: Text.AlignHCenter
+             }
+-
+-            Image {
+-                Layout.fillWidth: true
+-                Layout.alignment: Qt.AlignHCenter
+-                Layout.topMargin: Kirigami.Units.gridUnit
+-                Layout.maximumHeight: mainColumn.height - finishedMessage.height - Kirigami.Units.gridUnit
+-                fillMode: Image.PreserveAspectFit
+-                source: "konqi-calling.png"
+-            }
+         }
+     }
+ }

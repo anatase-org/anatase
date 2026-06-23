@@ -24,6 +24,7 @@ Source1: http://download.kde.org/%{stable_kf6}/plasma/%{maj_ver_kf6}.%{min_ver_k
 # Downstream only changes
 Patch1001:      plasma-setup-load-default-wallpaper.patch
 Patch1002:      plasma-setup-select-fedora-lookandfeel.patch
+Patch1003:      overrides.patch
  
 BuildRequires:  cmake(Qt6Core) >= %{qt6_minver}
 BuildRequires:  cmake(Qt6Gui) >= %{qt6_minver}
