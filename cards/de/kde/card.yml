@@ -136,6 +136,8 @@ specs:
 files:
     - color-schemes/AnataseDark.colors
     - color-schemes/AnataseLight.colors
+    - splash-preview.png
+    - splash.qml
 
 postprocess: |
     set -eux
@@ -253,6 +255,12 @@ postprocess: |
     sed -i -E 's/^ColorScheme=.*/ColorScheme=AnataseLight/' \
         "${lookandfeel_dir}/org.anatase.anataselight.desktop/contents/defaults"
 
+    # Select the matching splash screen when the global theme is applied.
+    sed -i -E 's/^Theme=.*/Theme=org.anatase.anatase.desktop/' \
+        "${lookandfeel_dir}/org.anatase.anatase.desktop/contents/defaults"
+    sed -i -E 's/^Theme=.*/Theme=org.anatase.anataselight.desktop/' \
+        "${lookandfeel_dir}/org.anatase.anataselight.desktop/contents/defaults"
+
     write_start_here_plasmoid_setup() {
         theme_dir="${1}"
         setup_dir="${theme_dir}/contents/plasmoidsetupscripts"
@@ -270,6 +278,21 @@ postprocess: |
 
     write_start_here_plasmoid_setup "${lookandfeel_dir}/org.anatase.anatase.desktop"
     write_start_here_plasmoid_setup "${lookandfeel_dir}/org.anatase.anataselight.desktop"
+
+    write_anatase_splash() {
+        theme_dir="${1}"
+        splash_dir="${theme_dir}/contents/splash"
+        preview_dir="${theme_dir}/contents/previews"
+
+        install -dm0755 "${splash_dir}/images"
+        install -m0644 /usr/share/icons/hicolor/scalable/apps/anatase-splash.svg \
+            "${splash_dir}/images/anatase.svg"
+        install -m0644 /files/splash.qml "${splash_dir}/Splash.qml"
+        install -Dm0644 /files/splash-preview.png "${preview_dir}/splash.png"
+    }
+
+    write_anatase_splash "${lookandfeel_dir}/org.anatase.anatase.desktop"
+    write_anatase_splash "${lookandfeel_dir}/org.anatase.anataselight.desktop"
 
     write_anatase_lookandfeel_metadata() {
         id="${1}"
@@ -300,9 +323,12 @@ postprocess: |
 
     # Apply our theme as a default
     kdeglobals=/usr/share/kde-settings/kde-profile/default/xdg/kdeglobals
+    ksplashrc=/usr/share/kde-settings/kde-profile/default/xdg/ksplashrc
 
     kwriteconfig6 --file "${kdeglobals}" --group KDE --key LookAndFeelPackage org.anatase.anatase.desktop
     kwriteconfig6 --file "${kdeglobals}" --group KDE --key DefaultDarkLookAndFeel org.anatase.anatase.desktop
     kwriteconfig6 --file "${kdeglobals}" --group KDE --key DefaultLightLookAndFeel org.anatase.anataselight.desktop
     kwriteconfig6 --file "${kdeglobals}" --group General --key ColorScheme AnataseDark
     kwriteconfig6 --file "${kdeglobals}" --group Icons --key Theme breeze-dark
+    kwriteconfig6 --file "${ksplashrc}" --group KSplash --key Engine KSplashQML
+    kwriteconfig6 --file "${ksplashrc}" --group KSplash --key Theme org.anatase.anatase.desktop

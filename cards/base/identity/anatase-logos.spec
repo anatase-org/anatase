@@ -1,7 +1,7 @@
 Name:		anatase-logos
 Summary:	Anatase-related icons and pictures
 Version:	42.0.1
-Release:	4%{?dist}
+Release:	5%{?dist}
 
 License:	LicenseRef-Anatase-Logos
 Source0:	favicon.svg
@@ -35,6 +35,7 @@ mkdir -p "$builddir"/pixmaps
 mkdir -p "$builddir"/plymouth/themes/spinner
 
 cp -p %{SOURCE0} "$builddir"/icons/hicolor/scalable/apps/anatase-logo-icon.svg
+cp -p %{SOURCE1} "$builddir"/icons/hicolor/scalable/apps/anatase-splash.svg
 cp -p %{SOURCE1} "$builddir"/icons/hicolor/scalable/apps/start-here.svg
 
 rsvg-convert -a -w 252 -h 252 -o "$builddir"/pixmaps/anatase-logo-sprite.png %{SOURCE0}
@@ -97,6 +98,7 @@ popd
 # Hicolor scalable launcher icon.
 mkdir -p $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/scalable/apps
 install -p -m 644 %{_builddir}/%{name}-generated/icons/hicolor/scalable/apps/anatase-logo-icon.svg $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/scalable/apps/
+install -p -m 644 %{_builddir}/%{name}-generated/icons/hicolor/scalable/apps/anatase-splash.svg $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/scalable/apps/
 pushd $RPM_BUILD_ROOT%{_datadir}/icons/hicolor/scalable/apps
   ln -s anatase-logo-icon.svg fedora-logo-icon.svg
   install -p -m 644 %{_builddir}/%{name}-generated/icons/hicolor/scalable/apps/start-here.svg .
@@ -122,6 +124,7 @@ hardlink -vv %{buildroot}/usr
 %{_datadir}/icons/hicolor/*/apps/fedora-logo-icon.png
 %{_datadir}/icons/hicolor/*/places/start-here.png
 %{_datadir}/icons/hicolor/scalable/apps/anatase-logo-icon.svg
+%{_datadir}/icons/hicolor/scalable/apps/anatase-splash.svg
 %{_datadir}/icons/hicolor/scalable/apps/fedora-logo-icon.svg
 %{_datadir}/icons/hicolor/scalable/apps/start-here.svg
 %{_datadir}/icons/hicolor/scalable/places/start-here.svg
