@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2160" viewBox="0 0 3840 2160" preserveAspectRatio="xMidYMid slice" role="img">
+  <title>Anatase Formation</title>
+  <desc>Abstract angular rock formations generated with the Anatase palette.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="@SKY_0@"/>
+      <stop offset="0.55" stop-color="@SKY_1@"/>
+      <stop offset="1" stop-color="@SKY_2@"/>
+    </linearGradient>
+    <linearGradient id="stoneA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="@ROCK_2@"/>
+      <stop offset="1" stop-color="@ROCK_4@"/>
+    </linearGradient>
+    <linearGradient id="stoneB" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="@ROCK_1@"/>
+      <stop offset="1" stop-color="@ROCK_3@"/>
+    </linearGradient>
+    <linearGradient id="stoneC" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="@ROCK_0@"/>
+      <stop offset="1" stop-color="@ROCK_3@"/>
+    </linearGradient>
+  </defs>
+  <rect width="3840" height="2160" fill="url(#sky)"/>
+  <path d="M0 1430 C470 1260 760 1320 1110 1180 C1530 1010 1840 1140 2190 980 C2590 800 3020 950 3840 650 L3840 2160 L0 2160 Z" fill="@ROCK_BACK@" opacity="0.55"/>
+  <path d="M0 1610 L420 1300 L930 1445 L1320 1120 L1740 1295 L2110 1040 L2530 1225 L2990 840 L3840 1190 L3840 2160 L0 2160 Z" fill="url(#stoneC)"/>
+  <path d="M0 1735 L560 1245 L960 1590 L1390 1185 L1765 1530 L2250 1095 L2740 1520 L3230 1045 L3840 1370 L3840 2160 L0 2160 Z" fill="url(#stoneB)" opacity="0.94"/>
+  <path d="M0 1880 L620 1495 L1030 1715 L1470 1325 L1970 1765 L2460 1290 L2890 1660 L3440 1260 L3840 1500 L3840 2160 L0 2160 Z" fill="url(#stoneA)"/>
+  <path d="M566 1250 L960 1590 L805 2160 L420 2160 Z" fill="@SHADOW@" opacity="0.48"/>
+  <path d="M1390 1185 L1765 1530 L1540 2160 L1110 2160 Z" fill="@SHADOW@" opacity="0.36"/>
+  <path d="M2460 1290 L2890 1660 L2665 2160 L2150 2160 Z" fill="@ACCENT@" opacity="0.14"/>
+  <path d="M3230 1045 L3840 1370 L3840 2160 L3230 2160 Z" fill="@SHADOW@" opacity="0.34"/>
+  <path d="M0 1765 L610 1495 L1030 1715 L1470 1325 L1970 1765 L2460 1290 L2890 1660 L3440 1260 L3840 1500" fill="none" stroke="@ACCENT@" stroke-width="10" stroke-linejoin="round" opacity="0.78"/>
+  <path d="M900 1450 L1260 2160 M1765 1530 L2050 2160 M2890 1660 L3040 2160" stroke="@HIGHLIGHT@" stroke-width="4" opacity="0.18"/>
+</svg>

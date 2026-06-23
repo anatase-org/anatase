@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2160" viewBox="0 0 3840 2160" preserveAspectRatio="xMidYMid slice" role="img">
+  <title>Anatase Strata</title>
+  <desc>Abstract sedimentary rock strata generated with the Anatase palette.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="@SKY_0@"/>
+      <stop offset="1" stop-color="@SKY_1@"/>
+    </linearGradient>
+  </defs>
+  <rect width="3840" height="2160" fill="url(#bg)"/>
+  <path d="M0 1040 C520 950 850 1080 1290 970 C1780 850 2190 940 2620 780 C3090 610 3430 750 3840 640 L3840 2160 L0 2160 Z" fill="@ROCK_1@"/>
+  <path d="M0 1280 C610 1140 930 1290 1460 1160 C1950 1040 2290 1150 2840 980 C3290 840 3580 950 3840 880 L3840 2160 L0 2160 Z" fill="@ROCK_2@"/>
+  <path d="M0 1485 C520 1390 920 1530 1440 1405 C2000 1270 2390 1430 2940 1240 C3320 1110 3580 1210 3840 1150 L3840 2160 L0 2160 Z" fill="@ROCK_3@"/>
+  <path d="M0 1690 C620 1590 880 1740 1510 1600 C1940 1505 2370 1620 2840 1490 C3290 1365 3500 1440 3840 1370 L3840 2160 L0 2160 Z" fill="@ROCK_4@"/>
+  <path d="M0 1900 C560 1820 1030 1940 1570 1830 C2100 1720 2480 1845 3000 1700 C3360 1600 3600 1665 3840 1600 L3840 2160 L0 2160 Z" fill="@SHADOW@"/>
+  <path d="M0 1515 L690 1390 L1180 1515 L1710 1300 L2310 1460 L2870 1220 L3370 1325 L3840 1205" fill="none" stroke="@ACCENT@" stroke-width="12" stroke-linejoin="round" opacity="0.78"/>
+  <path d="M1160 1510 L1010 2160 M2310 1460 L2100 2160 M3370 1325 L3260 2160" stroke="@HIGHLIGHT@" stroke-width="5" opacity="0.17"/>
+</svg>

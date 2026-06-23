@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2160" viewBox="0 0 3840 2160" preserveAspectRatio="xMidYMid slice" role="img">
+  <title>Anatase Crystal</title>
+  <desc>Abstract faceted mineral crystals generated with the Anatase palette.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="@SKY_0@"/>
+      <stop offset="0.52" stop-color="@SKY_1@"/>
+      <stop offset="1" stop-color="@ROCK_1@"/>
+    </linearGradient>
+    <linearGradient id="facet1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="@HIGHLIGHT@"/>
+      <stop offset="1" stop-color="@ROCK_2@"/>
+    </linearGradient>
+    <linearGradient id="facet2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="@ROCK_1@"/>
+      <stop offset="1" stop-color="@ROCK_4@"/>
+    </linearGradient>
+  </defs>
+  <rect width="3840" height="2160" fill="url(#bg)"/>
+  <path d="M2680 220 L3170 970 L2860 2040 L2295 1220 Z" fill="@ACCENT@" opacity="0.16"/>
+  <path d="M2140 500 L2680 220 L2295 1220 Z" fill="url(#facet1)" opacity="0.86"/>
+  <path d="M3170 970 L3610 1410 L2860 2040 Z" fill="@ROCK_3@" opacity="0.48"/>
+  <path d="M2140 500 L2295 1220 L1780 1850 L1540 930 Z" fill="url(#facet2)" opacity="0.88"/>
+  <path d="M1540 930 L1780 1850 L1050 2080 L1175 1220 Z" fill="@ROCK_2@" opacity="0.66"/>
+  <path d="M1175 1220 L1050 2080 L470 1740 L910 1045 Z" fill="@ROCK_4@" opacity="0.58"/>
+  <path d="M470 1740 L1050 2080 L0 2160 L0 1855 Z" fill="@SHADOW@" opacity="0.50"/>
+  <path d="M910 1045 L1175 1220 L1540 930 L2140 500 L2680 220" fill="none" stroke="@ACCENT@" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity="0.82"/>
+  <path d="M2295 1220 L3170 970 M2295 1220 L2860 2040 M1780 1850 L2295 1220 M1175 1220 L1780 1850" stroke="@HIGHLIGHT@" stroke-width="5" opacity="0.24"/>
+  <path d="M0 2160 L3840 2160 L3840 1880 C3080 2020 2520 1930 1900 2020 C1210 2120 710 2040 0 2115 Z" fill="@SHADOW@" opacity="0.18"/>
+</svg>

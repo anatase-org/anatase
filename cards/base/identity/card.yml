@@ -24,7 +24,8 @@ hash: >
     ./favicon.svg,
     ./borderless.svg,
     letterhead-onblack.svg,
-    letterhead-onwhite.svg
+    letterhead-onwhite.svg,
+    desktop-backgrounds
   )
 
 specs:
@@ -35,6 +36,16 @@ specs:
     packages:
       - anatase-logos
       - fedora-logos
+
+  - spec: desktop-backgrounds/desktop-backgrounds.spec
+    files:
+      - "*.svg"
+      - palette-day
+      - palette-night
+    packages:
+      - desktop-backgrounds
+      - desktop-backgrounds-gnome
+      - desktop-backgrounds-kde
 
 postprocess: |
   echo "OS Release file (/etc/os-release):"
