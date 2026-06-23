@@ -17,6 +17,7 @@ files:
   - cockpit-branding.css
 
 # Prevent env invalidating the build hash
+# do not readd: cockpit-branding.css
 hash: >
   @hash(
     anatase-logos.spec,

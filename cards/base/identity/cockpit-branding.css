@@ -43,8 +43,8 @@
     }
 }
 
-:not(.pf-v6-theme-dark) .anaconda {
-    /* Default (light theme) token mapping */
+html:not(.pf-v6-theme-dark) .anaconda {
+    /* Light theme token mapping */
     --pf-t--global--color--brand--default: var(--brand-surface);
     --pf-t--global--color--brand--hover: var(--brand-surface-dark);
 }
@@ -94,5 +94,13 @@
 
     .pf-v6-c-wizard__nav-link.pf-m-current {
         --pf-v6-c-wizard__nav-link--m-current--BackgroundColor: color-mix(in srgb, var(--brand-surface) 72%, transparent);
+        --pf-v6-c-wizard__nav-link--m-current--Color: var(--brand-accent-light);
+        --pf-v6-c-wizard__nav-link--m-current--before--BackgroundColor: var(--brand-accent);
+        --pf-v6-c-wizard__nav-link--m-current--before--BorderColor: var(--brand-accent);
+        --pf-v6-c-wizard__nav-link--m-current--before--Color: var(--brand-surface);
+    }
+
+    .pf-v6-c-wizard__nav-link.pf-m-current::before {
+        color: var(--brand-surface);
     }
 }
