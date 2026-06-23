@@ -10,9 +10,9 @@ Summary:        Anatase desktop backgrounds
 License:        LicenseRef-Anatase-Logos
 Source0:        palette-day
 Source1:        palette-night
-Source10:       anatase-formation.svg
-Source11:       anatase-crystal.svg
-Source12:       anatase-strata.svg
+Source10:       anatase-formation.svg.in
+Source11:       anatase-crystal.svg.in
+Source12:       anatase-strata.svg.in
 
 BuildArch:      noarch
 BuildRequires:  libjxl-utils

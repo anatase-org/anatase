@@ -39,7 +39,7 @@ specs:
 
   - spec: desktop-backgrounds/desktop-backgrounds.spec
     files:
-      - "*.svg"
+      - "*.svg.in"
       - palette-day
       - palette-night
     packages:

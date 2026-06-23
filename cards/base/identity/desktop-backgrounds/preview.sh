@@ -33,8 +33,8 @@ apply_palette() {
   fi
 }
 
-for source_svg in anatase-*.svg; do
-  name=${source_svg%.svg}
+for source_svg in anatase-*.svg.in; do
+  name=${source_svg%.svg.in}
   apply_palette palette-day "${source_svg}" "${outdir}/${name}-day.svg"
   apply_palette palette-night "${source_svg}" "${outdir}/${name}-night.svg"
 done
