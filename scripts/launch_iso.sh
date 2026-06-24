@@ -8,7 +8,7 @@ cd "${repo_root}"
 VM_MEMORY=${VM_MEMORY:-8192}
 VM_CPUS=${VM_CPUS:-4}
 VM_DISK_SIZE=${VM_DISK_SIZE:-40G}
-VM_FIRMWARE=${VM_FIRMWARE:-bios}
+BIOS=${BIOS:-0}
 VM_RESET_DISK=${VM_RESET_DISK:-0}
 QEMU_BIN=${QEMU_BIN:-qemu-system-x86_64}
 QEMU_DISPLAY=${QEMU_DISPLAY:-gtk}
@@ -86,10 +86,11 @@ qemu_args=(
     -serial mon:stdio
 )
 
-case "${VM_FIRMWARE}" in
-    bios)
+case "${BIOS}" in
+    1)
+        firmware=bios
         ;;
-    uefi)
+    0)
         ovmf_code=${QEMU_OVMF_CODE:-}
         if [[ -z "${ovmf_code}" ]]; then
             ovmf_code=$(first_existing \
@@ -125,13 +126,14 @@ case "${VM_FIRMWARE}" in
             -drive "if=pflash,format=raw,file=${ovmf_vars}"
             "${qemu_args[@]}"
         )
+        firmware=uefi
         ;;
     *)
-        printf 'Unsupported VM_FIRMWARE: %s\n' "${VM_FIRMWARE}" >&2
-        printf 'Use VM_FIRMWARE=bios or VM_FIRMWARE=uefi.\n' >&2
+        printf 'Unsupported BIOS value: %s\n' "${BIOS}" >&2
+        printf 'Use BIOS=0 for UEFI or BIOS=1 for legacy BIOS.\n' >&2
         exit 1
         ;;
 esac
 
-log "Launching ${iso} with ${QEMU_BIN} (${VM_FIRMWARE})"
+log "Launching ${iso} with ${QEMU_BIN} (${firmware})"
 exec "${QEMU_BIN}" "${qemu_args[@]}"
