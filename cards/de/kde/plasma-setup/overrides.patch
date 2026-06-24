@@ -8,7 +8,7 @@ Subject: Use Anatase icon on finished page
  1 file changed, 5 insertions(+), 7 deletions(-)
 
 diff --git a/modules/finished/contents/ui/main.qml b/modules/finished/contents/ui/main.qml
-index 92c1d9fafc39..4cd7f14dc032 100644
+index 92c1d9fafc39..ec8458523c40 100644
 --- a/modules/finished/contents/ui/main.qml
 +++ b/modules/finished/contents/ui/main.qml
 @@ -8,7 +8,6 @@ import QtQuick.Controls
@@ -34,7 +34,7 @@ index 92c1d9fafc39..4cd7f14dc032 100644
 +                Layout.topMargin: Kirigami.Units.gridUnit * 2
 +                implicitWidth: Kirigami.Units.iconSizes.huge * 2
 +                implicitHeight: implicitWidth
-+                source: "anatase-logo-icon"
++                source: "start-here"
              }
          }
      }
