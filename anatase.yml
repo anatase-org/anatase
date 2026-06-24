@@ -2,7 +2,6 @@ version: 1
 env:
   releasever: 44
   dist: ""
-  nvidia: "610.43.02"
   tag: $releasever.$version$dist
 
 name: Anatase

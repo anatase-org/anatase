@@ -1,9 +1,23 @@
 version: 1
 
 packages:
-    - kernel
-    - kernel-modules
-    - kernel-modules-extra
+  - dracut
+  - systemd
+  - systemd-udev
+
+oci:
+    - oci: kernel
+      packages:
+        - kernel-core
+        - kernel-modules
+        - kernel-modules-core
+        - kernel-modules-extra
+        - kernel-modules-akmods
+        - kernel-common
+        # Nvidia
+        - kernel-nvidia
+      env:
+        nvidia: ${label:org.anatase.kernel.nvidia}
 
 postprocess: |
     set -eux
