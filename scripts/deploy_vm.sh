@@ -98,22 +98,53 @@ log "Installing ${IMAGE} to ${disk}"
 disk=/output/vm.raw
 mnt=$(mktemp -d "${TMPDIR:-/var/tmp}/anatase-install.XXXXXX")
 loop=""
+cleanup_done=0
 
 cleanup() {
+    local fail_on_error=${1:-0}
+    local status=0
+
     set +e
-    if mountpoint -q "${mnt}/boot/efi"; then
-        umount "${mnt}/boot/efi"
+
+    if [ "${cleanup_done}" = 1 ]; then
+        return 0
     fi
-    if mountpoint -q "${mnt}/boot"; then
-        umount "${mnt}/boot"
+
+    sync
+
+    if [ -d "${mnt}" ]; then
+        if command -v findmnt >/dev/null 2>&1 && findmnt -R --target "${mnt}" >/dev/null 2>&1; then
+            umount -R "${mnt}" || status=1
+        else
+            if mountpoint -q "${mnt}/boot/efi"; then
+                umount "${mnt}/boot/efi" || status=1
+            fi
+            if mountpoint -q "${mnt}/boot"; then
+                umount "${mnt}/boot" || status=1
+            fi
+            if mountpoint -q "${mnt}"; then
+                umount "${mnt}" || status=1
+            fi
+        fi
     fi
-    if mountpoint -q "${mnt}"; then
-        umount "${mnt}"
-    fi
+
     if [ -n "${loop}" ]; then
-        losetup -d "${loop}"
+        if losetup -d "${loop}"; then
+            loop=""
+        else
+            status=1
+        fi
     fi
+
     rmdir "${mnt}/boot/efi" "${mnt}/boot" "${mnt}" 2>/dev/null || true
+    cleanup_done=1
+
+    if [ "${fail_on_error}" = 1 ] && [ "${status}" -ne 0 ]; then
+        printf "Failed to unmount VM install filesystems or detach %s\n" "${loop:-loop device}" >&2
+        return "${status}"
+    fi
+
+    return 0
 }
 trap cleanup EXIT
 
@@ -245,6 +276,13 @@ set prefix=(\$boot)/grub2
 configfile \$prefix/grub.cfg
 EOF
 done
+
+trap - EXIT
+cleanup 1
+cleanup_status=$?
+if [ "${cleanup_status}" -ne 0 ]; then
+    exit "${cleanup_status}"
+fi
 '
 
 log "Created ${disk}"
