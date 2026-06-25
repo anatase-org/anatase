@@ -1,6 +1,6 @@
 # Kickstart defaults for the interactive Anatase installer.
 
-ostreesetup --osname="anatase" --remote="anatase" --url="file:///ostree/repo" --ref="master" --nogpg
+ostreesetup --osname="anatase" --remote="anatase" --url="file:///ostree/repo" --ref="anatase" --nogpg
 
 %post --erroronfail --nochroot --interpreter=/usr/bin/bash --log=/tmp/anaconda-efi-payload.log
 target_efi="/mnt/sysimage/boot/efi"
