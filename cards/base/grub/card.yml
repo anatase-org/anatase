@@ -38,11 +38,16 @@ postprocess: |
     install -Dm0644 /files/grub-boot-success.timer \
         /usr/lib/systemd/system/grub-boot-success.timer
 
-    systemctl enable grub-boot-success.timer
-    systemctl enable grub-boot-success.service
-
-    systemctl --global disable grub-boot-success.timer || true
-    systemctl disable grub-boot-indeterminate.service || true
+    install -dm0755 /usr/lib/systemd/system-preset
+    cat > /usr/lib/systemd/system-preset/80-anatase-grub.preset <<'EOF'
+    enable grub-boot-success.timer
+    enable grub-boot-success.service
+    disable grub-boot-indeterminate.service
+    EOF
+    systemctl preset \
+        grub-boot-success.timer \
+        grub-boot-success.service \
+        grub-boot-indeterminate.service || true
 
     # Tweak grub2-mkconfig target to work on ostree systems
     if [ -f /usr/bin/grub2-mkconfig ] && \
