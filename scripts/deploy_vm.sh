@@ -213,7 +213,7 @@ udevadm settle || true
 
 mkfs.vfat -F32 -n ANATASE_EFI "${loop}p2"
 mkfs.ext4 -F -L ANATASE_BOOT "${loop}p3"
-mkfs.btrfs -f -L ANATASE_ROOT "${loop}p4"
+mkfs.btrfs -f -L ANATASE_DISK "${loop}p4"
 
 mount "${loop}p4" "${mnt}"
 mkdir -p "${mnt}/boot"
