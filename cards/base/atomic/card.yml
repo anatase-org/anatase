@@ -55,6 +55,9 @@ specs:
       ref: v${spec:Version}
       file: overrides.patch
 
+files:
+  - ./anatase-mok-ca.cer
+
 postprocess: |
     set -eux
 
@@ -134,6 +137,13 @@ postprocess: |
     # Move boot into /usr/lib/ostree-boot
     rm -rf /usr/lib/ostree-boot
     mv /boot /usr/lib/ostree-boot
+
+    # Add our key to the image
+    mkdir -p /usr/lib/ludos/efi
+    openssl x509 \
+        -in /files/anatase-mok-ca.cer \
+        -outform DER \
+        -out /usr/lib/ludos/efi/ANATASE-KEY-ENROLLME.der
 
     if command -v bootupctl >/dev/null; then
         bootupctl backend generate-update-metadata || true

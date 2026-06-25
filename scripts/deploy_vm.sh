@@ -263,13 +263,21 @@ grub2-install --target=i386-pc --boot-directory="${mnt}/boot" --recheck "${loop}
 
 # The source EFI trees may contain hard-linked fallback binaries. The VM ESP is
 # vfat, so copy file contents instead of preserving hard-link relationships.
+if [ -d /usr/lib/ludos/efi ]; then
+    cp -R --no-preserve=mode,ownership,timestamps /usr/lib/ludos/efi/. "${mnt}/boot/efi/"
+fi
 cp -R --no-preserve=links /usr/lib/efi/shim/*/EFI/. "${mnt}/boot/efi/EFI/"
 cp -R --no-preserve=links /usr/lib/efi/grub2/*/EFI/. "${mnt}/boot/efi/EFI/"
-install -d -m 0755 "${mnt}/boot/efi/EFI/BOOT" "${mnt}/boot/efi/EFI/fedora"
-if [ -f "${mnt}/boot/efi/EFI/fedora/grubx64.efi" ]; then
-    cp -f "${mnt}/boot/efi/EFI/fedora/grubx64.efi" "${mnt}/boot/efi/EFI/BOOT/grubx64.efi"
+efi_vendor=anatase
+install -d -m 0755 "${mnt}/boot/efi/EFI/BOOT" "${mnt}/boot/efi/EFI/${efi_vendor}"
+if [ -d "${mnt}/boot/efi/EFI/fedora" ]; then
+    cp -R --no-preserve=links "${mnt}/boot/efi/EFI/fedora/." "${mnt}/boot/efi/EFI/${efi_vendor}/"
+    rm -rf "${mnt}/boot/efi/EFI/fedora"
 fi
-for grub_cfg in "${mnt}/boot/efi/EFI/fedora/grub.cfg" "${mnt}/boot/efi/EFI/BOOT/grub.cfg"; do
+if [ -f "${mnt}/boot/efi/EFI/${efi_vendor}/grubx64.efi" ]; then
+    cp -f "${mnt}/boot/efi/EFI/${efi_vendor}/grubx64.efi" "${mnt}/boot/efi/EFI/BOOT/grubx64.efi"
+fi
+for grub_cfg in "${mnt}/boot/efi/EFI/${efi_vendor}/grub.cfg" "${mnt}/boot/efi/EFI/BOOT/grub.cfg"; do
     cat > "${grub_cfg}" <<EOF
 search --fs-uuid ${boot_uuid} --set boot --no-floppy
 set prefix=(\$boot)/grub2

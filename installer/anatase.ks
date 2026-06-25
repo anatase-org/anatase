@@ -2,6 +2,23 @@
 
 ostreesetup --osname="anatase" --remote="anatase" --url="file:///ostree/repo" --ref="master" --nogpg
 
+%post --erroronfail --nochroot --interpreter=/usr/bin/bash --log=/tmp/anaconda-efi-payload.log
+target_efi="/mnt/sysimage/boot/efi"
+if [ ! -d "$target_efi" ]; then
+    echo "no target EFI system partition mounted; skipping EFI payload copy"
+    exit 0
+fi
+
+efi_source="/usr/lib/ludos/efi"
+if [ ! -d "$efi_source" ]; then
+    echo "missing Anatase EFI payload directory: $efi_source" >&2
+    exit 1
+fi
+
+cp -R --no-preserve=mode,ownership,timestamps "$efi_source/." "$target_efi/"
+sync "$target_efi"
+%end
+
 %post --erroronfail --nochroot --interpreter=/usr/bin/bash --log=/tmp/anaconda-flatpaks.log
 flatpak_source="/var/lib/flatpak-installer"
 if [ ! -d "$flatpak_source" ]; then
