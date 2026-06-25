@@ -19,6 +19,49 @@ cp -R --no-preserve=mode,ownership,timestamps "$efi_source/." "$target_efi/"
 sync "$target_efi"
 %end
 
+%post --erroronfail --nochroot --interpreter=/usr/bin/bash --log=/tmp/anaconda-filesystem-labels.log
+set -euo pipefail
+
+label_mount() {
+    local mountpoint="$1"
+    local label="$2"
+    local source=""
+    local fstype=""
+
+    if ! mountpoint -q "$mountpoint"; then
+        echo "$mountpoint is not mounted; skipping $label"
+        return 0
+    fi
+
+    source="$(findmnt -nro SOURCE --target "$mountpoint")"
+    fstype="$(findmnt -nro FSTYPE --target "$mountpoint")"
+
+    case "$fstype" in
+        vfat|fat|msdos)
+            fatlabel "$source" "$label"
+            ;;
+        ext2|ext3|ext4)
+            e2label "$source" "$label"
+            ;;
+        btrfs)
+            if [ "$mountpoint" != /mnt/sysimage ]; then
+                echo "$mountpoint is a Btrfs subvolume; skipping $label"
+                return 0
+            fi
+            btrfs filesystem label "$mountpoint" "$label"
+            ;;
+        *)
+            echo "unsupported filesystem type for $mountpoint: $fstype" >&2
+            return 1
+            ;;
+    esac
+}
+
+label_mount /mnt/sysimage/boot/efi ANATASE_EFI
+label_mount /mnt/sysimage/boot ANATASE_BOOT
+label_mount /mnt/sysimage ANATASE_DISK
+%end
+
 %post --erroronfail --nochroot --interpreter=/usr/bin/bash --log=/tmp/anaconda-flatpaks.log
 flatpak_source="/var/lib/flatpak-installer"
 if [ ! -d "$flatpak_source" ]; then
