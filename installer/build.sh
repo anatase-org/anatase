@@ -119,10 +119,10 @@ if [ -z "${newest_commit}" ]; then
     exit 1
 fi
 
-if ostree --repo="${repo}" refs | grep -qx anatase; then
-    ostree --repo="${repo}" refs --delete anatase
+if ostree --repo="${repo}" refs | grep -qx os; then
+    ostree --repo="${repo}" refs --delete os
 fi
-ostree --repo="${repo}" refs --create=anatase "${newest_commit}"
+ostree --repo="${repo}" refs --create=os "${newest_commit}"
 ostree --repo="${repo}" summary --update
 
 # Install flathub apps
