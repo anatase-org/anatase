@@ -1,0 +1,10 @@
+[Unit]
+Description=Register Anatase-managed Flatpak extensions
+Before=flatpak-system-helper.service anatase-flatpaks.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/anatase-flatpak-extensions
+
+[Install]
+WantedBy=multi-user.target

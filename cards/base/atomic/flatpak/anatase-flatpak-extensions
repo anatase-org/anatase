@@ -1,0 +1,59 @@
+#!/usr/bin/bash
+set -euo pipefail
+
+config_dir=/usr/lib/anatase/flatpak
+extension_root=/var/lib/flatpak/extension
+
+#
+# Declarations
+#
+
+register_declarations() {
+    shopt -s nullglob
+
+    for config in "$config_dir"/*.conf; do
+        while read -r ref target extra; do
+            case "${ref:-}" in
+                ''|\#*) continue ;;
+            esac
+
+            if [ -z "${target:-}" ] || [ -n "${extra:-}" ]; then
+                printf 'ERROR: invalid Anatase Flatpak extension declaration in %s: %s %s %s\n' \
+                    "$config" "${ref:-}" "${target:-}" "${extra:-}" >&2
+                continue
+            fi
+
+            [ -d "$target" ] || continue
+
+            link="$extension_root/$ref"
+            mkdir -p "$(dirname "$link")"
+            ln -snf "$target" "$link"
+        done < "$config"
+    done
+}
+
+#
+# Cleanup
+#
+
+cleanup_managed_extensions() {
+    [ -d "$extension_root" ] || return 0
+
+    find "$extension_root" -mindepth 3 -maxdepth 3 -type l -print | while read -r link; do
+        target="$(readlink "$link")"
+        if [[ "$target" == "$config_dir"/* ]]; then
+            rm -f "$link"
+            rmdir -p "$(dirname "$link")" --ignore-fail-on-non-empty
+        fi
+    done
+}
+
+#
+# Startup
+#
+
+[ -d "$config_dir" ] || exit 0
+
+mkdir -p "$extension_root"
+cleanup_managed_extensions
+register_declarations

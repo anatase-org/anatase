@@ -196,3 +196,122 @@ postprocess: |
   if [ -e /usr/lib64/libnvidia-ml.so.1 ]; then
       ln -snf libnvidia-ml.so.1 /usr/lib64/libnvidia-ml.so
   fi
+
+  #
+  # Nvidia flatpak (avoids breaking flatpaks when rebooting/on live ISO)
+  #
+  driver_version="$(rpm -q --qf '%{VERSION}' nvidia-driver)"
+  driver_version_dashed="$(printf '%s' "$driver_version" | tr . -)"
+  flatpak_arch="$(rpm -E '%_arch')"
+  fedora_branch="f$(rpm -E '%fedora')"
+
+  link_payload_entry() {
+      src="$1"
+      dst="$2"
+
+      mkdir -p "$(dirname "$dst")"
+
+      if [ -L "$src" ]; then
+          target="$(readlink "$src")"
+          if [ "${target#/}" != "$target" ]; then
+              target="$(realpath -m --relative-to="$(dirname "$src")" "$target")"
+          fi
+          ln -snf "$target" "$dst"
+      elif [ -f "$src" ]; then
+          ln "$src" "$dst"
+      fi
+  }
+
+  link_payload_glob() {
+      dst_dir="$1"
+      shift
+
+      mkdir -p "$dst_dir"
+      for src in "$@"; do
+          [ -e "$src" ] || [ -L "$src" ] || continue
+          case "${src##*/}" in
+              libnvidia-container*.so*) continue ;;
+          esac
+          link_payload_entry "$src" "$dst_dir/$(basename "$src")"
+      done
+  }
+
+  rewrite_flatpak_metadata() {
+      payload="$1"
+
+      find "$payload" -type f \( -name '*.json' -o -name '*.icd' \) -exec sed -i \
+              -e 's|/usr/lib64/||g' \
+              -e 's|/usr/lib/||g' \
+              -e 's|__NV_VK_ICD__|libGLX_nvidia.so.0|g' \
+              {} +
+  }
+
+  build_flatpak_payload() {
+      libdir="$1"
+      payload="$2"
+      vulkan_cpu="$3"
+
+      rm -rf "$payload"
+      mkdir -p "$payload"
+
+      link_payload_glob "$payload/lib" \
+          "$libdir"/lib*nvidia*.so* \
+          "$libdir"/libcuda.so* \
+          "$libdir"/libcudadebugger.so* \
+          "$libdir"/libnvcuextend.so* \
+          "$libdir"/libnvcuvid.so* \
+          "$libdir"/libnvoptix.so*
+
+      for rule in \
+          "$payload/lib/dri:$libdir/dri/nvidia*.so" \
+          "$payload/lib/gbm:$libdir/gbm/nvidia*.so" \
+          "$payload/lib/vdpau:$libdir/vdpau/libvdpau_nvidia.so*" \
+          "$payload/lib/nvidia/wine:$libdir/nvidia/wine/*.dll" \
+          "$payload/share/nvidia:/usr/share/nvidia/nvidia-application-profiles*" \
+          "$payload/share/nvidia:/usr/share/nvidia/nvoptix.bin" \
+          "$payload/glvnd/egl_vendor.d:/usr/share/glvnd/egl_vendor.d/*nvidia*.json" \
+          "$payload/egl/egl_external_platform.d:/usr/share/egl/egl_external_platform.d/*nvidia*.json" \
+          "$payload/vulkan/icd.d:/usr/share/vulkan/icd.d/*nvidia*$vulkan_cpu*.json" \
+          "$payload/vulkansc/icd.d:/usr/share/vulkansc/icd.d/*nvidia*$vulkan_cpu*.json" \
+          "$payload/OpenCL/vendors:/etc/OpenCL/vendors/nvidia.icd"
+      do
+          link_payload_glob "${rule%%:*}" ${rule#*:}
+      done
+
+      # Not used for i686
+      if [ -e "$libdir"/libnvidia-present.so* ]; then
+          link_payload_glob "$payload/vulkan/implicit_layer.d" \
+              /usr/share/vulkan/implicit_layer.d/*nvidia*.json
+      fi
+
+      rewrite_flatpak_metadata "$payload"
+
+      # Sanity check we did not miss libraries
+      find "$payload" -type f \( -name '*.json' -o -name '*.icd' \) -print0 |
+          xargs -0 -r grep -hoE 'lib[^"[:space:]]+\.so([^"[:space:]]*)?' |
+          sort -u |
+          while read -r lib; do
+              [ -e "$payload/lib/$lib" ] || {
+                  printf 'Flatpak NVIDIA payload is missing metadata-referenced library: %s\n' "$lib" >&2
+                  return 1
+              }
+          done
+  }
+
+  build_flatpak_payload /usr/lib64 /usr/lib/anatase/flatpak/nvidia "$flatpak_arch"
+  if [ "$flatpak_arch" = "x86_64" ] && [ -e /usr/lib/libGLX_nvidia.so.0 ]; then
+      build_flatpak_payload /usr/lib /usr/lib/anatase/flatpak/nvidia32 i686
+  fi
+
+  install -dm0755 /usr/lib/anatase/flatpak
+  cat > /usr/lib/anatase/flatpak/nvidia.conf <<EOF
+  org.freedesktop.Platform.GL.nvidia-$driver_version_dashed/$flatpak_arch/1.4 /usr/lib/anatase/flatpak/nvidia
+  org.fedoraproject.Platform.GL.nvidia-$driver_version_dashed/$flatpak_arch/$fedora_branch /usr/lib/anatase/flatpak/nvidia
+  EOF
+
+  if [ "$flatpak_arch" = "x86_64" ]; then
+      cat >> /usr/lib/anatase/flatpak/nvidia.conf <<EOF
+  org.freedesktop.Platform.GL32.nvidia-$driver_version_dashed/$flatpak_arch/1.4 /usr/lib/anatase/flatpak/nvidia32
+  org.fedoraproject.Platform.GL32.nvidia-$driver_version_dashed/$flatpak_arch/$fedora_branch /usr/lib/anatase/flatpak/nvidia32
+  EOF
+  fi

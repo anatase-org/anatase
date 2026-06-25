@@ -57,6 +57,8 @@ specs:
 
 files:
   - ./anatase-mok-ca.cer
+  - flatpak/anatase-flatpak-extensions
+  - flatpak/anatase-flatpak-extensions.service
 
 postprocess: |
     set -eux
@@ -101,6 +103,20 @@ postprocess: |
     if [ -f /usr/lib/tmpfiles.d/provision.conf ]; then
         sed -i 's|^d- /root :0700 root :root -$|# d- /root :0700 root :root -|' /usr/lib/tmpfiles.d/provision.conf
     fi
+
+    #
+    # Flatpak Extension Management
+    #
+
+    install -dm0755 /usr/lib/anatase/flatpak
+    install -Dm0755 /files/flatpak/anatase-flatpak-extensions \
+        /usr/libexec/anatase-flatpak-extensions
+    install -Dm0644 /files/flatpak/anatase-flatpak-extensions.service \
+        /usr/lib/systemd/system/anatase-flatpak-extensions.service
+    cat > /usr/lib/systemd/system-preset/80-anatase-flatpak-extensions.preset <<'EOF'
+    enable anatase-flatpak-extensions.service
+    EOF
+    systemctl preset anatase-flatpak-extensions.service || true
 
     #
     # Installer fixups
