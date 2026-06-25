@@ -55,7 +55,7 @@ copy_image_to_rootful_storage() {
         log "Rootful podman storage already has ${IMAGE}"
         return
     elif [[ -n "${root_img_id}" ]]; then
-        log "Re-using older sha image ${IMAGE}, if you updated bootc delete it."
+        log "Re-using older sha image ${IMAGE}, if you updated bootc or your shim/grub delete it."
         return
     fi
 
