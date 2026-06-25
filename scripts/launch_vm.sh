@@ -9,9 +9,11 @@ VM_MEMORY=${VM_MEMORY:-8192}
 VM_CPUS=${VM_CPUS:-4}
 VM_SSH_PORT=${VM_SSH_PORT:-2222}
 BIOS=${BIOS:-0}
+VM_SECURE_BOOT=${VM_SECURE_BOOT:-1}
 QEMU_BIN=${QEMU_BIN:-qemu-system-x86_64}
 QEMU_DISPLAY=${QEMU_DISPLAY:-gtk}
 QEMU_VGA=${QEMU_VGA:-virtio}
+QEMU_MACHINE=${QEMU_MACHINE:-q35}
 VM_KERNEL_ARGS=${VM_KERNEL_ARGS:-}
 VM_OSTREE_SHARE=${VM_OSTREE_SHARE:-1}
 VM_OSTREE_MOUNT_TAG=${VM_OSTREE_MOUNT_TAG:-anatase-ostree}
@@ -20,7 +22,13 @@ VM_OSTREE_MOUNT_POINT=${VM_OSTREE_MOUNT_POINT:-/run/anatase/ostree}
 cache_dir="${repo_root}/cache"
 ostree_dir="${cache_dir}/ostree"
 disk="${cache_dir}/vm.raw"
-ovmf_vars=${VM_OVMF_VARS:-"${cache_dir}/vm-ovmf-vars.fd"}
+if [[ -n "${VM_OVMF_VARS:-}" ]]; then
+    ovmf_vars=${VM_OVMF_VARS}
+elif [[ "${VM_SECURE_BOOT}" == "1" ]]; then
+    ovmf_vars="${cache_dir}/vm-ovmf-ms-vars.fd"
+else
+    ovmf_vars="${cache_dir}/vm-ovmf-vars.fd"
+fi
 
 log() {
     printf '==> %s\n' "$*"
@@ -42,6 +50,31 @@ first_existing() {
         fi
     done
     return 1
+}
+
+machine_with_smm() {
+    local machine=$1
+    if [[ "${machine}" == *smm=* ]]; then
+        printf '%s\n' "${machine}"
+    else
+        printf '%s,smm=on\n' "${machine}"
+    fi
+}
+
+file_size() {
+    stat -c '%s' "$1"
+}
+
+require_matching_ovmf_flash() {
+    local code_size vars_size
+    code_size=$(file_size "${ovmf_code}")
+    vars_size=$(file_size "${ovmf_vars}")
+
+    if ((code_size > 3 * 1024 * 1024 && vars_size < 512 * 1024)); then
+        printf 'OVMF vars store is too small for the selected 4M OVMF code image: %s\n' "${ovmf_vars}" >&2
+        printf 'Remove it and recreate it from a matching 4M Microsoft-key template, for example OVMF_VARS_4M.ms.fd.\n' >&2
+        exit 1
+    fi
 }
 
 append_vm_kernel_args() {
@@ -128,26 +161,62 @@ case "${BIOS}" in
     0)
         ovmf_code=${QEMU_OVMF_CODE:-}
         if [[ -z "${ovmf_code}" ]]; then
-            ovmf_code=$(first_existing \
-                /usr/share/edk2/x64/OVMF_CODE.4m.fd \
-                /usr/share/edk2/ovmf/OVMF_CODE.fd \
-                /usr/share/OVMF/OVMF_CODE.fd || true)
+            if [[ "${VM_SECURE_BOOT}" == "1" ]]; then
+                ovmf_code=$(first_existing \
+                    "${cache_dir}/ovmf-ms/OVMF_CODE_4M.ms.fd" \
+                    "${cache_dir}/ovmf-ms/OVMF_CODE_4M.secboot.fd" \
+                    /usr/share/OVMF/OVMF_CODE_4M.ms.fd \
+                    /usr/share/OVMF/OVMF_CODE_4M.secboot.fd \
+                    /usr/share/OVMF/OVMF_CODE.ms.fd \
+                    /usr/share/OVMF/OVMF_CODE.secboot.fd \
+                    /usr/share/edk2/x64/OVMF_CODE.secboot.4m.fd \
+                    /usr/share/edk2/ovmf/OVMF_CODE.secboot.fd || true)
+            else
+                ovmf_code=$(first_existing \
+                    /usr/share/edk2/x64/OVMF_CODE.4m.fd \
+                    /usr/share/edk2/ovmf/OVMF_CODE.fd \
+                    /usr/share/OVMF/OVMF_CODE_4M.fd \
+                    /usr/share/OVMF/OVMF_CODE.fd || true)
+            fi
         fi
 
         ovmf_template=${QEMU_OVMF_VARS_TEMPLATE:-}
         if [[ -z "${ovmf_template}" ]]; then
-            ovmf_template=$(first_existing \
-                /usr/share/edk2/x64/OVMF_VARS.4m.fd \
-                /usr/share/edk2/ovmf/OVMF_VARS.fd \
-                /usr/share/OVMF/OVMF_VARS.fd || true)
+            if [[ "${VM_SECURE_BOOT}" == "1" ]]; then
+                ovmf_template=$(first_existing \
+                    "${cache_dir}/ovmf-ms/OVMF_VARS_4M.ms.fd" \
+                    "${cache_dir}/ovmf-ms/OVMF_VARS_4M.secboot.fd" \
+                    /usr/share/OVMF/OVMF_VARS_4M.ms.fd \
+                    /usr/share/OVMF/OVMF_VARS.ms.fd \
+                    /usr/share/OVMF/OVMF_VARS_4M.secboot.fd \
+                    /usr/share/OVMF/OVMF_VARS.secboot.fd \
+                    /usr/share/edk2/x64/OVMF_VARS.ms.4m.fd \
+                    /usr/share/edk2/x64/OVMF_VARS.secboot.4m.fd \
+                    /usr/share/edk2/ovmf/OVMF_VARS.ms.fd \
+                    /usr/share/edk2/ovmf/OVMF_VARS.secboot.fd || true)
+            else
+                ovmf_template=$(first_existing \
+                    /usr/share/edk2/x64/OVMF_VARS.4m.fd \
+                    /usr/share/edk2/ovmf/OVMF_VARS.fd \
+                    /usr/share/OVMF/OVMF_VARS_4M.fd \
+                    /usr/share/OVMF/OVMF_VARS.fd || true)
+            fi
         fi
 
         if [[ ! -f "${ovmf_code}" ]]; then
-            printf 'OVMF code file not found. Set QEMU_OVMF_CODE or install edk2-ovmf.\n' >&2
+            if [[ "${VM_SECURE_BOOT}" == "1" ]]; then
+                printf 'Secure Boot OVMF code file not found. Set QEMU_OVMF_CODE or install edk2-ovmf with Secure Boot support.\n' >&2
+            else
+                printf 'OVMF code file not found. Set QEMU_OVMF_CODE or install edk2-ovmf.\n' >&2
+            fi
             exit 1
         fi
         if [[ ! -f "${ovmf_template}" ]]; then
-            printf 'OVMF vars template not found. Set QEMU_OVMF_VARS_TEMPLATE or install edk2-ovmf.\n' >&2
+            if [[ "${VM_SECURE_BOOT}" == "1" ]]; then
+                printf 'Microsoft-key OVMF vars template not found. Set QEMU_OVMF_VARS_TEMPLATE to an enrolled OVMF_VARS file, or set VM_SECURE_BOOT=0 for unenrolled UEFI.\n' >&2
+            else
+                printf 'OVMF vars template not found. Set QEMU_OVMF_VARS_TEMPLATE or install edk2-ovmf.\n' >&2
+            fi
             exit 1
         fi
 
@@ -156,13 +225,30 @@ case "${BIOS}" in
             log "Creating OVMF variables store: ${ovmf_vars}"
             cp "${ovmf_template}" "${ovmf_vars}"
         fi
+        require_matching_ovmf_flash
 
-        qemu_args=(
-            -drive "if=pflash,format=raw,readonly=on,file=${ovmf_code}"
-            -drive "if=pflash,format=raw,file=${ovmf_vars}"
-            "${qemu_args[@]}"
-        )
-        firmware=uefi
+        if [[ "${VM_SECURE_BOOT}" == "1" ]]; then
+            qemu_args=(
+                -machine "$(machine_with_smm "${QEMU_MACHINE}")"
+                -global driver=cfi.pflash01,property=secure,value=on
+                -drive "if=pflash,format=raw,unit=0,readonly=on,file=${ovmf_code}"
+                -drive "if=pflash,format=raw,unit=1,file=${ovmf_vars}"
+                "${qemu_args[@]}"
+            )
+            firmware="uefi secureboot"
+        elif [[ "${VM_SECURE_BOOT}" == "0" ]]; then
+            qemu_args=(
+                -machine "${QEMU_MACHINE}"
+                -drive "if=pflash,format=raw,unit=0,readonly=on,file=${ovmf_code}"
+                -drive "if=pflash,format=raw,unit=1,file=${ovmf_vars}"
+                "${qemu_args[@]}"
+            )
+            firmware=uefi
+        else
+            printf 'Unsupported VM_SECURE_BOOT value: %s\n' "${VM_SECURE_BOOT}" >&2
+            printf 'Use VM_SECURE_BOOT=1 for Secure Boot or VM_SECURE_BOOT=0 for unenrolled UEFI.\n' >&2
+            exit 1
+        fi
         ;;
     1)
         firmware=bios
