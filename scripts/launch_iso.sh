@@ -13,7 +13,9 @@ VM_DISK_SIZE=${VM_DISK_SIZE:-40G}
 BIOS=${BIOS:-0}
 VM_SECURE_BOOT=${VM_SECURE_BOOT:-1}
 VM_RESET_DISK=${VM_RESET_DISK:-0}
+SIMULATE_WINDOWS=${SIMULATE_WINDOWS:-0}
 QEMU_BIN=${QEMU_BIN:-qemu-system-x86_64}
+QEMU_IMG=${QEMU_IMG:-qemu-img}
 QEMU_DISPLAY=${QEMU_DISPLAY:-gtk}
 QEMU_VGA=${QEMU_VGA:-virtio}
 QEMU_MACHINE=${QEMU_MACHINE:-q35}
@@ -59,6 +61,77 @@ file_size() {
     stat -c '%s' "$1"
 }
 
+create_thin_raw_disk() {
+    local path=$1
+    local size=$2
+
+    rm -f "${path}"
+    "${QEMU_IMG}" create -q -f raw -o preallocation=off "${path}" "${size}"
+}
+
+find_ntfs_mkfs() {
+    if command -v mkfs.ntfs >/dev/null 2>&1; then
+        command -v mkfs.ntfs
+    elif command -v mkntfs >/dev/null 2>&1; then
+        command -v mkntfs
+    else
+        return 1
+    fi
+}
+
+create_simulated_windows_disk() {
+    local root_cmd=()
+    local ntfs_mkfs
+    local loop=""
+    local recovery_start_sector=$((129 * 1024 * 1024 / 512))
+    local windows_start_sector=$((2177 * 1024 * 1024 / 512))
+
+    require_command parted
+    require_command losetup
+    require_command mkfs.vfat
+    ntfs_mkfs=$(find_ntfs_mkfs) || {
+        printf 'Required command not found: mkfs.ntfs or mkntfs\n' >&2
+        printf 'Install ntfsprogs/ntfs-3g to use SIMULATE_WINDOWS=1.\n' >&2
+        exit 1
+    }
+
+    if [[ "${UID}" -ne 0 ]]; then
+        require_command sudo
+        root_cmd=(sudo)
+    fi
+
+    log "Creating simulated Windows target disk: ${disk} (${VM_DISK_SIZE})"
+    create_thin_raw_disk "${disk}" "${VM_DISK_SIZE}"
+
+    cleanup_loop() {
+        if [[ -n "${loop}" ]]; then
+            "${root_cmd[@]}" losetup -d "${loop}" || true
+        fi
+    }
+    trap cleanup_loop RETURN
+
+    loop=$("${root_cmd[@]}" losetup --find --show --partscan "${disk}")
+    "${root_cmd[@]}" parted -s "${loop}" mklabel gpt
+    "${root_cmd[@]}" parted -s "${loop}" mkpart EFI fat32 1MiB 129MiB
+    "${root_cmd[@]}" parted -s "${loop}" name 1 EFI
+    "${root_cmd[@]}" parted -s "${loop}" set 1 esp on
+    "${root_cmd[@]}" parted -s "${loop}" mkpart recovery ntfs 129MiB 2177MiB
+    "${root_cmd[@]}" parted -s "${loop}" name 2 WindowsRecovery
+    "${root_cmd[@]}" parted -s "${loop}" type 2 de94bba4-06d1-4d40-a16a-bfd50179d6ac
+    "${root_cmd[@]}" parted -s "${loop}" mkpart windows ntfs 2177MiB 100%
+    "${root_cmd[@]}" parted -s "${loop}" name 3 "Windows"
+    "${root_cmd[@]}" parted -s "${loop}" type 3 ebd0a0a2-b9e5-4433-87c0-68b6b72699c7
+    "${root_cmd[@]}" partprobe "${loop}" || true
+    "${root_cmd[@]}" udevadm settle || true
+
+    "${root_cmd[@]}" mkfs.vfat -F32 -n WIN_EFI "${loop}p1"
+    "${root_cmd[@]}" "${ntfs_mkfs}" -F -f -q -p "${recovery_start_sector}" -H 255 -S 63 -L WINRE "${loop}p2"
+    "${root_cmd[@]}" "${ntfs_mkfs}" -F -f -q -p "${windows_start_sector}" -H 255 -S 63 -L WINDOWS "${loop}p3"
+
+    trap - RETURN
+    cleanup_loop
+}
+
 require_matching_ovmf_flash() {
     local code_size vars_size
     code_size=$(file_size "${ovmf_code}")
@@ -86,26 +159,39 @@ fi
 iso=$(realpath "$1")
 
 require_command "${QEMU_BIN}"
+require_command "${QEMU_IMG}"
 
 mkdir -p "$(dirname -- "${disk}")" "$(dirname -- "${ovmf_vars}")"
-if [[ "${VM_RESET_DISK}" == "1" ]]; then
-    log "Resetting installer target disk: ${disk}"
-    rm -f "${disk}"
-fi
+case "${SIMULATE_WINDOWS}" in
+    1)
+        create_simulated_windows_disk
+        ;;
+    0)
+        if [[ "${VM_RESET_DISK}" == "1" ]]; then
+            log "Resetting installer target disk: ${disk}"
+            rm -f "${disk}"
+        fi
 
-if [[ ! -e "${disk}" ]]; then
-    log "Creating installer target disk: ${disk} (${VM_DISK_SIZE})"
-    truncate -s "${VM_DISK_SIZE}" "${disk}"
-else
-    log "Using installer target disk: ${disk}"
-fi
+        if [[ ! -e "${disk}" ]]; then
+            log "Creating installer target disk: ${disk} (${VM_DISK_SIZE})"
+            create_thin_raw_disk "${disk}" "${VM_DISK_SIZE}"
+        else
+            log "Using installer target disk: ${disk}"
+        fi
+        ;;
+    *)
+        printf 'Unsupported SIMULATE_WINDOWS value: %s\n' "${SIMULATE_WINDOWS}" >&2
+        printf 'Use SIMULATE_WINDOWS=1 to recreate a dummy Windows disk or SIMULATE_WINDOWS=0 for a plain target disk.\n' >&2
+        exit 1
+        ;;
+esac
 
 qemu_args=(
     -enable-kvm
     -cpu host
     -m "${VM_MEMORY}"
     -smp "${VM_CPUS}"
-    -drive "if=none,id=install0,file=${disk},format=raw,cache=writeback"
+    -drive "if=none,id=install0,file=${disk},format=raw,cache=writeback,discard=unmap,detect-zeroes=unmap"
     -device "virtio-blk-pci,drive=install0,serial=ANATASE-INSTALL-TARGET"
     -drive "file=${iso},format=raw,media=cdrom,readonly=on"
     -boot order=cd,once=d

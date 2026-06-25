@@ -13,6 +13,7 @@ IMAGE=${IMAGE:-localhost/${manifest_image}:f44-x86_64}
 OSTREE_REF=${OSTREE_REF:-master}
 DISK_SIZE=${DISK_SIZE:-40G}
 VM_ROOT_SSH_KEY=${VM_ROOT_SSH_KEY:-${HOME:-}/.ssh/id_rsa.pub}
+QEMU_IMG=${QEMU_IMG:-qemu-img}
 
 cache_dir="${repo_root}/cache"
 ostree_dir="${cache_dir}/ostree"
@@ -32,6 +33,21 @@ fi
 
 log() {
     printf '==> %s\n' "$*"
+}
+
+require_command() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        printf 'Required command not found: %s\n' "$1" >&2
+        exit 1
+    fi
+}
+
+create_thin_raw_disk() {
+    local path=$1
+    local size=$2
+
+    rm -f "${path}"
+    "${QEMU_IMG}" create -q -f raw -o preallocation=off "${path}" "${size}"
 }
 
 copy_image_to_rootful_storage() {
@@ -63,6 +79,8 @@ copy_image_to_rootful_storage() {
     podman save "${IMAGE}" | "${rootful_podman[@]}" load
 }
 
+require_command "${QEMU_IMG}"
+
 log "Building ${MANIFEST}"
 "${ludos[@]}" build "${MANIFEST}" $@
 
@@ -74,8 +92,7 @@ log "Importing ${IMAGE} into ${ostree_dir}"
 copy_image_to_rootful_storage
 
 log "Creating ${disk} (${DISK_SIZE})"
-rm -f "${disk}"
-truncate -s "${DISK_SIZE}" "${disk}"
+create_thin_raw_disk "${disk}" "${DISK_SIZE}"
 
 root_ssh_authorized_key=""
 if [[ -s "${VM_ROOT_SSH_KEY}" ]]; then
