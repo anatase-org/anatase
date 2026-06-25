@@ -196,28 +196,3 @@ postprocess: |
   if [ -e /usr/lib64/libnvidia-ml.so.1 ]; then
       ln -snf libnvidia-ml.so.1 /usr/lib64/libnvidia-ml.so
   fi
-
-  # Skip NVIDIA services cleanly on systems without NVIDIA device nodes.
-  for unit in nvidia-persistenced.service nvidia-powerd.service; do
-      install -dm0755 "/usr/lib/systemd/system/${unit}.d"
-      cat > "/usr/lib/systemd/system/${unit}.d/10-condition-dev-nvidia.conf" <<'EOF'
-  [Unit]
-  ConditionPathExistsGlob=/dev/nvidia*
-  EOF
-  done
-
-  # Make the autoload entry for nvidia-settings configuration noop if no
-  # nvidia card is plugged in.
-  install -dm0755 /usr/libexec
-  cat > /usr/libexec/nvidia-settings-load <<'EOF'
-  #!/bin/sh
-  set -- /dev/nvidia*
-  [ -e "$1" ] || exit 0
-  /usr/bin/nvidia-settings --load-config-only
-  EOF
-  chmod 0755 /usr/libexec/nvidia-settings-load
-
-  if [ -f /etc/xdg/autostart/nvidia-settings-load.desktop ]; then
-      sed -i 's|^Exec=.*|Exec=/usr/libexec/nvidia-settings-load|' \
-          /etc/xdg/autostart/nvidia-settings-load.desktop
-  fi
