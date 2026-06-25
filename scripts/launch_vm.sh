@@ -4,6 +4,8 @@ set -euo pipefail
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 repo_root=$(cd -- "${script_dir}/.." && pwd)
 cd "${repo_root}"
+# shellcheck source=scripts/ovmf.sh
+source "${script_dir}/ovmf.sh"
 
 VM_MEMORY=${VM_MEMORY:-8192}
 VM_CPUS=${VM_CPUS:-4}
@@ -22,7 +24,9 @@ VM_OSTREE_MOUNT_POINT=${VM_OSTREE_MOUNT_POINT:-/run/anatase/ostree}
 cache_dir="${repo_root}/cache"
 ostree_dir="${cache_dir}/ostree"
 disk="${cache_dir}/vm.raw"
+ovmf_vars_was_explicit=0
 if [[ -n "${VM_OVMF_VARS:-}" ]]; then
+    ovmf_vars_was_explicit=1
     ovmf_vars=${VM_OVMF_VARS}
 elif [[ "${VM_SECURE_BOOT}" == "1" ]]; then
     ovmf_vars="${cache_dir}/vm-ovmf-ms-vars.fd"
@@ -39,17 +43,6 @@ require_command() {
         printf 'Required command not found: %s\n' "$1" >&2
         exit 1
     fi
-}
-
-first_existing() {
-    local path
-    for path in "$@"; do
-        if [[ -e "${path}" ]]; then
-            printf '%s\n' "${path}"
-            return 0
-        fi
-    done
-    return 1
 }
 
 machine_with_smm() {
@@ -70,9 +63,13 @@ require_matching_ovmf_flash() {
     code_size=$(file_size "${ovmf_code}")
     vars_size=$(file_size "${ovmf_vars}")
 
-    if ((code_size > 3 * 1024 * 1024 && vars_size < 512 * 1024)); then
-        printf 'OVMF vars store is too small for the selected 4M OVMF code image: %s\n' "${ovmf_vars}" >&2
-        printf 'Remove it and recreate it from a matching 4M Microsoft-key template, for example OVMF_VARS_4M.ms.fd.\n' >&2
+    if ! ovmf_vars_matches_code "${ovmf_code}" "${ovmf_vars}"; then
+        if ((code_size > 3 * 1024 * 1024 && vars_size < 512 * 1024)); then
+            printf 'OVMF vars store is too small for the selected 4M OVMF code image: %s\n' "${ovmf_vars}" >&2
+            printf 'Use a matching 4M variables template, for example OVMF_VARS_4M.ms.fd.\n' >&2
+        else
+            printf 'OVMF vars store does not match the selected OVMF code image: %s\n' "${ovmf_vars}" >&2
+        fi
         exit 1
     fi
 }
@@ -159,49 +156,7 @@ fi
 
 case "${BIOS}" in
     0)
-        ovmf_code=${QEMU_OVMF_CODE:-}
-        if [[ -z "${ovmf_code}" ]]; then
-            if [[ "${VM_SECURE_BOOT}" == "1" ]]; then
-                ovmf_code=$(first_existing \
-                    "${cache_dir}/ovmf-ms/OVMF_CODE_4M.ms.fd" \
-                    "${cache_dir}/ovmf-ms/OVMF_CODE_4M.secboot.fd" \
-                    /usr/share/OVMF/OVMF_CODE_4M.ms.fd \
-                    /usr/share/OVMF/OVMF_CODE_4M.secboot.fd \
-                    /usr/share/OVMF/OVMF_CODE.ms.fd \
-                    /usr/share/OVMF/OVMF_CODE.secboot.fd \
-                    /usr/share/edk2/x64/OVMF_CODE.secboot.4m.fd \
-                    /usr/share/edk2/ovmf/OVMF_CODE.secboot.fd || true)
-            else
-                ovmf_code=$(first_existing \
-                    /usr/share/edk2/x64/OVMF_CODE.4m.fd \
-                    /usr/share/edk2/ovmf/OVMF_CODE.fd \
-                    /usr/share/OVMF/OVMF_CODE_4M.fd \
-                    /usr/share/OVMF/OVMF_CODE.fd || true)
-            fi
-        fi
-
-        ovmf_template=${QEMU_OVMF_VARS_TEMPLATE:-}
-        if [[ -z "${ovmf_template}" ]]; then
-            if [[ "${VM_SECURE_BOOT}" == "1" ]]; then
-                ovmf_template=$(first_existing \
-                    "${cache_dir}/ovmf-ms/OVMF_VARS_4M.ms.fd" \
-                    "${cache_dir}/ovmf-ms/OVMF_VARS_4M.secboot.fd" \
-                    /usr/share/OVMF/OVMF_VARS_4M.ms.fd \
-                    /usr/share/OVMF/OVMF_VARS.ms.fd \
-                    /usr/share/OVMF/OVMF_VARS_4M.secboot.fd \
-                    /usr/share/OVMF/OVMF_VARS.secboot.fd \
-                    /usr/share/edk2/x64/OVMF_VARS.ms.4m.fd \
-                    /usr/share/edk2/x64/OVMF_VARS.secboot.4m.fd \
-                    /usr/share/edk2/ovmf/OVMF_VARS.ms.fd \
-                    /usr/share/edk2/ovmf/OVMF_VARS.secboot.fd || true)
-            else
-                ovmf_template=$(first_existing \
-                    /usr/share/edk2/x64/OVMF_VARS.4m.fd \
-                    /usr/share/edk2/ovmf/OVMF_VARS.fd \
-                    /usr/share/OVMF/OVMF_VARS_4M.fd \
-                    /usr/share/OVMF/OVMF_VARS.fd || true)
-            fi
-        fi
+        ovmf_select_firmware "${VM_SECURE_BOOT}" "${QEMU_OVMF_CODE:-}" "${QEMU_OVMF_VARS_TEMPLATE:-}"
 
         if [[ ! -f "${ovmf_code}" ]]; then
             if [[ "${VM_SECURE_BOOT}" == "1" ]]; then
@@ -219,9 +174,19 @@ case "${BIOS}" in
             fi
             exit 1
         fi
+        if ! ovmf_vars_matches_code "${ovmf_code}" "${ovmf_template}"; then
+            printf 'OVMF vars template does not match the selected OVMF code image: %s\n' "${ovmf_template}" >&2
+            exit 1
+        fi
 
         mkdir -p "$(dirname -- "${ovmf_vars}")"
-        if [[ ! -e "${ovmf_vars}" ]]; then
+        if [[ -e "${ovmf_vars}" ]] && ! ovmf_vars_matches_code "${ovmf_code}" "${ovmf_vars}"; then
+            if [[ "${ovmf_vars_was_explicit}" == "1" ]]; then
+                require_matching_ovmf_flash
+            fi
+            log "Replacing incompatible OVMF variables store: ${ovmf_vars}"
+            cp "${ovmf_template}" "${ovmf_vars}"
+        elif [[ ! -e "${ovmf_vars}" ]]; then
             log "Creating OVMF variables store: ${ovmf_vars}"
             cp "${ovmf_template}" "${ovmf_vars}"
         fi
