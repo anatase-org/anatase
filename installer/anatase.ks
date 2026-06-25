@@ -33,8 +33,17 @@ label_mount() {
         return 0
     fi
 
-    source="$(findmnt -nro SOURCE --target "$mountpoint")"
-    fstype="$(findmnt -nro FSTYPE --target "$mountpoint")"
+    if ! read -r source fstype < <(
+        findmnt --first-only -nro SOURCE,FSTYPE --mountpoint "$mountpoint"
+    ); then
+        echo "failed to resolve mounted filesystem for $mountpoint" >&2
+        return 1
+    fi
+
+    if [ -z "$source" ] || [ -z "$fstype" ]; then
+        echo "failed to resolve mounted filesystem for $mountpoint" >&2
+        return 1
+    fi
 
     case "$fstype" in
         vfat|fat|msdos)
