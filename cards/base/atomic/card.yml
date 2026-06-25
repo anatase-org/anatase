@@ -102,12 +102,6 @@ postprocess: |
         sed -i 's|^d- /root :0700 root :root -$|# d- /root :0700 root :root -|' /usr/lib/tmpfiles.d/provision.conf
     fi
 
-    install -dm0755 /usr/lib/systemd/system/bootloader-update.service.d
-    cat > /usr/lib/systemd/system/bootloader-update.service.d/migrate-static-grub-config.conf <<'EOF'
-    [Service]
-    ExecStart=/usr/bin/bootupctl migrate-static-grub-config
-    EOF
-
     #
     # Installer fixups
     #
@@ -145,6 +139,32 @@ postprocess: |
         -outform DER \
         -out /usr/lib/ludos/efi/ANATASE-KEY-ENROLLME.der
 
+    # bootupd installs EFI payloads from /usr/lib/efi. Keep the source tree
+    # aligned with the Anatase bootloader path instead of inheriting Fedora's
+    # vendor directory.
+    for efi_dir in /usr/lib/efi/*/*/EFI; do
+        [ -d "${efi_dir}" ] || continue
+        if [ -d "${efi_dir}/fedora" ]; then
+            rm -rf "${efi_dir}/anatase"
+            mv "${efi_dir}/fedora" "${efi_dir}/anatase"
+        fi
+    done
+
+    # Allow forcing bootupd to update efi by bumping dist
+    dist=1
+    install -d "/usr/lib/efi/anatase/${dist}/EFI"
+
     if command -v bootupctl >/dev/null; then
         bootupctl backend generate-update-metadata || true
     fi
+
+    # Enable bootupd
+    install -dm0755 /usr/lib/systemd/system/bootloader-update.service.d
+    cat > /usr/lib/systemd/system/bootloader-update.service.d/migrate-static-grub-config.conf <<'EOF'
+    [Service]
+    ExecStart=/usr/bin/bootupctl migrate-static-grub-config
+    EOF
+    cat > /usr/lib/systemd/system-preset/80-anatase-bootupd.preset <<'EOF'
+    enable bootloader-update.service
+    EOF
+    systemctl preset bootloader-update.service || true

@@ -21,6 +21,8 @@ oci:
         - grub2-pc
         - grub2-pc-modules
 files:
+    - grub_boot_minimal.cfg
+    - grub_boot_otheros.cfg
     - grub-boot-remount
     - grub-boot-success
     - grub-boot-success.service
@@ -37,6 +39,10 @@ postprocess: |
         /usr/lib/systemd/system/grub-boot-success.service
     install -Dm0644 /files/grub-boot-success.timer \
         /usr/lib/systemd/system/grub-boot-success.timer
+    install -Dm0644 /files/grub_boot_minimal.cfg \
+        /usr/lib/bootupd/grub2-static/configs.d/08_grub_boot_minimal.cfg
+    install -Dm0644 /files/grub_boot_otheros.cfg \
+        /usr/lib/bootupd/grub2-static/configs.d/40_grub_boot_otheros.cfg
 
     install -dm0755 /usr/lib/systemd/system-preset
     cat > /usr/lib/systemd/system-preset/80-anatase-grub.preset <<'EOF'

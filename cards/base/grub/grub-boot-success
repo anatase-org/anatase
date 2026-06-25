@@ -12,11 +12,6 @@ if ! /usr/bin/grub2-editenv - set boot_success=1; then
     exit 1
 fi
 
-if ! /usr/bin/grub2-editenv - set boot_indeterminate=0; then
-    remount_boot_ro
-    exit 1
-fi
-
 if [ ! -x /usr/bin/bootc ] ||
     /usr/bin/bootc status --json | grep -q '"rollback"[[:space:]]*:[[:space:]]*null'; then
     if ! /usr/bin/grub2-editenv - unset boot_counter; then

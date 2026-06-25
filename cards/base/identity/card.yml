@@ -69,6 +69,7 @@ postprocess: |
   SUPPORT_URL="https://ask.fedoraproject.org/"
   BUG_REPORT_URL="https://github.com/anatase-org/anatase/issues"
   EOF
+  echo "Anatase" > /etc/system-release
 
   # Cockpit selects branding by os-release ID. Anatase uses ID=anatase, so give
   # Cockpit and the Anaconda WebUI a matching branding directory.

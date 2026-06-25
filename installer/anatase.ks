@@ -1,8 +1,18 @@
 # Kickstart defaults for the interactive Anatase installer.
 
+#
+# Installer
+#
+
 ostreesetup --osname="anatase" --remote="anatase" --url="file:///ostree/repo" --ref="os" --nogpg
 
+#
+# Boot configuration
+#
+
 %post --erroronfail --nochroot --interpreter=/usr/bin/bash --log=/tmp/anaconda-efi-payload.log
+# Copy our MOK key to the efi root so that users have access to it
+
 target_efi="/mnt/sysimage/boot/efi"
 if [ ! -d "$target_efi" ]; then
     echo "no target EFI system partition mounted; skipping EFI payload copy"
@@ -18,6 +28,10 @@ fi
 cp -R --no-preserve=mode,ownership,timestamps "$efi_source/." "$target_efi/"
 sync "$target_efi"
 %end
+
+#
+# Mountpoint rename
+#
 
 %post --erroronfail --nochroot --interpreter=/usr/bin/bash --log=/tmp/anaconda-filesystem-labels.log
 set -euo pipefail
@@ -70,6 +84,10 @@ label_mount /mnt/sysimage/boot/efi ANATASE_EFI
 label_mount /mnt/sysimage/boot ANATASE_BOOT
 label_mount /mnt/sysimage ANATASE_DISK
 %end
+
+#
+# Flatpack configuration
+#
 
 %post --erroronfail --nochroot --interpreter=/usr/bin/bash --log=/tmp/anaconda-flatpaks.log
 flatpak_source="/var/lib/flatpak-installer"
