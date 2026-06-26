@@ -18,6 +18,7 @@ QEMU_BIN=${QEMU_BIN:-qemu-system-x86_64}
 QEMU_IMG=${QEMU_IMG:-qemu-img}
 QEMU_DISPLAY=${QEMU_DISPLAY:-gtk}
 QEMU_VGA=${QEMU_VGA:-virtio}
+QEMU_GL=${QEMU_GL:-1}
 QEMU_MACHINE=${QEMU_MACHINE:-q35}
 
 cache_dir="${repo_root}/cache"
@@ -59,6 +60,26 @@ machine_with_smm() {
 
 file_size() {
     stat -c '%s' "$1"
+}
+
+display_with_gl() {
+    local display=$1
+
+    if [[ "${display}" == *",gl="* ]]; then
+        printf '%s\n' "${display}"
+    else
+        printf '%s,gl=on\n' "${display}"
+    fi
+}
+
+qemu_graphics_args() {
+    if [[ "${QEMU_GL}" == "1" && "${QEMU_VGA}" == "virtio" ]]; then
+        printf '%s\n' -device virtio-vga-gl
+        printf '%s\n' -display "$(display_with_gl "${QEMU_DISPLAY}")"
+    else
+        printf '%s\n' -vga "${QEMU_VGA}"
+        printf '%s\n' -display "${QEMU_DISPLAY}"
+    fi
 }
 
 create_thin_raw_disk() {
@@ -186,6 +207,8 @@ case "${SIMULATE_WINDOWS}" in
         ;;
 esac
 
+mapfile -t graphics_args < <(qemu_graphics_args)
+
 qemu_args=(
     -enable-kvm
     -cpu host
@@ -197,8 +220,7 @@ qemu_args=(
     -boot order=cd,once=d
     -netdev user,id=net0
     -device virtio-net-pci,netdev=net0
-    -vga "${QEMU_VGA}"
-    -display "${QEMU_DISPLAY}"
+    "${graphics_args[@]}"
     -serial mon:stdio
 )
 

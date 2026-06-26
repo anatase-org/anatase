@@ -15,6 +15,7 @@ VM_SECURE_BOOT=${VM_SECURE_BOOT:-1}
 QEMU_BIN=${QEMU_BIN:-qemu-system-x86_64}
 QEMU_DISPLAY=${QEMU_DISPLAY:-gtk}
 QEMU_VGA=${QEMU_VGA:-virtio}
+QEMU_GL=${QEMU_GL:-1}
 QEMU_MACHINE=${QEMU_MACHINE:-q35}
 VM_KERNEL_ARGS=${VM_KERNEL_ARGS:-}
 VM_OSTREE_SHARE=${VM_OSTREE_SHARE:-1}
@@ -56,6 +57,26 @@ machine_with_smm() {
 
 file_size() {
     stat -c '%s' "$1"
+}
+
+display_with_gl() {
+    local display=$1
+
+    if [[ "${display}" == *",gl="* ]]; then
+        printf '%s\n' "${display}"
+    else
+        printf '%s,gl=on\n' "${display}"
+    fi
+}
+
+qemu_graphics_args() {
+    if [[ "${QEMU_GL}" == "1" && "${QEMU_VGA}" == "virtio" ]]; then
+        printf '%s\n' -device virtio-vga-gl
+        printf '%s\n' -display "$(display_with_gl "${QEMU_DISPLAY}")"
+    else
+        printf '%s\n' -vga "${QEMU_VGA}"
+        printf '%s\n' -display "${QEMU_DISPLAY}"
+    fi
 }
 
 require_matching_ovmf_flash() {
@@ -131,6 +152,8 @@ fi
 
 append_vm_kernel_args
 
+mapfile -t graphics_args < <(qemu_graphics_args)
+
 qemu_args=(
     -enable-kvm
     -cpu host
@@ -139,8 +162,7 @@ qemu_args=(
     -drive "file=${disk},format=raw,if=virtio"
     -netdev "user,id=net0,hostfwd=tcp::${VM_SSH_PORT}-:22"
     -device virtio-net-pci,netdev=net0
-    -vga "${QEMU_VGA}"
-    -display "${QEMU_DISPLAY}"
+    "${graphics_args[@]}"
     -serial mon:stdio
 )
 
