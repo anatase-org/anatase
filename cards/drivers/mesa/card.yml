@@ -125,8 +125,12 @@ postprocess: |
           "$libdir"/libEGL_mesa.so* \
           "$libdir"/libGLX_mesa.so* \
           "$libdir"/libGLX_system.so* \
+          "$libdir"/libdisplay-info.so* \
+          "$libdir"/libdrm_*.so* \
           "$libdir"/libgbm.so* \
           "$libdir"/libgallium-*.so \
+          "$libdir"/libLLVM*.so* \
+          "$libdir"/libsensors.so* \
           "$libdir"/libvulkan_*.so \
           "$libdir"/libVkLayer_MESA_device_select.so
 
