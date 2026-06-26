@@ -65,7 +65,7 @@ specs:
       file: overrides.patch
 
 postprocess: |
-  set -eux
+  set -eu
 
   #
   # Mesa flatpak (Fedora endpoint only)

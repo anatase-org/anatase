@@ -63,7 +63,7 @@ specs:
         - mesa-vulkan-drivers.i686
 
 postprocess: |
-  set -eux
+  set -eu
 
   #
   # Mesa 32-bit flatpak (Fedora endpoint only)

@@ -187,7 +187,7 @@ specs:
       url: https://github.com/negativo17/nvidia-driver-selinux
 
 postprocess: |
-  set -eux
+  set -eu
 
   # Drop Nouveau's ICD JSON files to force using nvidia.
   rm -f /usr/share/vulkan/icd.d/nouveau_icd.*.json
