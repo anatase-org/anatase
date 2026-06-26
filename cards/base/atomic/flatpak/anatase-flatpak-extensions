@@ -32,31 +32,6 @@ register_declarations() {
     done
 }
 
-mask_declarations() {
-    command -v flatpak >/dev/null 2>&1 || return 0
-    shopt -s nullglob
-
-    for config in "$config_dir"/*.conf; do
-        while read -r ref target extra; do
-            case "${ref:-}" in
-                ''|\#*) continue ;;
-            esac
-
-            if [ -z "${target:-}" ] || [ -n "${extra:-}" ]; then
-                continue
-            fi
-
-            [ -d "$target" ] || continue
-
-            # Flatpak runtime extension symlinks are honored at launch time, but
-            # install/update related-ref resolution only checks masked/installed
-            # refs. Mask locally provided refs so remotes do not auto-install
-            # duplicate GL/GL32 runtimes.
-            flatpak mask --system "${ref%%/*}" >/dev/null
-        done < "$config"
-    done
-}
-
 #
 # Cleanup
 #
@@ -82,4 +57,3 @@ cleanup_managed_extensions() {
 mkdir -p "$extension_root"
 cleanup_managed_extensions
 register_declarations
-mask_declarations
