@@ -39,6 +39,12 @@ packages:
   - llvm-libs
   - lm_sensors-libs
   - spirv-tools-libs
+  # mesa-libOpenCL deps
+  - clang-libs
+  - libclc
+  - opencl-filesystem
+  - OpenCL-ICD-Loader
+  - spirv-llvm-translator
 
 specs:
   - spec: ./mesa.spec
@@ -49,6 +55,7 @@ specs:
       - mesa-filesystem
       - mesa-libEGL
       - mesa-libGL
+      - mesa-libOpenCL
       - mesa-libgbm
       - mesa-dri-drivers
       - mesa-vulkan-drivers
@@ -102,6 +109,19 @@ postprocess: |
           esac
           link_payload_entry "$src" "$dst_dir/$(basename "$src")"
       done
+  }
+
+  link_payload_tree() {
+      dst_dir="$1"
+      src_dir="$2"
+
+      [ -d "$src_dir" ] || return 0
+
+      find "$src_dir" \( -type f -o -type l \) -print |
+          while read -r src; do
+              rel="${src#"$src_dir"/}"
+              link_payload_entry "$src" "$dst_dir/$rel"
+          done
   }
 
   rewrite_flatpak_metadata() {
@@ -165,9 +185,46 @@ postprocess: |
           done
   }
 
+  build_flatpak_cl_payload() {
+      libdir="$1"
+      payload="$2"
+
+      rm -rf "$payload"
+      mkdir -p "$payload"
+
+      link_payload_glob "$payload/lib" \
+          "$libdir"/libRusticlOpenCL.so* \
+          "$libdir"/libLLVM*.so* \
+          "$libdir"/libclang*.so*
+
+      link_payload_tree "$payload/lib/clc" "$libdir/clc"
+      link_payload_tree "$payload/lib/clang" /usr/lib/clang
+      link_payload_tree "$payload/lib/clang" "$libdir/clang"
+
+      link_payload_glob "$payload/share/OpenCL/vendors" \
+          /etc/OpenCL/vendors/rusticl.icd
+
+      ln -snf share/OpenCL/vendors "$payload/vendors"
+
+      rewrite_flatpak_metadata "$payload"
+
+      # Sanity check we did not miss libraries
+      find "$payload" -type f \( -name '*.json' -o -name '*.icd' \) -print0 |
+          xargs -0 -r grep -hoE 'lib[^"[:space:]]+\.so([^"[:space:]]*)?' |
+          sort -u |
+          while read -r lib; do
+              [ -e "$payload/lib/$lib" ] || {
+                  printf 'Flatpak Mesa CL payload is missing metadata-referenced library: %s\n' "$lib" >&2
+                  return 1
+              }
+          done
+  }
+
   build_flatpak_payload /usr/lib64 /usr/lib/anatase/flatpak/mesa "$flatpak_arch"
+  build_flatpak_cl_payload /usr/lib64 /usr/lib/anatase/flatpak/mesa-cl
 
   install -dm0755 /usr/lib/anatase/flatpak
   cat > /usr/lib/anatase/flatpak/mesa.conf <<EOF
   org.fedoraproject.Platform.GL.default/$flatpak_arch/$fedora_branch /usr/lib/anatase/flatpak/mesa
+  org.fedoraproject.Platform.CL.default/$flatpak_arch/$fedora_branch /usr/lib/anatase/flatpak/mesa-cl
   EOF
