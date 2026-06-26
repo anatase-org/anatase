@@ -19,6 +19,8 @@ QEMU_IMG=${QEMU_IMG:-qemu-img}
 QEMU_DISPLAY=${QEMU_DISPLAY:-gtk}
 QEMU_VGA=${QEMU_VGA:-virtio}
 QEMU_GL=${QEMU_GL:-1}
+QEMU_GPU_HOSTMEM=${QEMU_GPU_HOSTMEM:-1G}
+QEMU_VENUS=${QEMU_VENUS:-0}
 QEMU_MACHINE=${QEMU_MACHINE:-q35}
 
 cache_dir="${repo_root}/cache"
@@ -74,7 +76,11 @@ display_with_gl() {
 
 qemu_graphics_args() {
     if [[ "${QEMU_GL}" == "1" && "${QEMU_VGA}" == "virtio" ]]; then
-        printf '%s\n' -device virtio-vga-gl
+        local device="virtio-vga-gl,blob=on,hostmem=${QEMU_GPU_HOSTMEM}"
+        if [[ "${QEMU_VENUS}" == "1" ]]; then
+            device+=",venus=on"
+        fi
+        printf '%s\n' -device "${device}"
         printf '%s\n' -display "$(display_with_gl "${QEMU_DISPLAY}")"
     else
         printf '%s\n' -vga "${QEMU_VGA}"
