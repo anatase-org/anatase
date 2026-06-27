@@ -274,7 +274,8 @@ postprocess: |
         "${lookandfeel_dir}/org.anatase.anataselight.desktop" \
         AnataseLight \
         breeze \
-        org.anatase.anataselight.desktop
+        org.anatase.anatase.desktop
+    #   /\ this is the dark default theme splash screen as they are the same
 
     write_start_here_plasmoid_setup() {
         theme_dir="${1}"
@@ -307,7 +308,10 @@ postprocess: |
     }
 
     write_anatase_splash "${lookandfeel_dir}/org.anatase.anatase.desktop"
-    write_anatase_splash "${lookandfeel_dir}/org.anatase.anataselight.desktop"
+
+    # For anataselight drop the splash as its the same
+    # write_anatase_splash "${lookandfeel_dir}/org.anatase.anataselight.desktop"
+    rm -rf /usr/share/plasma/look-and-feel/org.anatase.anataselight.desktop/contents/splash/
 
     write_anatase_lookandfeel_metadata() {
         id="${1}"
@@ -354,3 +358,7 @@ postprocess: |
     kwriteconfig6 --file "${konsolerc}" --group "Desktop Entry" --key DefaultProfile Anatase.profile
     kwriteconfig6 --file "${ksplashrc}" --group KSplash --key Engine KSplashQML
     kwriteconfig6 --file "${ksplashrc}" --group KSplash --key Theme org.anatase.anatase.desktop
+
+    # Remove twilight theme as it conflicts with our start button
+    # TODO: Fix this
+    rm -rf /usr/share/plasma/look-and-feel/org.kde.breezetwilight.desktop/
