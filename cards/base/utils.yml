@@ -39,7 +39,9 @@ packages:
 postprocess: |
   set -eux
 
-  ln -sfn fastfetch /usr/bin/neofetch
+  #
+  # Modt config
+  #
 
   install -dm0755 /etc/profile.d
   cat > /etc/profile.d/anatase-fastfetch-motd.sh <<'EOF'
@@ -55,7 +57,16 @@ postprocess: |
       command -v fastfetch >/dev/null 2>&1; then
       ANATASE_MOTD_SHOWN=1
       export ANATASE_MOTD_SHOWN
+      echo
       fastfetch
+      echo
   fi
   EOF
   chmod 0644 /etc/profile.d/anatase-fastfetch-motd.sh
+
+  # Disable last login from being shown in ssh connections
+  install -dm0755 /etc/ssh/sshd_config.d
+  cat > /etc/ssh/sshd_config.d/80-anatase-lastlog.conf <<'EOF'
+  PrintLastLog no
+  EOF
+  chmod 0644 /etc/ssh/sshd_config.d/80-anatase-lastlog.conf
