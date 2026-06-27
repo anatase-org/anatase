@@ -1,0 +1,62 @@
+{
+    "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/master/doc/json_schema.json",
+    "logo": {
+        "type": "file",
+        "source": "/usr/share/fastfetch/logos/anatase.txt",
+        "color": {
+            "1": "@3",
+            "2": "@15",
+            "3": "@7",
+            "4": "reset_",
+            "5": "@3"
+        }
+    },
+    "display": {
+        "color": {
+            "keys": "@3",
+            "title": "@3"
+        }
+    },
+    "modules": [
+        "Title",
+        /*
+         * OS Block
+         */
+        "Separator",
+        "OS",
+        "Host",
+        "Kernel",
+        "Uptime",
+        // "Packages", you can't modify them so no point
+        // "Break",
+        /*
+         * Desktop Block
+         */
+        // "Display",
+        "DE",
+        "WM",
+        // "WMTheme",
+        // "Theme",
+        // "Icons",
+        // "Font",
+        // "Cursor",
+        // "Terminal",
+        "Shell",
+        // "TerminalFont",
+        "Locale",
+        "Break",
+        /*
+         * Hardware Info
+         */
+        "CPU",
+        "GPU",
+        "Memory",
+        "Swap",
+        "Disk",
+        "LocalIp",
+        "Battery",
+        "PowerAdapter",
+        "Break",
+        "Colors"
+    ]
+}

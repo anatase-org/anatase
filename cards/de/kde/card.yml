@@ -12,6 +12,7 @@ packages:
     - dolphin
     - ffmpegthumbs
     - kde-connect
+    - kde-partitionmanager
     - kdegraphics-thumbnailers
     - kdialog
     - kdnssd
