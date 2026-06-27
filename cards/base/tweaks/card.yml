@@ -62,7 +62,7 @@ postprocess: |
   #
 
   install -Dm0644 /files/override-zsh.sh \
-      /etc/profile.d/10-override-zsh.sh
+      /etc/profile.d/override-zsh.sh
 
   touch /etc/zshrc
   if ! grep -qF "source /usr/share/anatase/zsh/anatase.sh" /etc/zshrc; then

@@ -596,7 +596,7 @@ fidoc() {
 }
 
 #
-# 
+# Helpful Aliases 
 #
 
 # Prints all terminal colors, with optional parameters for start and stop
@@ -655,3 +655,19 @@ ex ()
     echo "'$1' is not a valid file"
   fi
 }
+
+#
+# Show fastfetch as MODT
+#
+
+case $- in
+    *i*) ;;
+    *) return 0 2>/dev/null || exit 0 ;;
+esac
+
+if [ -t 1 ] &&
+    [ -z "${ANATASE_DISABLE_MOTD:-}" ] &&
+    command -v fastfetch >/dev/null 2>&1; then
+    echo
+    fastfetch
+fi

@@ -43,26 +43,6 @@ postprocess: |
   # Modt config
   #
 
-  install -dm0755 /etc/profile.d
-  cat > /etc/profile.d/11-anatase-motd.sh <<'EOF'
-  # Show the Anatase fastfetch banner for interactive shell sessions.
-  case $- in
-      *i*) ;;
-      *) return 0 2>/dev/null || exit 0 ;;
-  esac
-
-  if [ -t 1 ] &&
-      [ -z "${ANATASE_DISABLE_MOTD:-}" ] &&
-      [ -z "${ANATASE_MOTD_SHOWN:-}" ] &&
-      command -v fastfetch >/dev/null 2>&1; then
-      ANATASE_MOTD_SHOWN=1
-      export ANATASE_MOTD_SHOWN
-      echo
-      fastfetch
-  fi
-  EOF
-  chmod 0644 /etc/profile.d/11-anatase-motd.sh
-
   # Disable last login from being shown in ssh connections
   install -dm0755 /etc/ssh/sshd_config.d
   cat > /etc/ssh/sshd_config.d/80-anatase-lastlog.conf <<'EOF'
