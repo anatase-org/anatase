@@ -59,7 +59,6 @@ postprocess: |
       export ANATASE_MOTD_SHOWN
       echo
       fastfetch
-      echo
   fi
   EOF
   chmod 0644 /etc/profile.d/11-anatase-motd.sh
