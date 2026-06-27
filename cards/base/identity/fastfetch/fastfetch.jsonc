@@ -52,7 +52,7 @@
         "GPU",
         "Memory",
         "Swap",
-        "Disk",
+        // "Disk", invalid labels due to composefs (shows /etc and /)
         "LocalIp",
         "Battery",
         "PowerAdapter",
