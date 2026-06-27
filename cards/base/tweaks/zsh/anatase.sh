@@ -369,7 +369,7 @@ anatase_should_configure_prompt() {
     off)
       return 1
       ;;
-    simple|p10k)
+    simple|rich)
       return 0
       ;;
   esac
@@ -391,7 +391,7 @@ if anatase_should_configure_prompt; then
       anatase_use_powerlevel10k=false
       anatase_configure_afmagic
       ;;
-    p10k:*|auto:*)
+    rich:*|auto:*)
       anatase_use_powerlevel10k=true
       anatase_configure_powerlevel10k
       ;;
