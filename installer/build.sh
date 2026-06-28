@@ -118,6 +118,22 @@ if [ -z "${newest_commit}" ]; then
     echo "failed to determine newest OSTree commit in ${repo}" >&2
     exit 1
 fi
+newest_version=$(
+    ostree --repo="${repo}" show --print-metadata-key=version "${newest_commit}" 2>/dev/null |
+        python3 -c 'import ast, sys
+value = sys.stdin.read().strip()
+if value:
+    try:
+        value = ast.literal_eval(value)
+    except (SyntaxError, ValueError):
+        pass
+    if isinstance(value, str):
+        print(value, end="")'
+)
+version_metadata_args=()
+if [ -n "${newest_version}" ]; then
+    version_metadata_args+=(--add-metadata-string="version=${newest_version}")
+fi
 
 fake_layer_sha=1111111111111111111111111111111111111111111111111111111111111111
 layer_ref="ostree/container/blob/sha256_3A_${fake_layer_sha}"
@@ -189,6 +205,7 @@ ostree --repo="${repo}" commit \
     --parent="${newest_commit}" \
     --subject="Anatase installer OSTree container metadata wrapper" \
     --bootable \
+    "${version_metadata_args[@]}" \
     --add-metadata-string="ostree.manifest-digest=${manifest_digest}" \
     --add-metadata-string="ostree.manifest=${manifest_json}" \
     --add-metadata-string="ostree.container.image-config=${config_json}"
