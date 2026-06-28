@@ -21,6 +21,8 @@ orchestrator-deps:
   - rpmdevtools
   - ripgrep
   - python3
+  # Flatpaks
+  - appstream-compose
 
 repos:
   - repo: fedora

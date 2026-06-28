@@ -1,0 +1,44 @@
+version: 1
+
+flatpak:
+  id: org.kde.kate
+  command: kate
+  rename-icon: kate
+  finish-args: |-
+    --device=dri
+    --filesystem=host
+    --share=ipc
+    --socket=cups
+    --socket=fallback-x11
+    --socket=wayland
+    --system-talk-name=org.freedesktop.UDisks2
+    --talk-name=org.freedesktop.Flatpak
+    --filesystem=xdg-config/kdeglobals:ro
+    --talk-name=org.kde.kconfig.notify
+    --talk-name=org.kde.KGlobalSettings
+
+build-deps:
+  - rpm-build
+  - rpmdevtools
+  - redhat-rpm-config
+  - flatpak-rpm-macros
+  - ccache
+
+specs:
+  - spec: git+https://src.fedoraproject.org/rpms/kate:kate.spec#branch=f$releasever
+    packages:
+      - kate
+      - kate-libs
+      - kate-plugins
+  - spec: git+https://src.fedoraproject.org/rpms/konsole:konsole.spec#branch=f$releasever
+    packages:
+      - konsole-part
+  - spec: git+https://src.fedoraproject.org/rpms/markdownpart:markdownpart.spec#branch=f$releasever
+    packages:
+      - markdownpart
+  - spec: git+https://src.fedoraproject.org/rpms/svgpart:svgpart.spec#branch=f$releasever
+    packages:
+      - svgpart
+  - spec: git+https://src.fedoraproject.org/rpms/qtkeychain:qtkeychain.spec#branch=f$releasever
+    packages:
+      - qtkeychain-qt6
