@@ -6,6 +6,64 @@
 
 ostreesetup --osname="anatase" --remote="anatase" --url="file:///ostree/repo" --ref="os" --nogpg
 
+%post --erroronfail --nochroot --interpreter=/usr/bin/bash --log=/tmp/anaconda-ostree-layer.log
+set -euo pipefail
+
+source_repo="/ostree/repo"
+target_repo="/mnt/sysimage/ostree/repo"
+layer_ref="ostree/container/blob/sha256_3A_1111111111111111111111111111111111111111111111111111111111111111"
+
+if [ ! -d "${source_repo}/objects" ]; then
+    echo "installer OSTree repo is missing objects: ${source_repo}" >&2
+    exit 1
+fi
+
+if [ ! -d "${target_repo}/objects" ]; then
+    echo "target OSTree repo is missing objects: ${target_repo}" >&2
+    exit 1
+fi
+
+ostree --repo="${target_repo}" pull-local \
+    --untrusted \
+    --disable-verify-bindings \
+    "${source_repo}" \
+    "${layer_ref}"
+ostree --repo="${target_repo}" summary --update
+
+deployment_root="/mnt/sysimage/ostree/deploy/anatase/deploy"
+shopt -s nullglob
+origin_files=("${deployment_root}"/*.origin)
+if [ "${#origin_files[@]}" -eq 0 ]; then
+    deployment="$(ostree rev-parse --repo="${target_repo}" ostree/0/1/0)"
+    origin_files=("${deployment_root}/${deployment}.0.origin")
+fi
+
+for origin_file in "${origin_files[@]}"; do
+    install -d -m 0755 "$(dirname "${origin_file}")"
+    python3 - "${origin_file}" <<'PY'
+import configparser
+import sys
+
+origin_file = sys.argv[1]
+target_image_ref = "ostree-unverified-registry:i.anatase.org/anatase:stable"
+
+config = configparser.ConfigParser(interpolation=None)
+config.optionxform = str
+config.read(origin_file)
+
+if not config.has_section("origin"):
+    config.add_section("origin")
+
+for key in ("refspec", "baserefspec"):
+    config.remove_option("origin", key)
+config.set("origin", "container-image-reference", target_image_ref)
+
+with open(origin_file, "w") as f:
+    config.write(f)
+PY
+done
+%end
+
 #
 # Boot configuration
 #

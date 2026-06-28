@@ -119,10 +119,83 @@ if [ -z "${newest_commit}" ]; then
     exit 1
 fi
 
+fake_layer_sha=1111111111111111111111111111111111111111111111111111111111111111
+layer_ref="ostree/container/blob/sha256_3A_${fake_layer_sha}"
+eval "$(
+    python3 <<'PY'
+import hashlib
+import json
+import shlex
+
+layer_digest = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+
+config = {
+    "architecture": "amd64",
+    "os": "linux",
+    "config": {
+        "Labels": {
+            "containers.bootc": "1",
+            "ostree.bootable": "true",
+            "ostree.final-diffid": layer_digest,
+        },
+    },
+    "rootfs": {
+        "type": "layers",
+        "diff_ids": [layer_digest],
+    },
+    "history": [
+        {
+            "created_by": "ludos fake single-layer metadata",
+        },
+    ],
+}
+config_json = json.dumps(config, separators=(",", ":"), sort_keys=True)
+config_digest = "sha256:" + hashlib.sha256(config_json.encode()).hexdigest()
+
+manifest = {
+    "schemaVersion": 2,
+    "mediaType": "application/vnd.oci.image.manifest.v1+json",
+    "config": {
+        "mediaType": "application/vnd.oci.image.config.v1+json",
+        "digest": config_digest,
+        "size": len(config_json.encode()),
+    },
+    "layers": [
+        {
+            "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+            "digest": layer_digest,
+            "size": 0,
+        },
+    ],
+}
+manifest_json = json.dumps(manifest, separators=(",", ":"), sort_keys=True)
+manifest_digest = "sha256:" + hashlib.sha256(manifest_json.encode()).hexdigest()
+
+for key, value in {
+    "manifest_json": manifest_json,
+    "manifest_digest": manifest_digest,
+    "config_json": config_json,
+}.items():
+    print(f"{key}={shlex.quote(value)}")
+PY
+)"
+
 if ostree --repo="${repo}" refs | grep -qx os; then
     ostree --repo="${repo}" refs --delete os
 fi
-ostree --repo="${repo}" refs --create=os "${newest_commit}"
+ostree --repo="${repo}" commit \
+    --branch=os \
+    --tree=ref="${newest_commit}" \
+    --parent="${newest_commit}" \
+    --subject="Anatase installer OSTree container metadata wrapper" \
+    --bootable \
+    --add-metadata-string="ostree.manifest-digest=${manifest_digest}" \
+    --add-metadata-string="ostree.manifest=${manifest_json}" \
+    --add-metadata-string="ostree.container.image-config=${config_json}"
+if ostree --repo="${repo}" refs | grep -Fqx "${layer_ref}"; then
+    ostree --repo="${repo}" refs --delete "${layer_ref}"
+fi
+ostree --repo="${repo}" refs --create="${layer_ref}" "${newest_commit}"
 ostree --repo="${repo}" summary --update
 
 # Install flathub apps
