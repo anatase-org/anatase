@@ -11,7 +11,6 @@ set -euo pipefail
 
 source_repo="/ostree/repo"
 target_repo="/mnt/sysimage/ostree/repo"
-layer_ref="ostree/container/blob/sha256_3A_1111111111111111111111111111111111111111111111111111111111111111"
 
 if [ ! -d "${source_repo}/objects" ]; then
     echo "installer OSTree repo is missing objects: ${source_repo}" >&2
@@ -23,11 +22,39 @@ if [ ! -d "${target_repo}/objects" ]; then
     exit 1
 fi
 
-ostree --repo="${target_repo}" pull-local \
-    --untrusted \
-    --disable-verify-bindings \
-    "${source_repo}" \
-    "${layer_ref}"
+mapfile -t container_refs < <(
+    python3 - "${source_repo}" <<'PY'
+import subprocess
+import sys
+
+source_repo = sys.argv[1]
+
+source_refs = subprocess.check_output(
+    ["ostree", f"--repo={source_repo}", "refs"],
+    text=True,
+).splitlines()
+refs = [
+    ref
+    for ref in source_refs
+    if ref.startswith(("ostree/container/image", "ostree/container/blob"))
+]
+
+if not refs:
+    print("source OSTree repo has no container image/blob refs", file=sys.stderr)
+    raise SystemExit(1)
+
+for ref in refs:
+    print(ref)
+PY
+)
+
+for container_ref in "${container_refs[@]}"; do
+    ostree --repo="${target_repo}" pull-local \
+        --untrusted \
+        --disable-verify-bindings \
+        "${source_repo}" \
+        "${container_ref}"
+done
 ostree --repo="${target_repo}" summary --update
 
 deployment_root="/mnt/sysimage/ostree/deploy/anatase/deploy"

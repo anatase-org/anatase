@@ -54,6 +54,7 @@ cards:
   - cards/base/tweaks
 
 installer:
+  ostree: True
   files:
     - installer/anaconda.conf
     - installer/anatase.ks
