@@ -8,6 +8,20 @@ esac
 anatase_zsh_dir=/usr/share/anatase/zsh
 
 #
+# History
+#
+
+HISTFILE=${HISTFILE:-${ZDOTDIR:-$HOME}/.zhistory}
+HISTSIZE=${HISTSIZE:-10000}
+SAVEHIST=${SAVEHIST:-10000}
+
+setopt append_history
+setopt inc_append_history
+setopt extended_history
+setopt hist_ignore_dups
+setopt hist_reduce_blanks
+
+#
 # Basic theming
 #
 
