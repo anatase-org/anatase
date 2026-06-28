@@ -11,6 +11,9 @@ anatase_zsh_dir=/usr/share/anatase/zsh
 # History
 #
 
+(( HISTSIZE == 30 )) && unset HISTSIZE
+(( SAVEHIST == 0 )) && unset SAVEHIST
+
 HISTFILE=${HISTFILE:-${ZDOTDIR:-$HOME}/.zhistory}
 HISTSIZE=${HISTSIZE:-10000}
 SAVEHIST=${SAVEHIST:-10000}
