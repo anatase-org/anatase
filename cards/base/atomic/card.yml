@@ -57,6 +57,7 @@ specs:
 
 files:
   - ./anatase-mok-ca.cer
+  - flatpak/anatase-runtime-deploy
   - flatpak/anatase-flatpak-extensions
   - flatpak/anatase-flatpak-extensions.service
 
@@ -109,6 +110,31 @@ postprocess: |
     #
 
     install -dm0755 /usr/lib/anatase/flatpak
+    flatpak_arch="$(rpm -E '%_arch')"
+    runtime_branch="f$(rpm -E '%fedora')"
+    runtime_id="org.anatase.Platform"
+    runtime_dir="/usr/lib/anatase/flatpak/runtime/${runtime_id}/${flatpak_arch}/${runtime_branch}"
+
+    rm -rf "${runtime_dir}"
+    install -dm0755 "${runtime_dir}"
+    ln -snf /usr "${runtime_dir}/files"
+    cat > "${runtime_dir}/metadata" <<EOF
+    [Runtime]
+    name=${runtime_id}
+    EOF
+    # anatase-runtime-deploy is a static Flatpak deploy-data v4 GLib Variant:
+    # python3 - <<'PY'
+    # from gi.repository import GLib
+    # metadata = {"deploy-version": GLib.Variant("i", 4), "timestamp": GLib.Variant("t", 0)}
+    # deploy = GLib.Variant("(ssasta{sv})", ("anatase", "0" * 64, [], 0, metadata))
+    # open("flatpak/anatase-runtime-deploy", "wb").write(deploy.get_data_as_bytes().get_data())
+    # PY
+    install -Dm0644 /files/flatpak/anatase-runtime-deploy "${runtime_dir}/deploy"
+
+    cat > /usr/lib/anatase/flatpak/runtime.conf <<EOF
+    runtime/${runtime_id}/${flatpak_arch}/${runtime_branch} ${runtime_dir}
+    EOF
+
     install -Dm0755 /files/flatpak/anatase-flatpak-extensions \
         /usr/libexec/anatase-flatpak-extensions
     install -Dm0644 /files/flatpak/anatase-flatpak-extensions.service \

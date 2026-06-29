@@ -204,7 +204,6 @@ postprocess: |
   driver_version="$(rpm -q --qf '%{VERSION}' nvidia-driver)"
   driver_version_dashed="$(printf '%s' "$driver_version" | tr . -)"
   flatpak_arch="$(rpm -E '%_arch')"
-  fedora_branch="f$(rpm -E '%fedora')"
 
   link_payload_entry() {
       src="$1"
@@ -307,12 +306,10 @@ postprocess: |
   install -dm0755 /usr/lib/anatase/flatpak
   cat > /usr/lib/anatase/flatpak/nvidia.conf <<EOF
   org.freedesktop.Platform.GL.nvidia-$driver_version_dashed/$flatpak_arch/1.4 /usr/lib/anatase/flatpak/nvidia
-  org.fedoraproject.Platform.GL.nvidia-$driver_version_dashed/$flatpak_arch/$fedora_branch /usr/lib/anatase/flatpak/nvidia
   EOF
 
   if [ "$flatpak_arch" = "x86_64" ]; then
       cat >> /usr/lib/anatase/flatpak/nvidia.conf <<EOF
   org.freedesktop.Platform.GL32.nvidia-$driver_version_dashed/$flatpak_arch/1.4 /usr/lib/anatase/flatpak/nvidia32
-  org.fedoraproject.Platform.GL32.nvidia-$driver_version_dashed/$flatpak_arch/$fedora_branch /usr/lib/anatase/flatpak/nvidia32
   EOF
   fi

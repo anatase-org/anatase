@@ -3,10 +3,40 @@ set -euo pipefail
 
 config_dir=/usr/lib/anatase/flatpak
 extension_root=/var/lib/flatpak/extension
+runtime_root=/var/lib/flatpak/runtime
 
 #
 # Declarations
 #
+
+register_extension_declaration() {
+    local ref=$1
+    local target=$2
+
+    [ -d "$target" ] || return 0
+
+    local link="$extension_root/$ref"
+    mkdir -p "$(dirname "$link")"
+    ln -snf "$target" "$link"
+}
+
+register_runtime_declaration() {
+    local ref=$1
+    local target=$2
+    local runtime_ref=${ref#runtime/}
+
+    [ "$runtime_ref" != "$ref" ] || return 1
+    [ -d "$target" ] || return 0
+    [ -e "$target/files" ] || return 0
+    [ -f "$target/metadata" ] || return 0
+    [ -s "$target/deploy" ] || return 0
+
+    local deploy_base="$runtime_root/$runtime_ref"
+    local deploy_name=anatase
+    mkdir -p "$deploy_base"
+    ln -snf "$target" "$deploy_base/$deploy_name"
+    ln -snf "$deploy_name" "$deploy_base/active"
+}
 
 register_declarations() {
     shopt -s nullglob
@@ -18,16 +48,22 @@ register_declarations() {
             esac
 
             if [ -z "${target:-}" ] || [ -n "${extra:-}" ]; then
-                printf 'ERROR: invalid Anatase Flatpak extension declaration in %s: %s %s %s\n' \
+                printf 'ERROR: invalid Anatase Flatpak declaration in %s: %s %s %s\n' \
                     "$config" "${ref:-}" "${target:-}" "${extra:-}" >&2
                 continue
             fi
 
-            [ -d "$target" ] || continue
-
-            link="$extension_root/$ref"
-            mkdir -p "$(dirname "$link")"
-            ln -snf "$target" "$link"
+            case "$ref" in
+                runtime/*/*/*)
+                    register_runtime_declaration "$ref" "$target" || {
+                        printf 'ERROR: invalid Anatase Flatpak runtime declaration in %s: %s %s\n' \
+                            "$config" "$ref" "$target" >&2
+                    }
+                    ;;
+                *)
+                    register_extension_declaration "$ref" "$target"
+                    ;;
+            esac
         done < "$config"
     done
 }
@@ -48,6 +84,29 @@ cleanup_managed_extensions() {
     done
 }
 
+cleanup_managed_runtimes() {
+    [ -d "$runtime_root" ] || return 0
+
+    find "$runtime_root" -mindepth 4 -maxdepth 4 -type l -name active -print | while read -r active; do
+        deploy_name="$(readlink "$active")"
+        branch_dir="$(dirname "$active")"
+        deploy_link="$branch_dir/$deploy_name"
+        target=
+
+        if [[ "$deploy_name" == "$config_dir"/* ]]; then
+            target="$deploy_name"
+        elif [ -L "$deploy_link" ]; then
+            target="$(readlink "$deploy_link")"
+        fi
+
+        if [[ "$target" == "$config_dir"/* ]]; then
+            rm -f "$active"
+            [ -L "$deploy_link" ] && rm -f "$deploy_link"
+            rmdir -p "$branch_dir" --ignore-fail-on-non-empty
+        fi
+    done
+}
+
 #
 # Startup
 #
@@ -55,5 +114,7 @@ cleanup_managed_extensions() {
 [ -d "$config_dir" ] || exit 0
 
 mkdir -p "$extension_root"
+mkdir -p "$runtime_root"
 cleanup_managed_extensions
+cleanup_managed_runtimes
 register_declarations
