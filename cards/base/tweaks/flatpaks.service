@@ -1,13 +1,13 @@
 [Unit]
-Description=Add Flathub flatpak repositories
-ConditionPathExists=!/var/lib/flatpak/.flathub-initialized
+Description=Configure Anatase flatpak repositories
 Before=flatpak-system-helper.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+ExecStart=/usr/bin/flatpak remote-add --if-not-exists --title "Anatase" --prio=10 anatase oci+https://flatpaks.anatase.org/%distro%
+ExecStart=/usr/bin/flatpak remote-modify --title "Anatase" --prio=10 --url oci+https://flatpaks.anatase.org/%distro% anatase
 ExecStart=/usr/bin/flatpak remote-add --if-not-exists --title "Flathub" flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-ExecStartPost=/usr/bin/touch /var/lib/flatpak/.flathub-initialized
 
 [Install]
 WantedBy=multi-user.target
