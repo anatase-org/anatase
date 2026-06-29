@@ -4,7 +4,9 @@ Before=flatpak-system-helper.service anatase-flatpaks.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/libexec/anatase-flatpak-extensions
+RemainAfterExit=yes
+ExecStart=/usr/libexec/anatase-flatpak-extensions start
+ExecStop=/usr/libexec/anatase-flatpak-extensions stop
 
 [Install]
 WantedBy=multi-user.target

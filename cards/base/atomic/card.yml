@@ -114,10 +114,17 @@ postprocess: |
     runtime_branch="f$(rpm -E '%fedora')"
     runtime_id="org.anatase.Platform"
     runtime_dir="/usr/lib/anatase/flatpak/runtime/${runtime_id}/${flatpak_arch}/${runtime_branch}"
+    runtime_override_dir="${runtime_dir}/overrides"
 
-    rm -rf "${runtime_dir}"
-    install -dm0755 "${runtime_dir}"
-    ln -snf /usr "${runtime_dir}/files"
+    install -dm0755 "${runtime_dir}/files" "${runtime_override_dir}/etc"
+    cat > "${runtime_override_dir}/etc/ld.so.conf" <<'EOF'
+    include /run/flatpak/ld.so.conf.d/app-*.conf
+    include /app/etc/ld.so.conf
+    include /app/etc/ld.so.conf.d/*.conf
+    /app/lib64
+    /app/lib
+    include /run/flatpak/ld.so.conf.d/runtime-*.conf
+    EOF
     cat > "${runtime_dir}/metadata" <<EOF
     [Runtime]
     name=${runtime_id}
