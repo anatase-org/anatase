@@ -1,0 +1,32 @@
+version: 1
+
+flatpak:
+  id: org.kde.gwenview
+  command: gwenview
+  rename-icon: gwenview
+  finish-args: |-
+    --device=dri
+    --filesystem=host
+    --filesystem=xdg-cache/thumbnails:rw
+    --filesystem=xdg-data/Trash
+    --share=ipc
+    --socket=cups
+    --socket=fallback-x11
+    --socket=pulseaudio
+    --socket=wayland
+    --filesystem=xdg-config/kdeglobals:ro
+    --talk-name=org.kde.kconfig.notify
+    --talk-name=org.kde.KGlobalSettings
+
+build-deps:
+  - rpm-build
+  - rpmdevtools
+  - redhat-rpm-config
+  - flatpak-rpm-macros
+  - ccache
+
+specs:
+  - spec: git+https://src.fedoraproject.org/rpms/gwenview:gwenview.spec#branch=f$releasever
+    packages:
+      - gwenview
+      - gwenview-libs

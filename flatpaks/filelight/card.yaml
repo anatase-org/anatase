@@ -1,0 +1,27 @@
+version: 1
+
+flatpak:
+  id: org.kde.filelight
+  command: filelight
+  rename-icon: filelight
+  finish-args: |-
+    --device=dri
+    --filesystem=host:ro
+    --share=ipc
+    --socket=fallback-x11
+    --socket=wayland
+    --filesystem=xdg-config/kdeglobals:ro
+    --talk-name=org.kde.kconfig.notify
+    --talk-name=org.kde.KGlobalSettings
+
+build-deps:
+  - rpm-build
+  - rpmdevtools
+  - redhat-rpm-config
+  - flatpak-rpm-macros
+  - ccache
+
+specs:
+  - spec: git+https://src.fedoraproject.org/rpms/filelight:filelight.spec#branch=f$releasever
+    packages:
+      - filelight

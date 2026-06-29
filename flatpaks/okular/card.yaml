@@ -1,0 +1,49 @@
+version: 1
+
+flatpak:
+  id: org.kde.okular
+  command: okular
+  rename-icon: okular
+  finish-args: |-
+    --device=dri
+    --filesystem=host
+    --share=ipc
+    --share=network
+    --socket=cups
+    --socket=fallback-x11
+    --socket=wayland
+    --socket=pulseaudio
+    --filesystem=xdg-config/kdeglobals:ro
+    --filesystem=xdg-run/speech-dispatcher
+    --system-talk-name=org.freedesktop.UDisks2
+    --talk-name=org.kde.kconfig.notify
+    --talk-name=org.kde.KGlobalSettings
+
+build-deps:
+  - rpm-build
+  - rpmdevtools
+  - redhat-rpm-config
+  - flatpak-rpm-macros
+  - ccache
+
+specs:
+  - spec: git+https://src.fedoraproject.org/rpms/okular:okular.spec#branch=f$releasever
+    packages:
+      - okular
+      - okular-part
+      - okular-libs
+  - spec: git+https://src.fedoraproject.org/rpms/calligra:calligra.spec#branch=f$releasever
+    packages:
+      - calligra-okular-odpgenerator
+      - calligra-okular-odtgenerator
+      - calligra-stage-libs
+      - calligra-words-libs
+      - calligra-libs
+      - calligra-data
+
+postprocess: |-
+  sed -i -e 's|%i -qwindowtitle %c||' app/share/applications/*
+  for f in app/share/applications/okularApplication_*; do
+      [ -e "$f" ] || continue
+      mv "$f" "${f/okularApplication_/org.kde.okular-}"
+  done

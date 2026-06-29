@@ -1,0 +1,41 @@
+version: 1
+
+flatpak:
+  id: org.kde.ark
+  command: ark
+  rename-icon: ark
+  finish-args: |-
+    --device=dri
+    --filesystem=host
+    --share=ipc
+    --socket=wayland
+    --socket=x11
+    --filesystem=xdg-config/kdeglobals:ro
+    --talk-name=org.kde.kconfig.notify
+    --talk-name=org.kde.KGlobalSettings
+
+build-deps:
+  - rpm-build
+  - rpmdevtools
+  - redhat-rpm-config
+  - flatpak-rpm-macros
+  - ccache
+
+specs:
+  - spec: git+https://src.fedoraproject.org/rpms/ark:ark.spec#branch=f$releasever
+    packages:
+      - ark
+      - ark-libs
+  - spec: git+https://src.fedoraproject.org/rpms/gwenview:gwenview.spec#branch=f$releasever
+    packages:
+      - gwenview-libs
+  - spec: git+https://src.fedoraproject.org/rpms/markdownpart:markdownpart.spec#branch=f$releasever
+    packages:
+      - markdownpart
+  - spec: git+https://src.fedoraproject.org/rpms/okular:okular.spec#branch=f$releasever
+    packages:
+      - okular-part
+      - okular-libs
+  - spec: git+https://src.fedoraproject.org/rpms/svgpart:svgpart.spec#branch=f$releasever
+    packages:
+      - svgpart

@@ -55,6 +55,14 @@ cards:
   - cards/gaming/hhd
   - cards/base/tweaks
 
+flatpaks:
+  - flatpaks/ark
+  - flatpaks/filelight
+  - flatpaks/gwenview
+  - flatpaks/kate
+  - flatpaks/kcalc
+  - flatpaks/okular
+
 installer:
   ostree: True
   files:
