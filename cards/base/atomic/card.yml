@@ -142,8 +142,8 @@ postprocess: |
     # flatpak/anatase-flatpak-extensions in the same commit.
     # python3 - <<'PY'
     # from gi.repository import GLib
-    # commit = "27ca8e061fcf086f8e808d52094984240346c4b4ea69568b1f0ff4fcd9e0ba10"
-    # oci_digest = "c40dd0a63fd9d30136c4244094f6913b6c1ef1cde846997dbc367b4b1fd58add"
+    # commit = "4d5e2e80543e18e8c8dcd16d51591d7059ec77df2f50cbe7fae1c36aec4a942c"
+    # oci_digest = "4d5e2e80543e18e8c8dcd16d51591d7059ec77df2f50cbe7fae1c36aec4a942c"
     # metadata = {
     #     "deploy-version": GLib.Variant("i", 4),
     #     "timestamp": GLib.Variant("t", 0),

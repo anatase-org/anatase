@@ -56,9 +56,16 @@ cards:
   - cards/base/tweaks
 
 runtime:
+  # DO NOT CHANGE THESE, THEY AFFECT THE UPDATE HASH OF THE RUNTIME.
   id: org.anatase.Platform
   repo: runtime
   branch: stable
+  title: Anatase Runtime
+  author: Anatase
+  description: System runtime used by applications from Anatase.
+  # Copy freedesktop runtime here.
+  # Even though a lot of the packages are not MIT.
+  license: MIT
 
 flatpaks:
   - flatpaks/ark
