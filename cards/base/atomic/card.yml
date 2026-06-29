@@ -128,6 +128,10 @@ postprocess: |
     cat > "${runtime_dir}/metadata" <<EOF
     [Runtime]
     name=${runtime_id}
+
+    [Environment]
+    QT_PLUGIN_PATH=/app/lib64/qt6/plugins:/usr/share/runtime/lib/plugins
+    QML2_IMPORT_PATH=/app/lib64/qt6/qml
     EOF
     # anatase-runtime-deploy is a static Flatpak deploy-data v4 GLib Variant:
     # python3 - <<'PY'
