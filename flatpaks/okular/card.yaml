@@ -1,8 +1,11 @@
 version: 1
 
 flatpak:
-  id: org.kde.okular
+  id: org.anatase.DocumentViewer
   command: okular
+  rename: Document Viewer (Okular)
+  rename-desktop-file: org.kde.okular.desktop
+  rename-appdata-file: org.kde.okular.appdata.xml
   rename-icon: okular
   finish-args: |-
     --device=dri

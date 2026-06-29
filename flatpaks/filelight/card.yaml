@@ -1,8 +1,11 @@
 version: 1
 
 flatpak:
-  id: org.kde.filelight
+  id: org.anatase.DiskUsageAnalyzer
   command: filelight
+  rename: Disk Usage Analyzer (Filelight)
+  rename-desktop-file: org.kde.filelight.desktop
+  rename-appdata-file: org.kde.filelight.appdata.xml
   rename-icon: filelight
   finish-args: |-
     --device=dri

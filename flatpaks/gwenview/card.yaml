@@ -1,8 +1,11 @@
 version: 1
 
 flatpak:
-  id: org.kde.gwenview
+  id: org.anatase.ImageViewer
   command: gwenview
+  rename: Image Viewer (Gwenview)
+  rename-desktop-file: org.kde.gwenview.desktop
+  rename-appdata-file: org.kde.gwenview.appdata.xml
   rename-icon: gwenview
   finish-args: |-
     --device=dri

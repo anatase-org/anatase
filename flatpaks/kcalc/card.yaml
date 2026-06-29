@@ -1,8 +1,11 @@
 version: 1
 
 flatpak:
-  id: org.kde.kcalc
+  id: org.anatase.Calculator
   command: kcalc
+  rename: Calculator (KCalc)
+  rename-desktop-file: org.kde.kcalc.desktop
+  rename-appdata-file: org.kde.kcalc.appdata.xml
   rename-icon: accessories-calculator
   finish-args: |-
     --device=dri

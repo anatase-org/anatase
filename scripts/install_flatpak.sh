@@ -80,7 +80,14 @@ PY
 
 install_app_image() {
     local app_id=$1
-    local latest_image="localhost/${app_id}:latest"
+    local image_name
+    image_name=$(python3 - "${app_id}" <<'PY'
+import sys
+
+print(sys.argv[1].lower())
+PY
+)
+    local latest_image="localhost/${image_name}:latest"
 
     if ! podman image exists "${latest_image}"; then
         printf 'Expected image not found after build: %s\n' "${latest_image}" >&2
