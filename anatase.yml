@@ -55,6 +55,11 @@ cards:
   - cards/gaming/hhd
   - cards/base/tweaks
 
+runtime:
+  id: org.anatase.Platform
+  repo: runtime
+  branch: stable
+
 flatpaks:
   - flatpaks/ark
   - flatpaks/filelight

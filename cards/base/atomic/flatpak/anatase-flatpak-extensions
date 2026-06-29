@@ -5,6 +5,14 @@ config_dir=/usr/lib/anatase/flatpak
 extension_root=/var/lib/flatpak/extension
 runtime_root=/var/lib/flatpak/runtime
 state_dir=/run/anatase/flatpak
+# DO NOT TOUCH THIS CASUALLY.
+# This is the Flatpak-imported OSTree commit for the deterministic dummy
+# runtime published in the Anatase OCI Flatpak remote. If it does not exactly
+# match that remote, Discover will report org.anatase.Platform as updateable
+# forever. Only change it when regenerating and uploading the dummy runtime and
+# updating cards/base/atomic/flatpak/anatase-runtime-deploy in the same commit.
+anatase_runtime_commit=27ca8e061fcf086f8e808d52094984240346c4b4ea69568b1f0ff4fcd9e0ba10
+anatase_runtime_oci_digest=c40dd0a63fd9d30136c4244094f6913b6c1ef1cde846997dbc367b4b1fd58add
 
 register_extension() {
     local ref=$1
@@ -62,8 +70,8 @@ register_runtime() {
 
     local deploy_base="$runtime_root/$runtime_ref"
     mkdir -p "$deploy_base"
-    ln -snf "$deploy_dir" "$deploy_base/stable"
-    ln -snf stable "$deploy_base/active"
+    ln -snf "$deploy_dir" "$deploy_base/$anatase_runtime_commit"
+    ln -snf "$anatase_runtime_commit" "$deploy_base/active"
 }
 
 unregister_runtime() {
@@ -73,7 +81,7 @@ unregister_runtime() {
     local deploy_dir="$state_dir/runtime/$runtime_ref"
     local deploy_base="$runtime_root/$runtime_ref"
     local active="$deploy_base/active"
-    local deploy_link="$deploy_base/stable"
+    local deploy_link="$deploy_base/$anatase_runtime_commit"
     local mountpoint="$deploy_dir/files"
     local runtime_overrides="$state_dir/overrides/$runtime_ref"
 
@@ -83,7 +91,7 @@ unregister_runtime() {
         [ "$(readlink "$deploy_link")" = "$target" ] ||
         [ "$(readlink "$deploy_link")" = "$deploy_dir" ]
     }; then
-        if [ -L "$active" ] && [ "$(readlink "$active")" = stable ]; then
+        if [ -L "$active" ] && [ "$(readlink "$active")" = "$anatase_runtime_commit" ]; then
             rm -f "$active"
         fi
         rm -f "$deploy_link"

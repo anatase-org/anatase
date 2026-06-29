@@ -133,11 +133,23 @@ postprocess: |
     QT_PLUGIN_PATH=/app/lib64/qt6/plugins:/usr/share/runtime/lib/plugins
     QML2_IMPORT_PATH=/app/lib64/qt6/qml
     EOF
-    # anatase-runtime-deploy is a static Flatpak deploy-data v4 GLib Variant:
+    # DO NOT TOUCH THIS CASUALLY.
+    # anatase-runtime-deploy embeds the Flatpak-imported OSTree commit and OCI
+    # manifest digest for the deterministic dummy runtime in the Anatase OCI
+    # Flatpak remote. If these values do not exactly match the remote, Discover
+    # will report org.anatase.Platform as updateable forever. Only change them
+    # when regenerating and uploading the dummy runtime and updating
+    # flatpak/anatase-flatpak-extensions in the same commit.
     # python3 - <<'PY'
     # from gi.repository import GLib
-    # metadata = {"deploy-version": GLib.Variant("i", 4), "timestamp": GLib.Variant("t", 0)}
-    # deploy = GLib.Variant("(ssasta{sv})", ("anatase", "0" * 64, [], 0, metadata))
+    # commit = "27ca8e061fcf086f8e808d52094984240346c4b4ea69568b1f0ff4fcd9e0ba10"
+    # oci_digest = "c40dd0a63fd9d30136c4244094f6913b6c1ef1cde846997dbc367b4b1fd58add"
+    # metadata = {
+    #     "deploy-version": GLib.Variant("i", 4),
+    #     "timestamp": GLib.Variant("t", 0),
+    #     "alt-id": GLib.Variant("s", oci_digest),
+    # }
+    # deploy = GLib.Variant("(ssasta{sv})", ("anatase", commit, [], 0, metadata))
     # open("flatpak/anatase-runtime-deploy", "wb").write(deploy.get_data_as_bytes().get_data())
     # PY
     install -Dm0644 /files/flatpak/anatase-runtime-deploy "${runtime_dir}/deploy"
