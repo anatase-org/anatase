@@ -41,12 +41,15 @@ packages:
   - bzip2
   - cpio
   - tar
-  - unrar-free
+  - unrar-free # consider unar in the future, but it is 5mb, not 50kb
   - unzip
   - zip
 
 postprocess: |
   set -eux
+
+  # Fix unrar
+  ln -s unrar-free /usr/bin/unrar
 
   #
   # Modt config
