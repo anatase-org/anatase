@@ -111,7 +111,7 @@ postprocess: |
 
     install -dm0755 /usr/lib/anatase/flatpak
     flatpak_arch="$(rpm -E '%_arch')"
-    runtime_branch="f$(rpm -E '%fedora')"
+    runtime_branch="stable"
     runtime_id="org.anatase.Platform"
     runtime_dir="/usr/lib/anatase/flatpak/runtime/${runtime_id}/${flatpak_arch}/${runtime_branch}"
     runtime_override_dir="${runtime_dir}/overrides"
