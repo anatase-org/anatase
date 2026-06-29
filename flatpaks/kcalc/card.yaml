@@ -21,6 +21,9 @@ build-deps:
   - ccache
 
 specs:
+  - spec: git+https://src.fedoraproject.org/rpms/libmpc:libmpc.spec#branch=f$releasever
+    packages:
+      - libmpc
   - spec: git+https://src.fedoraproject.org/rpms/kcalc:kcalc.spec#branch=f$releasever
     packages:
       - kcalc

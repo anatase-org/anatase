@@ -106,6 +106,9 @@ packages:
     - gdb
     - xdpyinfo
 
+    # Flatpak dependencies (kde runtime; move later)
+    - kf6-threadweaver # Okular
+
 build-deps:
   - bash
   - cmake

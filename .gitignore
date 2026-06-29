@@ -6,3 +6,4 @@ logs/
 patchwork
 .env
 __pycache__
+scripts/archives

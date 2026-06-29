@@ -26,6 +26,16 @@ build-deps:
   - ccache
 
 specs:
+  - spec: git+https://src.fedoraproject.org/rpms/cfitsio:cfitsio.spec#branch=f$releasever
+    packages:
+      - cfitsio
+  - spec: git+https://src.fedoraproject.org/rpms/kcolorpicker:kcolorpicker.spec#branch=f$releasever
+    packages:
+      - kcolorpicker-qt6
+  - spec: git+https://src.fedoraproject.org/rpms/kimageannotator:kimageannotator.spec#branch=f$releasever
+    packages:
+      - kimageannotator-common
+      - kimageannotator-qt6
   - spec: git+https://src.fedoraproject.org/rpms/gwenview:gwenview.spec#branch=f$releasever
     packages:
       - gwenview
