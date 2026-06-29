@@ -36,6 +36,15 @@ packages:
   - screen
   - fastfetch
 
+  # Compression and archives
+  - 7zip
+  - bzip2
+  - cpio
+  - tar
+  - unrar-free
+  - unzip
+  - zip
+
 postprocess: |
   set -eux
 

@@ -8,9 +8,7 @@ packages:
   - bash-color-prompt
   - bash-completion
   - bc
-  - bzip2
   - coreutils
-  - cpio
   - curl
   - default-editor
   - file
@@ -28,16 +26,13 @@ packages:
   - setup
   - shadow-utils
   - sudo
-  - tar
   - time
   - tree
-  - unzip
   - util-linux
   - vim-minimal
   - wget2-wget
   - which
   - words
-  - zip
 
   # System services
   - chrony
