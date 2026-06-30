@@ -1,0 +1,120 @@
+version: 1
+
+flatpak:
+  id: org.anatase.Steam
+  command: steam
+  rename-author: "%s (packaged by Anatase)"
+  rename-desktop-file: steam.desktop
+  rename-appdata-file: com.valvesoftware.Steam.metainfo.xml
+  rename-icon: steam
+  finish-args: |-
+    # From Flathub steam
+    --device=all
+    --share=ipc
+    --share=network
+    --allow=multiarch
+    --allow=devel
+    --allow=bluetooth
+    --allow=per-app-dev-shm
+    --socket=x11
+    --socket=wayland
+    --socket=pulseaudio
+    --own-name=com.steampowered.*
+    --filesystem=xdg-music:ro
+    --filesystem=xdg-pictures:ro
+    --filesystem=xdg-run/app/com.discordapp.Discord:create
+    --filesystem=xdg-run/pipewire-0:ro
+    --filesystem=xdg-config/MangoHud:ro
+    --filesystem=/run/udev:ro
+    --filesystem=xdg-run/speech-dispatcher:ro
+    --filesystem=/mnt
+    --filesystem=/media
+    --filesystem=/run/media
+    --persist=.
+    --system-talk-name=org.freedesktop.NetworkManager
+    --system-talk-name=org.freedesktop.UDisks2
+    --system-talk-name=org.freedesktop.UPower
+    --talk-name=org.freedesktop.Flatpak
+    --talk-name=org.freedesktop.Notifications
+    --talk-name=org.freedesktop.PowerManagement
+    --talk-name=org.freedesktop.ScreenSaver
+    --talk-name=org.gnome.SessionManager
+    --talk-name=org.kde.StatusNotifierWatcher
+    --env=TZ=
+    --unset-env=TZ
+    --env=LC_ADDRESS=C
+    --env=LC_COLLATE=C
+    --env=LC_MONETARY=C
+    --env=LC_MEASUREMENT=C
+    --env=LC_NAME=C
+    --env=LC_NUMERIC=C
+    --env=LC_TELEPHONE=C
+    --env=ALSA_CONFIG_PATH=
+    --unset-env=ALSA_CONFIG_PATH
+    --env=MESA_GLSL_CACHE_DIR=
+    --unset-env=MESA_GLSL_CACHE_DIR
+    --env=STEAM_RUNTIME_PREFER_HOST_LIBRARIES=
+    --unset-env=STEAM_RUNTIME_PREFER_HOST_LIBRARIES
+    --env=STEAM_RUNTIME=
+    --unset-env=STEAM_RUNTIME
+    --env=SDL_VIDEODRIVER=
+    --unset-env=SDL_VIDEODRIVER
+    --env=DBUS_FATAL_WARNINGS=0
+    --env=SSL_CERT_DIR=/etc/ssl/certs
+    # From Flathub Steam, trimmed for Anatase's local runtime layout
+    --env=STEAM_EXTRA_COMPAT_TOOLS_PATHS=/app/share/steam/compatibilitytools.d
+    --env=PATH=/app/bin:/usr/bin
+    --env=PROTON_DEBUG_DIR=/var/tmp
+    --env=XDG_DATA_DIRS=/app/share:/usr/share:/usr/share/runtime/share:/run/host/user-share:/run/host/share:/usr/lib/pressure-vessel/overrides/share
+    --env=GST_PLUGIN_SYSTEM_PATH=/app/lib/gstreamer-1.0:/app/lib32/gstreamer-1.0:/usr/lib/x86_64-linux-gnu/codecs-extra/lib/gstreamer-1.0:/usr/lib/i386-linux-gnu/codecs-extra/lib/gstreamer-1.0:/usr/lib/x86_64-linux-gnu/gstreamer-1.0:/usr/lib/i386-linux-gnu/gstreamer-1.0
+    # From negativo17 steam.sh
+    --env=STEAM_FRAME_FORCE_CLOSE=1
+    --env=SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS=0
+    # Our changes
+
+
+build-deps:
+  - rpm-build
+  - rpmdevtools
+  - redhat-rpm-config
+  - flatpak-rpm-macros
+
+specs:
+  - spec: steam.spec
+    packages:
+      x86_64:
+        - steam
+    files:
+      - steam.spec
+      - steam-makefile.patch
+      - steam-no-icon-on-desktop.patch
+    upstream:
+      type: dist-git
+      url: https://github.com/negativo17/steam
+
+postprocess: |-
+  set -eu
+
+  desktop_file="app/share/applications/steam.desktop"
+  if [ -f "$desktop_file" ]; then
+      sed -i \
+          -e 's|/usr/bin/steam|/app/bin/steam|g' \
+          -e '/^PrefersNonDefaultGPU=/d' \
+          -e '/^X-KDE-RunOnDiscreteGpu=/d' \
+          "$desktop_file"
+      if grep -q '^StartupWMClass=' "$desktop_file"; then
+          sed -i 's|^StartupWMClass=.*|StartupWMClass=Steam|' "$desktop_file"
+      else
+          printf '\nStartupWMClass=Steam\n' >> "$desktop_file"
+      fi
+  fi
+
+  if [ -f app/bin/steam ]; then
+      sed -i 's|/usr/lib/|/app/lib/|g' app/bin/steam
+  fi
+
+  mkdir -p app/bin app/share/steam/compatibilitytools.d
+  ln -snf /bin/true app/bin/steamdeps
+  if [ -x /usr/bin/cmp ]; then
+      cp -f /usr/bin/cmp app/bin/cmp
+  fi

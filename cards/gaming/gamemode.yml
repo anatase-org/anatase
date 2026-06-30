@@ -11,8 +11,21 @@ build-deps:
   - sccache
 
 packages:
-  - gamescope
-  - mangohud
+  # Base rules for hid* access
+  - steam-devices
+  # Implicit deps by gamescope/mangohud
+  - glfw
+  - libXres
+  - libliftoff
+  - libseat
+  - luajit
+  - openvr-api
+  - spdlog
+  - wlroots0.18
+  - xcb-util-errors
+  # Base gcc deps, required by steam bootstrap
+  - libnsl
+  - libnsl.i686
 
 specs:
   - spec: gamescope/gamescope.spec

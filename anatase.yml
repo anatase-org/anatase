@@ -75,6 +75,7 @@ flatpaks:
   - flatpaks/kate
   - flatpaks/kcalc
   - flatpaks/okular
+  - flatpaks/steam
 
 installer:
   ostree: True
