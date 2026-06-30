@@ -123,9 +123,17 @@ postprocess: |-
 
   cat > app/bin/anatase-steam <<'EOF'
   #!/bin/sh
+  flatpak_info=
+  for candidate in "${FLATPAK_INFO:-}" /.flatpak-info /run/flatpak-info; do
+      [ -n "$candidate" ] || continue
+      [ -r "$candidate" ] || continue
+      flatpak_info="$candidate"
+      break
+  done
+
   has_filesystem() {
-      [ -r /run/flatpak-info ] || return 1
-      sed -n '/^\[Context\]/,/^\[/{s/^filesystems=//p}' /run/flatpak-info \
+      [ -n "$flatpak_info" ] || return 1
+      sed -n '/^\[Context\]/,/^\[/{s/^filesystems=//p}' "$flatpak_info" \
           | tr ';' '\n' \
           | grep -Fx -- "$1" >/dev/null
   }
