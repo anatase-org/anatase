@@ -153,6 +153,8 @@ postprocess: |
         /etc/xdg \
         /usr/lib/systemd/system \
         /usr/lib/systemd/system-preset \
+        /usr/lib/systemd/system-environment-generators \
+        /usr/lib/systemd/user-environment-generators \
         /usr/lib/tmpfiles.d \
         /usr/libexec
 
@@ -226,6 +228,48 @@ postprocess: |
     EOF
 
     systemctl preset fedora-kinoite-plasmalogin-workaround.service || true
+
+    #
+    # Fix VM graphics freezes when using GL on kwin
+    #
+
+    cat > /usr/libexec/anatase-kwin-compose-environment <<'EOF'
+    #!/bin/sh
+    set -eu
+
+    is_qemu_vm() {
+        if command -v systemd-detect-virt >/dev/null 2>&1; then
+            case "$(systemd-detect-virt --vm 2>/dev/null || true)" in
+                qemu|kvm)
+                    return 0
+                    ;;
+            esac
+        fi
+
+        for path in \
+            /sys/class/dmi/id/sys_vendor \
+            /sys/class/dmi/id/product_name \
+            /sys/class/dmi/id/board_vendor; do
+            [ -r "${path}" ] || continue
+            case "$(cat "${path}" 2>/dev/null || true)" in
+                *QEMU*|*KVM*)
+                    return 0
+                    ;;
+            esac
+        done
+
+        return 1
+    }
+
+    if is_qemu_vm; then
+        printf 'KWIN_COMPOSE=Q\n'
+    fi
+    EOF
+    chmod 0755 /usr/libexec/anatase-kwin-compose-environment
+    ln -snf /usr/libexec/anatase-kwin-compose-environment \
+        /usr/lib/systemd/system-environment-generators/30-anatase-kwin-compose
+    ln -snf /usr/libexec/anatase-kwin-compose-environment \
+        /usr/lib/systemd/user-environment-generators/30-anatase-kwin-compose
 
     #
     # Themes
