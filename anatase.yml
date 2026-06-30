@@ -62,10 +62,11 @@ runtime:
   branch: stable
   title: Anatase Runtime
   author: Anatase
-  description: System runtime used by applications from Anatase.
+  description: System runtime used by applications from Anatase
   # Copy freedesktop runtime here.
   # Even though a lot of the packages are not MIT.
   license: MIT
+  image: https://flatpaks.anatase.org/icons/128x128/org.anatase.Platform.png
 
 flatpaks:
   - flatpaks/ark

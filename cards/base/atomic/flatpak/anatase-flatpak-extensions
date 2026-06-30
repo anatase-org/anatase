@@ -11,8 +11,8 @@ state_dir=/run/anatase/flatpak
 # match that remote, Discover will report org.anatase.Platform as updateable
 # forever. Only change it when regenerating and uploading the dummy runtime and
 # updating cards/base/atomic/flatpak/anatase-runtime-deploy in the same commit.
-anatase_runtime_commit=4d5e2e80543e18e8c8dcd16d51591d7059ec77df2f50cbe7fae1c36aec4a942c
-anatase_runtime_oci_digest=4d5e2e80543e18e8c8dcd16d51591d7059ec77df2f50cbe7fae1c36aec4a942c
+anatase_runtime_commit=45a3b20413966e9c9070ac7459c797175ae7a70dd424e1534c5e3128844a4bc8
+anatase_runtime_oci_digest=45a3b20413966e9c9070ac7459c797175ae7a70dd424e1534c5e3128844a4bc8
 
 register_extension() {
     local ref=$1
