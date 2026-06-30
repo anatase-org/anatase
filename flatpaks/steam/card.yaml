@@ -2,7 +2,7 @@ version: 1
 
 flatpak:
   id: org.anatase.Steam
-  command: steam
+  command: anatase-steam
   rename-author: "%s (packaged by Anatase)"
   rename-desktop-file: steam.desktop
   rename-appdata-file: com.valvesoftware.Steam.metainfo.xml
@@ -71,6 +71,8 @@ flatpak:
     --env=STEAM_FRAME_FORCE_CLOSE=1
     --env=SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS=0
     # Our changes
+    --filesystem=~/.steam:create
+    --filesystem=xdg-data/Steam:create
 
 
 build-deps:
@@ -98,7 +100,7 @@ postprocess: |-
   desktop_file="app/share/applications/steam.desktop"
   if [ -f "$desktop_file" ]; then
       sed -i \
-          -e 's|/usr/bin/steam|/app/bin/steam|g' \
+          -e 's|/usr/bin/steam|/app/bin/anatase-steam|g' \
           -e '/^PrefersNonDefaultGPU=/d' \
           -e '/^X-KDE-RunOnDiscreteGpu=/d' \
           "$desktop_file"
@@ -118,3 +120,31 @@ postprocess: |-
   if [ -x /usr/bin/cmp ]; then
       cp -f /usr/bin/cmp app/bin/cmp
   fi
+
+  cat > app/bin/anatase-steam <<'EOF'
+  #!/bin/sh
+  has_filesystem() {
+      [ -r /run/flatpak-info ] || return 1
+      sed -n '/^\[Context\]/,/^\[/{s/^filesystems=//p}' /run/flatpak-info \
+          | tr ';' '\n' \
+          | grep -Fx -- "$1" >/dev/null
+  }
+
+  if has_filesystem '~/.steam:create' && has_filesystem 'xdg-data/Steam:create'; then
+      host_xdg_data_home=
+      if command -v flatpak-spawn >/dev/null 2>&1; then
+          host_xdg_data_home="$(flatpak-spawn --host sh -c 'printf "%s" "${XDG_DATA_HOME:-}"' 2>/dev/null || true)"
+      fi
+      case "$host_xdg_data_home" in
+          /*) steam_data_home="$host_xdg_data_home" ;;
+          *) steam_data_home="$HOME/.local/share" ;;
+      esac
+      if mkdir -p "$HOME/.steam" "$steam_data_home/Steam" 2>/dev/null \
+              && [ -w "$HOME/.steam" ] \
+              && [ -w "$steam_data_home/Steam" ]; then
+          export XDG_DATA_HOME="$steam_data_home"
+      fi
+  fi
+  exec /app/bin/steam "$@"
+  EOF
+  chmod 0755 app/bin/anatase-steam
