@@ -4,6 +4,7 @@ flatpak:
   id: org.anatase.Calculator
   command: kcalc
   rename: Calculator (KCalc)
+  rename-author: "%s (packaged by Anatase)"
   rename-desktop-file: org.kde.kcalc.desktop
   rename-appdata-file: org.kde.kcalc.appdata.xml
   rename-icon: accessories-calculator

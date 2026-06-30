@@ -4,6 +4,7 @@ flatpak:
   id: org.anatase.TextEditor
   command: kate
   rename: Text Editor (Kate)
+  rename-author: "%s (packaged by Anatase)"
   rename-desktop-file: org.kde.kate.desktop
   rename-appdata-file: org.kde.kate.appdata.xml
   rename-icon: kate

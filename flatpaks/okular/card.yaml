@@ -4,6 +4,7 @@ flatpak:
   id: org.anatase.DocumentViewer
   command: okular
   rename: Document Viewer (Okular)
+  rename-author: "%s (packaged by Anatase)"
   rename-desktop-file: org.kde.okular.desktop
   rename-appdata-file: org.kde.okular.appdata.xml
   rename-icon: okular

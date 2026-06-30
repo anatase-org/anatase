@@ -4,6 +4,7 @@ flatpak:
   id: org.anatase.ImageViewer
   command: gwenview
   rename: Image Viewer (Gwenview)
+  rename-author: "%s (packaged by Anatase)"
   rename-desktop-file: org.kde.gwenview.desktop
   rename-appdata-file: org.kde.gwenview.appdata.xml
   rename-icon: gwenview

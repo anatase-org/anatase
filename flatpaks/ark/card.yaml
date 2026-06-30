@@ -4,6 +4,7 @@ flatpak:
   id: org.anatase.ArchiveManager
   command: ark
   rename: Archive Manager (Ark)
+  rename-author: "%s (packaged by Anatase)"
   rename-desktop-file: org.kde.ark.desktop
   rename-appdata-file: org.kde.ark.appdata.xml
   rename-icon: ark
