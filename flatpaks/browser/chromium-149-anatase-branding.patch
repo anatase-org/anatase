@@ -9,7 +9,7 @@
            </message>
            <message name="IDS_SHORT_PRODUCT_NAME" desc="The Chrome application short name." translateable="false">
 -            Chromium
-+            Browser
++            Anatase
            </message>
          </else>
        </if>
@@ -176,3 +176,86 @@
        </message>
  
        <!-- Device Chooser Prompt -->
+--- a/ui/color/ref_color_mixer.cc
++++ b/ui/color/ref_color_mixer.cc
+@@ -28,31 +28,31 @@
+-  mixer[kColorRefPrimary10] = {SkColorSetRGB(0x04, 0x1E, 0x49)};
+-  mixer[kColorRefPrimary20] = {SkColorSetRGB(0x06, 0x2E, 0x6F)};
+-  mixer[kColorRefPrimary25] = {SkColorSetRGB(0x07, 0x38, 0x88)};
+-  mixer[kColorRefPrimary30] = {SkColorSetRGB(0x08, 0x42, 0xA0)};
+-  mixer[kColorRefPrimary40] = {SkColorSetRGB(0x0B, 0x57, 0xD0)};
+-  mixer[kColorRefPrimary50] = {SkColorSetRGB(0x1B, 0x6E, 0xF3)};
+-  mixer[kColorRefPrimary60] = {SkColorSetRGB(0x4C, 0x8D, 0xF6)};
+-  mixer[kColorRefPrimary70] = {SkColorSetRGB(0x7C, 0xAC, 0xF8)};
+-  mixer[kColorRefPrimary80] = {SkColorSetRGB(0xA8, 0xC7, 0xFA)};
+-  mixer[kColorRefPrimary90] = {SkColorSetRGB(0xD3, 0xE3, 0xFD)};
+-  mixer[kColorRefPrimary95] = {SkColorSetRGB(0xEC, 0xF3, 0xFE)};
+-  mixer[kColorRefPrimary99] = {SkColorSetRGB(0xFA, 0xFB, 0xFF)};
++  mixer[kColorRefPrimary10] = {SkColorSetRGB(0x1A, 0x16, 0x04)};
++  mixer[kColorRefPrimary20] = {SkColorSetRGB(0x3A, 0x31, 0x08)};
++  mixer[kColorRefPrimary25] = {SkColorSetRGB(0x4C, 0x40, 0x0A)};
++  mixer[kColorRefPrimary30] = {SkColorSetRGB(0x5E, 0x4F, 0x0D)};
++  mixer[kColorRefPrimary40] = {SkColorSetRGB(0x8B, 0x75, 0x14)};
++  mixer[kColorRefPrimary50] = {SkColorSetRGB(0xA8, 0x8F, 0x22)};
++  mixer[kColorRefPrimary60] = {SkColorSetRGB(0xC4, 0xAA, 0x36)};
++  mixer[kColorRefPrimary70] = {SkColorSetRGB(0xD9, 0xC3, 0x5C)};
++  mixer[kColorRefPrimary80] = {SkColorSetRGB(0xE9, 0xDA, 0x86)};
++  mixer[kColorRefPrimary90] = {SkColorSetRGB(0xF5, 0xED, 0xC6)};
++  mixer[kColorRefPrimary95] = {SkColorSetRGB(0xFA, 0xF6, 0xE3)};
++  mixer[kColorRefPrimary99] = {SkColorSetRGB(0xFF, 0xFC, 0xF2)};
+   mixer[kColorRefPrimary100] = {SkColorSetRGB(0xFF, 0xFF, 0xFF)};
+ 
+   mixer[kColorRefSecondary0] = {SkColorSetRGB(0x00, 0x00, 0x00)};
+-  mixer[kColorRefSecondary10] = {SkColorSetRGB(0x00, 0x1D, 0x35)};
+-  mixer[kColorRefSecondary12] = {SkColorSetRGB(0x00, 0x22, 0x38)};
+-  mixer[kColorRefSecondary15] = {SkColorSetRGB(0x00, 0x28, 0x45)};
+-  mixer[kColorRefSecondary20] = {SkColorSetRGB(0x00, 0x33, 0x55)};
+-  mixer[kColorRefSecondary25] = {SkColorSetRGB(0x00, 0x3f, 0x66)};
+-  mixer[kColorRefSecondary30] = {SkColorSetRGB(0x00, 0x4A, 0x77)};
+-  mixer[kColorRefSecondary35] = {SkColorSetRGB(0x00, 0x57, 0x89)};
+-  mixer[kColorRefSecondary40] = {SkColorSetRGB(0x00, 0x63, 0x9B)};
+-  mixer[kColorRefSecondary50] = {SkColorSetRGB(0x04, 0x7D, 0xB7)};
+-  mixer[kColorRefSecondary60] = {SkColorSetRGB(0x39, 0x98, 0xD3)};
+-  mixer[kColorRefSecondary70] = {SkColorSetRGB(0x5A, 0xB3, 0xF0)};
+-  mixer[kColorRefSecondary80] = {SkColorSetRGB(0x7F, 0xCF, 0xFF)};
+-  mixer[kColorRefSecondary90] = {SkColorSetRGB(0xC2, 0xE7, 0xFF)};
+-  mixer[kColorRefSecondary95] = {SkColorSetRGB(0xDF, 0xF3, 0xFF)};
+-  mixer[kColorRefSecondary99] = {SkColorSetRGB(0xF7, 0xFC, 0xFF)};
++  mixer[kColorRefSecondary10] = {SkColorSetRGB(0x1C, 0x19, 0x05)};
++  mixer[kColorRefSecondary12] = {SkColorSetRGB(0x24, 0x20, 0x07)};
++  mixer[kColorRefSecondary15] = {SkColorSetRGB(0x30, 0x2B, 0x09)};
++  mixer[kColorRefSecondary20] = {SkColorSetRGB(0x4A, 0x42, 0x0E)};
++  mixer[kColorRefSecondary25] = {SkColorSetRGB(0x62, 0x58, 0x12)};
++  mixer[kColorRefSecondary30] = {SkColorSetRGB(0x7A, 0x6E, 0x17)};
++  mixer[kColorRefSecondary35] = {SkColorSetRGB(0x93, 0x84, 0x1C)};
++  mixer[kColorRefSecondary40] = {SkColorSetRGB(0xAB, 0x9B, 0x22)};
++  mixer[kColorRefSecondary50] = {SkColorSetRGB(0xC8, 0xB8, 0x3A)};
++  mixer[kColorRefSecondary60] = {SkColorSetRGB(0xDB, 0xCB, 0x5D)};
++  mixer[kColorRefSecondary70] = {SkColorSetRGB(0xEA, 0xDD, 0x83)};
++  mixer[kColorRefSecondary80] = {SkColorSetRGB(0xF4, 0xEC, 0xB0)};
++  mixer[kColorRefSecondary90] = {SkColorSetRGB(0xFA, 0xF6, 0xD6)};
++  mixer[kColorRefSecondary95] = {SkColorSetRGB(0xFC, 0xFA, 0xEB)};
++  mixer[kColorRefSecondary99] = {SkColorSetRGB(0xFF, 0xFE, 0xF8)};
+   mixer[kColorRefSecondary100] = {SkColorSetRGB(0xFF, 0xFF, 0xFF)};
+--- a/ui/webui/resources/cr_components/theme_color_picker/color_utils.ts
++++ b/ui/webui/resources/cr_components/theme_color_picker/color_utils.ts
+@@ -25,15 +25,15 @@
+ };
+ 
+ export const LIGHT_BASELINE_BLUE_COLOR: Color = {
+-  background: {value: 0xff0b57d0},
+-  foreground: {value: 0xffd3e3fd},
+-  base: {value: 0xffc7c7c7},
++  background: {value: 0xff8b7514},
++  foreground: {value: 0xfff5edc6},
++  base: {value: 0xffc7c7c7},
+ };
+ 
+ export const DARK_BASELINE_BLUE_COLOR: Color = {
+-  background: {value: 0xffa8c7fa},
+-  foreground: {value: 0xff0842a0},
+-  base: {value: 0xff757575},
++  background: {value: 0xffe9da86},
++  foreground: {value: 0xff5e4f0d},
++  base: {value: 0xff757575},
+ };
