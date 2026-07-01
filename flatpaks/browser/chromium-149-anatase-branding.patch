@@ -176,6 +176,133 @@
        </message>
  
        <!-- Device Chooser Prompt -->
+--- a/ui/gfx/color_palette.h
++++ b/ui/gfx/color_palette.h
+@@ -18,10 +18,10 @@
+-constexpr SkColor kGoogleBlue050 = SkColorSetRGB(0xE8, 0xF0, 0xFE);
+-constexpr SkColor kGoogleBlue100 = SkColorSetRGB(0xD2, 0xE3, 0xFC);
+-constexpr SkColor kGoogleBlue200 = SkColorSetRGB(0xAE, 0xCB, 0xFA);
+-constexpr SkColor kGoogleBlue300 = SkColorSetRGB(0x8A, 0xB4, 0xF8);
+-constexpr SkColor kGoogleBlue400 = SkColorSetRGB(0x66, 0x9D, 0xF6);
+-constexpr SkColor kGoogleBlue500 = SkColorSetRGB(0x42, 0x85, 0xF4);
+-constexpr SkColor kGoogleBlue600 = SkColorSetRGB(0x1A, 0x73, 0xE8);
+-constexpr SkColor kGoogleBlue700 = SkColorSetRGB(0x19, 0x67, 0xD2);
+-constexpr SkColor kGoogleBlue800 = SkColorSetRGB(0x18, 0x5A, 0xBC);
+-constexpr SkColor kGoogleBlue900 = SkColorSetRGB(0x17, 0x4E, 0xA6);
++constexpr SkColor kGoogleBlue050 = SkColorSetRGB(0xFF, 0xFC, 0xF2);
++constexpr SkColor kGoogleBlue100 = SkColorSetRGB(0xFA, 0xF6, 0xE3);
++constexpr SkColor kGoogleBlue200 = SkColorSetRGB(0xF5, 0xED, 0xC6);
++constexpr SkColor kGoogleBlue300 = SkColorSetRGB(0xE9, 0xDA, 0x86);
++constexpr SkColor kGoogleBlue400 = SkColorSetRGB(0xD9, 0xC3, 0x5C);
++constexpr SkColor kGoogleBlue500 = SkColorSetRGB(0xC4, 0xAA, 0x36);
++constexpr SkColor kGoogleBlue600 = SkColorSetRGB(0x8B, 0x75, 0x14);
++constexpr SkColor kGoogleBlue700 = SkColorSetRGB(0x5E, 0x4F, 0x0D);
++constexpr SkColor kGoogleBlue800 = SkColorSetRGB(0x3A, 0x31, 0x08);
++constexpr SkColor kGoogleBlue900 = SkColorSetRGB(0x1A, 0x16, 0x04);
+--- a/ui/webui/resources/cr_elements/cr_shared_vars.css
++++ b/ui/webui/resources/cr_elements/cr_shared_vars.css
+@@ -12,19 +12,19 @@ html {
+-  --google-blue-50-rgb: 232, 240, 254;  /* #e8f0fe */
++  --google-blue-50-rgb: 255, 252, 242;  /* #fffcf2 */
+   --google-blue-50: rgb(var(--google-blue-50-rgb));
+-  --google-blue-100-rgb: 210, 227, 252;  /* #d2e3fc */
++  --google-blue-100-rgb: 250, 246, 227;  /* #faf6e3 */
+   --google-blue-100: rgb(var(--google-blue-100-rgb));
+-  --google-blue-200-rgb: 174, 203, 250;  /* #aecbfa */
++  --google-blue-200-rgb: 245, 237, 198;  /* #f5edc6 */
+   --google-blue-200: rgb(var(--google-blue-200-rgb));
+-  --google-blue-300-rgb: 138, 180, 248;  /* #8ab4f8 */
++  --google-blue-300-rgb: 233, 218, 134;  /* #e9da86 */
+   --google-blue-300: rgb(var(--google-blue-300-rgb));
+-  --google-blue-400-rgb: 102, 157, 246;  /* #669df6 */
++  --google-blue-400-rgb: 217, 195, 92;  /* #d9c35c */
+   --google-blue-400: rgb(var(--google-blue-400-rgb));
+-  --google-blue-500-rgb: 66, 133, 244;  /* #4285f4 */
++  --google-blue-500-rgb: 196, 170, 54;  /* #c4aa36 */
+   --google-blue-500: rgb(var(--google-blue-500-rgb));
+-  --google-blue-600-rgb: 26, 115, 232;  /* #1a73e8 */
++  --google-blue-600-rgb: 139, 117, 20;  /* #8b7514 */
+   --google-blue-600: rgb(var(--google-blue-600-rgb));
+-  --google-blue-700-rgb: 25, 103, 210;  /* #1967d2 */
++  --google-blue-700-rgb: 94, 79, 13;  /* #5e4f0d */
+   --google-blue-700: rgb(var(--google-blue-700-rgb));
+-  --google-blue-800-rgb: 24, 90, 188;  /* #185abc */
++  --google-blue-800-rgb: 58, 49, 8;  /* #3a3108 */
+   --google-blue-800: rgb(var(--google-blue-800-rgb));
+-  --google-blue-900-rgb: 23, 78, 166;  /* #174ea6 */
++  --google-blue-900-rgb: 26, 22, 4;  /* #1a1604 */
+   --google-blue-900: rgb(var(--google-blue-900-rgb));
+@@ -200,8 +200,8 @@ html {
+-  --cr-fallback-color-primary: rgb(11, 87, 208);
++  --cr-fallback-color-primary: rgb(139, 117, 20);
+   --cr-fallback-color-on-primary: rgb(255, 255, 255);
+-  --cr-fallback-color-primary-container: rgb(211, 227, 253);
+-  --cr-fallback-color-on-primary-container: rgb(4, 30, 73);
++  --cr-fallback-color-primary-container: rgb(245, 237, 198);
++  --cr-fallback-color-on-primary-container: rgb(26, 22, 4);
+-  --cr-fallback-color-secondary-container: rgb(194, 231, 255);
+-  --cr-fallback-color-on-secondary-container: rgb(0, 29, 53);
++  --cr-fallback-color-secondary-container: rgb(248, 242, 220);
++  --cr-fallback-color-on-secondary-container: rgb(30, 24, 5);
+@@ -225,8 +225,8 @@ html {
+-  --cr-fallback-color-inverse-primary: rgb(168, 199, 250);
++  --cr-fallback-color-inverse-primary: rgb(233, 218, 134);
+   --cr-fallback-color-inverse-surface: rgb(48, 48, 48);
+   --cr-fallback-color-inverse-on-surface: rgb(242, 242, 242);
+-  --cr-fallback-color-tonal-container: rgb(211, 227, 253);
+-  --cr-fallback-color-on-tonal-container: rgb(4, 30, 73);
++  --cr-fallback-color-tonal-container: rgb(245, 237, 198);
++  --cr-fallback-color-on-tonal-container: rgb(26, 22, 4);
+@@ -232,9 +232,9 @@ html {
+-  --cr-fallback-color-tonal-outline: rgb(168, 199, 250);
++  --cr-fallback-color-tonal-outline: rgb(233, 218, 134);
+   --cr-fallback-color-error: rgb(179, 38, 30);
+-  --cr-fallback-color-divider: rgb(211, 227, 253);
++  --cr-fallback-color-divider: rgb(245, 237, 198);
+   --cr-fallback-color-state-hover-on-prominent_: rgba(253, 252, 251, .1);
+@@ -245,7 +245,7 @@ html {
+   --cr-fallback-color-state-hover-on-subtle_: rgba(
+       var(--cr-fallback-color-state-on-subtle-rgb_), .06);
+   --cr-fallback-color-state-ripple-neutral-on-subtle_: rgba(
+       var(--cr-fallback-color-state-on-subtle-rgb_), .08);
+-  --cr-fallback-color-state-ripple-primary-rgb_: 124, 172, 248;
++  --cr-fallback-color-state-ripple-primary-rgb_: 217, 195, 92;
+   --cr-fallback-color-state-ripple-primary_: rgba(
+       var(--cr-fallback-color-state-ripple-primary-rgb_), 0.32);
+@@ -304,10 +304,10 @@ html {
+-    --cr-fallback-color-primary: rgb(168, 199, 250);
+-    --cr-fallback-color-on-primary: rgb(6, 46, 111);
+-    --cr-fallback-color-primary-container: rgb(8, 66, 160);
+-    --cr-fallback-color-on-primary-container: rgb(211, 227, 253);
+-    --cr-fallback-color-secondary-container: rgb(0, 74, 119);
+-    --cr-fallback-color-on-secondary-container: rgb(194, 231, 255);
++    --cr-fallback-color-primary: rgb(233, 218, 134);
++    --cr-fallback-color-on-primary: rgb(58, 49, 8);
++    --cr-fallback-color-primary-container: rgb(94, 79, 13);
++    --cr-fallback-color-on-primary-container: rgb(245, 237, 198);
++    --cr-fallback-color-secondary-container: rgb(94, 79, 13);
++    --cr-fallback-color-on-secondary-container: rgb(248, 242, 220);
+@@ -321,18 +321,18 @@ html {
+-    --cr-fallback-color-inverse-primary: rgb(11, 87, 208);
++    --cr-fallback-color-inverse-primary: rgb(139, 117, 20);
+     --cr-fallback-color-inverse-surface: rgb(227, 227, 227);
+     --cr-fallback-color-inverse-on-surface: rgb(31, 31, 31);
+-    --cr-fallback-color-tonal-container: rgb(0, 74, 119);
+-    --cr-fallback-color-on-tonal-container: rgb(194, 231, 255);
+-    --cr-fallback-color-tonal-outline: rgb(4, 125, 183);
++    --cr-fallback-color-tonal-container: rgb(94, 79, 13);
++    --cr-fallback-color-on-tonal-container: rgb(245, 237, 198);
++    --cr-fallback-color-tonal-outline: rgb(196, 170, 54);
+     --cr-fallback-color-error: rgb(242, 184, 181);
+     --cr-fallback-color-divider: rgb(94, 94, 94);
+@@ -335,7 +335,7 @@ html {
+     --cr-fallback-color-state-hover-on-subtle_: rgba(
+         var(--cr-fallback-color-state-on-subtle-rgb_), .10);
+     --cr-fallback-color-state-ripple-neutral-on-subtle_: rgba(
+         var(--cr-fallback-color-state-on-subtle-rgb_), .16);
+-    --cr-fallback-color-state-ripple-primary-rgb_: 76, 141, 246;
++    --cr-fallback-color-state-ripple-primary-rgb_: 196, 170, 54;
+     --cr-fallback-color-base-container: rgba(40, 40, 40, 1);
 --- a/ui/color/ref_color_mixer.cc
 +++ b/ui/color/ref_color_mixer.cc
 @@ -28,31 +28,31 @@
@@ -221,21 +348,21 @@
 -  mixer[kColorRefSecondary90] = {SkColorSetRGB(0xC2, 0xE7, 0xFF)};
 -  mixer[kColorRefSecondary95] = {SkColorSetRGB(0xDF, 0xF3, 0xFF)};
 -  mixer[kColorRefSecondary99] = {SkColorSetRGB(0xF7, 0xFC, 0xFF)};
-+  mixer[kColorRefSecondary10] = {SkColorSetRGB(0x1C, 0x19, 0x05)};
-+  mixer[kColorRefSecondary12] = {SkColorSetRGB(0x24, 0x20, 0x07)};
-+  mixer[kColorRefSecondary15] = {SkColorSetRGB(0x30, 0x2B, 0x09)};
-+  mixer[kColorRefSecondary20] = {SkColorSetRGB(0x4A, 0x42, 0x0E)};
-+  mixer[kColorRefSecondary25] = {SkColorSetRGB(0x62, 0x58, 0x12)};
-+  mixer[kColorRefSecondary30] = {SkColorSetRGB(0x7A, 0x6E, 0x17)};
-+  mixer[kColorRefSecondary35] = {SkColorSetRGB(0x93, 0x84, 0x1C)};
-+  mixer[kColorRefSecondary40] = {SkColorSetRGB(0xAB, 0x9B, 0x22)};
-+  mixer[kColorRefSecondary50] = {SkColorSetRGB(0xC8, 0xB8, 0x3A)};
-+  mixer[kColorRefSecondary60] = {SkColorSetRGB(0xDB, 0xCB, 0x5D)};
-+  mixer[kColorRefSecondary70] = {SkColorSetRGB(0xEA, 0xDD, 0x83)};
-+  mixer[kColorRefSecondary80] = {SkColorSetRGB(0xF4, 0xEC, 0xB0)};
-+  mixer[kColorRefSecondary90] = {SkColorSetRGB(0xFA, 0xF6, 0xD6)};
-+  mixer[kColorRefSecondary95] = {SkColorSetRGB(0xFC, 0xFA, 0xEB)};
-+  mixer[kColorRefSecondary99] = {SkColorSetRGB(0xFF, 0xFE, 0xF8)};
++  mixer[kColorRefSecondary10] = {SkColorSetRGB(0x1E, 0x18, 0x05)};
++  mixer[kColorRefSecondary12] = {SkColorSetRGB(0x26, 0x1F, 0x07)};
++  mixer[kColorRefSecondary15] = {SkColorSetRGB(0x33, 0x29, 0x0A)};
++  mixer[kColorRefSecondary20] = {SkColorSetRGB(0x4D, 0x3F, 0x11)};
++  mixer[kColorRefSecondary25] = {SkColorSetRGB(0x66, 0x54, 0x16)};
++  mixer[kColorRefSecondary30] = {SkColorSetRGB(0x80, 0x6A, 0x1C)};
++  mixer[kColorRefSecondary35] = {SkColorSetRGB(0x99, 0x80, 0x25)};
++  mixer[kColorRefSecondary40] = {SkColorSetRGB(0xB1, 0x98, 0x35)};
++  mixer[kColorRefSecondary50] = {SkColorSetRGB(0xC9, 0xB0, 0x56)};
++  mixer[kColorRefSecondary60] = {SkColorSetRGB(0xD9, 0xC3, 0x72)};
++  mixer[kColorRefSecondary70] = {SkColorSetRGB(0xE6, 0xD5, 0x93)};
++  mixer[kColorRefSecondary80] = {SkColorSetRGB(0xF1, 0xE5, 0xB7)};
++  mixer[kColorRefSecondary90] = {SkColorSetRGB(0xF8, 0xF2, 0xDC)};
++  mixer[kColorRefSecondary95] = {SkColorSetRGB(0xFC, 0xF9, 0xEF)};
++  mixer[kColorRefSecondary99] = {SkColorSetRGB(0xFF, 0xFD, 0xF7)};
    mixer[kColorRefSecondary100] = {SkColorSetRGB(0xFF, 0xFF, 0xFF)};
 --- a/ui/webui/resources/cr_components/theme_color_picker/color_utils.ts
 +++ b/ui/webui/resources/cr_components/theme_color_picker/color_utils.ts
@@ -255,7 +382,7 @@
 -  background: {value: 0xffa8c7fa},
 -  foreground: {value: 0xff0842a0},
 -  base: {value: 0xff757575},
-+  background: {value: 0xffe9da86},
-+  foreground: {value: 0xff5e4f0d},
++  background: {value: 0xffdbc64f},
++  foreground: {value: 0xff4c400a},
 +  base: {value: 0xff757575},
  };
