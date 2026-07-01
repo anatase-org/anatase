@@ -20,8 +20,9 @@ install -dm0755 /var/spool/mail
 if id -u anatase >/dev/null 2>&1; then
     usermod --append --groups wheel --shell /usr/bin/bash anatase
 else
-    useradd --create-home --shell /usr/bin/bash --groups wheel anatase
+    useradd --create-home --comment Anatase --shell /usr/bin/bash --groups wheel anatase
 fi
+usermod --comment Anatase anatase
 passwd -d anatase || true
 install -dm0755 -o anatase -g anatase /home/anatase
 install -Dm0755 -o anatase -g anatase /files/installer/anatase-webui.desktop \
@@ -33,6 +34,7 @@ install -Dm0644 /usr/share/icons/hicolor/256x256/apps/anatase-logo-icon.png \
 install -dm0755 /var/lib/AccountsService/users
 cat > /var/lib/AccountsService/users/anatase <<'EOF'
 [User]
+RealName=Anatase
 Icon=/var/lib/AccountsService/icons/anatase
 EOF
 
