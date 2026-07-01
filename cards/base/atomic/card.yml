@@ -124,7 +124,6 @@ postprocess: |
     [Flatpak Repo]
     Title=Anatase
     Url=oci+https://flatpaks.anatase.org/${distro}
-    xa.prio=10
     EOF
 
     #
@@ -200,8 +199,7 @@ postprocess: |
     Documentation=https://gitlab.com/fedora/ostree/sig/-/work_items/103
     ConditionPathIsReadWrite=/var
     ConditionPathExists=/run/ostree-booted
-    Wants=network-online.target
-    After=local-fs.target network-online.target
+    After=local-fs.target
 
     [Service]
     Type=oneshot
