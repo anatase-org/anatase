@@ -142,6 +142,8 @@ files:
     - color-schemes/AnataseLight.colors
     - konsole/Anatase.profile
     - konsole/AnataseDark.colorscheme
+    - kwallet/anatase-empty-password-kwallet
+    - kwallet/anatase-empty-password-kwallet.service
     - theme/defaults
     - theme/splash-preview.png
     - theme/splash.qml
@@ -153,6 +155,8 @@ postprocess: |
         /etc/xdg \
         /usr/lib/systemd/system \
         /usr/lib/systemd/system-preset \
+        /usr/lib/systemd/user \
+        /usr/lib/systemd/user/plasma-workspace.target.wants \
         /usr/lib/systemd/system-environment-generators \
         /usr/lib/systemd/user-environment-generators \
         /usr/lib/tmpfiles.d \
@@ -228,6 +232,15 @@ postprocess: |
     EOF
 
     systemctl preset fedora-kinoite-plasmalogin-workaround.service || true
+
+    # If a user genuinely has no password, create a matching empty-password
+    # KWallet before desktop apps can trigger the interactive first-use dialog.
+    install -Dm0755 /files/kwallet/anatase-empty-password-kwallet \
+        /usr/libexec/anatase-empty-password-kwallet
+    install -Dm0644 /files/kwallet/anatase-empty-password-kwallet.service \
+        /usr/lib/systemd/user/anatase-empty-password-kwallet.service
+    ln -snf ../anatase-empty-password-kwallet.service \
+        /usr/lib/systemd/user/plasma-workspace.target.wants/anatase-empty-password-kwallet.service
 
     #
     # Fix VM graphics freezes when using GL on kwin
