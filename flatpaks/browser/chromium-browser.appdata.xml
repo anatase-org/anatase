@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2017 The Chromium Authors -->
+<component type="desktop">
+  <id>chromium-browser.desktop</id>
+  <update_contact>chromium-dev@chromium.org</update_contact>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>BSD-3-Clause and LGPL-2.1+ and Apache-2.0 and IJG and MIT and GPL-2.0+ and ISC and OpenSSL and (MPL-1.1 or GPL-2.0 or LGPL-2.0)</project_license>
+  <name>Anatase Browser</name>
+  <summary>A web browser provided by Anatase</summary>
+  <categories>
+    <category>Network</category>
+    <category>WebBrowser</category>
+  </categories>
+  <description>
+    <p>
+    Anatase Browser is an open-source browser with three simple goals: working video acceleration so your computer does not overheat, a good ad blocker, and no extra cruft.
+    </p>
+    <p>
+      It is based on the Chromium project, which is the open-source project behind Google Chrome.
+    </p>
+  </description>
+  <url type="homepage">https://www.chromium.org/Home</url>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://www.gstatic.com/chrome/appstream/chrome-2.png</image>
+      <caption/>
+    </screenshot>
+  </screenshots>
+  <launchable type="desktop-id">chromium-browser.desktop</launchable>
+  <developer_name>Anatase</developer_name>
+  <url type="bugtracker">https://www.chromium.org/for-testers/bug-reporting-guidelines</url>
+  <url type="help">https://chromium.googlesource.com/chromium/src/+/main/docs/linux/debugging.md</url>
+</component>

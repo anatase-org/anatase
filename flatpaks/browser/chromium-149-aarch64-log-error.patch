@@ -1,0 +1,15 @@
+Fixed build error on aarch64
+
+error: use of undeclared identifier 'ERROR'
+
+diff -up chromium-149.0.7827.53/media/gpu/sandbox/hardware_video_decoding_sandbox_hook_linux.cc.mee chromium-149.0.7827.53/media/gpu/sandbox/hardware_video_decoding_sandbox_hook_linux.cc
+--- chromium-149.0.7827.53/media/gpu/sandbox/hardware_video_decoding_sandbox_hook_linux.cc.mee	2026-06-05 22:00:18.004795141 +0200
++++ chromium-149.0.7827.53/media/gpu/sandbox/hardware_video_decoding_sandbox_hook_linux.cc	2026-06-05 22:01:15.977407830 +0200
+@@ -8,6 +8,7 @@
+ #include <sys/stat.h>
+ 
+ #include "base/process/process_metrics.h"
++#include "base/logging.h"
+ #include "base/strings/stringprintf.h"
+ #include "build/build_config.h"
+ #include "media/gpu/buildflags.h"

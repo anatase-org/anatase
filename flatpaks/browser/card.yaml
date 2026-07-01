@@ -1,0 +1,150 @@
+version: 1
+
+flatpak:
+  id: org.anatase.Browser
+  command: chromium-browser
+  rename: Anatase Browser
+  rename-desktop-file: chromium-browser.desktop
+  rename-appdata-file: chromium-browser.appdata.xml
+  rename-icon: chromium-browser
+  finish-args: |-
+    --filesystem=xdg-desktop
+    --filesystem=xdg-documents
+    --filesystem=xdg-download
+    --filesystem=xdg-music
+    --filesystem=xdg-pictures
+    --filesystem=xdg-public-share
+    --filesystem=xdg-templates
+    --filesystem=xdg-videos
+    --filesystem=xdg-run/pipewire-0:ro
+    --filesystem=/run/.heim_org.h5l.kcm-socket
+    --device=all
+    --share=ipc
+    --share=network
+    --socket=cups
+    --socket=pcsc
+    --socket=pulseaudio
+    --socket=x11
+    --socket=wayland
+    --system-talk-name=org.bluez
+    --system-talk-name=org.freedesktop.Avahi
+    --system-talk-name=org.freedesktop.UPower
+    --talk-name=com.canonical.AppMenu.Registrar
+    --talk-name=org.freedesktop.FileManager1
+    --talk-name=org.freedesktop.Notifications
+    --talk-name=org.freedesktop.ScreenSaver
+    --talk-name=org.freedesktop.secrets
+    --talk-name=org.gnome.SessionManager
+    --talk-name=org.kde.StatusNotifierWatcher
+    --talk-name=org.kde.kwalletd5
+    --talk-name=org.kde.kwalletd6
+    --own-name=org.mpris.MediaPlayer2.chromium.*
+  add-extensions:
+    org.chromium.Chromium.Extension:
+      version: "1"
+      directory: chromium/extensions
+      merge-dirs: extensions;native-messaging-hosts;policies/managed;policies/recommended
+      subdirectories: true
+      no-autodownload: true
+      autodelete: true
+    org.chromium.Chromium.NativeMessagingHost:
+      version: "1"
+      directory: chromium/native-messaging-hosts
+      merge-dirs: native-messaging-hosts
+      subdirectories: true
+      no-autodownload: true
+      autodelete: true
+    org.chromium.Chromium.Policy:
+      version: "1"
+      directory: chromium/policies
+      merge-dirs: policies/managed;policies/recommended
+      subdirectories: true
+      no-autodownload: true
+      autodelete: true
+
+build-deps:
+  - rpm-build
+  - rpmdevtools
+  - redhat-rpm-config
+  - flatpak-rpm-macros
+  - ccache
+
+specs:
+  - spec: chromium.spec
+    packages:
+      - chromium
+      - chromium-common
+      - chromium-qt5-ui
+      - chromium-qt6-ui
+    files:
+      - "*.patch"
+      - "chromium-browser-*.png"
+      - chromium-browser.appdata.xml
+      - chromium-browser.desktop
+      - chromium-browser.sh
+      - chromium-browser.xml
+      - chromium.conf
+      - disable-ai.json
+      - master_preferences
+      - sources
+    upstream:
+      type: dist-git
+      url: https://src.fedoraproject.org/rpms/chromium
+      branch: f$releasever
+
+postprocess: |-
+  set -eu
+
+  ln -sfn ../lib64/chromium-browser/chromium-browser.sh app/bin/chromium-browser
+  sed -i -e 's|/etc|/app&|g' app/lib64/chromium-browser/chromium-browser.sh
+  rm -f app/lib64/chromium-browser/chrome-sandbox
+  sed -i -e 's|/usr/bin/||g' app/share/applications/*.desktop
+  sed -i -e '/<!--/d' app/share/appdata/*.xml
+
+  desktop_file="app/share/applications/chromium-browser.desktop"
+  if [ -f "$desktop_file" ]; then
+      sed -i \
+          -e '/^Name\[/d' \
+          -e 's|^Name=.*|Name=Anatase Browser|' \
+          -e 's|^Icon=.*|Icon=chromium-browser|' \
+          "$desktop_file"
+  fi
+
+  appdata_file="app/share/appdata/chromium-browser.appdata.xml"
+  if [ -f "$appdata_file" ]; then
+      python3 - "$appdata_file" <<'PY'
+  import sys
+  import xml.etree.ElementTree as ET
+
+  path = sys.argv[1]
+  tree = ET.parse(path)
+  root = tree.getroot()
+
+  def set_text(name, value):
+      element = root.find(name)
+      if element is None:
+          element = ET.SubElement(root, name)
+      element.text = value
+
+  set_text("id", "chromium-browser.desktop")
+  set_text("name", "Anatase Browser")
+  set_text("summary", "A web browser provided by Anatase")
+  developer_name = root.find("developer_name")
+  if developer_name is None:
+      developer_name = ET.SubElement(root, "developer_name")
+  developer_name.text = "Anatase"
+  developer = root.find("developer")
+  if developer is None:
+      developer = ET.SubElement(root, "developer")
+  name = developer.find("name")
+  if name is None:
+      name = ET.SubElement(developer, "name")
+  name.text = "Anatase"
+  tree.write(path, encoding="UTF-8", xml_declaration=True)
+  PY
+  fi
+
+  mkdir -p app/chromium/extensions
+  for dir in native-messaging-hosts policies; do
+      ln -sfn "/app/chromium/$dir" "app/chromium/extensions/$dir"
+  done

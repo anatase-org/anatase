@@ -1,0 +1,16 @@
+{
+  "homepage": "https://google.com",
+  "homepage_is_newtabpage": false,
+  "distribution": {
+     "alternate_shortcut_text": false,
+     "oem_bubble": false,
+     "chrome_shortcut_icon_index": 0,
+     "create_all_shortcuts": false,
+     "show_welcome_page": false,
+     "system_level": false,
+     "verbose_logging": false
+  },
+  "first_run_tabs": [
+     "https://google.com"
+  ]
+}

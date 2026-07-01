@@ -1,0 +1,60 @@
+Fix build error with rustc 1.95
+
+error[E0425]: cannot find type `LaneCount` in module `core::simd`
+   --> ../../third_party/rust/chromium_crates_io/vendor/bytemuck-v1/src/zeroable.rs:234:15
+    |
+234 |   core::simd::LaneCount<N>: core::simd::SupportedLaneCount,
+    |               ^^^^^^^^^ not found in `core::simd`
+error[E0405]: cannot find trait `SupportedLaneCount` in module `core::simd`
+   --> ../../third_party/rust/chromium_crates_io/vendor/bytemuck-v1/src/zeroable.rs:234:41
+    |
+234 |   core::simd::LaneCount<N>: core::simd::SupportedLaneCount,
+    |                                         ^^^^^^^^^^^^^^^^^^ not found in `core::simd`
+error[E0425]: cannot find type `LaneCount` in module `core::simd`
+   --> ../../third_party/rust/chromium_crates_io/vendor/bytemuck-v1/src/pod.rs:155:15
+    |
+155 |   core::simd::LaneCount<N>: core::simd::SupportedLaneCount,
+    |               ^^^^^^^^^ not found in `core::simd`
+error[E0405]: cannot find trait `SupportedLaneCount` in module `core::simd`
+   --> ../../third_party/rust/chromium_crates_io/vendor/bytemuck-v1/src/pod.rs:155:41
+    |
+155 |   core::simd::LaneCount<N>: core::simd::SupportedLaneCount,
+
+diff -up chromium-148.0.7778.96/third_party/rust/chromium_crates_io/vendor/bytemuck-v1/src/pod.rs.me chromium-148.0.7778.96/third_party/rust/chromium_crates_io/vendor/bytemuck-v1/src/pod.rs
+--- chromium-148.0.7778.96/third_party/rust/chromium_crates_io/vendor/bytemuck-v1/src/pod.rs.me	2026-04-28 23:05:57.000000000 +0200
++++ chromium-148.0.7778.96/third_party/rust/chromium_crates_io/vendor/bytemuck-v1/src/pod.rs	2026-05-09 20:39:28.808258788 +0200
+@@ -152,7 +152,6 @@ impl_unsafe_marker_for_simd!(
+ unsafe impl<T, const N: usize> Pod for core::simd::Simd<T, N>
+ where
+   T: core::simd::SimdElement + Pod,
+-  core::simd::LaneCount<N>: core::simd::SupportedLaneCount,
+ {
+ }
+ 
+@@ -165,6 +164,7 @@ where
+ unsafe impl<T, const N: usize> Pod for core::simd::Simd<T, N>
+ where
+   T: core::simd::SimdElement + Pod,
++  core::simd::LaneCount<N>: core::simd::SupportedLaneCount,
+ {
+ }
+ 
+diff -up chromium-148.0.7778.96/third_party/rust/chromium_crates_io/vendor/bytemuck-v1/src/zeroable.rs.me chromium-148.0.7778.96/third_party/rust/chromium_crates_io/vendor/bytemuck-v1/src/zeroable.rs
+--- chromium-148.0.7778.96/third_party/rust/chromium_crates_io/vendor/bytemuck-v1/src/zeroable.rs.me	2026-04-28 23:05:57.000000000 +0200
++++ chromium-148.0.7778.96/third_party/rust/chromium_crates_io/vendor/bytemuck-v1/src/zeroable.rs	2026-05-09 20:39:28.808258788 +0200
+@@ -231,7 +231,6 @@ impl_unsafe_marker_for_simd!(
+ unsafe impl<T, const N: usize> Zeroable for core::simd::Simd<T, N>
+ where
+   T: core::simd::SimdElement + Zeroable,
+-  core::simd::LaneCount<N>: core::simd::SupportedLaneCount,
+ {
+ }
+ 
+@@ -244,6 +243,7 @@ where
+ unsafe impl<T, const N: usize> Zeroable for core::simd::Simd<T, N>
+ where
+   T: core::simd::SimdElement + Zeroable,
++  core::simd::LaneCount<N>: core::simd::SupportedLaneCount,
+ {
+ }
+ 

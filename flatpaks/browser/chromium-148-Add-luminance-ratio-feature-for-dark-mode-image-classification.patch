@@ -1,0 +1,311 @@
+commit a207a12457397aebd0ef0898b645c62345c160ce
+Author: Prashant Nevase <pnevase@microsoft.com>
+Date:   Thu May 7 00:03:47 2026 -0700
+
+    Add luminance ratio feature for dark mode image classification.
+    
+    Image with a transparent background and light foreground (e.g.
+    a logo with light color lettering on transparent PNG) was getting
+    inverted by the dark mode filter, turning the foreground dark and
+    making it merge with dark background.
+    
+    This cl adds a luminance ratio feature to skip filtering when both
+    transparency ratio and luminance ratio exceed their thresholds. Here
+    only high luminance ratio is considered.
+    
+    This new feature corrects existing tests having images with transparent
+    background and light foreground.
+    
+    Bug: 449909524
+    Change-Id: Ia84137ad9af2c9d253a3ba46b255147e356b542f
+    Reviewed-on: https://chromium-review.googlesource.com/c/chromium/src/+/7806455
+    Commit-Queue: Prashant Nevase <pnevase@microsoft.com>
+    Reviewed-by: Stephen Chenney <schenney@chromium.org>
+    Cr-Commit-Position: refs/heads/main@{#1626754}
+
+diff --git a/third_party/blink/renderer/platform/blink_platform_unittests_bundle_data.filelist b/third_party/blink/renderer/platform/blink_platform_unittests_bundle_data.filelist
+index 6c6bf1fbda07..acb3f240d841 100644
+--- a/third_party/blink/renderer/platform/blink_platform_unittests_bundle_data.filelist
++++ b/third_party/blink/renderer/platform/blink_platform_unittests_bundle_data.filelist
+@@ -693,6 +693,9 @@
+ ../../web_tests/images/resources/small-square-with-colorspin-profile.jpg
+ ../../web_tests/images/resources/sprite_all_fragments_same.png
+ ../../web_tests/images/resources/sprite_alternate_fragments_same.png
++../../web_tests/images/resources/sprite_dark_background.png
++../../web_tests/images/resources/sprite_light_background.png
++../../web_tests/images/resources/sprite_transparent_background.png
+ ../../web_tests/images/resources/stripes-large.png
+ ../../web_tests/images/resources/stripes-small.png
+ ../../web_tests/images/resources/test-load.jpg
+diff --git a/third_party/blink/renderer/platform/graphics/dark_mode_image_classifier.cc b/third_party/blink/renderer/platform/graphics/dark_mode_image_classifier.cc
+index cf923b9493fd..8151543ee33f 100644
+--- a/third_party/blink/renderer/platform/graphics/dark_mode_image_classifier.cc
++++ b/third_party/blink/renderer/platform/graphics/dark_mode_image_classifier.cc
+@@ -21,6 +21,20 @@ namespace {
+ constexpr std::array<float, 2> kLowColorCountThreshold = {0.8125, 0.015137};
+ constexpr std::array<float, 2> kHighColorCountThreshold = {1, 0.025635};
+ 
++// Color is considered light if its luma is above this threshold.
++constexpr int kHighLightnessThreshold = 96;
++
++// Luminance ratio threshold above which the image is classified as light.
++constexpr float kHighLuminanceThreshold = 0.5f;
++
++// Transparency ratio threshold above which the image is classified as
++// transparent, meaning most of the background pixels are transparent.
++constexpr float kTransparencyRatioThreshold = 0.4f;
++
++const int kMaxSampledPixels = 1000;
++const int kMaxBlocks = 10;
++const float kMinOpaquePixelPercentageForForeground = 0.2;
++
+ bool IsColorGray(const SkColor& color) {
+   return abs(static_cast<int>(SkColorGetR(color)) -
+              static_cast<int>(SkColorGetG(color))) +
+@@ -33,9 +47,13 @@ bool IsColorTransparent(const SkColor& color) {
+   return (SkColorGetA(color) < 128);
+ }
+ 
+-const int kMaxSampledPixels = 1000;
+-const int kMaxBlocks = 10;
+-const float kMinOpaquePixelPercentageForForeground = 0.2;
++bool IsColorLight(const SkColor& color) {
++  // ITU-R BT.601 Y'CbCr based luma calculation.
++  int luma = (SkColorGetR(color) * 299 + SkColorGetG(color) * 587 +
++              SkColorGetB(color) * 114) /
++             1000;
++  return luma >= kHighLightnessThreshold;
++}
+ 
+ }  // namespace
+ 
+@@ -179,12 +197,18 @@ DarkModeImageClassifier::Features DarkModeImageClassifier::ComputeFeatures(
+     const float background_ratio) const {
+   int samples_count = static_cast<int>(sampled_pixels.size());
+ 
+-  // Is image grayscale.
+   int color_pixels = 0;
++  int high_luma_pixels = 0;
+   for (const SkColor& sample : sampled_pixels) {
+-    if (!IsColorGray(sample))
++    if (!IsColorGray(sample)) {
+       color_pixels++;
++    }
++
++    if (IsColorLight(sample)) {
++      high_luma_pixels++;
++    }
+   }
++
+   ColorMode color_mode = (color_pixels > samples_count / 100)
+                              ? ColorMode::kColor
+                              : ColorMode::kGrayscale;
+@@ -195,6 +219,8 @@ DarkModeImageClassifier::Features DarkModeImageClassifier::ComputeFeatures(
+       ComputeColorBucketsRatio(sampled_pixels, color_mode);
+   features.transparency_ratio = transparency_ratio;
+   features.background_ratio = background_ratio;
++  features.high_luminance_ratio =
++      static_cast<float>(high_luma_pixels) / samples_count;
+ 
+   return features;
+ }
+@@ -258,18 +284,26 @@ DarkModeResult DarkModeImageClassifier::ClassifyWithFeatures(
+ 
+ DarkModeResult DarkModeImageClassifier::ClassifyUsingDecisionTree(
+     const DarkModeImageClassifier::Features& features) const {
+-  float low_color_count_threshold =
+-      kLowColorCountThreshold[features.is_colorful];
+-  float high_color_count_threshold =
+-      kHighColorCountThreshold[features.is_colorful];
++  // Skip filtering for images that have transparent background and whose
++  // foreground is predominantly light. Inverting such images would make
++  // visible pixels darker, causing them to merge with dark background, so do
++  // not apply filter.
++  if (features.transparency_ratio > kTransparencyRatioThreshold &&
++      features.high_luminance_ratio > kHighLuminanceThreshold) {
++    return DarkModeResult::kDoNotApplyFilter;
++  }
+ 
+   // Very few colors means it's not a photo, apply the filter.
+-  if (features.color_buckets_ratio < low_color_count_threshold)
++  if (features.color_buckets_ratio <
++      kLowColorCountThreshold[features.is_colorful]) {
+     return DarkModeResult::kApplyFilter;
++  }
+ 
+   // Too many colors means it's probably photorealistic, do not apply it.
+-  if (features.color_buckets_ratio > high_color_count_threshold)
++  if (features.color_buckets_ratio >
++      kHighColorCountThreshold[features.is_colorful]) {
+     return DarkModeResult::kDoNotApplyFilter;
++  }
+ 
+   // In-between, decision tree cannot give a precise result.
+   return DarkModeResult::kNotClassified;
+diff --git a/third_party/blink/renderer/platform/graphics/dark_mode_image_classifier.h b/third_party/blink/renderer/platform/graphics/dark_mode_image_classifier.h
+index a660e9c999c7..9bc536750e76 100644
+--- a/third_party/blink/renderer/platform/graphics/dark_mode_image_classifier.h
++++ b/third_party/blink/renderer/platform/graphics/dark_mode_image_classifier.h
+@@ -40,6 +40,9 @@ class PLATFORM_EXPORT DarkModeImageClassifier {
+     // background.
+     float transparency_ratio;
+     float background_ratio;
++
++    // Ratio of high luminance pixels to all sampled pixels in the image.
++    float high_luminance_ratio;
+   };
+ 
+   DarkModeResult Classify(const SkPixmap& pixmap, const SkIRect& src) const;
+diff --git a/third_party/blink/renderer/platform/graphics/dark_mode_image_classifier_test.cc b/third_party/blink/renderer/platform/graphics/dark_mode_image_classifier_test.cc
+index fa54e4e8fddc..e634550498a7 100644
+--- a/third_party/blink/renderer/platform/graphics/dark_mode_image_classifier_test.cc
++++ b/third_party/blink/renderer/platform/graphics/dark_mode_image_classifier_test.cc
+@@ -63,7 +63,7 @@ TEST_F(DarkModeImageClassifierTest, ValidImage) {
+   bitmap.peekPixels(&pixmap);
+   EXPECT_EQ(image_classifier()->Classify(
+                 pixmap, SkIRect::MakeWH(image->width(), image->height())),
+-            DarkModeResult::kApplyFilter);
++            DarkModeResult::kDoNotApplyFilter);
+ }
+ 
+ TEST_F(DarkModeImageClassifierTest, InvalidImage) {
+@@ -156,6 +156,58 @@ TEST_F(DarkModeImageClassifierTest, ImageSpriteAlternateFragmentsSame) {
+       DarkModeResult::kDoNotApplyFilter);
+ }
+ 
++TEST_F(DarkModeImageClassifierTest, ImageWithTransparentBackground) {
++  scoped_refptr<BitmapImage> image;
++  SkBitmap bitmap;
++  SkPixmap pixmap;
++  image = GetImage("/images/resources/sprite_transparent_background.png");
++  bitmap = image->AsSkBitmapForCurrentFrame(kDoNotRespectImageOrientation);
++  bitmap.peekPixels(&pixmap);
++
++  EXPECT_EQ(
++      image_classifier()->Classify(pixmap, SkIRect::MakeXYWH(0, 0, 128, 24)),
++      DarkModeResult::kApplyFilter);
++
++  EXPECT_EQ(
++      image_classifier()->Classify(pixmap, SkIRect::MakeXYWH(0, 24, 128, 24)),
++      DarkModeResult::kDoNotApplyFilter);
++}
++
++TEST_F(DarkModeImageClassifierTest, ImageWithLightBackground) {
++  scoped_refptr<BitmapImage> image;
++  SkBitmap bitmap;
++  SkPixmap pixmap;
++  image = GetImage("/images/resources/sprite_light_background.png");
++  bitmap = image->AsSkBitmapForCurrentFrame(kDoNotRespectImageOrientation);
++  bitmap.peekPixels(&pixmap);
++
++  // TODO(pnevase): Handle this case better.
++  EXPECT_EQ(
++      image_classifier()->Classify(pixmap, SkIRect::MakeXYWH(0, 0, 128, 24)),
++      DarkModeResult::kDoNotApplyFilter);
++
++  EXPECT_EQ(
++      image_classifier()->Classify(pixmap, SkIRect::MakeXYWH(0, 24, 128, 24)),
++      DarkModeResult::kApplyFilter);
++}
++
++TEST_F(DarkModeImageClassifierTest, ImageWithDarkBackground) {
++  scoped_refptr<BitmapImage> image;
++  SkBitmap bitmap;
++  SkPixmap pixmap;
++  image = GetImage("/images/resources/sprite_dark_background.png");
++  bitmap = image->AsSkBitmapForCurrentFrame(kDoNotRespectImageOrientation);
++  bitmap.peekPixels(&pixmap);
++
++  EXPECT_EQ(
++      image_classifier()->Classify(pixmap, SkIRect::MakeXYWH(0, 0, 128, 24)),
++      DarkModeResult::kApplyFilter);
++
++  EXPECT_EQ(
++      image_classifier()->Classify(pixmap, SkIRect::MakeXYWH(0, 24, 128, 24)),
++      DarkModeResult::kDoNotApplyFilter);
++}
++
+ TEST_F(DarkModeImageClassifierTest, BlockSamples) {
+   SkBitmap bitmap;
+   SkPixmap pixmap;
+@@ -282,12 +334,13 @@ TEST_F(DarkModeImageClassifierTest, FeaturesAndClassification) {
+   EXPECT_NEAR(0.1875f, features.color_buckets_ratio, kEpsilon);
+   EXPECT_NEAR(0.0f, features.transparency_ratio, kEpsilon);
+   EXPECT_NEAR(0.0f, features.background_ratio, kEpsilon);
++  EXPECT_NEAR(0.3044f, features.high_luminance_ratio, kEpsilon);
+ 
+   // Test Case 2:
+   // Grayscale
+   // Color Buckets Ratio: Medium
+-  // Decision Tree: Can't Decide
+-  // Neural Network: Apply
++  // Decision Tree: Do Not Apply
++  // Neural Network: NA
+   image = GetImage("/images/resources/apng08-ref.png");
+   bitmap = image->AsSkBitmapForCurrentFrame(kDoNotRespectImageOrientation);
+   bitmap.peekPixels(&pixmap);
+@@ -298,16 +351,17 @@ TEST_F(DarkModeImageClassifierTest, FeaturesAndClassification) {
+   EXPECT_EQ(image_classifier()->ClassifyWithFeatures(features),
+             DarkModeResult::kDoNotApplyFilter);
+   EXPECT_EQ(image_classifier()->ClassifyUsingDecisionTree(features),
+-            DarkModeResult::kNotClassified);
++            DarkModeResult::kDoNotApplyFilter);
+   EXPECT_FALSE(features.is_colorful);
+   EXPECT_NEAR(0.8125f, features.color_buckets_ratio, kEpsilon);
+   EXPECT_NEAR(0.446667f, features.transparency_ratio, kEpsilon);
+   EXPECT_NEAR(0.03f, features.background_ratio, kEpsilon);
++  EXPECT_NEAR(0.6144578f, features.high_luminance_ratio, kEpsilon);
+ 
+   // Test Case 3:
+   // Color
+   // Color Buckets Ratio: Low
+-  // Decision Tree: Apply
++  // Decision Tree: Do Not Apply
+   // Neural Network: NA.
+   image = GetImage("/images/resources/twitter_favicon.ico");
+   bitmap = image->AsSkBitmapForCurrentFrame(kDoNotRespectImageOrientation);
+@@ -317,13 +371,14 @@ TEST_F(DarkModeImageClassifierTest, FeaturesAndClassification) {
+                                SkIRect::MakeWH(image->width(), image->height()))
+                  .value();
+   EXPECT_EQ(image_classifier()->ClassifyWithFeatures(features),
+-            DarkModeResult::kApplyFilter);
++            DarkModeResult::kDoNotApplyFilter);
+   EXPECT_EQ(image_classifier()->ClassifyUsingDecisionTree(features),
+-            DarkModeResult::kApplyFilter);
++            DarkModeResult::kDoNotApplyFilter);
+   EXPECT_TRUE(features.is_colorful);
+   EXPECT_NEAR(0.0002441f, features.color_buckets_ratio, kEpsilon);
+   EXPECT_NEAR(0.542092f, features.transparency_ratio, kEpsilon);
+   EXPECT_NEAR(0.1500000f, features.background_ratio, kEpsilon);
++  EXPECT_NEAR(1.0f, features.high_luminance_ratio, kEpsilon);
+ 
+   // Test Case 4:
+   // Color
+@@ -345,6 +400,7 @@ TEST_F(DarkModeImageClassifierTest, FeaturesAndClassification) {
+   EXPECT_NEAR(0.032959f, features.color_buckets_ratio, kEpsilon);
+   EXPECT_NEAR(0.0f, features.transparency_ratio, kEpsilon);
+   EXPECT_NEAR(0.0f, features.background_ratio, kEpsilon);
++  EXPECT_NEAR(0.33f, features.high_luminance_ratio, kEpsilon);
+ 
+   // Test Case 5:
+   // Color
+@@ -366,6 +422,7 @@ TEST_F(DarkModeImageClassifierTest, FeaturesAndClassification) {
+   EXPECT_NEAR(0.0151367f, features.color_buckets_ratio, kEpsilon);
+   EXPECT_NEAR(0.0f, features.transparency_ratio, kEpsilon);
+   EXPECT_NEAR(0.0f, features.background_ratio, kEpsilon);
++  EXPECT_NEAR(0.9255555272102356f, features.high_luminance_ratio, kEpsilon);
+ }
+ 
+ }  // namespace blink
+diff --git a/third_party/blink/web_tests/images/resources/sprite_dark_background.png b/third_party/blink/web_tests/images/resources/sprite_dark_background.png
+new file mode 100644
+index 000000000000..cc67ef3e897d
+Binary files /dev/null and b/third_party/blink/web_tests/images/resources/sprite_dark_background.png differ
+diff --git a/third_party/blink/web_tests/images/resources/sprite_light_background.png b/third_party/blink/web_tests/images/resources/sprite_light_background.png
+new file mode 100644
+index 000000000000..3977af4d55fb
+Binary files /dev/null and b/third_party/blink/web_tests/images/resources/sprite_light_background.png differ
+diff --git a/third_party/blink/web_tests/images/resources/sprite_transparent_background.png b/third_party/blink/web_tests/images/resources/sprite_transparent_background.png
+new file mode 100644
+index 000000000000..df08f2291eb9
+Binary files /dev/null and b/third_party/blink/web_tests/images/resources/sprite_transparent_background.png differ
