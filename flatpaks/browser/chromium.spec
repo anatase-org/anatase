@@ -1052,6 +1052,14 @@ CHROMIUM_CORE_GN_DEFINES+=' enable_vr=false'
 CHROMIUM_CORE_GN_DEFINES+=' build_dawn_tests=false enable_perfetto_unittests=false'
 CHROMIUM_CORE_GN_DEFINES+=' disable_fieldtrial_testing_config=true'
 CHROMIUM_CORE_GN_DEFINES+=' symbol_level=0 blink_symbol_level=0 v8_symbol_level=0'
+# Some Chromium ACTION steps fan out into memory-heavy script/tool work; keep
+# that pool below the C/C++ compile parallelism to avoid transient OOM spikes.
+# FIXME: THIS IS SLOWER AND IF YOU PAY FOR RUNNERS AND THEY TAKE LONGER IT'S SAD
+action_pool_depth=$(( (%{numjobs} + 3) / 4 ))
+if [ "$action_pool_depth" -lt 1 ]; then
+	action_pool_depth=1
+fi
+CHROMIUM_CORE_GN_DEFINES+=" action_pool_depth=$action_pool_depth"
 CHROMIUM_CORE_GN_DEFINES+=' angle_has_histograms=false'
 CHROMIUM_CORE_GN_DEFINES+=' use_system_libffi=true'
 # drop unrar
