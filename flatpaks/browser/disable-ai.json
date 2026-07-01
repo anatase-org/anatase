@@ -1,4 +1,7 @@
 {
+  "GenAiDefaultSettings": 2,
   "GenAILocalFoundationalModelSettings": 1,
-  "AIModeSettings": 2
+  "GeminiSettings": 1,
+  "LensOverlaySettings": 1,
+  "AIModeSettings": 1
 }
