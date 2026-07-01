@@ -28,6 +28,10 @@ packages:
     - mtools
     - erofs-utils
 
+    # Flatpak runtime libraries
+    - libcxx # chromium qt theme
+    - libcxxabi # chromium qt theme
+
 build-deps:
   - bash
   - cmake
