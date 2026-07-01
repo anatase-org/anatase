@@ -80,6 +80,20 @@ flatpaks:
 
 installer:
   ostree: True
+
+  flatpaks:
+    - repo: anatase
+      preinstall:
+        - flatpaks/ark
+        - flatpaks/filelight
+        - flatpaks/gwenview
+        - flatpaks/kate
+        - flatpaks/kcalc
+        - flatpaks/okular
+      installer:
+        # Codecs, sigh
+        - flatpaks/browser
+
   files:
     - installer/anaconda.conf
     - installer/anatase.ks

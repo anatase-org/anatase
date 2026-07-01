@@ -1,5 +1,8 @@
 version: 1
 
+env:
+  distro: $distro
+
 packages:
     # Atomic boot
     - bootupd
@@ -64,6 +67,7 @@ files:
   - flatpak/anatase-runtime-deploy
   - flatpak/anatase-flatpak-extensions
   - flatpak/anatase-flatpak-extensions.service
+  - flatpak/flathub.flatpakrepo
 
 postprocess: |
     set -eux
@@ -108,6 +112,20 @@ postprocess: |
     if [ -f /usr/lib/tmpfiles.d/provision.conf ]; then
         sed -i 's|^d- /root :0700 root :root -$|# d- /root :0700 root :root -|' /usr/lib/tmpfiles.d/provision.conf
     fi
+
+    #
+    # Flatpak Remotes
+    #
+
+    install -dm0755 /usr/share/flatpak/remotes.d
+    install -Dm0644 /files/flatpak/flathub.flatpakrepo \
+        /usr/share/flatpak/remotes.d/flathub.flatpakrepo
+    cat > /usr/share/flatpak/remotes.d/anatase.flatpakrepo <<EOF
+    [Flatpak Repo]
+    Title=Anatase
+    Url=oci+https://flatpaks.anatase.org/${distro}
+    xa.prio=10
+    EOF
 
     #
     # Flatpak Extension Management
@@ -171,6 +189,63 @@ postprocess: |
     enable anatase-flatpak-extensions.service
     EOF
     systemctl preset anatase-flatpak-extensions.service || true
+
+    #
+    # Atomic Desktop Maintenance
+    #
+
+    cat > /usr/lib/systemd/system/fedora-atomic-desktop-appstream-cache-refresh.service <<'EOF'
+    [Unit]
+    Description=Refresh appstream cache on Atomic Desktops
+    Documentation=https://gitlab.com/fedora/ostree/sig/-/work_items/103
+    ConditionPathIsReadWrite=/var
+    ConditionPathExists=/run/ostree-booted
+    Wants=network-online.target
+    After=local-fs.target network-online.target
+
+    [Service]
+    Type=oneshot
+    RemainAfterExit=yes
+    ExecStart=/usr/bin/flatpak --system update --appstream
+    ExecStart=/usr/bin/appstreamcli refresh --force
+    Nice=19
+    IOWeight=10
+
+    [Install]
+    WantedBy=multi-user.target
+    EOF
+
+    cat > /usr/lib/systemd/system/fedora-atomic-desktop-mandb-update.service <<'EOF'
+    [Unit]
+    Description=Update mandb cache on Atomic Desktops
+    Documentation=https://gitlab.com/fedora/ostree/sig/-/work_items/62
+    ConditionPathIsReadWrite=/var
+    ConditionPathExists=/run/ostree-booted
+    After=local-fs.target
+
+    [Service]
+    Type=oneshot
+    RemainAfterExit=yes
+    Environment=MAN_NO_LOCALE_WARNING=1
+    ExecStart=/usr/bin/mandb -q
+    Nice=19
+    IOWeight=10
+
+    [Install]
+    WantedBy=multi-user.target
+    EOF
+
+    cat >> /usr/lib/systemd/system-preset/81-atomic-desktop.preset <<'EOF'
+
+    # See: https://gitlab.com/fedora/ostree/sig/-/work_items/103
+    enable fedora-atomic-desktop-appstream-cache-refresh.service
+
+    # See: https://gitlab.com/fedora/ostree/sig/-/work_items/62
+    enable fedora-atomic-desktop-mandb-update.service
+    EOF
+
+    systemctl preset fedora-atomic-desktop-appstream-cache-refresh.service || true
+    systemctl preset fedora-atomic-desktop-mandb-update.service || true
 
     #
     # Installer fixups

@@ -1,15 +1,11 @@
 version: 1
 
-env:
-  distro: $distro
-
 files:
   - sysctl.conf
   - memlock.conf
   - modules-load.conf
   - zram-generator.conf
   - dev-hugepages1G.mount
-  - flatpaks.service
   - override-zsh.sh
 
 build-deps:
@@ -37,12 +33,6 @@ postprocess: |
   # Disable flatpak fedora remotes (they come from the flatpak package)
   rm -rf /etc/systemd/system/multi-user.target.wants/flatpak-add-fedora-repos.service \
     /usr/lib/systemd/system/flatpak-add-fedora-repos.service
-  # Add Flatpak remotes with a similar service
-  cp /files/flatpaks.service \
-    /usr/lib/systemd/system/anatase-flatpaks.service
-  sed -i "s|%distro%|${distro}|g" \
-    /usr/lib/systemd/system/anatase-flatpaks.service
-  systemctl enable anatase-flatpaks
 
   #
   # System policy

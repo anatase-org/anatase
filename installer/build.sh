@@ -89,21 +89,3 @@ polkit.addRule(function(action, subject) {
     }
 });
 EOF
-
-# Install flathub apps
-flatpak remote-add --system --if-not-exists --title "Flathub" \
-    flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak remote-modify --system --enable flathub
-
-flatpak_arch=$(uname -m)
-flatpak install --system -y --noninteractive flathub \
-    "app/org.kde.kcalc/${flatpak_arch}/stable" \
-    "app/org.kde.okular/${flatpak_arch}/stable" \
-    "app/org.kde.gwenview/${flatpak_arch}/stable" \
-    "app/org.kde.kate/${flatpak_arch}/stable" \
-    "app/org.kde.ark/${flatpak_arch}/stable" \
-    "app/org.kde.filelight/${flatpak_arch}/stable"
-flatpak update --system --appstream -y --noninteractive
-
-rm -rf /var/lib/flatpak-installer
-cp -alT /var/lib/flatpak /var/lib/flatpak-installer
