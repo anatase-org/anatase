@@ -77,11 +77,15 @@ specs:
     packages:
       - chromium
       - chromium-common
-      - chromium-qt5-ui
+      # - chromium-qt5-ui # we use qt6
       - chromium-qt6-ui
     files:
       - "*.patch"
       - browser.svg
+      - browser-outline.svg
+      - browser-outline.icon
+      - "browser-outline-*.png"
+      - new-tab-google-logo.svg
       - "chromium-browser-*.png"
       - chromium-browser.appdata.xml
       - chromium-browser.desktop

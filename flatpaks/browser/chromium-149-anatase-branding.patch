@@ -9,7 +9,7 @@
            </message>
            <message name="IDS_SHORT_PRODUCT_NAME" desc="The Chrome application short name." translateable="false">
 -            Chromium
-+            Anatase
++            Browser
            </message>
          </else>
        </if>
@@ -30,7 +30,78 @@
 +          Welcome to Anatase Browser
          </message>
        </if>
-       <if expr="is_linux">
+      <if expr="is_linux">
+@@ -497,7 +497,7 @@
+         </then>
+         <else>
+           <message name="IDS_ABOUT_VERSION_COPYRIGHT" desc="Copyright information on the about pages">
+-            Copyright <ph name="YEAR">{0,date,y}<ex>2016</ex></ph> The Chromium Authors. All rights reserved.
++            Copyright <ph name="YEAR">{0,date,y}<ex>2026</ex></ph> Anatase &amp; the Chromium Authors.
+           </message>
+       </else>
+      </if>
+@@ -1049,7 +1049,7 @@
+           </then>
+           <else>
+             <message name="IDS_ABOUT" desc="In Title Case: The text label of the About Chrome menu item">
+-              About &amp;Chromium
++              About &amp;Anatase Browser
+             </message>
+           </else>
+         </if>
+@@ -1066,7 +1066,7 @@
+           </then>
+           <else>
+             <message name="IDS_ABOUT" desc="The text label of the About Chrome menu item">
+-              About &amp;Chromium
++              About &amp;Anatase Browser
+             </message>
+           </else>
+         </if>
+@@ -1076,7 +1076,7 @@
+       </if>
+       <if expr="is_chromeos">
+         <message name="IDS_ABOUT" desc="The text label of the About Chrome menu item">
+-          About &amp;Chromium
++          About &amp;Anatase Browser
+         </message>
+         <message name="IDS_RELAUNCH_TO_UPDATE" desc="The text label of the relaunch to update ChromeOS menu item">
+           Relaunch to update &amp;ChromiumOS
+@@ -1100,7 +1100,7 @@
+         <if expr="use_titlecase">
+           <then>
+             <message name="IDS_CUSTOMIZE_CHROME" desc="In Title Case: The text label of the Customize Chrome menu item">
+-              C&amp;ustomize Your Chromium
++              C&amp;ustomize Browser
+             </message>
+             <message name="IDS_OTHER_CHROME_PROFILES_TITLE" desc="In Title Case: The title of the Other Chrome profiles section">
+               Other Chromium Profiles
+@@ -1111,6 +1111,6 @@
+           <else>
+             <message name="IDS_CUSTOMIZE_CHROME" desc="The text label of the Customize Chrome menu item">
+-              C&amp;ustomize your Chromium
++              C&amp;ustomize Browser
+             </message>
+             <message name="IDS_OTHER_CHROME_PROFILES_TITLE" desc="The title of the Other Chrome profiles section">
+               Other Chromium profiles
+@@ -1243,7 +1243,7 @@
+         </then>
+         <else>
+           <message name="IDS_NTP_CUSTOMIZE_BUTTON_LABEL" desc="Label for button on the New Tab Page that opens dialog to customize Chromium browser.">
+-            Customize Chromium
++            Customize Browser
+           </message>
+         </else>
+       </if>
+@@ -1886,7 +1886,7 @@
+ 
+       <!-- Side panel strings -->
+       <message name="IDS_SIDE_PANEL_CUSTOMIZE_CHROME_TITLE" desc="The name of the Customize Chrome feature in the side panel combo box.">
+-        Customize Chromium
++        Customize Browser
+       </message>
+ 
+       <!-- History Strings -->
 --- a/chrome/app/settings_chromium_strings.grdp
 +++ b/chrome/app/settings_chromium_strings.grdp
 @@ -4,7 +4,7 @@
@@ -74,3 +145,34 @@
      </message>
    </if>
    <if expr="is_chromeos">
+--- a/chrome/app/settings_strings.grdp
++++ b/chrome/app/settings_strings.grdp
+@@ -3835,7 +3835,7 @@
+ 
+     <!-- Sync / People Page -->
+     <message name="IDS_SETTINGS_PEOPLE" desc="Name of the settings page which manages the user's relationship to Google.">
+-      You and Google
++      Your Profile
+     </message>
+     <message name="IDS_SETTINGS_CHANGE_PICTURE_PROFILE_PHOTO" desc="The text on the Google profile photo of the user.">
+       Google Profile photo
+--- a/components/components_chromium_strings.grd
++++ b/components/components_chromium_strings.grd
+@@ -276,7 +276,7 @@
+       </message>
+ 
+       <message name="IDS_VERSION_UI_LICENSE" desc="The label below the copyright message, containing the URLs.">
+-        Chromium is made possible by the <ph name="BEGIN_LINK_CHROMIUM">&lt;a target="_blank" href="$1" aria-description="$3"&gt;</ph>Chromium<ph name="END_LINK_CHROMIUM">&lt;/a&gt;</ph> open source project and other <ph name="BEGIN_LINK_OSS">&lt;a target="_blank" href="$2" aria-description="$3"&gt;</ph>open source software<ph name="END_LINK_OSS">&lt;/a&gt;</ph>.
++        Anatase Browser is made possible by the <ph name="BEGIN_LINK_CHROMIUM">&lt;a target="_blank" href="$1" aria-description="$3"&gt;</ph>Chromium<ph name="END_LINK_CHROMIUM">&lt;/a&gt;</ph> open source project and other <ph name="BEGIN_LINK_OSS">&lt;a target="_blank" href="$2" aria-description="$3"&gt;</ph>open source software<ph name="END_LINK_OSS">&lt;/a&gt;</ph>.
+       </message>
+       <if expr="is_chromeos">
+         <message name="IDS_VERSION_UI_LICENSE_CHROMIUM" desc="The label below the copyright message, containing the link to the Chromium project.">
+@@ -307,7 +307,7 @@
+ 
+       <!-- Session Crash -->
+       <message name="IDS_SESSION_CRASHED_VIEW_MESSAGE" desc="Message shown when the last session didn't exit cleanly.">
+-        Chromium didn't shut down correctly.
++        Anatase Browser didn't shut down correctly.
+       </message>
+ 
+       <!-- Device Chooser Prompt -->

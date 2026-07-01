@@ -369,6 +369,11 @@ Source19: chromium-browser-256.png
 Source20: chromium-browser-16.png
 Source21: chromium-browser-32.png
 Source22: browser.svg
+Source23: browser-outline.svg
+Source24: new-tab-google-logo.svg
+Source25: browser-outline-16.png
+Source26: browser-outline-32.png
+Source27: browser-outline.icon
 
 BuildRequires: clang
 BuildRequires: clang-tools-extra
@@ -800,6 +805,86 @@ cp -a %{SOURCE15} chrome/app/theme/chromium/linux/product_logo_24.png
 cp -a %{SOURCE17} chrome/app/theme/chromium/linux/product_logo_64.png
 cp -a %{SOURCE18} chrome/app/theme/chromium/linux/product_logo_128.png
 cp -a %{SOURCE19} chrome/app/theme/chromium/linux/product_logo_256.png
+cp -a %{SOURCE20} chrome/app/theme/default_100_percent/chromium/product_logo_16.png
+cp -a %{SOURCE21} chrome/app/theme/default_100_percent/chromium/product_logo_32.png
+cp -a %{SOURCE20} chrome/app/theme/default_100_percent/chromium/linux/product_logo_16.png
+cp -a %{SOURCE21} chrome/app/theme/default_100_percent/chromium/linux/product_logo_32.png
+cp -a %{SOURCE21} chrome/app/theme/default_200_percent/chromium/product_logo_16.png
+cp -a %{SOURCE17} chrome/app/theme/default_200_percent/chromium/product_logo_32.png
+cp -a %{SOURCE25} chrome/app/theme/default_100_percent/common/favicon_ntp.png
+cp -a %{SOURCE26} chrome/app/theme/default_200_percent/common/favicon_ntp.png
+cp -a %{SOURCE25} chrome/app/theme/default_100_percent/common/favicon_settings.png
+cp -a %{SOURCE26} chrome/app/theme/default_200_percent/common/favicon_settings.png
+cp -a %{SOURCE24} chrome/browser/resources/new_tab_page/icons/google_logo.svg
+cp -a %{SOURCE27} components/omnibox/browser/vector_icons/product.icon
+cp -a %{SOURCE27} components/omnibox/browser/vector_icons/product_chrome_refresh.icon
+cp -a %{SOURCE23} ui/webui/resources/images/chrome_logo_dark.svg
+
+# Replace the shared chrome-product WebUI vector while leaving existing
+# chrome-product references intact.
+python3 - "%{SOURCE23}" <<'PY'
+from html import escape
+from pathlib import Path
+import sys
+import xml.etree.ElementTree as ET
+
+path = Path("ui/webui/resources/cr_elements/icons.html.ts")
+text = path.read_text()
+old = '''      <g id="chrome-product" viewBox="0 -960 960 960">
+        <path d="M336-479q0 60 42 102t102 42q60 0 102-42t42-102q0-60-42-102t-102-42q-60 0-102 42t-42 102Zm144 216q11 0 22.5-.5T525-267L427-99q-144-16-237.5-125T96-479q0-43 9.5-84.5T134-645l160 274q28 51 78 79.5T480-263Zm0-432q-71 0-126.5 42T276-545l-98-170q53-71 132.5-109.5T480-863q95 0 179 45t138 123H480Zm356 72q15 35 21.5 71t6.5 73q0 155-100 260.5T509-96l157-275q14-25 22-52t8-56q0-40-15-77t-41-67h196Z">
+        </path>
+      </g>'''
+
+def local_name(tag):
+    return tag.rsplit("}", 1)[-1]
+
+def style_value(style, name):
+    for part in style.split(";"):
+        key, _, value = part.partition(":")
+        if key.strip() == name:
+            return value.strip()
+    return ""
+
+outline = ET.parse(sys.argv[1]).getroot()
+view_box = outline.attrib["viewBox"]
+paths = []
+
+def collect_paths(element, transforms):
+    transform = element.attrib.get("transform")
+    if transform:
+        transforms = [*transforms, transform]
+    if local_name(element.tag) == "path" and element.attrib.get("d"):
+        paths.append((element.attrib["d"], transforms, element.attrib.get("style", "")))
+    for child in element:
+        collect_paths(child, transforms)
+
+collect_paths(outline, [])
+if not paths:
+    raise SystemExit(f"no paths found in {sys.argv[1]}")
+
+lines = [f'      <g id="chrome-product" viewBox="{escape(view_box)}">']
+for d, transforms, style in paths:
+    attrs = [f'd="{escape(d)}"']
+    if transforms:
+        attrs.append(f'transform="{escape(" ".join(transforms))}"')
+    fill = style_value(style, "fill")
+    if fill and fill != "none":
+        attrs.append('fill="currentColor"')
+    stroke = style_value(style, "stroke")
+    if stroke and stroke != "none":
+        attrs.append('stroke="currentColor"')
+        for name in ("stroke-width", "stroke-miterlimit", "stroke-dasharray"):
+            value = style_value(style, name)
+            if value and value != "none":
+                attrs.append(f'{name}="{escape(value)}"')
+    lines.append(f'        <path {" ".join(attrs)}></path>')
+lines.append("      </g>")
+new = "\n".join(lines)
+
+if old not in text:
+    raise SystemExit(f"chrome-product icon block not found in {path}")
+path.write_text(text.replace(old, new, 1))
+PY
 
 # Change shebang in all relevant files in this directory and all subdirectories
 # See `man find` for how the `-exec command {} +` syntax works

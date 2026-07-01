@@ -1,27 +1,6 @@
 [Desktop Entry]
 Version=1.0
 Name=Anatase Browser
-Name[ast]=Restolador web Chromium
-Name[ca]=Navegador web Chromium
-Name[de]=Chromium-Webbrowser
-Name[es]=Navegador web Chromium
-Name[fr]=Navigateur Web Chromium
-Name[gl]=Navegador web Chromium
-Name[he]=דפדפן האינטרנט Chromium
-Name[hr]=Chromium web preglednik
-Name[hu]=Chromium webböngésző
-Name[id]=Peramban Web Chromium
-Name[it]=Browser web Chromium
-Name[ja]=Chromium ウェブ・ブラウザ
-Name[ko]=Chromium 웹 브라우저
-Name[pt_BR]=Chromium Navegador da Internet
-Name[ru]=Веб-браузер Chromium
-Name[sl]=Chromium spletni brskalnik
-Name[sv]=Webbläsaren Chromium
-Name[ug]=Chromium توركۆرگۈ
-Name[zh_CN]=Chromium 网页浏览器
-Name[zh_HK]=Chromium 網頁瀏覽器
-Name[zh_TW]=Chromium 網頁瀏覽器
 Comment=Access the Internet
 Comment[ar]=الدخول إلى الإنترنت
 Comment[ast]=Accesu a Internet
