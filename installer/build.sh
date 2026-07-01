@@ -26,6 +26,15 @@ passwd -d anatase || true
 install -dm0755 -o anatase -g anatase /home/anatase
 install -Dm0755 -o anatase -g anatase /files/installer/anatase-webui.desktop \
     /home/anatase/Desktop/anatase-webui.desktop
+install -Dm0644 -o anatase -g anatase /usr/share/icons/hicolor/256x256/apps/anatase-logo-icon.png \
+    /home/anatase/.face
+install -Dm0644 /usr/share/icons/hicolor/256x256/apps/anatase-logo-icon.png \
+    /var/lib/AccountsService/icons/anatase
+install -dm0755 /var/lib/AccountsService/users
+cat > /var/lib/AccountsService/users/anatase <<'EOF'
+[User]
+Icon=/var/lib/AccountsService/icons/anatase
+EOF
 
 install -Dm0644 /files/installer/anaconda.conf \
     /etc/anaconda/conf.d/90-anatase-installer.conf
