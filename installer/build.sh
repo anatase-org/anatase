@@ -10,8 +10,6 @@ install -Dm0644 /files/installer/anatase.ks \
     /usr/share/anatase-installer/anatase.ks
 install -Dm0644 /files/installer/anatase.ks \
     /usr/share/anaconda/interactive-defaults.ks
-install -Dm0644 /files/installer/anatase-webui.desktop \
-    /etc/xdg/autostart/anatase-webui.desktop
 install -Dm0755 /files/installer/anatase-webui.desktop \
     /etc/skel/Desktop/anatase-webui.desktop
 
