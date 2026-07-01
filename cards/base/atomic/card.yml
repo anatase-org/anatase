@@ -130,8 +130,9 @@ postprocess: |
     name=${runtime_id}
 
     [Environment]
-    QT_PLUGIN_PATH=/app/lib64/qt6/plugins:/usr/share/runtime/lib/plugins
-    QML2_IMPORT_PATH=/app/lib64/qt6/qml
+    QT_PLUGIN_PATH=/app/lib64/qt6/plugins:/usr/lib64/qt6/plugins
+    QML2_IMPORT_PATH=/app/lib64/qt6/qml:/usr/lib64/qt6/qml
+    QT_QPA_PLATFORMTHEME=kde
     EOF
     # DO NOT TOUCH THIS CASUALLY.
     # anatase-runtime-deploy embeds the Flatpak-imported OSTree commit and OCI
