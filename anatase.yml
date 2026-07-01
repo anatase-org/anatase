@@ -83,16 +83,17 @@ installer:
 
   flatpaks:
     - repo: anatase
+      nodeps: True
       preinstall:
-        - flatpaks/ark
-        - flatpaks/filelight
-        - flatpaks/gwenview
-        - flatpaks/kate
-        - flatpaks/kcalc
-        - flatpaks/okular
+        - org.anatase.ArchiveManager
+        - org.anatase.DiskUsageAnalyzer
+        - org.anatase.ImageViewer
+        - org.anatase.TextEditor
+        - org.anatase.Calculator
+        - org.anatase.DocumentViewer
       installer:
         # Codecs, sigh
-        - flatpaks/browser
+        - org.anatase.Browser
 
   files:
     - installer/anaconda.conf
