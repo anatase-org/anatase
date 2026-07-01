@@ -337,6 +337,7 @@ Patch501: flatpak-Adjust-paths-for-the-sandbox.patch
 # remove rollup binary, build with wasm-rollup 
 Patch520: build-with-wasm-rollup.patch
 Patch521: disable-ai.patch
+Patch522: chromium-149-anatase-branding.patch
 
 # Upstream patches
 # Fix auto dark mode
@@ -365,6 +366,9 @@ Source16: chromium-browser-48.png
 Source17: chromium-browser-64.png
 Source18: chromium-browser-128.png
 Source19: chromium-browser-256.png
+Source20: chromium-browser-16.png
+Source21: chromium-browser-32.png
+Source22: browser.svg
 
 BuildRequires: clang
 BuildRequires: clang-tools-extra
@@ -770,6 +774,7 @@ Qt6 UI for chromium.
 
 %patch -P520 -p1 -b .build-with-wasm-rollup
 %patch -P521 -p1 -b .disable-ai
+%patch -P522 -p1 -b .anatase-branding
 
 # Upstream patches
 # improve auto dark image inversion logic
@@ -780,6 +785,21 @@ Qt6 UI for chromium.
 %patch -P604 -p1 -b .Add-chromatic-pixels-feature-based-on-muted-hue-colors-for-dark-mode
 %patch -P605 -p1 -b .Make-dark-mode-apply-filter-to-images-irrespective-of-layout-zoom
 %patch -P606 -p1 -b .chromium-149-use-64px-css-pixels-absolute-threshold-for-dark-image-classification
+
+# Replace Chromium's bundled product logos used by chrome:// pages.
+cp -a %{SOURCE20} chrome/app/theme/chromium/product_logo_16.png
+cp -a %{SOURCE15} chrome/app/theme/chromium/product_logo_24.png
+cp -a %{SOURCE21} chrome/app/theme/chromium/product_logo_32.png
+cp -a %{SOURCE16} chrome/app/theme/chromium/product_logo_48.png
+cp -a %{SOURCE17} chrome/app/theme/chromium/product_logo_64.png
+cp -a %{SOURCE18} chrome/app/theme/chromium/product_logo_128.png
+cp -a %{SOURCE19} chrome/app/theme/chromium/product_logo_256.png
+cp -a %{SOURCE22} chrome/app/theme/chromium/product_logo.svg
+cp -a %{SOURCE20} chrome/app/theme/chromium/linux/product_logo_16.png
+cp -a %{SOURCE15} chrome/app/theme/chromium/linux/product_logo_24.png
+cp -a %{SOURCE17} chrome/app/theme/chromium/linux/product_logo_64.png
+cp -a %{SOURCE18} chrome/app/theme/chromium/linux/product_logo_128.png
+cp -a %{SOURCE19} chrome/app/theme/chromium/linux/product_logo_256.png
 
 # Change shebang in all relevant files in this directory and all subdirectories
 # See `man find` for how the `-exec command {} +` syntax works
@@ -820,9 +840,6 @@ rm -rf third_party/libusb/src/libusb/libusb.h
 # we _shouldn't need to do this, but it looks like we do.
 cp -a $(pkg-config --variable=includedir libusb-1.0)/libusb-1.0/libusb.h third_party/libusb/src/libusb/libusb.h
 %endif
-
-# Hard code extra version
-sed -i 's/getenv("CHROME_VERSION_EXTRA")/"Fedora Project"/' chrome/common/channel_info_posix.cc
 
 # Fix hardcoded path in remoting code
 sed -i 's|/opt/google/chrome-remote-desktop|%{crd_path}|g' remoting/host/setup/daemon_controller_delegate_linux_single_process.cc
@@ -1079,9 +1096,6 @@ cp -a %{SOURCE3} %{buildroot}%{chromium_path}/chromium-browser.sh
 echo "# system wide chromium flags" > %{buildroot}%{_sysconfdir}/%{name}/%{name}.conf
 %endif
 
-export BUILD_TARGET=`cat /etc/redhat-release`
-
-sed -i "s|@@BUILD_TARGET@@|$BUILD_TARGET|g" %{buildroot}%{chromium_path}/chromium-browser.sh
 sed -i "s|@@EXTRA_FLAGS@@||g" %{buildroot}%{chromium_path}/chromium-browser.sh
 
 ln -s ../..%{chromium_path}/chromium-browser.sh %{buildroot}%{_bindir}/chromium-browser
@@ -1154,7 +1168,9 @@ mkdir -p %{buildroot}%{_sysconfdir}/chromium/policies/recommended
 # disable AI
 cp -a %{SOURCE14} %{buildroot}%{_sysconfdir}/chromium/policies/managed/
 
+install -Dm0644 %{SOURCE20} %{buildroot}%{_datadir}/icons/hicolor/16x16/apps/chromium-browser.png
 install -Dm0644 %{SOURCE15} %{buildroot}%{_datadir}/icons/hicolor/24x24/apps/chromium-browser.png
+install -Dm0644 %{SOURCE21} %{buildroot}%{_datadir}/icons/hicolor/32x32/apps/chromium-browser.png
 install -Dm0644 %{SOURCE16} %{buildroot}%{_datadir}/icons/hicolor/48x48/apps/chromium-browser.png
 install -Dm0644 %{SOURCE17} %{buildroot}%{_datadir}/icons/hicolor/64x64/apps/chromium-browser.png
 install -Dm0644 %{SOURCE18} %{buildroot}%{_datadir}/icons/hicolor/128x128/apps/chromium-browser.png

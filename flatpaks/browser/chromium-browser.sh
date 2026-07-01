@@ -25,8 +25,6 @@ else
   [ -f "$xdg_app_dir/mimeapps.list" ] || touch "$xdg_app_dir/mimeapps.list"
 fi
 
-export CHROME_VERSION_EXTRA="Built from source for @@BUILD_TARGET@@"
-
 # We don't want bug-buddy intercepting our crashes. http://crbug.com/24120
 export GNOME_DISABLE_CRASH_DIALOG=SET_BY_GOOGLE_CHROME
 

@@ -1,6 +1,6 @@
 {
   "homepage": "https://google.com",
-  "homepage_is_newtabpage": false,
+  "homepage_is_newtabpage": true,
   "distribution": {
      "alternate_shortcut_text": false,
      "oem_bubble": false,

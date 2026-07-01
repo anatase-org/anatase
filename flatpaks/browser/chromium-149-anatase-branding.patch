@@ -1,0 +1,76 @@
+--- a/chrome/app/chromium_strings.grd
++++ b/chrome/app/chromium_strings.grd
+@@ -294,10 +294,10 @@
+         </then>
+         <else>
+           <message name="IDS_PRODUCT_NAME" desc="The Chrome application name" translateable="false">
+-            Chromium
++            Anatase Browser
+           </message>
+           <message name="IDS_SHORT_PRODUCT_NAME" desc="The Chrome application short name." translateable="false">
+-            Chromium
++            Anatase
+           </message>
+         </else>
+       </if>
+@@ -309,7 +309,7 @@
+         <message name="IDS_SHORTCUT_NAME_DEV" desc="Unused in Chromium builds" translateable="false">
+         </message>
+         <message name="IDS_PRODUCT_DESCRIPTION" desc="Browser description">
+-          Chromium is a web browser that runs webpages and applications with lightning speed. It's fast, stable, and easy to use. Browse the web more safely with malware and phishing protection built into Chromium.
++          Anatase Browser is a Chromium-based web browser tuned for the Anatase desktop.
+         </message>
+         <message name="IDS_WELCOME_TO_CHROME" desc="Welcoming text announced via screen readers the first time Chrome is launched at the conclusion of installation.">
+           Welcome to Chromium; new browser window opened
+@@ -317,7 +317,7 @@
+       </if>
+       <if expr="is_macosx or is_linux">
+         <message name="IDS_FIRST_RUN_DIALOG_WINDOW_TITLE" desc="Window title of First Run dialog on Mac and Linux, displayed in title bar">
+-          Welcome to Chromium
++          Welcome to Anatase Browser
+         </message>
+       </if>
+       <if expr="is_linux">
+--- a/chrome/app/settings_chromium_strings.grdp
++++ b/chrome/app/settings_chromium_strings.grdp
+@@ -4,7 +4,7 @@
+   <!-- Shared across multiple page -->
+   <if expr="not is_chromeos">
+     <message name="IDS_RELAUNCH_CONFIRMATION_DIALOG_TITLE" desc="The title of the modal dialog that we show when users click on relaunch and they have open Incognito windows. The dialog serves to warn the users about losing their Incognito windows if they proceed with the relaunch.">
+-      Relaunch Chromium?
++      Relaunch Anatase Browser?
+     </message>
+   </if>
+   <!-- About Page -->
+@@ -19,25 +19,25 @@
+     </then>
+     <else>
+       <message name="IDS_SETTINGS_ABOUT_PROGRAM" desc="Menu title for the About Chromium page.">
+-        About Chromium
++        About Anatase Browser
+       </message>
+       <message name="IDS_SETTINGS_GET_HELP_USING_CHROME" desc="Text of the button which takes the user to the Chrome help page.">
+-        Get help with Chromium
++        Get help with Anatase Browser
+       </message>
+     </else>
+   </if>
+   <if expr="not is_chromeos">
+     <message name="IDS_SETTINGS_UPGRADE_UPDATING" desc="Status label: Updating Chromium">
+-      Updating Chromium
++      Updating Anatase Browser
+     </message>
+     <message name="IDS_SETTINGS_UPGRADE_UPDATING_PERCENT" desc="Status label: Updating Chromium (90%)">
+-      Updating Chromium (<ph name="PROGRESS_PERCENT">$1<ex>90%</ex></ph>)
++      Updating Anatase Browser (<ph name="PROGRESS_PERCENT">$1<ex>90%</ex></ph>)
+     </message>
+     <message name="IDS_SETTINGS_UPGRADE_SUCCESSFUL_RELAUNCH" desc="Status label: Successfully updated Chromium">
+-      Nearly up to date! Relaunch Chromium to finish updating.
++      Nearly up to date! Relaunch Anatase Browser to finish updating.
+     </message>
+     <message name="IDS_SETTINGS_UPGRADE_UP_TO_DATE" desc="Status label: Already up to date (Chromium)">
+-      Chromium is up to date
++      Anatase Browser is up to date
+     </message>
+   </if>
+   <if expr="is_chromeos">

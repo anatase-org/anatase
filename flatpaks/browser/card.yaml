@@ -16,6 +16,7 @@ flatpak:
     --filesystem=xdg-public-share
     --filesystem=xdg-templates
     --filesystem=xdg-videos
+    --filesystem=xdg-config/kdeglobals:ro
     --filesystem=xdg-run/pipewire-0:ro
     --filesystem=/run/.heim_org.h5l.kcm-socket
     --device=all
@@ -35,7 +36,9 @@ flatpak:
     --talk-name=org.freedesktop.ScreenSaver
     --talk-name=org.freedesktop.secrets
     --talk-name=org.gnome.SessionManager
+    --talk-name=org.kde.KGlobalSettings
     --talk-name=org.kde.StatusNotifierWatcher
+    --talk-name=org.kde.kconfig.notify
     --talk-name=org.kde.kwalletd5
     --talk-name=org.kde.kwalletd6
     --own-name=org.mpris.MediaPlayer2.chromium.*
@@ -78,6 +81,7 @@ specs:
       - chromium-qt6-ui
     files:
       - "*.patch"
+      - browser.svg
       - "chromium-browser-*.png"
       - chromium-browser.appdata.xml
       - chromium-browser.desktop
