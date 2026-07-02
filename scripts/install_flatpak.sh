@@ -125,7 +125,7 @@ for ref in refs:
         raise SystemExit(f"{card}: missing flatpak.id")
 
     app_name = card.parent.name
-    image = f"{repository}:{distro}-{app_name}"
+    image = f"{repository}:{app_name}"
     print(f"{ref}\t{card}\t{app_id.strip()}\t{app_name}\t{image}")
 PY
 }
