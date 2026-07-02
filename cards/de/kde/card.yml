@@ -233,6 +233,15 @@ postprocess: |
 
     systemctl preset fedora-kinoite-plasmalogin-workaround.service || true
 
+    # Just the app store, browser, and discover
+    kicker_extra_favorites=/usr/share/kde-settings/kde-profile/default/xdg/kicker-extra-favoritesrc
+    install -dm0755 "$(dirname "${kicker_extra_favorites}")"
+    cat > "${kicker_extra_favorites}" <<'EOF'
+    [General]
+    Prepend=preferred://browser;org.kde.dolphin.desktop;org.kde.discover.desktop
+    IgnoreDefaults=true
+    EOF
+
     # If a user genuinely has no password, create a matching empty-password
     # KWallet before desktop apps can trigger the interactive first-use dialog.
     install -Dm0755 /files/kwallet/anatase-empty-password-kwallet \
