@@ -97,6 +97,7 @@ installer:
 
   files:
     - installer/anaconda.conf
+    - installer/anatase-face.png
     - installer/anatase.ks
     - installer/anatase-webui.desktop
     - installer/build.sh
