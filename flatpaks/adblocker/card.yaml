@@ -1,0 +1,19 @@
+version: 1
+
+flatpak:
+  id: org.anatase.Browser.Adblocker
+  runtime: true
+  version: "1"
+
+build-deps:
+  - rpm-build
+  - rpmdevtools
+  - redhat-rpm-config
+
+specs:
+  - spec: adblocker.spec
+    packages:
+      - anatase-browser-adblocker
+    files:
+      - adblocker.spec
+      - adblocker.pem

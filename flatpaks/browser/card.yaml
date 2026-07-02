@@ -50,6 +50,11 @@ flatpak:
       subdirectories: true
       no-autodownload: true
       autodelete: true
+    org.anatase.Browser.Adblocker:
+      version: "1"
+      directory: chromium/extensions
+      no-autodownload: false
+      autodelete: true
     org.chromium.Chromium.NativeMessagingHost:
       version: "1"
       directory: chromium/native-messaging-hosts
