@@ -2094,17 +2094,62 @@ index e648a0124919..76befe43cbd0 100644
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
-Date: Fri, 3 Jul 2026 21:57:32 +0200
+Date: Sat, 4 Jul 2026 00:23:57 +0200
 Subject: update colors to anatase
 
 ---
- src/css/themes/default.css | 44 +++++++++++++++++++-------------------
- 1 file changed, 22 insertions(+), 22 deletions(-)
+ src/css/themes/default.css | 82 +++++++++++++++++++-------------------
+ 1 file changed, 41 insertions(+), 41 deletions(-)
 
 diff --git a/src/css/themes/default.css b/src/css/themes/default.css
-index c78b4a255c51..8a69ce6b2f2e 100644
+index c78b4a255c51..bb39c7e35484 100644
 --- a/src/css/themes/default.css
 +++ b/src/css/themes/default.css
+@@ -101,25 +101,25 @@
+      * the number is Luv.
+      * 
+      * */
+-    --gray-5: 16 16 22;
+-    --gray-10: 27 27 35;
+-    --gray-15: 37 37 47;
+-    --gray-20: 47 47 59;
+-    --gray-25: 58 58 72;
+-    --gray-30: 69 69 85;
+-    --gray-35: 81 81 98;
+-    --gray-40: 93 93 110;
+-    --gray-45: 105 105 121;
+-    --gray-50: 118 118 133;
+-    --gray-55: 131 131 145;
+-    --gray-60: 144 144 156;
+-    --gray-65: 157 157 168;
+-    --gray-70: 170 170 180;
+-    --gray-75: 184 184 192;
+-    --gray-80: 198 198 204;
+-    --gray-85: 212 212 217;
+-    --gray-90: 226 226 229;
+-    --gray-95: 240 240 242;
++    --gray-5: 16 21 22;
++    --gray-10: 27 34 35;
++    --gray-15: 36 46 48;
++    --gray-20: 46 59 60;
++    --gray-25: 56 72 74;
++    --gray-30: 67 85 87;
++    --gray-35: 77 99 102;
++    --gray-40: 88 112 115;
++    --gray-45: 98 125 128;
++    --gray-50: 109 139 142;
++    --gray-55: 122 150 154;
++    --gray-60: 136 161 164;
++    --gray-65: 150 172 175;
++    --gray-70: 164 183 186;
++    --gray-75: 179 195 197;
++    --gray-80: 194 207 208;
++    --gray-85: 209 219 220;
++    --gray-90: 224 230 231;
++    --gray-95: 239 242 243;
+ }
+ 
+ /*
 @@ -147,18 +147,18 @@
   * Tool: hsluv.org
   * 
