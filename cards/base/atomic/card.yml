@@ -63,10 +63,11 @@ specs:
       file: overrides.patch
 
 files:
-  - keys/anatase-mok-ca.cer
+  - keys/anatase-mok-ca.crt
   - flatpak/anatase-runtime-deploy
   - flatpak/anatase-flatpak-extensions
   - flatpak/anatase-flatpak-extensions.service
+  - flatpak/flathub.filter
   - flatpak/flathub.flatpakrepo
 
 postprocess: |
@@ -118,6 +119,8 @@ postprocess: |
     #
 
     install -dm0755 /usr/share/flatpak/remotes.d
+    install -Dm0644 /files/flatpak/flathub.filter \
+        /usr/share/flatpak/filters/flathub.filter
     install -Dm0644 /files/flatpak/flathub.flatpakrepo \
         /usr/share/flatpak/remotes.d/flathub.flatpakrepo
     cat > /usr/share/flatpak/remotes.d/anatase.flatpakrepo <<EOF
@@ -278,7 +281,7 @@ postprocess: |
     # Add our key to the image
     mkdir -p /usr/lib/ludos/efi
     openssl x509 \
-        -in /files/keys/anatase-mok-ca.cer \
+        -in /files/keys/anatase-mok-ca.crt \
         -outform DER \
         -out /usr/lib/ludos/efi/ANATASE-KEY-ENROLLME.der
 

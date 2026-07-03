@@ -1,0 +1,4 @@
+# Keep Anatase-owned Flatpaks and runtimes resolved from the Anatase remote.
+deny org.anatase.*
+deny app/org.anatase.*
+deny runtime/org.anatase.*
