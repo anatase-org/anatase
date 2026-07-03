@@ -27,12 +27,14 @@ prepare: |
   # Prepare ublock source
   #
   UBLOCK_REF="1.72.0"
-  PACKAGE_VERSION="$(awk '$1 == "Version:" { print $2; exit }' adblocker.spec)"
+  WEEK_MINUTES="$(( ($(date -u +%u) - 1) * 1440 + $(date -u +%-H) * 60 + $(date -u +%-M) ))"
+  PACKAGE_VERSION="${version}.${WEEK_MINUTES}"
   SOURCE="uBlock-source.tar.gz"
   SOURCE_CACHE="uBlock-source-${UBLOCK_REF}.tar.gz"
   SOURCE_DIR="uBlock-source"
   RULESETS="rulesets-${PACKAGE_VERSION}.tar.gz"
 
+  sed -i -E "0,/^Version:[[:space:]]*.*/s//Version:        ${PACKAGE_VERSION}/" adblocker.spec
   mkdir -p /cache/artifacts
 
   if [ -f "/cache/artifacts/${SOURCE_CACHE}" ]; then

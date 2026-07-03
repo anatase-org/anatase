@@ -120,6 +120,9 @@ cp LICENSE.txt "$ubol_dir"/
 cp platform/mv3/"$manifest_dir"/manifest.json "$ubol_dir"/
 cp platform/mv3/extension/*.html "$ubol_dir"/
 cp platform/mv3/extension/*.json "$ubol_dir"/
+jq --arg version "%{version}" '.version = $version' "$ubol_dir/manifest.json" \
+    > "$ubol_dir/manifest.json.new"
+mv "$ubol_dir/manifest.json.new" "$ubol_dir/manifest.json"
 cp platform/mv3/extension/css/* "$ubol_dir"/css/
 cp -R platform/mv3/extension/js/* "$ubol_dir"/js/
 cp platform/mv3/"$platform"/ext-compat.js "$ubol_dir"/js/ 2>/dev/null || :
