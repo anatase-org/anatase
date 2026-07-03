@@ -102,4 +102,5 @@ specs:
       - adblocker.pem
       - adblocker.svg
       - adblocker_off.svg
+      - org.anatase.Browser.Adblocker.metainfo.xml
       - overrides.patch

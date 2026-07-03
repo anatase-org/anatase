@@ -1,4 +1,5 @@
 %global extension_id lffaaenmikbaifpipgfdhhpgpneakaea
+%global appstream_id org.anatase.Browser.Adblocker
 
 Name:           anatase-browser-adblocker
 Version:        xxxxxx
@@ -11,6 +12,7 @@ Source1:        rulesets-%{version}.tar.gz
 Source2:        adblocker.pem
 Source3:        adblocker.svg
 Source4:        adblocker_off.svg
+Source5:        %{appstream_id}.metainfo.xml
 Patch0:         overrides.patch
 
 # This is the private key used to sign the extension.
@@ -55,6 +57,7 @@ BuildRequires:  bash
 BuildRequires:  chromium
 BuildRequires:  coreutils
 BuildRequires:  jq
+BuildRequires:  libappstream-glib
 BuildRequires:  librsvg2-tools
 BuildRequires:  nodejs
 BuildRequires:  openssl
@@ -220,7 +223,26 @@ cat > "%{buildroot}/app/policies/managed/anatase-adblocker.json" <<EOF
 }
 EOF
 
+install -dm0755 "%{buildroot}%{_metainfodir}"
+sed "s/@VERSION@/%{version}/g" "%{SOURCE5}" \
+    > "%{buildroot}%{_metainfodir}/%{appstream_id}.metainfo.xml"
+
+for size in 64 128; do
+    install -dm0755 "%{buildroot}%{_datadir}/icons/hicolor/${size}x${size}/apps"
+    rsvg-convert \
+        -w "$size" \
+        -h "$size" \
+        -o "%{buildroot}%{_datadir}/icons/hicolor/${size}x${size}/apps/%{appstream_id}.png" \
+        %{SOURCE3}
+done
+
+%check
+appstream-util validate-relax --nonet \
+    "%{buildroot}%{_metainfodir}/%{appstream_id}.metainfo.xml"
+
 %files
 %license LICENSE.txt
 /app/extensions
 /app/policies
+%{_datadir}/icons/hicolor/*/apps/org.anatase.Browser.Adblocker.png
+%{_metainfodir}/org.anatase.Browser.Adblocker.metainfo.xml

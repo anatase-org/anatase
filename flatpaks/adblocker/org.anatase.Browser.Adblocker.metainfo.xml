@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="addon">
+  <id>org.anatase.Browser.Adblocker</id>
+  <extends>org.anatase.Browser</extends>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>Anatase Adblocker</name>
+  <summary>Blocks ads and trackers in Anatase Browser</summary>
+  <developer id="org.anatase">
+    <name>Anatase</name>
+  </developer>
+
+  <description>
+    <p>
+      Adblocker is the managed content blocker bundled for Anatase Browser. It
+      is built from uBO Lite source and packaged as a Chromium extension for
+      the browser Flatpak.
+    </p>
+    <p>
+      The extension ships with default filter lists and updates through the
+      Anatase's repositories, so the filter lists can update more often.
+    </p>
+    <p>
+      If you are facing an issue with ads not being blocked, try updating
+      the extension through Discover and restarting your browser. If that
+      does not work, get in touch.
+    </p>
+  </description>
+
+  <url type="homepage">https://github.com/gorhill/uBlock</url>
+  <url type="bugtracker">https://github.com/anatase-org/anatase/issues</url>
+
+  <categories>
+    <category>Network</category>
+    <category>Security</category>
+  </categories>
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="@VERSION@" date="2026-07-03" />
+  </releases>
+</component>
