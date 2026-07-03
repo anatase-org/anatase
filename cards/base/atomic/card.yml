@@ -63,7 +63,7 @@ specs:
       file: overrides.patch
 
 files:
-  - ./anatase-mok-ca.cer
+  - keys/anatase-mok-ca.cer
   - flatpak/anatase-runtime-deploy
   - flatpak/anatase-flatpak-extensions
   - flatpak/anatase-flatpak-extensions.service
@@ -278,7 +278,7 @@ postprocess: |
     # Add our key to the image
     mkdir -p /usr/lib/ludos/efi
     openssl x509 \
-        -in /files/anatase-mok-ca.cer \
+        -in /files/keys/anatase-mok-ca.cer \
         -outform DER \
         -out /usr/lib/ludos/efi/ANATASE-KEY-ENROLLME.der
 
