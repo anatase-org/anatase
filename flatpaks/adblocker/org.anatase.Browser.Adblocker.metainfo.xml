@@ -13,13 +13,8 @@
 
   <description>
     <p>
-      Adblocker is the managed content blocker bundled for Anatase Browser. It
-      is built from uBO Lite source and packaged as a Chromium extension for
-      the browser Flatpak.
-    </p>
-    <p>
-      The extension ships with default filter lists and updates through the
-      Anatase's repositories, so the filter lists can update more often.
+      Anatase Adblocker is the the bundled adblocker of Anatase Browser. It
+      is built from uBO Lite and installed as a removable extension.
     </p>
     <p>
       If you are facing an issue with ads not being blocked, try updating
