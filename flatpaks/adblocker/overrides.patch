@@ -1,0 +1,2179 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Fri, 3 Jul 2026 20:36:29 +0200
+Subject: Build only enabled MV3 rulesets
+
+---
+ platform/mv3/make-rulesets.js | 16 ++--------------
+ 1 file changed, 2 insertions(+), 14 deletions(-)
+
+diff --git a/platform/mv3/make-rulesets.js b/platform/mv3/make-rulesets.js
+index 7f90ecb97921..ce5113720397 100644
+--- a/platform/mv3/make-rulesets.js
++++ b/platform/mv3/make-rulesets.js
+@@ -263,20 +263,7 @@ async function fetchListFromCache(assetDetails) {
+         return content;
+     }
+ 
+-    const context = {
+-        env,
+-        secret,
+-        trustedPrefixes: [ 'https://ublockorigin.github.io/uAssets/filters/' ],
+-    };
+-
+-    const text = await fetchList(context, assetDetails);
+-    writeFile(`${cacheDir}/${fname}`, text);
+-
+-    if ( Boolean(text) === false ) {
+-        throw 'Filter list should not be empty';
+-    }
+-
+-    return text;
++    throw 'Cached lists run only';
+ }
+ 
+ /******************************************************************************/
+@@ -1148,6 +1135,7 @@ async function main() {
+     );
+ 
+     for ( const ruleset of rulesets ) {
++        if ( ruleset.enabled !== true ) { continue; }
+         if ( ruleset.excludedPlatforms?.includes(platform) ) { continue; }
+         await rulesetFromURLs(ruleset);
+     }
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Fri, 3 Jul 2026 21:18:08 +0200
+Subject: update name
+
+---
+ platform/mv3/chromium/manifest.json                |  2 +-
+ platform/mv3/extension/_locales/ar/messages.json   |  4 ++--
+ platform/mv3/extension/_locales/az/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/be/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/bg/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/bn/messages.json   |  6 +++---
+ .../mv3/extension/_locales/br_FR/messages.json     |  6 +++---
+ platform/mv3/extension/_locales/bs/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/ca/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/cs/messages.json   |  4 ++--
+ platform/mv3/extension/_locales/cv/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/cy/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/da/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/de/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/el/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/en/messages.json   | 14 +++++++-------
+ .../mv3/extension/_locales/en_GB/messages.json     |  6 +++---
+ platform/mv3/extension/_locales/eo/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/es/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/et/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/eu/messages.json   |  4 ++--
+ platform/mv3/extension/_locales/fa/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/fi/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/fil/messages.json  |  6 +++---
+ platform/mv3/extension/_locales/fr/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/fy/messages.json   |  4 ++--
+ platform/mv3/extension/_locales/gl/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/gu/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/he/messages.json   |  4 ++--
+ platform/mv3/extension/_locales/hi/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/hr/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/hu/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/hy/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/id/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/it/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/ja/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/ka/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/kk/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/kn/messages.json   |  4 ++--
+ platform/mv3/extension/_locales/ko/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/lt/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/lv/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/mk/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/ml/messages.json   |  4 ++--
+ platform/mv3/extension/_locales/mr/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/ms/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/nb/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/nl/messages.json   |  4 ++--
+ platform/mv3/extension/_locales/oc/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/pa/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/pl/messages.json   |  6 +++---
+ .../mv3/extension/_locales/pt_BR/messages.json     |  6 +++---
+ .../mv3/extension/_locales/pt_PT/messages.json     |  6 +++---
+ platform/mv3/extension/_locales/ro/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/ru/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/si/messages.json   |  4 ++--
+ platform/mv3/extension/_locales/sk/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/sl/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/so/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/sq/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/sr/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/sv/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/sw/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/ta/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/te/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/th/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/tr/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/uk/messages.json   |  6 +++---
+ platform/mv3/extension/_locales/ur/messages.json   |  4 ++--
+ platform/mv3/extension/_locales/vi/messages.json   |  6 +++---
+ .../mv3/extension/_locales/zh_CN/messages.json     |  6 +++---
+ .../mv3/extension/_locales/zh_TW/messages.json     |  6 +++---
+ platform/mv3/extension/dashboard.html              |  2 +-
+ 73 files changed, 209 insertions(+), 209 deletions(-)
+
+diff --git a/platform/mv3/chromium/manifest.json b/platform/mv3/chromium/manifest.json
+index 0995341e2fdb..53b7845d7f6b 100644
+--- a/platform/mv3/chromium/manifest.json
++++ b/platform/mv3/chromium/manifest.json
+@@ -7,7 +7,7 @@
+     },
+     "default_popup": "popup.html"
+   },
+-  "author": "Raymond Hill",
++  "author": "Anatase",
+   "background": {
+       "service_worker": "/js/background.js",
+       "type": "module"
+diff --git a/platform/mv3/extension/_locales/ar/messages.json b/platform/mv3/extension/_locales/ar/messages.json
+index 357b8cf9f02d..c8538e88f168 100644
+--- a/platform/mv3/extension/_locales/ar/messages.json
++++ b/platform/mv3/extension/_locales/ar/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -447,4 +447,4 @@
+     "message": "اختر تصفية أدناه لتمييز العناصر المطابقة في صفحة الويب. انقر على سلة المهملات لإزالة التصفية.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/az/messages.json b/platform/mv3/extension/_locales/az/messages.json
+index 6c42bd194bec..f623bec45fc7 100644
+--- a/platform/mv3/extension/_locales/az/messages.json
++++ b/platform/mv3/extension/_locales/az/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — İdarəetmə paneli",
++    "message": "Anatase Adblocker — İdarəetmə paneli",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Vebsəhifədə uyğun gələn elementləri vurğulamaq üçün aşağıdan bir filtr seçin. Filtri silmək üçün çöp qutusuna klikləyin.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/be/messages.json b/platform/mv3/extension/_locales/be/messages.json
+index ce5fbf6fe5b1..1bb47dcd70e3 100644
+--- a/platform/mv3/extension/_locales/be/messages.json
++++ b/platform/mv3/extension/_locales/be/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Панэль кіравання",
++    "message": "Anatase Adblocker — Панэль кіравання",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Выберыце фільтр ніжэй, каб вылучыць адпаведныя элементы на старонцы. Націсніце на кошык, каб выдаліць фільтр.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/bg/messages.json b/platform/mv3/extension/_locales/bg/messages.json
+index c0a02c789b8d..9595149142e8 100644
+--- a/platform/mv3/extension/_locales/bg/messages.json
++++ b/platform/mv3/extension/_locales/bg/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Табло",
++    "message": "Anatase Adblocker — Табло",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Изберете филтър по-долу, за да маркирате съвпадащите елементи в уеб страницата. Кликнете върху кошчето, за да премахнете филтъра.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/bn/messages.json b/platform/mv3/extension/_locales/bn/messages.json
+index 3c45063ead49..01b99173bdce 100644
+--- a/platform/mv3/extension/_locales/bn/messages.json
++++ b/platform/mv3/extension/_locales/bn/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — ড্যাশবোর্ড",
++    "message": "Anatase Adblocker — ড্যাশবোর্ড",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/br_FR/messages.json b/platform/mv3/extension/_locales/br_FR/messages.json
+index d442774d0ccc..f1f2420e95bd 100644
+--- a/platform/mv3/extension/_locales/br_FR/messages.json
++++ b/platform/mv3/extension/_locales/br_FR/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Taolenn-vourzh",
++    "message": "Anatase Adblocker — Taolenn-vourzh",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Diuzit ur sil amañ-dindan evit sklêrijennañ an elfennoù kendere er bajenn web. Klikit ar pod-lastez evit lemel ur sil.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/bs/messages.json b/platform/mv3/extension/_locales/bs/messages.json
+index 192e5682f41f..1dcf604a4e19 100644
+--- a/platform/mv3/extension/_locales/bs/messages.json
++++ b/platform/mv3/extension/_locales/bs/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Nadzorna Ploča",
++    "message": "Anatase Adblocker — Nadzorna Ploča",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Odaberite filter ispod da biste istaknuli odgovarajuće elemente na web stranici. Kliknite na kantu za smeće da biste uklonili filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/ca/messages.json b/platform/mv3/extension/_locales/ca/messages.json
+index d185d30a6d8b..0ce476700aa4 100644
+--- a/platform/mv3/extension/_locales/ca/messages.json
++++ b/platform/mv3/extension/_locales/ca/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Tauler",
++    "message": "Anatase Adblocker — Tauler",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Seleccioneu un filtre a continuació per a ressaltar els elements coincidents de la pàgina web. Feu clic a la paperera per a eliminar un filtre.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/cs/messages.json b/platform/mv3/extension/_locales/cs/messages.json
+index cc3babacb9c3..c7950297d646 100644
+--- a/platform/mv3/extension/_locales/cs/messages.json
++++ b/platform/mv3/extension/_locales/cs/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -447,4 +447,4 @@
+     "message": "Výběrem níže uvedeného filtru zvýrazníte odpovídající prvky na webové stránce. Klepnutím na koš filtr odeberete.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/cv/messages.json b/platform/mv3/extension/_locales/cv/messages.json
+index b74f4f971b24..da1fffc7fb44 100644
+--- a/platform/mv3/extension/_locales/cv/messages.json
++++ b/platform/mv3/extension/_locales/cv/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Dashboard",
++    "message": "Anatase Adblocker — Dashboard",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/cy/messages.json b/platform/mv3/extension/_locales/cy/messages.json
+index 1c157f84889a..c50ea12867e5 100644
+--- a/platform/mv3/extension/_locales/cy/messages.json
++++ b/platform/mv3/extension/_locales/cy/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Dangosfwrdd",
++    "message": "Anatase Adblocker — Dangosfwrdd",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/da/messages.json b/platform/mv3/extension/_locales/da/messages.json
+index 6e1dc7977c4c..fce5e4ea07c5 100644
+--- a/platform/mv3/extension/_locales/da/messages.json
++++ b/platform/mv3/extension/_locales/da/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Kontrolpanel",
++    "message": "Anatase Adblocker — Kontrolpanel",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Vælg et filter nedenfor for at fremhæve matchende elementer på websiden. Klik på papirkurven for at fjerne et filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/de/messages.json b/platform/mv3/extension/_locales/de/messages.json
+index fcbeca703d3f..bdb0206b4ad7 100644
+--- a/platform/mv3/extension/_locales/de/messages.json
++++ b/platform/mv3/extension/_locales/de/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Dashboard",
++    "message": "Anatase Adblocker — Dashboard",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Das Auswählen eines unten stehenden Filters hebt übereinstimmende Elemente auf der Webseite hervor. Auf den Mülleimer klicken, um einen Filter zu entfernen.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/el/messages.json b/platform/mv3/extension/_locales/el/messages.json
+index e82892b24c69..c07fe7667b79 100644
+--- a/platform/mv3/extension/_locales/el/messages.json
++++ b/platform/mv3/extension/_locales/el/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Πίνακας ελέγχου",
++    "message": "Anatase Adblocker — Πίνακας ελέγχου",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Επιλέξτε ένα φίλτρο παρακάτω για να επισημάνετε τα στοιχεία που αντιστοιχούν στην ιστοσελίδα. Κάντε κλικ στον κάδο απορριμμάτων για να αφαιρέσετε ένα φίλτρο.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/en/messages.json b/platform/mv3/extension/_locales/en/messages.json
+index ce4ca9c1642a..da1fffc7fb44 100644
+--- a/platform/mv3/extension/_locales/en/messages.json
++++ b/platform/mv3/extension/_locales/en/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Dashboard",
++    "message": "Anatase Adblocker — Dashboard",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -244,12 +244,12 @@
+     "description": "This describes the 'complete' filtering mode"
+   },
+   "noFilteringModeDescription": {
+-      "message": "List of websites for which no filtering will take place.",
+-      "description": "A short description for the editable field which lists trusted sites"
++    "message": "List of websites for which no filtering will take place.",
++    "description": "A short description for the editable field which lists trusted sites"
+   },
+   "noFilteringModePlaceholder": {
+-      "message": "[hostnames only]\nexample.com\ngames.example\n...",
+-      "description": "Default text for in edit field"
++    "message": "[hostnames only]\nexample.com\ngames.example\n...",
++    "description": "Default text for in edit field"
+   },
+   "behaviorSectionLabel": {
+     "message": "Behavior",
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/en_GB/messages.json b/platform/mv3/extension/_locales/en_GB/messages.json
+index 574e711c8f97..19a947735bed 100644
+--- a/platform/mv3/extension/_locales/en_GB/messages.json
++++ b/platform/mv3/extension/_locales/en_GB/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Dashboard",
++    "message": "Anatase Adblocker — Dashboard",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the webpage. Click the dustbin to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/eo/messages.json b/platform/mv3/extension/_locales/eo/messages.json
+index da33dccf051d..0f4e24f0d7a4 100644
+--- a/platform/mv3/extension/_locales/eo/messages.json
++++ b/platform/mv3/extension/_locales/eo/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Panelo",
++    "message": "Anatase Adblocker — Panelo",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Elektu filtrilon suban por lumigi kongruajn elementojn en la retejo. Alklaku la rubujon por forigi filtrilon.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/es/messages.json b/platform/mv3/extension/_locales/es/messages.json
+index b08fe0897ef4..6702c227a07a 100644
+--- a/platform/mv3/extension/_locales/es/messages.json
++++ b/platform/mv3/extension/_locales/es/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Panel de control",
++    "message": "Anatase Adblocker — Panel de control",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Selecciona un filtro abajo para resaltar los elementos coincidentes en la página web. Haz clic en la papelera para eliminar un filtro.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/et/messages.json b/platform/mv3/extension/_locales/et/messages.json
+index 9863c2e15934..b438f5ae9688 100644
+--- a/platform/mv3/extension/_locales/et/messages.json
++++ b/platform/mv3/extension/_locales/et/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Töölaud",
++    "message": "Anatase Adblocker — Töölaud",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Valige allolev filter, et tõsta esile veebilehel kattuvad elemendid. Filtri eemaldamiseks klõpsake prügikasti.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/eu/messages.json b/platform/mv3/extension/_locales/eu/messages.json
+index 758ece65af61..61963ac6f9ed 100644
+--- a/platform/mv3/extension/_locales/eu/messages.json
++++ b/platform/mv3/extension/_locales/eu/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/fa/messages.json b/platform/mv3/extension/_locales/fa/messages.json
+index 6af8f8a461f4..4cd57707b1eb 100644
+--- a/platform/mv3/extension/_locales/fa/messages.json
++++ b/platform/mv3/extension/_locales/fa/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Dashboard",
++    "message": "Anatase Adblocker — Dashboard",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/fi/messages.json b/platform/mv3/extension/_locales/fi/messages.json
+index 8d05b0d67737..e7e037caad30 100644
+--- a/platform/mv3/extension/_locales/fi/messages.json
++++ b/platform/mv3/extension/_locales/fi/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Hallintapaneeli",
++    "message": "Anatase Adblocker — Hallintapaneeli",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Valitse alta suodatin korostaaksesi verkkosivulta sitä vastaavat elementit. Poista suodatin klikkamalla roskakoria.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/fil/messages.json b/platform/mv3/extension/_locales/fil/messages.json
+index 8231458f9a2b..5c1623bf2fba 100644
+--- a/platform/mv3/extension/_locales/fil/messages.json
++++ b/platform/mv3/extension/_locales/fil/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Dashboard",
++    "message": "Anatase Adblocker — Dashboard",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/fr/messages.json b/platform/mv3/extension/_locales/fr/messages.json
+index 91310eccb049..87d346370a0a 100644
+--- a/platform/mv3/extension/_locales/fr/messages.json
++++ b/platform/mv3/extension/_locales/fr/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Tableau de bord",
++    "message": "Anatase Adblocker — Tableau de bord",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Choisissez un filtre ci-dessous pour surligner les éléments correspondants dans la page Web. Cliquez sur l'icône de poubelle pour supprimer un filtre.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/fy/messages.json b/platform/mv3/extension/_locales/fy/messages.json
+index e6e7dc191258..94c90e4d7bff 100644
+--- a/platform/mv3/extension/_locales/fy/messages.json
++++ b/platform/mv3/extension/_locales/fy/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -447,4 +447,4 @@
+     "message": "Selektearje hjirûnder in filter om oerienkommende eleminten yn de webside te markearjen. Klik op it jiskefet om in filter fuort te smiten.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/gl/messages.json b/platform/mv3/extension/_locales/gl/messages.json
+index 1e859d2b9b9b..37f55859d08f 100644
+--- a/platform/mv3/extension/_locales/gl/messages.json
++++ b/platform/mv3/extension/_locales/gl/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Panel de control",
++    "message": "Anatase Adblocker — Panel de control",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Escolle un filtro para destacar os elementos que representa na páxina web. Preme no caldeiro do lixo para eliminar un filtro.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/gu/messages.json b/platform/mv3/extension/_locales/gu/messages.json
+index b74f4f971b24..da1fffc7fb44 100644
+--- a/platform/mv3/extension/_locales/gu/messages.json
++++ b/platform/mv3/extension/_locales/gu/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Dashboard",
++    "message": "Anatase Adblocker — Dashboard",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/he/messages.json b/platform/mv3/extension/_locales/he/messages.json
+index f4f94573e220..37a5010886dc 100644
+--- a/platform/mv3/extension/_locales/he/messages.json
++++ b/platform/mv3/extension/_locales/he/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -447,4 +447,4 @@
+     "message": "בחרו את המסנן למטה להצגת הרכיבים התואמים בדף האינטרנט. לחצו על פח האשפה למחיקת המסנן.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/hi/messages.json b/platform/mv3/extension/_locales/hi/messages.json
+index 4ec54205ecb0..3280c2591c54 100644
+--- a/platform/mv3/extension/_locales/hi/messages.json
++++ b/platform/mv3/extension/_locales/hi/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — डैशबोर्ड",
++    "message": "Anatase Adblocker — डैशबोर्ड",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/hr/messages.json b/platform/mv3/extension/_locales/hr/messages.json
+index 9d0a20fe6c3f..ba7357f1fcf5 100644
+--- a/platform/mv3/extension/_locales/hr/messages.json
++++ b/platform/mv3/extension/_locales/hr/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — nadzorna ploča",
++    "message": "Anatase Adblocker — nadzorna ploča",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Odaberite filter u nastavku kako biste istaknuli odgovarajuće elemente na web stranici. Kliknite koš za smeće kako biste uklonili filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/hu/messages.json b/platform/mv3/extension/_locales/hu/messages.json
+index 8e320fa7b1a8..5118d3cf1df1 100644
+--- a/platform/mv3/extension/_locales/hu/messages.json
++++ b/platform/mv3/extension/_locales/hu/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Vezérlőpult",
++    "message": "Anatase Adblocker — Vezérlőpult",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Válasszon alább egy szűrőt, hogy kiemelje az egyező elemeket a weboldalon. Kattintson a kuka ikonra egy szűrő eltávolításához.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/hy/messages.json b/platform/mv3/extension/_locales/hy/messages.json
+index 875cbd6a8c7a..609e55e2ee91 100644
+--- a/platform/mv3/extension/_locales/hy/messages.json
++++ b/platform/mv3/extension/_locales/hy/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Կառավահան",
++    "message": "Anatase Adblocker — Կառավահան",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/id/messages.json b/platform/mv3/extension/_locales/id/messages.json
+index 8a5eb5184793..5d7525de2c9a 100644
+--- a/platform/mv3/extension/_locales/id/messages.json
++++ b/platform/mv3/extension/_locales/id/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Dasbor",
++    "message": "Anatase Adblocker — Dasbor",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Pilih filter di bawah ini untuk menyorot elemen yang cocok di halaman web. Klik ikon tempat sampah untuk menghapus filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/it/messages.json b/platform/mv3/extension/_locales/it/messages.json
+index d72a00931616..4e3c17bf4c47 100644
+--- a/platform/mv3/extension/_locales/it/messages.json
++++ b/platform/mv3/extension/_locales/it/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Cruscotto",
++    "message": "Anatase Adblocker — Cruscotto",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Seleziona un filtro per evidenziare gli elementi corrispondenti nella pagina web. Clicca il cestino per rimuovere un filtro.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/ja/messages.json b/platform/mv3/extension/_locales/ja/messages.json
+index ffee91678df5..8904533b864d 100644
+--- a/platform/mv3/extension/_locales/ja/messages.json
++++ b/platform/mv3/extension/_locales/ja/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — ダッシュボード",
++    "message": "Anatase Adblocker — ダッシュボード",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "下のフィルターを選択すると、ウェブページ内の一致する要素がハイライトされます。フィルタを削除するには、ゴミ箱をクリックしてください。",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/ka/messages.json b/platform/mv3/extension/_locales/ka/messages.json
+index 49b287db3dcd..7153446cf920 100644
+--- a/platform/mv3/extension/_locales/ka/messages.json
++++ b/platform/mv3/extension/_locales/ka/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — მაჩვენებლები",
++    "message": "Anatase Adblocker — მაჩვენებლები",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "აირჩიეთ ქვემოთ ფილტრი შესაბამისი ნაწილების მოსანიშნად ვებგვერდზე. დაწკაპეთ სანაგვე ყუთი ფილტრის მოსაცილებლად.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/kk/messages.json b/platform/mv3/extension/_locales/kk/messages.json
+index e031ff507623..abe5a8e22bb8 100644
+--- a/platform/mv3/extension/_locales/kk/messages.json
++++ b/platform/mv3/extension/_locales/kk/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Бақылау тақтасы",
++    "message": "Anatase Adblocker — Бақылау тақтасы",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Веб-беттегі сәйкес элементтерді түспен ерекшелеу үшін төмендегі сүзгіні таңдаңыз. Сүзгіні өшіру үшін қоқыс шелегін шертіңіз.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/kn/messages.json b/platform/mv3/extension/_locales/kn/messages.json
+index 9765a2893e08..18e33fd3569c 100644
+--- a/platform/mv3/extension/_locales/kn/messages.json
++++ b/platform/mv3/extension/_locales/kn/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/ko/messages.json b/platform/mv3/extension/_locales/ko/messages.json
+index 1ad56b57331c..525cb544766f 100644
+--- a/platform/mv3/extension/_locales/ko/messages.json
++++ b/platform/mv3/extension/_locales/ko/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — 대시보드",
++    "message": "Anatase Adblocker — 대시보드",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "아래의 필터를 선택하면 웹페이지의 일치하는 요소가 강조 표시됩니다. 필터를 삭제하려면 휴지통을 클릭합니다.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/lt/messages.json b/platform/mv3/extension/_locales/lt/messages.json
+index a783678a7fbe..4d0b223020a6 100644
+--- a/platform/mv3/extension/_locales/lt/messages.json
++++ b/platform/mv3/extension/_locales/lt/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Skydelis",
++    "message": "Anatase Adblocker — Skydelis",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/lv/messages.json b/platform/mv3/extension/_locales/lv/messages.json
+index b13753d6350c..543379f4247a 100644
+--- a/platform/mv3/extension/_locales/lv/messages.json
++++ b/platform/mv3/extension/_locales/lv/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — infopanelis",
++    "message": "Anatase Adblocker — infopanelis",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Zemāk jāatlasa atlasītājs, lai tīmekļa lapā izceltu atbilstošos elementus. Klikšķināt uz atkritnes, lai noņemtu aizturētāju.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/mk/messages.json b/platform/mv3/extension/_locales/mk/messages.json
+index 04d75725a251..e048a17ae8cf 100644
+--- a/platform/mv3/extension/_locales/mk/messages.json
++++ b/platform/mv3/extension/_locales/mk/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Контролна плоча",
++    "message": "Anatase Adblocker — Контролна плоча",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/ml/messages.json b/platform/mv3/extension/_locales/ml/messages.json
+index 0d9e4378326a..077ad3d75376 100644
+--- a/platform/mv3/extension/_locales/ml/messages.json
++++ b/platform/mv3/extension/_locales/ml/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/mr/messages.json b/platform/mv3/extension/_locales/mr/messages.json
+index 65519057ab85..704068167ea9 100644
+--- a/platform/mv3/extension/_locales/mr/messages.json
++++ b/platform/mv3/extension/_locales/mr/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Dashboard",
++    "message": "Anatase Adblocker — Dashboard",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/ms/messages.json b/platform/mv3/extension/_locales/ms/messages.json
+index 738ec8d4d5a8..d642b52e24f8 100644
+--- a/platform/mv3/extension/_locales/ms/messages.json
++++ b/platform/mv3/extension/_locales/ms/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Papan pemuka",
++    "message": "Anatase Adblocker — Papan pemuka",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/nb/messages.json b/platform/mv3/extension/_locales/nb/messages.json
+index 920ca1542cba..00df7fd08e49 100644
+--- a/platform/mv3/extension/_locales/nb/messages.json
++++ b/platform/mv3/extension/_locales/nb/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Dashbord",
++    "message": "Anatase Adblocker — Dashbord",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Velg et filter nedenfor for å fremheve samsvarende elementer på nettsiden. Klikk på papirkurven for å fjerne et filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/nl/messages.json b/platform/mv3/extension/_locales/nl/messages.json
+index 8f75638f39ca..67063ae29621 100644
+--- a/platform/mv3/extension/_locales/nl/messages.json
++++ b/platform/mv3/extension/_locales/nl/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -447,4 +447,4 @@
+     "message": "Selecteer hieronder een filter om overeenkomende elementen in de webpagina te markeren. Klik op de prullenbak om een filter te verwijderen.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/oc/messages.json b/platform/mv3/extension/_locales/oc/messages.json
+index 6160fdf7a4c2..8b531f67db12 100644
+--- a/platform/mv3/extension/_locales/oc/messages.json
++++ b/platform/mv3/extension/_locales/oc/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Dashboard",
++    "message": "Anatase Adblocker — Dashboard",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/pa/messages.json b/platform/mv3/extension/_locales/pa/messages.json
+index e9b3e7a84fa1..8563d7757cce 100644
+--- a/platform/mv3/extension/_locales/pa/messages.json
++++ b/platform/mv3/extension/_locales/pa/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — ਡੈਸ਼ਬੋਰਡ",
++    "message": "Anatase Adblocker — ਡੈਸ਼ਬੋਰਡ",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/pl/messages.json b/platform/mv3/extension/_locales/pl/messages.json
+index 4a07f450fe65..546657547490 100644
+--- a/platform/mv3/extension/_locales/pl/messages.json
++++ b/platform/mv3/extension/_locales/pl/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Panel sterowania",
++    "message": "Anatase Adblocker — Panel sterowania",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Wybierz filtr poniżej, aby wyróżnić pasujące elementy na stronie internetowej. Kliknij kosz, aby usunąć filtr.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/pt_BR/messages.json b/platform/mv3/extension/_locales/pt_BR/messages.json
+index 09a8213ea029..7b1a1dbfc7b5 100644
+--- a/platform/mv3/extension/_locales/pt_BR/messages.json
++++ b/platform/mv3/extension/_locales/pt_BR/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Painel",
++    "message": "Anatase Adblocker — Painel",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Selecione um filtro abaixo para destacar os elementos correspondentes na página. Clique na lixeira para remover um filtro.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/pt_PT/messages.json b/platform/mv3/extension/_locales/pt_PT/messages.json
+index 4877347c7738..c0da47c9ff65 100644
+--- a/platform/mv3/extension/_locales/pt_PT/messages.json
++++ b/platform/mv3/extension/_locales/pt_PT/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Painel de controlo",
++    "message": "Anatase Adblocker — Painel de controlo",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Selecione um filtro abaixo para destacar os elementos correspondentes na página web. Clique no caixote do lixo para remover um filtro.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/ro/messages.json b/platform/mv3/extension/_locales/ro/messages.json
+index 8b2759d72f1a..03126ef8e1ef 100644
+--- a/platform/mv3/extension/_locales/ro/messages.json
++++ b/platform/mv3/extension/_locales/ro/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Panou de control",
++    "message": "Anatase Adblocker — Panou de control",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Alege un filtru de mai jos pentru a evidenția elementele cu potriviri în pagina web. Clic pe [Coș de gunoi] pentru a îndepărta un filtru.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/ru/messages.json b/platform/mv3/extension/_locales/ru/messages.json
+index 7fa268745653..967e33c3a237 100644
+--- a/platform/mv3/extension/_locales/ru/messages.json
++++ b/platform/mv3/extension/_locales/ru/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Панель управления",
++    "message": "Anatase Adblocker — Панель управления",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Выберите фильтр ниже, чтобы подсветить соответствующие элементы на странице. Нажмите на корзину для удаления фильтра.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/si/messages.json b/platform/mv3/extension/_locales/si/messages.json
+index 52932767d015..eaa8c92efa25 100644
+--- a/platform/mv3/extension/_locales/si/messages.json
++++ b/platform/mv3/extension/_locales/si/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/sk/messages.json b/platform/mv3/extension/_locales/sk/messages.json
+index 916ffbc04ea7..63bef386889e 100644
+--- a/platform/mv3/extension/_locales/sk/messages.json
++++ b/platform/mv3/extension/_locales/sk/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Ovládací panel",
++    "message": "Anatase Adblocker — Ovládací panel",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Vyberte filter na zvýraznenie zodpovedajúcich prvkov na webovej stránke. Ak chcete filter odstrániť, kliknite na kôš.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/sl/messages.json b/platform/mv3/extension/_locales/sl/messages.json
+index 88bc96483c9c..f4e254cb34e6 100644
+--- a/platform/mv3/extension/_locales/sl/messages.json
++++ b/platform/mv3/extension/_locales/sl/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Dashboard",
++    "message": "Anatase Adblocker — Dashboard",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/so/messages.json b/platform/mv3/extension/_locales/so/messages.json
+index a4cedf9573e8..9309cf241eac 100644
+--- a/platform/mv3/extension/_locales/so/messages.json
++++ b/platform/mv3/extension/_locales/so/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Dashboard",
++    "message": "Anatase Adblocker — Dashboard",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/sq/messages.json b/platform/mv3/extension/_locales/sq/messages.json
+index 4fc93c4fc3ad..2a28723e7d32 100644
+--- a/platform/mv3/extension/_locales/sq/messages.json
++++ b/platform/mv3/extension/_locales/sq/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Paneli i kontrollit",
++    "message": "Anatase Adblocker — Paneli i kontrollit",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Zgjidhni ndër filtrat më poshtë për të parë elementin që i korrespondon në faqe. Filtrat hiqen duke klikuar koshin.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/sr/messages.json b/platform/mv3/extension/_locales/sr/messages.json
+index bdc9b62606d6..be62040207d0 100644
+--- a/platform/mv3/extension/_locales/sr/messages.json
++++ b/platform/mv3/extension/_locales/sr/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Контролна табла",
++    "message": "Anatase Adblocker — Контролна табла",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Изаберите филтер испод да бисте истакли одговарајуће елементе на веб страници. Кликните на канту за смеће да бисте уклонили филтер.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/sv/messages.json b/platform/mv3/extension/_locales/sv/messages.json
+index 6264d2de370b..5911284c5b2a 100644
+--- a/platform/mv3/extension/_locales/sv/messages.json
++++ b/platform/mv3/extension/_locales/sv/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Kontrollpanel",
++    "message": "Anatase Adblocker — Kontrollpanel",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Välj ett filter nedan för att markera matchande element på webbsidan. Klicka på papperskorgen för att ta bort ett filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/sw/messages.json b/platform/mv3/extension/_locales/sw/messages.json
+index 89d66fb3bb45..f9a49a3c8658 100644
+--- a/platform/mv3/extension/_locales/sw/messages.json
++++ b/platform/mv3/extension/_locales/sw/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Dashboard",
++    "message": "Anatase Adblocker — Dashboard",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/ta/messages.json b/platform/mv3/extension/_locales/ta/messages.json
+index 0b353fb60926..492d9248a459 100644
+--- a/platform/mv3/extension/_locales/ta/messages.json
++++ b/platform/mv3/extension/_locales/ta/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Dashboard",
++    "message": "Anatase Adblocker — Dashboard",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/te/messages.json b/platform/mv3/extension/_locales/te/messages.json
+index 608faee95758..b848c254ec69 100644
+--- a/platform/mv3/extension/_locales/te/messages.json
++++ b/platform/mv3/extension/_locales/te/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Dashboard",
++    "message": "Anatase Adblocker — Dashboard",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/th/messages.json b/platform/mv3/extension/_locales/th/messages.json
+index 46291095e6bf..935f3e55f1b1 100644
+--- a/platform/mv3/extension/_locales/th/messages.json
++++ b/platform/mv3/extension/_locales/th/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — แดชบอร์ด",
++    "message": "Anatase Adblocker — แดชบอร์ด",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "เลือกตัวกรองด้านล่างเพื่อไฮไลต์องค์ประกอบที่ตรงกันในหน้าเว็บ คลิกที่ไอคอนถังขยะเพื่อลบตัวกรอง",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/tr/messages.json b/platform/mv3/extension/_locales/tr/messages.json
+index cd4b5e74364e..b7108af58068 100644
+--- a/platform/mv3/extension/_locales/tr/messages.json
++++ b/platform/mv3/extension/_locales/tr/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Kontrol Paneli",
++    "message": "Anatase Adblocker — Kontrol Paneli",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Web sayfasındaki eşleşen öğeleri vurgulamak için aşağıdan bir filtre seçin. Bir filtreyi kaldırmak için çöp kutusuna tıklayın.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/uk/messages.json b/platform/mv3/extension/_locales/uk/messages.json
+index 9d611a56dfeb..d709ff08dd38 100644
+--- a/platform/mv3/extension/_locales/uk/messages.json
++++ b/platform/mv3/extension/_locales/uk/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Панель керування",
++    "message": "Anatase Adblocker — Панель керування",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Виберіть фільтр нижче, щоб підсвітити відповідні елементи на сторінці. Натисніть на кошик для видалення фільтра.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/ur/messages.json b/platform/mv3/extension/_locales/ur/messages.json
+index 933a642d189b..3263241b4c06 100644
+--- a/platform/mv3/extension/_locales/ur/messages.json
++++ b/platform/mv3/extension/_locales/ur/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -447,4 +447,4 @@
+     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/vi/messages.json b/platform/mv3/extension/_locales/vi/messages.json
+index ca2997d12364..d6b57919bcd3 100644
+--- a/platform/mv3/extension/_locales/vi/messages.json
++++ b/platform/mv3/extension/_locales/vi/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — Bảng điều khiển",
++    "message": "Anatase Adblocker — Bảng điều khiển",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "Chọn một bộ lọc bên dưới để đánh dấu các phần tử phù hợp trong trang web. Nhấp vào thùng rác để xóa bộ lọc.",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/zh_CN/messages.json b/platform/mv3/extension/_locales/zh_CN/messages.json
+index a18a367c9b22..1fd82856ec19 100644
+--- a/platform/mv3/extension/_locales/zh_CN/messages.json
++++ b/platform/mv3/extension/_locales/zh_CN/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — 控制面板",
++    "message": "Anatase Adblocker — 控制面板",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "选择下面的过滤器以突出显示网页中匹配的元素。点击垃圾桶可移除过滤器。",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/_locales/zh_TW/messages.json b/platform/mv3/extension/_locales/zh_TW/messages.json
+index d2fc4019ca39..5f6e921a2e04 100644
+--- a/platform/mv3/extension/_locales/zh_TW/messages.json
++++ b/platform/mv3/extension/_locales/zh_TW/messages.json
+@@ -1,6 +1,6 @@
+ {
+   "extName": {
+-    "message": "uBlock Origin Lite",
++    "message": "Anatase Adblocker",
+     "description": "extension name."
+   },
+   "extShortDesc": {
+@@ -12,7 +12,7 @@
+     "description": "Appears aside each filter list in the _3rd-party filters_ pane"
+   },
+   "dashboardName": {
+-    "message": "uBO Lite — 控制台",
++    "message": "Anatase Adblocker — 控制台",
+     "description": "English: uBO Lite — Dashboard"
+   },
+   "settingsPageName": {
+@@ -447,4 +447,4 @@
+     "message": "選取下方的過濾器，以突顯網頁中符合條件的元素。按一下回收桶可移除過濾器。",
+     "description": "Summary description on how to use the tool to remove custom filters"
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/platform/mv3/extension/dashboard.html b/platform/mv3/extension/dashboard.html
+index 6b5fc33bf53f..654c473bb26d 100644
+--- a/platform/mv3/extension/dashboard.html
++++ b/platform/mv3/extension/dashboard.html
+@@ -168,7 +168,7 @@
+     <div class="body">
+         <div id="aboutNameVer" class="li"></div>
+         <div class="liul">
+-            <div class="li">Copyright (c) Raymond Hill 2014-present</div>
++            <div class="li">Based on uBlock Origin Lite. Copyright (C) Anatase 2026 & Raymond Hill 2014-present</div>
+         </div>
+         <div class="li"><a href="https://github.com/uBlockOrigin/uBOL-home/wiki/Privacy-policy" data-i18n="aboutPrivacyPolicy"></a></div>
+         <div class="li"><a href="https://github.com/uBlockOrigin/uBOL-home/releases" data-i18n="aboutChangelog"></a></div>
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Fri, 3 Jul 2026 21:35:07 +0200
+Subject: be responsible and remove report an issue for now
+
+---
+ platform/mv3/extension/popup.html | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/platform/mv3/extension/popup.html b/platform/mv3/extension/popup.html
+index e648a0124919..76befe43cbd0 100644
+--- a/platform/mv3/extension/popup.html
++++ b/platform/mv3/extension/popup.html
+@@ -42,10 +42,10 @@
+             <span class="fa-icon">eye-open</span>
+             <span data-i18n="unpickerTipEnter">_</span>
+         </span>
+-        <span id="gotoReport" class="tool enabled" tabindex="0">
++        <!-- <span id="gotoReport" class="tool enabled" tabindex="0">
+             <span class="fa-icon">comment-alt</span>
+             <span data-i18n="popupTipReport">_</span>
+-        </span>
++        </span> -->
+     </div>
+     <!-- -------- -->
+     <div class="toolRibbon globalTools">
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Fri, 3 Jul 2026 21:57:32 +0200
+Subject: update colors to anatase
+
+---
+ src/css/themes/default.css | 44 +++++++++++++++++++-------------------
+ 1 file changed, 22 insertions(+), 22 deletions(-)
+
+diff --git a/src/css/themes/default.css b/src/css/themes/default.css
+index c78b4a255c51..8a69ce6b2f2e 100644
+--- a/src/css/themes/default.css
++++ b/src/css/themes/default.css
+@@ -147,18 +147,18 @@
+  * Tool: hsluv.org
+  * 
+  * */
+-:root /* h255 */ {
+-    --primary-5:   3  16  40; /* S:90 Luv:5 */
+-   --primary-10:   5  27  59; /* S:90 Luv:10 */
+-   --primary-20:  14  47  95; /* S:90 Luv:20 */
+-   --primary-30:  24  69 134; /* S:90 Luv:30 */
+-   --primary-40:  34  93 176; /* S:90 Luv:40 */
+-   --primary-50:  45 117 219; /* S:90 Luv:50 */
+-   --primary-60:  86 143 244; /* S:90 Luv:60 */
+-   --primary-70: 137 170 247; /* S:90 Luv:70 */
+-   --primary-80: 179 198 250; /* S:90 Luv:80 */
+-   --primary-90: 218 226 252; /* S:90 Luv:90 */
+-   --primary-95: 236 240 254; /* S:90 Luv:95 */
++:root /* h55 */ {
++    --primary-5:  13  11   2;
++   --primary-10:  26  22   4;
++   --primary-20:  58  49   8;
++   --primary-30:  94  79  13;
++   --primary-40: 139 117  20;
++   --primary-50: 168 143  34;
++   --primary-60: 196 170  54;
++   --primary-70: 217 195  92;
++   --primary-80: 233 218 134;
++   --primary-90: 245 237 198;
++   --primary-95: 250 246 227;
+     }
+ 
+ /*
+@@ -180,10 +180,10 @@
+ }
+ @media (prefers-color-scheme: dark) {
+     :root {
+-        --surface-0-rgb: 0 0 0;
+-        --surface-1: rgb(var(--gray-10));
+-        --surface-2: rgb(var(--gray-20));
+-        --surface-3: rgb(var(--gray-30));
++        --surface-0-rgb: 16 21 22;
++        --surface-1: rgb(21 27 28);
++        --surface-2: rgb(29 37 38);
++        --surface-3: rgb(37 45 46);
+     }
+ }
+ 
+@@ -195,10 +195,10 @@
+ }
+ 
+ :root.dark {
+-    --surface-0-rgb: 0 0 0;
+-    --surface-1: rgb(var(--gray-10));
+-    --surface-2: rgb(var(--gray-20));
+-    --surface-3: rgb(var(--gray-30));
++    --surface-0-rgb: 16 21 22;
++    --surface-1: rgb(21 27 28);
++    --surface-2: rgb(29 37 38);
++    --surface-3: rgb(37 45 46);
+ }
+ 
+ /*
+@@ -455,8 +455,8 @@
+     --popup-cell-block-own-surface: rgb(var(--popup-cell-block-own-surface-rgb));
+     --popup-cell-block-surface: rgb(var(--popup-cell-block-surface-rgb));
+     --popup-power-ink: rgb(var(--popup-power-ink-rgb));
+-    --popup-toolbar-surface: rgb(var(--primary-80) / 15%);
+-    --popup-toolbar-surface-hover: rgb(var(--primary-80) / 30%);
++    --popup-toolbar-surface: var(--surface-2);
++    --popup-toolbar-surface-hover: var(--surface-3);
+     --popup-ruleset-tool-ink: var(--ink-1);
+     --popup-ruleset-tool-surface: rgb(var(--primary-80) / 15%);
+     --popup-ruleset-tool-surface-hover: rgb(var(--primary-80) / 20%);

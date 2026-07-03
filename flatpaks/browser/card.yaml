@@ -43,26 +43,35 @@ flatpak:
     --talk-name=org.kde.kwalletd6
     --own-name=org.mpris.MediaPlayer2.chromium.*
   add-extensions:
-    org.chromium.Chromium.Extension:
+    # Should these exist? Aren't they an attack vector?
+    # org.chromium.Chromium.Extension:
+    #   version: "1"
+    #   directory: chromium/extensions
+    #   merge-dirs: extensions;native-messaging-hosts;policies/managed;policies/recommended
+    #   subdirectories: true
+    #   no-autodownload: true
+    #   autodelete: true
+    # org.chromium.Chromium.NativeMessagingHost:
+    #   version: "1"
+    #   directory: chromium/native-messaging-hosts
+    #   merge-dirs: native-messaging-hosts
+    #   subdirectories: true
+    #   no-autodownload: true
+    #   autodelete: true
+    # org.chromium.Chromium.Policy:
+    #   version: "1"
+    #   directory: chromium/policies
+    #   merge-dirs: policies/managed;policies/recommended
+    #   subdirectories: true
+    #   no-autodownload: true
+    #   autodelete: true
+    org.anatase.Browser.Adblocker:
       version: "1"
       directory: chromium/extensions
-      merge-dirs: extensions;native-messaging-hosts;policies/managed;policies/recommended
+      # TODO: Figure out why this has a merge-dirs component that is not working 
+      # merge-dirs: extensions;native-messaging-hosts;policies/managed;policies/recommended
       subdirectories: true
-      no-autodownload: true
-      autodelete: true
-    org.chromium.Chromium.NativeMessagingHost:
-      version: "1"
-      directory: chromium/native-messaging-hosts
-      merge-dirs: native-messaging-hosts
-      subdirectories: true
-      no-autodownload: true
-      autodelete: true
-    org.chromium.Chromium.Policy:
-      version: "1"
-      directory: chromium/policies
-      merge-dirs: policies/managed;policies/recommended
-      subdirectories: true
-      no-autodownload: true
+      no-autodownload: false
       autodelete: true
 
 build-deps:
@@ -152,7 +161,10 @@ postprocess: |-
   PY
   fi
 
-  mkdir -p app/chromium/extensions
+  mkdir -p app/chromium/extensions \
+           app/chromium/native-messaging-hosts \
+           app/chromium/policies/managed \
+           app/chromium/policies/recommended
   for dir in native-messaging-hosts policies; do
-      ln -sfn "/app/chromium/$dir" "app/chromium/extensions/$dir"
+      ln -s "/app/chromium/$dir" "app/chromium/extensions/$dir"
   done

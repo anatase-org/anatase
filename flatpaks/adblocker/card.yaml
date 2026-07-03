@@ -1,0 +1,105 @@
+version: 1
+
+env:
+  version: $version
+
+flatpak:
+  id: org.anatase.Browser.Adblocker
+  runtime: true
+  version: "1"
+
+build-deps:
+  - curl
+  - findutils
+  - gawk
+  - git-core
+  - gzip
+  - jq
+  - rpm-build
+  - rpmdevtools
+  - redhat-rpm-config
+  - tar
+
+prepare: |
+  set -eux
+
+  #
+  # Prepare ublock source
+  #
+  UBLOCK_REF="1.72.0"
+  PACKAGE_VERSION="$(awk '$1 == "Version:" { print $2; exit }' adblocker.spec)"
+  SOURCE="uBlock-source.tar.gz"
+  SOURCE_CACHE="uBlock-source-${UBLOCK_REF}.tar.gz"
+  SOURCE_DIR="uBlock-source"
+  RULESETS="rulesets-${PACKAGE_VERSION}.tar.gz"
+
+  mkdir -p /cache/artifacts
+
+  if [ -f "/cache/artifacts/${SOURCE_CACHE}" ]; then
+    cp -f "/cache/artifacts/${SOURCE_CACHE}" "$SOURCE"
+  else
+    rm -rf "$SOURCE_DIR"
+    git clone \
+      --depth=1 \
+      --filter=blob:none \
+      --also-filter-submodules \
+      --recurse-submodules \
+      --shallow-submodules \
+      --branch "$UBLOCK_REF" \
+      https://github.com/gorhill/uBlock.git "$SOURCE_DIR"
+    find "$SOURCE_DIR" -name .git -prune -exec rm -rf {} +
+    tar -czf "$SOURCE" "$SOURCE_DIR"
+    cp -f "$SOURCE" "/cache/artifacts/${SOURCE_CACHE}"
+  fi
+
+  if [ -f "/cache/artifacts/${RULESETS}" ]; then
+    cp -f "/cache/artifacts/${RULESETS}" .
+    exit 0
+  fi
+
+  if [ ! -d "$SOURCE_DIR" ]; then
+    tar -xzf "$SOURCE"
+  fi
+
+  #
+  # Prepare rulesets
+  #
+
+  rm -rf rulesets
+  mkdir -p rulesets
+  jq -c '.[] | select(.enabled == true) | select(((.excludedPlatforms // []) | index("chromium")) | not)' \
+    "$SOURCE_DIR/platform/mv3/rulesets.json" |
+  while IFS= read -r ruleset; do
+    id="$(printf '%s\n' "$ruleset" | jq -r '.id')"
+    urls="$(printf '%s\n' "$ruleset" | jq -r '.urls[]?')"
+    if [ -z "$urls" ]; then
+      continue
+    fi
+    : > "rulesets/$id"
+    printf '%s\n' "$urls" |
+    while IFS= read -r url; do
+      curl -fL --retry 3 --retry-delay 2 "$url" >> "rulesets/$id"
+      printf '\n' >> "rulesets/$id"
+    done
+  done
+  tar -czf "$RULESETS" rulesets
+  cp -f "$RULESETS" /cache/artifacts/
+  rm -rf "$SOURCE_DIR" rulesets
+
+specs:
+  - spec: adblocker.spec
+    replace:
+      Version: $version
+    patch:
+      type: git
+      url: https://github.com/gorhill/uBlock.git
+      ref: 1.72.0
+      file: overrides.patch
+    packages:
+      - anatase-browser-adblocker
+    files:
+      - adblocker.spec
+      - adblocker.pem
+      - adblocker.svg
+      - adblocker_off.svg
+      - overrides.patch
