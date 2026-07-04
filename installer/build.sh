@@ -53,6 +53,20 @@ install -Dm0644 /files/installer/anatase.ks \
     /usr/share/anaconda/interactive-defaults.ks
 install -Dm0755 /files/installer/anatase-webui.desktop \
     /etc/skel/Desktop/anatase-webui.desktop
+for size in 16 22 24 32 36 48 96 256; do
+    icon_dir="/usr/share/icons/hicolor/${size}x${size}/apps"
+    if [ -f "${icon_dir}/anatase-logo-icon.png" ]; then
+        ln -snf anatase-logo-icon.png \
+            "${icon_dir}/org.fedoraproject.AnacondaInstaller.png"
+    fi
+done
+if [ -f /usr/share/icons/hicolor/scalable/apps/anatase-logo-icon.svg ]; then
+    ln -snf anatase-logo-icon.svg \
+        /usr/share/icons/hicolor/scalable/apps/org.fedoraproject.AnacondaInstaller.svg
+fi
+if command -v gtk-update-icon-cache >/dev/null; then
+    gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true
+fi
 
 if ! getent group wheel >/dev/null; then
     groupadd wheel
