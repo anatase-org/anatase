@@ -1,0 +1,4 @@
+[Flatpak Repo]
+Title=Anatase
+Url=oci+https://flatpaks.anatase.org/%distro%
+xa.prio=10

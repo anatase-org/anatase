@@ -67,6 +67,8 @@ files:
   - flatpak/anatase-runtime-deploy
   - flatpak/anatase-flatpak-extensions
   - flatpak/anatase-flatpak-extensions.service
+  - flatpak/anatase-flatpaks.service
+  - flatpak/anatase.flatpakrepo
   - flatpak/flathub.filter
   - flatpak/flathub.flatpakrepo
 
@@ -118,16 +120,22 @@ postprocess: |
     # Flatpak Remotes
     #
 
-    install -dm0755 /usr/share/flatpak/remotes.d
     install -Dm0644 /files/flatpak/flathub.filter \
         /usr/share/flatpak/filters/flathub.filter
     install -Dm0644 /files/flatpak/flathub.flatpakrepo \
         /usr/share/flatpak/remotes.d/flathub.flatpakrepo
-    cat > /usr/share/flatpak/remotes.d/anatase.flatpakrepo <<EOF
-    [Flatpak Repo]
-    Title=Anatase
-    Url=oci+https://flatpaks.anatase.org/${distro}
+    install -Dm0644 /files/flatpak/anatase.flatpakrepo \
+        /usr/share/flatpak/remotes.d/anatase.flatpakrepo
+    sed -i "s|%distro%|${distro}|g" \
+        /usr/share/flatpak/remotes.d/anatase.flatpakrepo
+    install -Dm0644 /files/flatpak/anatase-flatpaks.service \
+        /usr/lib/systemd/system/anatase-flatpaks.service
+    sed -i "s|%distro%|${distro}|g" \
+        /usr/lib/systemd/system/anatase-flatpaks.service
+    cat > /usr/lib/systemd/system-preset/80-anatase-flatpaks.preset <<'EOF'
+    enable anatase-flatpaks.service
     EOF
+    systemctl preset anatase-flatpaks.service || true
 
     #
     # Flatpak Extension Management

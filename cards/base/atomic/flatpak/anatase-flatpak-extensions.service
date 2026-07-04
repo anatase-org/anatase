@@ -1,7 +1,7 @@
 [Unit]
 Description=Register Anatase-managed Flatpak extensions
 After=local-fs.target
-Before=flatpak-system-helper.service
+Before=flatpak-system-helper.service anatase-flatpaks.service
 RequiresMountsFor=/var/lib/flatpak
 
 [Service]
