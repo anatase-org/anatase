@@ -9,7 +9,7 @@ MANIFEST=${MANIFEST:-anatase.yml}
 manifest_image=${MANIFEST##*/}
 manifest_image=${manifest_image%.yml}
 manifest_image=${manifest_image%.yaml}
-IMAGE=${IMAGE:-localhost/${manifest_image}:f44-x86_64}
+IMAGE=${IMAGE:-localhost/images:${manifest_image}}
 OSTREE_REF=${OSTREE_REF:-master}
 VM_SSH_HOST=${VM_SSH_HOST:-localhost}
 VM_SSH_PORT=${VM_SSH_PORT:-2222}
@@ -64,5 +64,5 @@ fi
 
 sudo ostree pull-local "${ostree_mount_point}" "${ostree_ref}"
 sudo ostree admin deploy "${ostree_ref}"
-sudo ostree admin prepare-soft-reboot 0 --reboot || sudo reboot
+sudo reboot
 EOF
