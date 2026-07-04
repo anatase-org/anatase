@@ -43,7 +43,7 @@ ln -snf /dev/null /etc/systemd/system/flatpak-system-update.timer
 ln -snf /dev/null /etc/systemd/user/flatpak-user-update.service
 ln -snf /dev/null /etc/systemd/user/flatpak-user-update.timer
 sed -i \
-    's#panel.addWidget("org.kde.plasma.icontasks")#var iconTasks = panel.addWidget("org.kde.plasma.icontasks")\niconTasks.currentConfigGroup = ["General"]\niconTasks.writeConfig("launchers", "applications:systemsettings.desktop,preferred://filemanager,preferred://browser")#' \
+    's#panel.addWidget("org.kde.plasma.icontasks")#var iconTasks = panel.addWidget("org.kde.plasma.icontasks")\niconTasks.currentConfigGroup = ["General"]\niconTasks.writeConfig("launchers", "preferred://filemanager,preferred://browser")#' \
     /usr/share/plasma/layout-templates/org.kde.plasma.desktop.defaultPanel/contents/layout.js
 
 # Add Installer user and skeleton
