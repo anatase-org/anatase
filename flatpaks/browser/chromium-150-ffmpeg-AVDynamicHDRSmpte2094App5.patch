@@ -1,0 +1,21 @@
+Workaround for missing AVDynamicHDRSmpte2094App5
+
+diff -up chromium-150.0.7871.46/media/filters/ffmpeg_demuxer.cc.me chromium-150.0.7871.46/media/filters/ffmpeg_demuxer.cc
+--- chromium-150.0.7871.46/media/filters/ffmpeg_demuxer.cc.me	2026-07-01 16:46:33.963059679 +0200
++++ chromium-150.0.7871.46/media/filters/ffmpeg_demuxer.cc	2026-07-01 17:02:31.668298287 +0200
+@@ -343,6 +343,7 @@ base::span<const uint8_t> GetMatroskaBlo
+ 
+ std::vector<uint8_t> GetAgtmSideData(const AVPacket* packet) {
+   std::vector<uint8_t> data;
++#ifdef AV_PKT_DATA_DYNAMIC_HDR_SMPTE_2094_APP5
+   size_t side_data_size = 0;
+   AVDynamicHDRSmpte2094App5* side_data =
+       reinterpret_cast<AVDynamicHDRSmpte2094App5*>(av_packet_get_side_data(
+@@ -360,6 +361,7 @@ std::vector<uint8_t> GetAgtmSideData(con
+       0) {
+     data.clear();
+   }
++#endif
+   return data;
+ }
+ 

@@ -1,0 +1,12 @@
+diff -up chromium-150.0.7871.46/third_party/blink/renderer/platform/runtime_enabled_features.json5.me chromium-150.0.7871.46/third_party/blink/renderer/platform/runtime_enabled_features.json5
+--- chromium-150.0.7871.46/third_party/blink/renderer/platform/runtime_enabled_features.json5.me	2026-07-01 11:42:50.002271226 +0200
++++ chromium-150.0.7871.46/third_party/blink/renderer/platform/runtime_enabled_features.json5	2026-07-01 15:15:08.984906253 +0200
+@@ -761,7 +761,7 @@
+       // as if they are in light mode.
+       // P.N. `AutoDarkMode` needs to be applied separately.
+       name: "AutoDarkModeSkipImages",
+-      base_feature: "none",
++      base_feature: "AutoDarkModeSkipImages",
+     },
+     {
+       name: "Autofill",

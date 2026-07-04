@@ -1,0 +1,17 @@
+
+Fix build error with new kernel-7.2.0 on ppc64le (fedora 45), pt_regs size is changed
+  error: static assertion failed due to requirement 'sizeof(crashpad::ThreadContext::t64_t) == sizeof(pt_regs)': Size mismatch
+
+diff -up chromium-150.0.7871.46/third_party/crashpad/crashpad/util/linux/thread_info.h.me chromium-150.0.7871.46/third_party/crashpad/crashpad/util/linux/thread_info.h
+--- chromium-150.0.7871.46/third_party/crashpad/crashpad/util/linux/thread_info.h.me	2026-07-03 13:42:51.069732930 +0200
++++ chromium-150.0.7871.46/third_party/crashpad/crashpad/util/linux/thread_info.h	2026-07-03 13:44:52.107066309 +0200
+@@ -165,6 +165,9 @@ union ThreadContext {
+     uint64_t dar;
+     uint64_t dsisr;
+     uint64_t result;
++    uint64_t exit_flags;
++    uint64_t __pt_regs_pad[3];
++
+ #else
+ #error Port.
+ #endif  // ARCH_CPU_X86_FAMILY
