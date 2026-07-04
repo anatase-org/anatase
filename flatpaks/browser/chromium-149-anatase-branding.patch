@@ -366,7 +366,7 @@
    mixer[kColorRefSecondary100] = {SkColorSetRGB(0xFF, 0xFF, 0xFF)};
 --- a/ui/webui/resources/cr_components/theme_color_picker/color_utils.ts
 +++ b/ui/webui/resources/cr_components/theme_color_picker/color_utils.ts
-@@ -25,15 +25,15 @@
+@@ -29,13 +29,13 @@
  };
  
  export const LIGHT_BASELINE_BLUE_COLOR: Color = {
@@ -386,3 +386,26 @@
 +  foreground: {value: 0xff4c400a},
 +  base: {value: 0xff757575},
  };
+--- a/chrome/browser/ui/views/user_education/browser_ntp_promos.cc
++++ b/chrome/browser/ui/views/user_education/browser_ntp_promos.cc
+@@ -141,10 +141,10 @@
+-  registry.AddPromo(NtpPromoSpecification(
+-      kNtpCustomizationPromoId,
+-      NtpPromoContent("palette", IDS_NTP_CUSTOMIZATION_PROMO,
+-                      IDS_NTP_CUSTOMIZATION_PROMO),
+-      base::BindRepeating(&CheckCustomizationPromoEligibility),
+-      /*show_callback=*/base::DoNothing(),
+-      base::BindRepeating(&InvokeCustomizationPromo),
+-      /*show_after=*/{},
+-      user_education::Metadata(141, "cjgrant@google.com",
+-                               "Promotes customization of the New Tab Page")));
++  // registry.AddPromo(NtpPromoSpecification(
++  //     kNtpCustomizationPromoId,
++  //     NtpPromoContent("palette", IDS_NTP_CUSTOMIZATION_PROMO,
++  //                     IDS_NTP_CUSTOMIZATION_PROMO),
++  //     base::BindRepeating(&CheckCustomizationPromoEligibility),
++  //     /*show_callback=*/base::DoNothing(),
++  //     base::BindRepeating(&InvokeCustomizationPromo),
++  //     /*show_after=*/{},
++  //     user_education::Metadata(141, "cjgrant@google.com",
++  //                              "Promotes customization of the New Tab Page")));
