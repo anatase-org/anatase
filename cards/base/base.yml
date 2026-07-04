@@ -176,7 +176,6 @@ packages:
   - b43-openfwwf
   - intel-lpmd
   - libva-intel-media-driver
-  - mcelog
   - pciutils
   - prefixdevname
   - thermald
