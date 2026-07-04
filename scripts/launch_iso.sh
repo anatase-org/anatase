@@ -221,9 +221,11 @@ qemu_args=(
     -m "${VM_MEMORY}"
     -smp "${VM_CPUS}"
     -drive "if=none,id=install0,file=${disk},format=raw,cache=writeback,discard=unmap,detect-zeroes=unmap"
-    -device "virtio-blk-pci,drive=install0,serial=ANATASE-INSTALL-TARGET"
-    -drive "file=${iso},format=raw,media=cdrom,readonly=on"
-    -boot order=cd,once=d
+    -device "virtio-blk-pci,drive=install0,serial=ANATASE-INSTALL-TARGET,bootindex=2"
+    -drive "if=none,id=installer_iso,file=${iso},format=raw,media=cdrom,readonly=on"
+    -device "virtio-scsi-pci,id=installer_scsi"
+    -device "scsi-cd,bus=installer_scsi.0,drive=installer_iso,bootindex=1"
+    -boot order=d,once=d
     -netdev user,id=net0
     -device virtio-net-pci,netdev=net0
     "${graphics_args[@]}"
