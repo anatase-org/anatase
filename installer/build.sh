@@ -5,6 +5,47 @@ set -eux
 command -v liveinst >/dev/null
 command -v slitherer-anaconda >/dev/null
 
+# Hide Discover in the live installer session. The installed system keeps the
+# normal KDE defaults from the image that Anaconda deploys.
+install -dm0755 \
+    /etc/xdg \
+    /etc/xdg/autostart \
+    /etc/systemd/system \
+    /etc/systemd/user \
+    /usr/share/applications \
+    /usr/share/kde-settings/kde-profile/default/xdg
+for desktop_file in \
+    org.kde.discover.desktop \
+    org.kde.discover.flatpak.desktop \
+    org.kde.discover.notifier.desktop \
+    org.kde.discover.urlhandler.desktop; do
+    cat > "/usr/share/applications/${desktop_file}" <<'EOF'
+[Desktop Entry]
+Hidden=true
+EOF
+done
+cat > /etc/xdg/autostart/org.kde.discover.notifier.desktop <<'EOF'
+[Desktop Entry]
+Hidden=true
+EOF
+cat > /usr/share/kde-settings/kde-profile/default/xdg/kicker-extra-favoritesrc <<'EOF'
+[General]
+Prepend=preferred://browser;org.kde.dolphin.desktop
+IgnoreDefaults=true
+EOF
+cat > /etc/xdg/PlasmaDiscoverUpdates <<'EOF'
+[Global]
+UseUnattendedUpdates=false
+RequiredNotificationInterval=0
+EOF
+ln -snf /dev/null /etc/systemd/system/flatpak-system-update.service
+ln -snf /dev/null /etc/systemd/system/flatpak-system-update.timer
+ln -snf /dev/null /etc/systemd/user/flatpak-user-update.service
+ln -snf /dev/null /etc/systemd/user/flatpak-user-update.timer
+sed -i \
+    's#panel.addWidget("org.kde.plasma.icontasks")#var iconTasks = panel.addWidget("org.kde.plasma.icontasks")\niconTasks.currentConfigGroup = ["General"]\niconTasks.writeConfig("launchers", "applications:systemsettings.desktop,preferred://filemanager,preferred://browser")#' \
+    /usr/share/plasma/layout-templates/org.kde.plasma.desktop.defaultPanel/contents/layout.js
+
 # Add Installer user and skeleton
 install -Dm0644 /files/installer/anatase.ks \
     /usr/share/anatase-installer/anatase.ks
