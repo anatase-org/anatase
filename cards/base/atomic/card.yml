@@ -314,3 +314,26 @@ postprocess: |
     enable bootloader-update.service
     EOF
     systemctl preset bootloader-update.service || true
+
+    # Fix stale / entries in /etc/fstab before systemd-remount-fs applies root
+    # mount options on bootc systems.
+    # https://github.com/fedora-iot/iot-distro/issues/81
+    cat > /usr/lib/systemd/system/anatase-fixup-etc-fstab.service <<'EOF'
+    [Unit]
+    Description=Fix stale root mount in /etc/fstab
+    DefaultDependencies=no
+    After=systemd-fsck-root.service
+    Before=local-fs-pre.target local-fs.target shutdown.target systemd-remount-fs.service
+
+    [Service]
+    Type=oneshot
+    RemainAfterExit=yes
+    ExecStart=bootc internals fixup-etc-fstab
+
+    [Install]
+    WantedBy=local-fs.target
+    EOF
+    cat > /usr/lib/systemd/system-preset/80-anatase-fstab.preset <<'EOF'
+    enable anatase-fixup-etc-fstab.service
+    EOF
+    systemctl preset anatase-fixup-etc-fstab.service || true
