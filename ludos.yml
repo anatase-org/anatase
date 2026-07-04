@@ -7,3 +7,7 @@ flatpaks:
     uri: https://flatpaks.anatase.org/icons/
     s3: icons/
     overlay: ./flatpaks/overlay.png
+  gpg:
+    identity: https://flatpaks.anatase.org/
+    lookaside: gpg
+    verify: ./cards/base/atomic/keys/anatase-gpg.pub.asc

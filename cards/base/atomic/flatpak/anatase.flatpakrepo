@@ -1,4 +1,6 @@
 [Flatpak Repo]
 Title=Anatase
 Url=oci+https://flatpaks.anatase.org/%distro%
+GPGKey=@gpg@
 xa.prio=10
+xa.signature-lookaside=https://flatpaks.anatase.org/gpg

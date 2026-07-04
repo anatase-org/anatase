@@ -7,7 +7,7 @@ RequiresMountsFor=/var/lib/flatpak
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/bin/flatpak remote-modify --title "Anatase" --prio=10 --url oci+https://flatpaks.anatase.org/%distro% anatase
+ExecStart=/usr/bin/flatpak remote-modify --title "Anatase" --prio=10 --url oci+https://flatpaks.anatase.org/%distro% --gpg-verify --gpg-import=/usr/share/anatase/keys/anatase-gpg.pub.asc --signature-lookaside=https://flatpaks.anatase.org/gpg anatase
 ExecStart=/usr/bin/flatpak remote-modify --title "Flathub" --url https://dl.flathub.org/repo/ --filter=/usr/share/flatpak/filters/flathub.filter flathub
 
 [Install]

@@ -64,6 +64,7 @@ specs:
 
 files:
   - keys/anatase-mok-ca.crt
+  - keys/anatase-gpg.pub.asc
   - flatpak/anatase-runtime-deploy
   - flatpak/anatase-flatpak-extensions
   - flatpak/anatase-flatpak-extensions.service
@@ -125,6 +126,15 @@ postprocess: |
     install -Dm0644 /files/flatpak/flathub.flatpakrepo \
         /usr/share/flatpak/remotes.d/flathub.flatpakrepo
     install -Dm0644 /files/flatpak/anatase.flatpakrepo \
+        /usr/share/flatpak/remotes.d/anatase.flatpakrepo
+    install -Dm0644 /files/keys/anatase-gpg.pub.asc \
+        /usr/share/anatase/keys/anatase-gpg.pub.asc
+    gpg_key="$(awk '
+        /^-----BEGIN PGP PUBLIC KEY BLOCK-----$/ { body = 1; next }
+        /^-----END PGP PUBLIC KEY BLOCK-----$/ { body = 0; next }
+        body && $0 !~ /:/ && $0 !~ /^=/ && length($0) { printf "%s", $0 }
+    ' /files/keys/anatase-gpg.pub.asc)"
+    sed -i "s|@gpg@|${gpg_key}|g" \
         /usr/share/flatpak/remotes.d/anatase.flatpakrepo
     sed -i "s|%distro%|${distro}|g" \
         /usr/share/flatpak/remotes.d/anatase.flatpakrepo
