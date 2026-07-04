@@ -1,0 +1,35 @@
+#!/bin/bash
+set -eo pipefail
+
+efi_root=/boot/efi
+payload=/usr/lib/ludos/efi
+boot_mount=$efi_root
+source /usr/libexec/grub-boot-remount
+trap remount_boot_ro EXIT
+
+if [ ! -d "$payload" ]; then
+    echo "missing Anatase EFI payload directory: $payload" >&2
+    exit 1
+fi
+
+if ! mountpoint -q "$efi_root"; then
+    echo "EFI system partition is not mounted: $efi_root" >&2
+    exit 1
+fi
+
+payload_complete() {
+    local relative source
+    while IFS= read -r -d '' source; do
+        relative=${source#"${payload}/"}
+        [ -f "${efi_root}/${relative}" ] || return 1
+    done < <(find "$payload" -type f -print0)
+}
+
+if payload_complete; then
+    exit 0
+fi
+
+remount_boot_rw
+cp -R --no-preserve=mode,ownership,timestamps "${payload}/." "${efi_root}/"
+sync "$efi_root"
+remount_boot_ro

@@ -1,0 +1,13 @@
+[Unit]
+Description=Install extra GRUB boot files
+After=local-fs.target
+RequiresMountsFor=/boot/efi
+ConditionDirectoryNotEmpty=/usr/lib/ludos/efi
+ConditionPathIsMountPoint=/boot/efi
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/grub-boot-extrafiles
+
+[Install]
+WantedBy=multi-user.target
