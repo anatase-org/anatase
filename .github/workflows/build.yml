@@ -16,6 +16,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 100
+          token: ${{ secrets.ANATASE_READ }}
+          persist-credentials: false
           submodules: recursive
 
       - name: Install ludos
