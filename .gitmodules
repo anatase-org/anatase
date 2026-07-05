@@ -1,6 +1,6 @@
 [submodule "ludos"]
 	path = ludos
-	url = git@github.com:anatase-org/ludos.git
+	url = https://github.com/anatase-org/ludos.git
 [submodule "cards/drivers/nvidia/nvidia-container-toolkit"]
 	path = cards/drivers/nvidia/nvidia-container-toolkit
 	url = https://github.com/NVIDIA/nvidia-container-toolkit
