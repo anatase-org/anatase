@@ -69,7 +69,6 @@ files:
   - containers/anatase-registries.yaml
   - containers/anatase-container-policy
   - containers/anatase-container-policy.service
-  - containers/80-anatase-container-policy.preset
   - flatpak/anatase-runtime-deploy
   - flatpak/anatase-flatpak-extensions
   - flatpak/anatase-flatpak-extensions.service
@@ -142,8 +141,9 @@ postprocess: |
         /usr/libexec/anatase-container-policy
     install -Dm0644 /files/containers/anatase-container-policy.service \
         /usr/lib/systemd/system/anatase-container-policy.service
-    install -Dm0644 /files/containers/80-anatase-container-policy.preset \
-        /usr/lib/systemd/system-preset/80-anatase-container-policy.preset
+    cat > /usr/lib/systemd/system-preset/80-anatase-container-policy.preset <<'EOF'
+    enable anatase-container-policy.service
+    EOF
     /usr/libexec/anatase-container-policy
     systemctl preset anatase-container-policy.service || true
     gpg_key="$(awk '
