@@ -72,7 +72,7 @@ import configparser
 import sys
 
 origin_file = sys.argv[1]
-target_image_ref = "ostree-unverified-registry:i.anatase.org/anatase:stable"
+target_image_ref = "ostree-image-signed:registry:i.anatase.org/anatase:stable"
 
 config = configparser.ConfigParser(interpolation=None)
 config.optionxform = str

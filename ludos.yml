@@ -2,6 +2,12 @@ version: 1
 
 name: Anatase
 
+oci:
+  cosign:
+    registry: https://i.anatase.org/
+    identity: cosign.anatase.org
+    verify: cards/base/atomic/keys/anatase-cosign-root.pem
+
 flatpaks:
   images:
     uri: https://flatpaks.anatase.org/icons/

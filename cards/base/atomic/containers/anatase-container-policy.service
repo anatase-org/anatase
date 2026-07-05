@@ -1,0 +1,13 @@
+[Unit]
+Description=Enforce Anatase container signature policy
+ConditionPathExists=/usr/share/anatase/keys/anatase-cosign-root.pem
+After=local-fs.target
+Before=rpm-ostreed.service anatase-flatpaks.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/anatase-container-policy
+
+[Install]
+WantedBy=multi-user.target
+WantedBy=rpm-ostreed.service

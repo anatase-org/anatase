@@ -65,6 +65,11 @@ specs:
 files:
   - keys/anatase-mok-ca.crt
   - keys/anatase-gpg.pub.asc
+  - keys/anatase-cosign-root.pem
+  - containers/anatase-registries.yaml
+  - containers/anatase-container-policy
+  - containers/anatase-container-policy.service
+  - containers/80-anatase-container-policy.preset
   - flatpak/anatase-runtime-deploy
   - flatpak/anatase-flatpak-extensions
   - flatpak/anatase-flatpak-extensions.service
@@ -129,6 +134,18 @@ postprocess: |
         /usr/share/flatpak/remotes.d/anatase.flatpakrepo
     install -Dm0644 /files/keys/anatase-gpg.pub.asc \
         /usr/share/anatase/keys/anatase-gpg.pub.asc
+    install -Dm0644 /files/keys/anatase-cosign-root.pem \
+        /usr/share/anatase/keys/anatase-cosign-root.pem
+    install -Dm0644 /files/containers/anatase-registries.yaml \
+        /etc/containers/registries.d/anatase.yaml
+    install -Dm0755 /files/containers/anatase-container-policy \
+        /usr/libexec/anatase-container-policy
+    install -Dm0644 /files/containers/anatase-container-policy.service \
+        /usr/lib/systemd/system/anatase-container-policy.service
+    install -Dm0644 /files/containers/80-anatase-container-policy.preset \
+        /usr/lib/systemd/system-preset/80-anatase-container-policy.preset
+    /usr/libexec/anatase-container-policy
+    systemctl preset anatase-container-policy.service || true
     gpg_key="$(awk '
         /^-----BEGIN PGP PUBLIC KEY BLOCK-----$/ { body = 1; next }
         /^-----END PGP PUBLIC KEY BLOCK-----$/ { body = 0; next }

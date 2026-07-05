@@ -1,0 +1,3 @@
+docker:
+  i.anatase.org:
+    use-sigstore-attachments: true
