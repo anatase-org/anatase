@@ -1,6 +1,11 @@
 [Flatpak Repo]
 Title=Anatase
 Url=oci+https://flatpaks.anatase.org/%distro%
-GPGKey=@gpg@
-xa.prio=10
-xa.signature-lookaside=https://flatpaks.anatase.org/gpg
+
+# The nitwit that implemented the parser did not add support for importing
+# xa. attrs, so adding the gpg key here results in an invalid repo because
+# lookaside is not respected. Rely on the boot service to add gpg
+# verification instead.
+#GPGKey=@gpg@
+#xa.prio=10
+#xa.signature-lookaside=https://flatpaks.anatase.org/gpg
