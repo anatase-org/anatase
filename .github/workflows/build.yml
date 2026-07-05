@@ -1,0 +1,40 @@
+name: build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 100
+          submodules: recursive
+
+      - name: Install ludos
+        run: |
+          python3 -m venv venv
+          venv/bin/pip install --upgrade pip
+          venv/bin/pip install -e ./ludos
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io \
+            --username "${{ github.actor }}" \
+            --password-stdin
+
+      - name: Initialize CI images
+        run: venv/bin/ludos ci init anatase.yml
+
+      - name: Prepare CI build manifest
+        run: venv/bin/ludos ci prepare anatase.yml
+
+      - name: Seed CI images
+        run: venv/bin/ludos ci seed

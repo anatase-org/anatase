@@ -2,6 +2,9 @@ version: 1
 
 name: Anatase
 
+ci:
+  registry: ghcr.io/anatase-org
+
 oci:
   cosign:
     registry: https://i.anatase.org/
