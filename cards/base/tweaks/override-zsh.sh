@@ -1,4 +1,5 @@
 # Switch interactive bash sessions to zsh on bootc systems, where chsh is not useful.
+# Also wrap systemd-inhibit over ssh, so devices don't sleep while SSH is active
 
 case "$-" in
   *i*) ;;
