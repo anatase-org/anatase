@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 6 Jul 2026 18:45:33 +0200
+Subject: Tweak scaling for handhelds
+
+---
+ src/outputconfigurationstore.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/outputconfigurationstore.cpp b/src/outputconfigurationstore.cpp
+index 2f6a76caf43e..37537b66f84c 100644
+--- a/src/outputconfigurationstore.cpp
++++ b/src/outputconfigurationstore.cpp
+@@ -817,7 +817,7 @@ double OutputConfigurationStore::chooseScale(BackendOutput *output, const QSize
+         } else {
+             // phone screens: even closer than laptops
+             targetDpi = 150;
+-            minSize = 360;
++            minSize = 650;
+         }
+     } else {
+         // NOTE that height is checked instead of diagonal size to avoid

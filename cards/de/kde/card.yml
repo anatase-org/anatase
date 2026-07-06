@@ -136,6 +136,25 @@ specs:
       ref: v${spec:Version}
       file: overrides.patch
 
+  - spec: kwin/kwin.spec
+    files:
+      - .gitignore
+      - kwin.spec
+      - overrides.patch
+      - sources
+    packages:
+      - kwin
+      - kwin-common
+      - kwin-libs
+    upstream:
+      type: dist-git
+      url: https://src.fedoraproject.org/rpms/kwin
+      branch: f$releasever
+    patch:
+      type: git
+      url: https://invent.kde.org/plasma/kwin
+      ref: v${spec:Version}
+      file: overrides.patch
 
 files:
     - color-schemes/AnataseDark.colors
@@ -150,6 +169,14 @@ files:
 
 postprocess: |
     set -eux
+
+    kwin_version="$(rpm -q --qf '%{VERSION}' kwin)"
+    plasma_workspace_version="$(rpm -q --qf '%{VERSION}' plasma-workspace)"
+
+    if [ "${kwin_version}" != "${plasma_workspace_version}" ]; then
+        echo "KWin and Plasma Workspace versions diverged: kwin=${kwin_version}, plasma-workspace=${plasma_workspace_version}" >&2
+        exit 1
+    fi
 
     install -dm0755 \
         /etc/xdg \
