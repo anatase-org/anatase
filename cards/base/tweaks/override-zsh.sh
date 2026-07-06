@@ -14,7 +14,20 @@ command -v zsh >/dev/null 2>&1 || return 0
 
 export ANATASE_ZSH_ENTERED=1
 if shopt -q login_shell; then
-    exec zsh -l
+    anatase_zsh=(zsh -l)
 else
-    exec zsh
+    anatase_zsh=(zsh)
 fi
+
+if [ "${ANATASE_SSH_NOSLEEP:-1}" != 0 ] \
+    && [ -n "${SSH_CONNECTION:-}${SSH_CLIENT:-}${SSH_TTY:-}" ] \
+    && command -v systemd-inhibit >/dev/null 2>&1; then
+    exec systemd-inhibit \
+        --what=idle \
+        --mode=block \
+        --who=sshd \
+        --why="SSH session active" \
+        "${anatase_zsh[@]}"
+fi
+
+exec "${anatase_zsh[@]}"
