@@ -648,6 +648,32 @@ cv ()
 alias av='source venv/bin/activate'
 alias dv='deactivate'
 
+# Enable passwordless sudo for the current user, or for the user given as $1.
+sudonopass ()
+{
+  local target_user sudoers_file
+
+  if (( $# > 1 )); then
+    print -u2 -- "usage: sudonopass [user]"
+    return 2
+  fi
+
+  target_user="${1:-${SUDO_USER:-${USER:-$(id -un)}}}"
+  if [[ ! "$target_user" =~ '^[A-Za-z0-9_.][A-Za-z0-9_.-]*$' ]]; then
+    print -u2 -- "Refusing to write sudoers entry for invalid user name: $target_user"
+    return 1
+  fi
+
+  if ! getent passwd "$target_user" >/dev/null; then
+    print -u2 -- "No such user: $target_user"
+    return 1
+  fi
+
+  sudoers_file="/etc/sudoers.d/90-${target_user}-nopasswd"
+  sudo sh -c "echo '${target_user} ALL=(ALL) NOPASSWD: ALL' > '${sudoers_file}'" &&
+    print -r -- "Enabled passwordless sudo for ${target_user} in ${sudoers_file}."
+}
+
 # ex - archive extractor, who remembers the commands anyway
 # Yes, some of these are not available in anatase (for now)
 # usage: ex <file>
