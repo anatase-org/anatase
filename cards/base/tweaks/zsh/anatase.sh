@@ -544,8 +544,8 @@ unset anatase_zsh_dir anatase_use_powerlevel10k anatase_zsh_theme
 : ${PCRS:="0+2+3+7+8"}
 
 _anatase_enroll_with_key() {
-  if ! sudo test -s /crypt/systemd.key; then
-    print -r -- "No cached LUKS recovery key was found at /crypt/systemd.key."
+  if ! sudo test -s /var/crypt/systemd.key; then
+    print -r -- "No cached LUKS recovery key was found at /var/crypt/systemd.key."
     print -r -- "Anatase will generate and enroll a recovery key now, then store it"
     print -r -- "there so TPM/FIDO enrollment updates can happen without a password."
     print -r -- "You may be prompted for your current disk encryption passphrase."
@@ -553,7 +553,7 @@ _anatase_enroll_with_key() {
     sudo bash -c '
       set -e
 
-      key=/crypt/systemd.key
+      key=/var/crypt/systemd.key
       device=$(blkid | awk -F: "/crypto_LUKS/ { print \$1; exit }")
 
       if [ -z "$device" ]; then
@@ -580,7 +580,7 @@ _anatase_enroll_with_key() {
     fi
 
     PASSWORD="$(cat "$key")" systemd-cryptenroll "$@" "$device"
-  ' bash /crypt/systemd.key "$@"
+  ' bash /var/crypt/systemd.key "$@"
 }
 
 # Asks you to enter your hardware encryption password
