@@ -1,28 +1,5 @@
 version: 1
 
-packages:
-  - alsa-sof-firmware
-  - amd-gpu-firmware
-  - amd-ucode-firmware
-  - atheros-firmware
-  - brcmfmac-firmware
-  - cirrus-audio-firmware
-  - intel-audio-firmware
-  - intel-gpu-firmware
-  - intel-vsc-firmware
-  - iwlegacy-firmware
-  - iwlwifi-dvm-firmware
-  - iwlwifi-mvm-firmware
-  - libertas-firmware
-  - linux-firmware
-  - microcode_ctl
-  - mt7xxx-firmware
-  # - nvidia-gpu-firmware
-  - nxpwireless-firmware
-  - qcom-wwan-firmware
-  - realtek-firmware
-  - tiwilink-firmware
-
 build-deps:
   - bash
   - coreutils
@@ -54,6 +31,7 @@ specs:
       - linux-firmware
       - linux-firmware-whence
       - mt7xxx-firmware
+      # - nvidia-gpu-firmware # provided by proprietary driver
       - nxpwireless-firmware
       - qcom-wwan-firmware
       - realtek-firmware
