@@ -1,0 +1,64 @@
+version: 1
+
+packages:
+  - alsa-sof-firmware
+  - amd-gpu-firmware
+  - amd-ucode-firmware
+  - atheros-firmware
+  - brcmfmac-firmware
+  - cirrus-audio-firmware
+  - intel-audio-firmware
+  - intel-gpu-firmware
+  - intel-vsc-firmware
+  - iwlegacy-firmware
+  - iwlwifi-dvm-firmware
+  - iwlwifi-mvm-firmware
+  - libertas-firmware
+  - linux-firmware
+  - microcode_ctl
+  - mt7xxx-firmware
+  # - nvidia-gpu-firmware
+  - nxpwireless-firmware
+  - qcom-wwan-firmware
+  - realtek-firmware
+  - tiwilink-firmware
+
+build-deps:
+  - bash
+  - coreutils
+  - findutils
+  - rpm-build
+  - rpmdevtools
+  - ccache
+  - sccache
+
+specs:
+  - spec: linux-firmware.spec
+    files:
+      - .gitignore
+      - linux-firmware.spec
+    packages:
+      - amd-gpu-firmware
+      - amd-ucode-firmware
+      - atheros-firmware
+      - brcmfmac-firmware
+      - cirrus-audio-firmware
+      - intel-audio-firmware
+      - intel-gpu-firmware
+      - intel-vsc-firmware
+      - iwlegacy-firmware
+      - iwlwifi-dvm-firmware
+      - iwlwifi-mld-firmware
+      - iwlwifi-mvm-firmware
+      - libertas-firmware
+      - linux-firmware
+      - linux-firmware-whence
+      - mt7xxx-firmware
+      - nxpwireless-firmware
+      - qcom-wwan-firmware
+      - realtek-firmware
+      - tiwilink-firmware
+    upstream:
+      type: dist-git
+      url: https://src.fedoraproject.org/rpms/linux-firmware
+      branch: rawhide
