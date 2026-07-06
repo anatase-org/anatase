@@ -440,17 +440,6 @@ anatase_bindkey_all() {
   bindkey -M vicmd "$1" "$2"
 }
 
-if (( ${+terminfo[smkx]} && ${+terminfo[rmkx]} )); then
-  anatase_zle_line_init() {
-    echoti smkx
-  }
-  anatase_zle_line_finish() {
-    echoti rmkx
-  }
-  zle -N zle-line-init anatase_zle_line_init
-  zle -N zle-line-finish anatase_zle_line_finish
-fi
-
 #
 # Expand key bindings
 #
