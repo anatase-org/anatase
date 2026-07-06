@@ -541,7 +541,7 @@ unset anatase_zsh_dir anatase_use_powerlevel10k anatase_zsh_theme
 # 0 UEFI 2 KERNEL 4 BOOTLOADER 5 PARTITION TABLE 7 SECURE BOOT (grub: 8 KERNEL CMD 9 KERNEL IMG)
 # https://www.gnu.org/software/grub/manual/grub/grub.html#Measured-Boot
 # https://threat.tevora.com/secure-boot-tpm-2/
-: ${PCRS:="0+2+3+7+8"}
+: ${PCRS:="0+2+3+5+7+14"}
 
 _anatase_enroll_with_key() {
   if ! sudo test -s /var/crypt/systemd.key; then
