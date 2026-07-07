@@ -64,5 +64,5 @@ fi
 
 sudo ostree pull-local "${ostree_mount_point}" "${ostree_ref}"
 sudo ostree admin deploy "${ostree_ref}"
-sudo reboot
+sudo ostree admin prepare-soft-reboot 0 --reboot || sudo reboot
 EOF
