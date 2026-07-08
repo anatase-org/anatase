@@ -1,0 +1,213 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Tue, 7 Jul 2026 23:04:00 +0200
+Subject: use the user's settings, dont override
+
+---
+ envmanager/config.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/envmanager/config.h b/envmanager/config.h
+index c2c967ddc95a..2f35a260de0a 100644
+--- a/envmanager/config.h
++++ b/envmanager/config.h
+@@ -27,10 +27,10 @@ const QMap<QString, QMap<QString, QVariant>> APPLICATIONS_BLACKLIST_DEFAULT_SETT
+        "waydroid.org.lineageos.jelly,waydroid.org.lineageos.recorder,wordview,org.kde.drkonqi.coredump.gui,org.kde.kdeconnect.sms"}}}};
+ 
+ // .config/plasma-mobile/kdeglobals - non-immutable settings:
+-const QMap<QString, QMap<QString, QVariant>> KDEGLOBALS_DEFAULT_SETTINGS = {{"General", {{"BrowserApplication", "angelfish"}}}};
++const QMap<QString, QMap<QString, QVariant>> KDEGLOBALS_DEFAULT_SETTINGS = {};
+ 
+ // .config/plasma-mobile/kdeglobals - immutable settings:
+-const QMap<QString, QMap<QString, QVariant>> KDEGLOBALS_SETTINGS = {{"KDE", {{"LookAndFeelPackage", "org.kde.breeze.mobile"}}}};
++const QMap<QString, QMap<QString, QVariant>> KDEGLOBALS_SETTINGS = {};
+ 
+ // .config/plasma-mobile/kwinrc - non-immutable settings:
+ const QMap<QString, QMap<QString, QVariant>> KWINRC_DEFAULT_SETTINGS = {
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Tue, 7 Jul 2026 21:47:19 +0200
+Subject: disable first run wizard
+
+---
+ initialstart/settings.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/initialstart/settings.cpp b/initialstart/settings.cpp
+index e415cd3f973e..68ff44ec6d0a 100644
+--- a/initialstart/settings.cpp
++++ b/initialstart/settings.cpp
+@@ -18,7 +18,7 @@ Settings::Settings(QObject *parent)
+ 
+ bool Settings::shouldStartWizard()
+ {
+-    if (!m_isMobilePlatform) {
++    if (!m_isMobilePlatform || true) {
+         return false;
+     }
+ 
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Tue, 7 Jul 2026 21:59:36 +0200
+Subject: use our image
+
+---
+ containments/taskpanel/qml/NavigationPanelComponent.qml      | 2 +-
+ kcms/navigation/ui/TutorialPhone.qml                         | 2 +-
+ kwin/mobiletaskswitcher/package/contents/ui/TaskSwitcher.qml | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/containments/taskpanel/qml/NavigationPanelComponent.qml b/containments/taskpanel/qml/NavigationPanelComponent.qml
+index 763460455523..9c1285483852 100644
+--- a/containments/taskpanel/qml/NavigationPanelComponent.qml
++++ b/containments/taskpanel/qml/NavigationPanelComponent.qml
+@@ -86,7 +86,7 @@ MobileShell.NavigationPanel {
+         id: homeAction
+ 
+         enabled: true
+-        iconSource: "start-here-kde"
++        iconSource: "start-here"
+ 
+         onTriggered: {
+             MobileShellState.ShellDBusClient.openHomeScreen();
+diff --git a/kcms/navigation/ui/TutorialPhone.qml b/kcms/navigation/ui/TutorialPhone.qml
+index 52014b70a218..7f05c29be0f9 100644
+--- a/kcms/navigation/ui/TutorialPhone.qml
++++ b/kcms/navigation/ui/TutorialPhone.qml
+@@ -44,7 +44,7 @@ Item {
+         Kirigami.Icon {
+             visible: root.showBackground
+ 
+-            source: "start-here-kde"
++            source: "start-here"
+             smooth: true
+ 
+             anchors.verticalCenter: phone.verticalCenter
+diff --git a/kwin/mobiletaskswitcher/package/contents/ui/TaskSwitcher.qml b/kwin/mobiletaskswitcher/package/contents/ui/TaskSwitcher.qml
+index e6146392f26a..d9882af6a5da 100644
+--- a/kwin/mobiletaskswitcher/package/contents/ui/TaskSwitcher.qml
++++ b/kwin/mobiletaskswitcher/package/contents/ui/TaskSwitcher.qml
+@@ -559,7 +559,7 @@ FocusScope {
+             // home button
+             middleAction: MobileShell.NavigationPanelAction {
+                 enabled: true
+-                iconSource: "start-here-kde"
++                iconSource: "start-here"
+                 onTriggered: root.hide()
+             }
+ 
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Tue, 7 Jul 2026 23:14:53 +0200
+Subject: do a dirty load of current env vars so that plasma mobile does not
+ override
+
+---
+ bin/startplasmamobile.in | 23 ++++++++++++++++++++++-
+ 1 file changed, 22 insertions(+), 1 deletion(-)
+
+diff --git a/bin/startplasmamobile.in b/bin/startplasmamobile.in
+index 9c4c994de124..96b9ac0a6d10 100755
+--- a/bin/startplasmamobile.in
++++ b/bin/startplasmamobile.in
+@@ -16,8 +16,29 @@ export QT_QUICK_CONTROLS_MOBILE=true
+ export PLASMA_INTEGRATION_USE_PORTAL=1
+ export PLASMA_PLATFORM=phone:handset
+ 
++# Load distro Plasma defaults before adding the mobile overlay. Fedora's
++# kde-settings profile is added here, and Plasma skips it if XDG_CONFIG_DIRS is
++# already set.
++[ -f /etc/xdg/plasma-workspace/env/env.sh ] && . /etc/xdg/plasma-workspace/env/env.sh
++
++if [ -n "$XDG_CONFIG_HOME" ]; then
++	config_home="$XDG_CONFIG_HOME"
++else
++	config_home="$HOME/.config"
++fi
++
++if [ -n "$XDG_CONFIG_DIRS" ]; then
++	config_dirs="$XDG_CONFIG_DIRS"
++else
++	config_dirs="/etc/xdg"
++fi
++
++if [ -d "$config_home/kdedefaults" ]; then
++	config_dirs="$config_home/kdedefaults:$config_dirs"
++fi
++
+ # Set ~/.config/plasma-mobile/... as location for default mobile configs (i.e. envmanager generated)
+-export XDG_CONFIG_DIRS="$HOME/.config/plasma-mobile:/etc/xdg:$XDG_CONFIG_DIRS"
++export XDG_CONFIG_DIRS="$config_home/plasma-mobile:$config_dirs"
+ 
+ # if coredumpd knows about the dumps, make sure drkonqi catches them
+ if grep -q '/systemd-coredump' /proc/sys/kernel/core_pattern
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Tue, 7 Jul 2026 23:56:39 +0200
+Subject: cleanup quick settings
+
+---
+ .../quicksettingsplugin/quicksettingsconfig.cpp | 17 +++++++++--------
+ 1 file changed, 9 insertions(+), 8 deletions(-)
+
+diff --git a/components/quicksettingsplugin/quicksettingsconfig.cpp b/components/quicksettingsplugin/quicksettingsconfig.cpp
+index e40a378bf55c..649cbf72ceaf 100644
+--- a/components/quicksettingsplugin/quicksettingsconfig.cpp
++++ b/components/quicksettingsplugin/quicksettingsconfig.cpp
+@@ -32,22 +32,23 @@ QList<QString> QuickSettingsConfig::enabledQuickSettings() const
+     // we aren't worried about quicksettings not showing up though, any that are not specified will be automatically added to the end
+     return group.readEntry("enabledQuickSettings",
+                            QList<QString>{QStringLiteral("org.kde.plasma.quicksetting.wifi"),
+-                                          QStringLiteral("org.kde.plasma.quicksetting.mobiledata"),
+                                           QStringLiteral("org.kde.plasma.quicksetting.bluetooth"),
+-                                          QStringLiteral("org.kde.plasma.quicksetting.flashlight"),
++                                          QStringLiteral("org.kde.plasma.quicksetting.battery"),
+                                           QStringLiteral("org.kde.plasma.quicksetting.screenrotation"),
+-                                          QStringLiteral("org.kde.plasma.quicksetting.settingsapp"),
+-                                          QStringLiteral("org.kde.plasma.quicksetting.airplanemode"),
+                                           QStringLiteral("org.kde.plasma.quicksetting.audio"),
+-                                          QStringLiteral("org.kde.plasma.quicksetting.battery"),
+-                                          QStringLiteral("org.kde.plasma.quicksetting.record"),
+                                           QStringLiteral("org.kde.plasma.quicksetting.nightcolor"),
+                                           QStringLiteral("org.kde.plasma.quicksetting.screenshot"),
++                                          QStringLiteral("org.kde.plasma.quicksetting.keyboardtoggle"),
+                                           QStringLiteral("org.kde.plasma.quicksetting.powermenu"),
+                                           QStringLiteral("org.kde.plasma.quicksetting.donotdisturb"),
+                                           QStringLiteral("org.kde.plasma.quicksetting.caffeine"),
+-                                          QStringLiteral("org.kde.plasma.quicksetting.keyboardtoggle"),
+-                                          QStringLiteral("org.kde.plasma.quicksetting.hotspot")});
++                                          QStringLiteral("org.kde.plasma.quicksetting.settingsapp"),
++                                        //   QStringLiteral("org.kde.plasma.quicksetting.airplanemode"),
++                                        //   QStringLiteral("org.kde.plasma.quicksetting.record"),
++                                        //   QStringLiteral("org.kde.plasma.quicksetting.flashlight"),
++                                        //   QStringLiteral("org.kde.plasma.quicksetting.mobiledata"),
++                                        //   QStringLiteral("org.kde.plasma.quicksetting.hotspot")
++                                        });
+ }
+ 
+ void QuickSettingsConfig::setEnabledQuickSettings(QList<QString> &list)
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Tue, 7 Jul 2026 23:56:49 +0200
+Subject: make power menu show all options
+
+---
+ quicksettings/powermenu/powermenuutil.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/quicksettings/powermenu/powermenuutil.cpp b/quicksettings/powermenu/powermenuutil.cpp
+index 43450a0c24db..da5228f5169d 100644
+--- a/quicksettings/powermenu/powermenuutil.cpp
++++ b/quicksettings/powermenu/powermenuutil.cpp
+@@ -16,5 +16,5 @@ PowerMenuUtil::PowerMenuUtil(QObject *parent)
+ void PowerMenuUtil::openShutdownScreen()
+ {
+     SessionManagement sessionManagement;
+-    sessionManagement.requestShutdown();
++    sessionManagement.requestLogoutPrompt();
+ }

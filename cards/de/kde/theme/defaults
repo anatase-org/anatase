@@ -2,6 +2,7 @@
 widgetStyle=Breeze
 
 [kdeglobals][General]
+AccentColor=@ACCENT_COLOR@
 ColorScheme=@COLOR_SCHEME@
 
 [kdeglobals][Icons]

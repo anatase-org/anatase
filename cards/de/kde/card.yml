@@ -109,6 +109,14 @@ packages:
     # Flatpak dependencies (kde runtime; move later)
     - kf6-threadweaver # Okular
 
+    # Plasma mobile deps
+    - gmobile
+    - gsound
+    - libfeedbackd
+    - plasma-milou
+    - plasma-nano
+    - qt6-qtsensors
+
 build-deps:
   - bash
   - cmake
@@ -135,7 +143,21 @@ specs:
       url: https://invent.kde.org/plasma/plasma-setup
       ref: v${spec:Version}
       file: overrides.patch
-
+  - spec: plasma-mobile/plasma-mobile.spec
+    files:
+      - "*.patch"
+      - plasma-mobile.spec
+    packages:
+      - plasma-mobile
+    upstream:
+      type: dist-git
+      url: https://src.fedoraproject.org/rpms/plasma-mobile
+      branch: f$releasever
+    patch:
+      type: git
+      url: https://invent.kde.org/plasma/plasma-mobile
+      ref: v${spec:Version}
+      file: overrides.patch
   - spec: kwin/kwin.spec
     files:
       - .gitignore
@@ -351,10 +373,12 @@ postprocess: |
         color_scheme="${2}"
         icon_theme="${3}"
         splash_theme="${4}"
+        accent_color="${5}"
         defaults_file="${theme_dir}/contents/defaults"
 
         install -m0644 /files/theme/defaults "${defaults_file}"
         sed -i \
+            -e "s|@ACCENT_COLOR@|${accent_color}|g" \
             -e "s|@COLOR_SCHEME@|${color_scheme}|g" \
             -e "s|@ICON_THEME@|${icon_theme}|g" \
             -e "s|@SPLASH_THEME@|${splash_theme}|g" \
@@ -365,12 +389,14 @@ postprocess: |
         "${lookandfeel_dir}/org.anatase.anatase.desktop" \
         AnataseDark \
         breeze-dark \
-        org.anatase.anatase.desktop
+        org.anatase.anatase.desktop \
+        "190,166,40"
     write_anatase_defaults \
         "${lookandfeel_dir}/org.anatase.anataselight.desktop" \
         AnataseLight \
         breeze \
-        org.anatase.anatase.desktop
+        org.anatase.anatase.desktop \
+        "207,184,49"
     #   /\ this is the dark default theme splash screen as they are the same
 
     write_start_here_plasmoid_setup() {
@@ -449,11 +475,17 @@ postprocess: |
     kwriteconfig6 --file "${kdeglobals}" --group KDE --key LookAndFeelPackage org.anatase.anatase.desktop
     kwriteconfig6 --file "${kdeglobals}" --group KDE --key DefaultDarkLookAndFeel org.anatase.anatase.desktop
     kwriteconfig6 --file "${kdeglobals}" --group KDE --key DefaultLightLookAndFeel org.anatase.anataselight.desktop
+    kwriteconfig6 --file "${kdeglobals}" --group KDE --key ColorScheme --delete ''
+    kwriteconfig6 --file "${kdeglobals}" --group General --key AccentColor "190,166,40"
     kwriteconfig6 --file "${kdeglobals}" --group General --key ColorScheme AnataseDark
     kwriteconfig6 --file "${kdeglobals}" --group Icons --key Theme breeze-dark
     kwriteconfig6 --file "${konsolerc}" --group "Desktop Entry" --key DefaultProfile Anatase.profile
     kwriteconfig6 --file "${ksplashrc}" --group KSplash --key Engine KSplashQML
     kwriteconfig6 --file "${ksplashrc}" --group KSplash --key Theme org.anatase.anatase.desktop
+
+    # Plasma mobile
+    # Removing this here is easier than in the package
+    rm -rf /usr/share/plasma/look-and-feel/org.kde.breeze.mobile/
 
     # Remove twilight theme as it conflicts with our start button
     # TODO: Fix this
