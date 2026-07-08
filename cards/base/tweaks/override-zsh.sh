@@ -11,13 +11,14 @@ esac
 [ "${ANATASE_AUTO_ZSH:-1}" != 0 ] || return 0
 [ ! -e "${HOME}/.no-anatase-zsh" ] || return 0
 [ -z "${ANATASE_ZSH_ENTERED:-}" ] || return 0
-command -v zsh >/dev/null 2>&1 || return 0
+anatase_zsh_path=$(command -v zsh) || return 0
 
 export ANATASE_ZSH_ENTERED=1
+export SHELL="$anatase_zsh_path"
 if shopt -q login_shell; then
-    anatase_zsh=(zsh -l)
+    anatase_zsh=("$anatase_zsh_path" -l)
 else
-    anatase_zsh=(zsh)
+    anatase_zsh=("$anatase_zsh_path")
 fi
 
 if [ "${ANATASE_SSH_NOSLEEP:-1}" != 0 ] \
