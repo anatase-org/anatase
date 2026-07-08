@@ -689,7 +689,7 @@ ex ()
 }
 
 #
-# Show fastfetch as MODT
+# Show fastfetch as MOTD
 #
 
 case $- in
@@ -699,6 +699,7 @@ esac
 
 if [ -t 1 ] &&
     [ -z "${ANATASE_DISABLE_MOTD:-}" ] &&
+    [ -z "${STY:-}" ] &&
     command -v fastfetch >/dev/null 2>&1; then
     echo
     fastfetch
