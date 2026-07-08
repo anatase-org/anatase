@@ -151,11 +151,25 @@ Date: Tue, 7 Jul 2026 23:56:39 +0200
 Subject: cleanup quick settings
 
 ---
- .../quicksettingsplugin/quicksettingsconfig.cpp | 17 +++++++++--------
- 1 file changed, 9 insertions(+), 8 deletions(-)
+ bin/startplasmamobile.in                      |  1 -
+ .../quicksettingsconfig.cpp                   | 19 ++++++++++---------
+ .../savedquicksettings.cpp                    | 12 ++++++------
+ 3 files changed, 16 insertions(+), 16 deletions(-)
 
+diff --git a/bin/startplasmamobile.in b/bin/startplasmamobile.in
+index 96b9ac0a6d10..498b475f0102 100755
+--- a/bin/startplasmamobile.in
++++ b/bin/startplasmamobile.in
+@@ -10,7 +10,6 @@
+ export QT_QPA_PLATFORMTHEME=KDE
+ export EGL_PLATFORM=wayland
+ 
+-export QT_QUICK_CONTROLS_STYLE=org.kde.breeze
+ export QT_ENABLE_GLYPH_CACHE_WORKAROUND=1
+ export QT_QUICK_CONTROLS_MOBILE=true
+ export PLASMA_INTEGRATION_USE_PORTAL=1
 diff --git a/components/quicksettingsplugin/quicksettingsconfig.cpp b/components/quicksettingsplugin/quicksettingsconfig.cpp
-index e40a378bf55c..649cbf72ceaf 100644
+index e40a378bf55c..b3f31802acd0 100644
 --- a/components/quicksettingsplugin/quicksettingsconfig.cpp
 +++ b/components/quicksettingsplugin/quicksettingsconfig.cpp
 @@ -32,22 +32,23 @@ QList<QString> QuickSettingsConfig::enabledQuickSettings() const
@@ -166,6 +180,7 @@ index e40a378bf55c..649cbf72ceaf 100644
                                            QStringLiteral("org.kde.plasma.quicksetting.bluetooth"),
 -                                          QStringLiteral("org.kde.plasma.quicksetting.flashlight"),
 +                                          QStringLiteral("org.kde.plasma.quicksetting.battery"),
++                                          QStringLiteral("org.kde.plasma.quicksetting.powermenu"),
                                            QStringLiteral("org.kde.plasma.quicksetting.screenrotation"),
 -                                          QStringLiteral("org.kde.plasma.quicksetting.settingsapp"),
 -                                          QStringLiteral("org.kde.plasma.quicksetting.airplanemode"),
@@ -174,8 +189,8 @@ index e40a378bf55c..649cbf72ceaf 100644
 -                                          QStringLiteral("org.kde.plasma.quicksetting.record"),
                                            QStringLiteral("org.kde.plasma.quicksetting.nightcolor"),
                                            QStringLiteral("org.kde.plasma.quicksetting.screenshot"),
+-                                          QStringLiteral("org.kde.plasma.quicksetting.powermenu"),
 +                                          QStringLiteral("org.kde.plasma.quicksetting.keyboardtoggle"),
-                                           QStringLiteral("org.kde.plasma.quicksetting.powermenu"),
                                            QStringLiteral("org.kde.plasma.quicksetting.donotdisturb"),
                                            QStringLiteral("org.kde.plasma.quicksetting.caffeine"),
 -                                          QStringLiteral("org.kde.plasma.quicksetting.keyboardtoggle"),
@@ -190,6 +205,29 @@ index e40a378bf55c..649cbf72ceaf 100644
  }
  
  void QuickSettingsConfig::setEnabledQuickSettings(QList<QString> &list)
+diff --git a/components/quicksettingsplugin/savedquicksettings.cpp b/components/quicksettingsplugin/savedquicksettings.cpp
+index cf0f1cd87326..c0a546b42931 100644
+--- a/components/quicksettingsplugin/savedquicksettings.cpp
++++ b/components/quicksettingsplugin/savedquicksettings.cpp
+@@ -144,12 +144,12 @@ void SavedQuickSettings::refreshModel()
+         }
+     }
+ 
+-    // add undefined quick settings to the back of enabled quick settings
+-    for (auto &metaData : m_validPackages) {
+-        if (!enabledQS.contains(metaData.pluginId()) && !disabledQS.contains(metaData.pluginId())) {
+-            m_enabledPackages.push_back(metaData);
+-        }
+-    }
++    // // add undefined quick settings to the back of enabled quick settings
++    // for (auto &metaData : m_validPackages) {
++    //     if (!enabledQS.contains(metaData.pluginId()) && !disabledQS.contains(metaData.pluginId())) {
++    //         m_enabledPackages.push_back(metaData);
++    //     }
++    // }
+ 
+     m_enabledQSModel->updateData(m_enabledPackages);
+     m_disabledQSModel->updateData(m_disabledPackages);
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
