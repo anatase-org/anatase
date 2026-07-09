@@ -12,6 +12,7 @@ packages:
 
   # System inspection and diagnostics
   - htop
+  - nvtop
   - i2c-tools
   - libinput-utils
   - lm_sensors
