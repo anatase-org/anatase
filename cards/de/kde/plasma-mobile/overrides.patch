@@ -286,3 +286,40 @@ index 5eda53bfa79e..6509bd7d47ae 100644
      , m_mobileConfig{KSharedConfig::openConfig(CONFIG_FILE, KConfig::SimpleConfig)}
  {
  }
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Fri, 10 Jul 2026 00:16:17 +0200
+Subject: Make default action sleep on plasma mobile
+
+---
+ bin/startplasmamobile.in | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/bin/startplasmamobile.in b/bin/startplasmamobile.in
+index b822e53392d8..69b93b1b6155 100755
+--- a/bin/startplasmamobile.in
++++ b/bin/startplasmamobile.in
+@@ -36,8 +36,20 @@ if [ -d "$config_home/kdedefaults" ]; then
+ 	config_dirs="$config_home/kdedefaults:$config_dirs"
+ fi
+ 
++# Set the mobile power button default to suspend to RAM for every power profile.
++mobile_config_dir="$config_home/plasma-mobile"
++mkdir -p "$mobile_config_dir"
++for profile in AC Battery LowBattery; do
++	kwriteconfig6 --file "$mobile_config_dir/powerdevilrc" \
++		--group "$profile" --group SuspendAndShutdown \
++		--key PowerButtonAction 1
++	kwriteconfig6 --file "$mobile_config_dir/powerdevilrc" \
++		--group "$profile" --group SuspendAndShutdown \
++		--key SleepMode 1
++done
++
+ # Set ~/.config/plasma-mobile/... as location for default mobile configs (i.e. envmanager generated)
+-export XDG_CONFIG_DIRS="$config_home/plasma-mobile:$config_dirs"
++export XDG_CONFIG_DIRS="$mobile_config_dir:$config_dirs"
+ 
+ # if coredumpd knows about the dumps, make sure drkonqi catches them
+ if grep -q '/systemd-coredump' /proc/sys/kernel/core_pattern
+
