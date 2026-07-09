@@ -157,7 +157,7 @@ install_app_image() {
     ssh "${VM_SSH}" "cat > '${remote_archive}'" < "${archive}"
 
     log "Installing ${app_id} on ${VM_SSH}"
-    ssh "${VM_SSH}" "flatpak install --system -y --noninteractive --reinstall --no-deps --image 'oci-archive:${remote_archive}'"
+    ssh "${VM_SSH}" "sudo flatpak install --system -y --noninteractive --reinstall --no-deps --image 'oci-archive:${remote_archive}'"
 
     log "Installed ${app_id} (${branch})"
 }
