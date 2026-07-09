@@ -45,6 +45,8 @@ packages:
   - opencl-filesystem
   - OpenCL-ICD-Loader
   - spirv-llvm-translator
+  # Useful for debugging
+  - libva-utils
 
 specs:
   - spec: ./mesa.spec
