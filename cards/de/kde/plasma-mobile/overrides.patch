@@ -249,3 +249,40 @@ index 43450a0c24db..da5228f5169d 100644
 -    sessionManagement.requestShutdown();
 +    sessionManagement.requestLogoutPrompt();
  }
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Wed, 8 Jul 2026 04:07:29 +0200
+Subject: this var causes dolphin to change layout
+
+---
+ bin/startplasmamobile.in | 2 +-
+ envmanager/settings.cpp  | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/bin/startplasmamobile.in b/bin/startplasmamobile.in
+index 498b475f0102..b822e53392d8 100755
+--- a/bin/startplasmamobile.in
++++ b/bin/startplasmamobile.in
+@@ -13,7 +13,7 @@ export EGL_PLATFORM=wayland
+ export QT_ENABLE_GLYPH_CACHE_WORKAROUND=1
+ export QT_QUICK_CONTROLS_MOBILE=true
+ export PLASMA_INTEGRATION_USE_PORTAL=1
+-export PLASMA_PLATFORM=phone:handset
++# export PLASMA_PLATFORM=phone:handset
+ 
+ # Load distro Plasma defaults before adding the mobile overlay. Fedora's
+ # kde-settings profile is added here, and Plasma skips it if XDG_CONFIG_DIRS is
+diff --git a/envmanager/settings.cpp b/envmanager/settings.cpp
+index 5eda53bfa79e..6509bd7d47ae 100644
+--- a/envmanager/settings.cpp
++++ b/envmanager/settings.cpp
+@@ -29,7 +29,7 @@ const QString DESKTOP_KWINRC_FILE = u"kwinrc"_s;
+ 
+ Settings::Settings(QObject *parent)
+     : QObject{parent}
+-    , m_isMobilePlatform{KRuntimePlatform::runtimePlatform().contains(u"phone"_s)}
++    , m_isMobilePlatform{true}
+     , m_mobileConfig{KSharedConfig::openConfig(CONFIG_FILE, KConfig::SimpleConfig)}
+ {
+ }
