@@ -5,3 +5,5 @@ kwin:
   patch-sha: e34ec104bd373692eeb167947654e8411ccb1c1c
 plasma-mobile:
   patch-sha: 5765658ba43fe2469466e17d5f7ef66e4fdd2f5b
+powerdevil:
+  patch-sha: 1fd89635b8d4c5c18ea4ea06b9c57a858067d3c2

@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Fri, 10 Jul 2026 00:02:20 +0200
+Subject: suspend in tablet mode when power button is pressed
+
+---
+ daemon/actions/bundled/dpms.cpp | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/daemon/actions/bundled/dpms.cpp b/daemon/actions/bundled/dpms.cpp
+index 1588192cb7ee..12cb989269bb 100644
+--- a/daemon/actions/bundled/dpms.cpp
++++ b/daemon/actions/bundled/dpms.cpp
+@@ -12,6 +12,7 @@
+ #include <kwinkscreenhelpereffect.h>
+ #include <powerdevil_debug.h>
+ #include <powerdevilcore.h>
++#include <powerdevilenums.h>
+ 
+ #include <QAction>
+ #include <QDBusConnection>
+@@ -79,6 +80,14 @@ DPMS::DPMS(QObject *parent)
+             lockScreen();
+         }
+         m_dpms->switchMode(KScreen::Dpms::Off);
++
++        PowerDevil::Action *suspendAction = core()->action(u"SuspendSession"_s);
++        if (suspendAction) {
++            suspendAction->trigger({
++                {u"Type"_s, qToUnderlying(PowerDevil::PowerButtonAction::Sleep)},
++                {u"Explicit"_s, true},
++            });
++        }
+     });
+ 
+     auto powerButtonMode = [globalAction](bool isTablet) {

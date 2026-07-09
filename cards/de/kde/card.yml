@@ -177,6 +177,21 @@ specs:
       url: https://invent.kde.org/plasma/kwin
       ref: v${spec:Version}
       file: overrides.patch
+  - spec: powerdevil/powerdevil.spec
+    files:
+      - powerdevil.spec
+      - overrides.patch
+    packages:
+      - powerdevil
+    upstream:
+      type: dist-git
+      url: https://src.fedoraproject.org/rpms/powerdevil
+      branch: f$releasever
+    patch:
+      type: git
+      url: https://invent.kde.org/plasma/powerdevil
+      ref: v${spec:Version}
+      file: overrides.patch
 
 files:
     - color-schemes/AnataseDark.colors
