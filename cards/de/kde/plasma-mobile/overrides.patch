@@ -323,3 +323,25 @@ index b822e53392d8..69b93b1b6155 100755
  # if coredumpd knows about the dumps, make sure drkonqi catches them
  if grep -q '/systemd-coredump' /proc/sys/kernel/core_pattern
 
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Fri, 10 Jul 2026 11:26:11 +0200
+Subject: disable tablet mode to unify all devices (pointer in win5 counts)
+
+---
+ envmanager/config.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/envmanager/config.h b/envmanager/config.h
+index 2f35a260de0a..d070f750ad55 100644
+--- a/envmanager/config.h
++++ b/envmanager/config.h
+@@ -70,7 +70,7 @@ QMap<QString, QMap<QString, QVariant>> getKwinrcSettings(KSharedConfig::Ptr m_mo
+              }},
+             {"Input",
+              {
+-                 {"TabletMode", convergenceModeEnabled ? "off" : "auto"} // TabletMode changes depending on whether the device is in convergence mode
++                 {"TabletMode", "off"} // TabletMode changes depending on whether the device is in convergence mode
+              }}};
+ }
+ 
