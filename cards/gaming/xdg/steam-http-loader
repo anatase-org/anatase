@@ -1,0 +1,38 @@
+#!/usr/bin/python3
+
+import argparse
+import os.path
+import subprocess
+import urllib.parse
+
+
+STEAM_FLATPAK_ID = "org.anatase.Steam"
+
+
+def run(action: str, argument: str) -> None:
+    steam_url = f"steam://{action}/{argument}"
+    subprocess.run(
+        ["flatpak", "run", STEAM_FLATPAK_ID, steam_url],
+        check=False,
+    )
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Launch a link in the Steam browser.")
+    parser.add_argument("uri")
+    args = parser.parse_args()
+
+    url = urllib.parse.urlparse(args.uri, "file")
+
+    if url.scheme == "mailto":
+        run("mailto", url.path or url.netloc)
+        return
+
+    if url.scheme == "file" and not os.path.isabs(url.path):
+        url = url._replace(path=os.path.abspath(url.path))
+
+    run("openurl_external", url.geturl())
+
+
+if __name__ == "__main__":
+    main()

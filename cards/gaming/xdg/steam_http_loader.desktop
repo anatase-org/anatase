@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Steam HTTP Handler
+NoDisplay=true
+TryExec=flatpak
+Exec=steam-http-loader %u

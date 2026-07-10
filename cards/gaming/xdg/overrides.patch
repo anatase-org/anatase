@@ -1,0 +1,148 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Fri, 10 Jul 2026 23:52:39 +0200
+Subject: Adapt to ashpd 0.13.12
+
+---
+ src/access.rs     |  4 ++--
+ src/screencast.rs |  8 ++++----
+ src/screenshot.rs | 15 +++++++++++----
+ 3 files changed, 17 insertions(+), 10 deletions(-)
+
+diff --git a/src/access.rs b/src/access.rs
+index 81995b9f215b..03df2406923c 100644
+--- a/src/access.rs
++++ b/src/access.rs
+@@ -5,7 +5,7 @@
+  */
+ 
+ use ashpd::{
+-    AppID, WindowIdentifierType,
++    MaybeAppID, WindowIdentifierType,
+     backend::{
+         Result,
+         access::{AccessImpl, AccessOptions, AccessResponse},
+@@ -28,7 +28,7 @@ impl AccessImpl for Access {
+     async fn access_dialog(
+         &self,
+         _handle: HandleToken,
+-        _app_id: Option<AppID>,
++        _app_id: Option<MaybeAppID>,
+         _window_identifier: Option<WindowIdentifierType>,
+         _title: String,
+         _subtitle: String,
+diff --git a/src/screencast.rs b/src/screencast.rs
+index 637649becccd..9900e14e75a8 100644
+--- a/src/screencast.rs
++++ b/src/screencast.rs
+@@ -5,7 +5,7 @@
+  */
+ 
+ use ashpd::{
+-    AppID, PortalError, WindowIdentifierType,
++    MaybeAppID, PortalError, WindowIdentifierType,
+     backend::{
+         Result,
+         request::RequestImpl,
+@@ -47,7 +47,7 @@ impl ScreencastImpl for Screencast {
+         &self,
+         _token: HandleToken,
+         session_token: HandleToken,
+-        _app_id: Option<AppID>,
++        _app_id: Option<MaybeAppID>,
+         _options: CreateSessionOptions,
+     ) -> Result<CreateSessionResponse> {
+         log::info!("ScreenCast session created: {session_token}");
+@@ -57,7 +57,7 @@ impl ScreencastImpl for Screencast {
+     async fn select_sources(
+         &self,
+         session_token: HandleToken,
+-        _app_id: Option<AppID>,
++        _app_id: Option<MaybeAppID>,
+         options: SelectSourcesOptions,
+     ) -> Result<SelectSourcesResponse> {
+         // TODO: actually select the sources
+@@ -71,7 +71,7 @@ impl ScreencastImpl for Screencast {
+     async fn start_cast(
+         &self,
+         session_token: HandleToken,
+-        _app_id: Option<AppID>,
++        _app_id: Option<MaybeAppID>,
+         _window_identifier: Option<WindowIdentifierType>,
+         _options: StartCastOptions,
+     ) -> Result<Streams> {
+diff --git a/src/screenshot.rs b/src/screenshot.rs
+index ffa65222d206..d377ff10f8d1 100644
+--- a/src/screenshot.rs
++++ b/src/screenshot.rs
+@@ -5,12 +5,15 @@
+  */
+ 
+ use ashpd::{
+-    AppID, PortalError, Uri, WindowIdentifierType,
++    MaybeAppID, PortalError, Uri, WindowIdentifierType,
+     backend::{Result, request::RequestImpl, screenshot::ScreenshotImpl},
+     desktop::{
+         Color, HandleToken,
+-        screenshot::{ColorOptions, Screenshot as ScreenshotResponse, ScreenshotOptions},
++        screenshot::{
++            AvailableTargets, ColorOptions, Screenshot as ScreenshotResponse, ScreenshotOptions,
++        },
+     },
++    enumflags2::BitFlags,
+     zbus::DBusError,
+ };
+ use async_trait::async_trait;
+@@ -32,10 +35,14 @@ fn log_error(error: PortalError) -> Result<ScreenshotResponse> {
+ 
+ #[async_trait]
+ impl ScreenshotImpl for Screenshot {
++    fn available_targets(&self) -> BitFlags<AvailableTargets> {
++        AvailableTargets::Screen.into()
++    }
++
+     async fn screenshot(
+         &self,
+         token: HandleToken,
+-        app_id: Option<AppID>,
++        app_id: Option<MaybeAppID>,
+         _window_identifier: Option<WindowIdentifierType>,
+         _options: ScreenshotOptions,
+     ) -> Result<ScreenshotResponse> {
+@@ -134,7 +141,7 @@ impl ScreenshotImpl for Screenshot {
+     async fn pick_color(
+         &self,
+         _token: HandleToken,
+-        _app_id: Option<AppID>,
++        _app_id: Option<MaybeAppID>,
+         _window_identifier: Option<WindowIdentifierType>,
+         _options: ColorOptions,
+     ) -> Result<Color> {
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Fri, 10 Jul 2026 23:57:36 +0200
+Subject: Allow running without the systemd journal
+
+---
+ src/main.rs | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/src/main.rs b/src/main.rs
+index ef4141e7f7fc..a83dfbf08347 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -18,10 +18,9 @@ include!(concat!(env!("CARGO_TARGET_DIR"), "/config.rs"));
+ 
+ #[tokio::main]
+ async fn main() -> ashpd::Result<()> {
+-    systemd_journal_logger::JournalLog::new()
+-        .unwrap()
+-        .install()
+-        .unwrap();
++    if let Ok(logger) = systemd_journal_logger::JournalLog::new() {
++        let _ = logger.install();
++    }
+     log::set_max_level(log::LevelFilter::Info);
+ 
+     if !std::env::var("XDG_CURRENT_DESKTOP").is_ok_and(|v| v == "gamescope") {

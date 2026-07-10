@@ -8,3 +8,5 @@ xserver:
   upstream-sha: 47be547607964501bf347e6210cf543ba5dba2b2
 steamos-manager:
   patch-sha: 244e21225379af4037aeeabdc6efd5b71984e7dd
+xdg-desktop-portal-gamescope:
+  patch-sha: 412a4bff892bdb5726a549d03b11e6ce2f8e8152

@@ -92,3 +92,25 @@ specs:
       url: https://github.com/evlav/steamos-manager
       ref: v${spec:Version}
       file: overrides.patch
+
+  - spec: xdg/xdg-desktop-portal-holo.spec
+    files:
+      - gamescope-mimeapps.list
+      - steam-http-loader
+      - steam_http_loader.desktop
+      - xdg-desktop-portal-holo.spec
+    packages:
+      - xdg-desktop-portal-holo
+
+  - spec: xdg/xdg-desktop-portal-gamescope.spec
+    files:
+      - xdg-desktop-portal-gamescope.spec
+      - overrides.patch
+    packages:
+      - xdg-desktop-portal-gamescope
+    patch:
+      type: git
+      url: https://github.com/evlav/xdg-desktop-portal-gamescope.git
+      ref: 412a4bff892bdb5726a549d03b11e6ce2f8e8152
+      file: overrides.patch
+      name: xdg-desktop-portal-gamescope
