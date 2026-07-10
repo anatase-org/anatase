@@ -26,6 +26,10 @@ packages:
   # Base gcc deps, required by steam bootstrap
   - libnsl
   - libnsl.i686
+  # Mangohud lib32 deps
+  - fmt.i686
+  - spdlog.i686
+  - libxkbcommon.i686
 
 specs:
   - spec: gamescope/gamescope.spec
