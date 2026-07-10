@@ -35,11 +35,19 @@ BuildRequires:  gcc
 BuildRequires:  gcc-c++
 BuildRequires:  git-core
 BuildRequires:  glm-devel
+BuildRequires:  meson >= 0.54.0
+BuildRequires:  ninja-build
+BuildRequires:  pkgconfig(vulkan)
+BuildRequires:  pkgconfig(wayland-client)
+BuildRequires:  pkgconfig(wayland-protocols) >= 1.17
+BuildRequires:  pkgconfig(wayland-scanner)
+BuildRequires:  pkgconfig(x11)
+BuildRequires:  pkgconfig(xcb)
+
+%ifnarch %{ix86}
 BuildRequires:  google-benchmark-devel
 BuildRequires:  libXcursor-devel
 BuildRequires:  libXmu-devel
-BuildRequires:  meson >= 0.54.0
-BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(hwdata)
 BuildRequires:  pkgconfig(libavif)
 BuildRequires:  pkgconfig(libcap)
@@ -53,12 +61,8 @@ BuildRequires:  pkgconfig(libudev)
 BuildRequires:  pkgconfig(luajit)
 BuildRequires:  pkgconfig(openvr) >= 2.12
 BuildRequires:  pkgconfig(sdl2)
-BuildRequires:  pkgconfig(vulkan)
-BuildRequires:  pkgconfig(wayland-protocols) >= 1.17
-BuildRequires:  pkgconfig(wayland-scanner)
 BuildRequires:  pkgconfig(wayland-server)
 BuildRequires:  pkgconfig(wlroots-0.18)
-BuildRequires:  pkgconfig(x11)
 BuildRequires:  pkgconfig(xcomposite)
 BuildRequires:  pkgconfig(xdamage)
 BuildRequires:  pkgconfig(xext)
@@ -81,14 +85,19 @@ BuildRequires:  stb_image_resize-static
 BuildRequires:  stb_image_write-devel
 BuildRequires:  stb_image_write-static
 BuildRequires:  /usr/bin/glslangValidator
+%endif
 
 Provides:       bundled(vkroots) = 0^20240429git5106d8a
 
 # libliftoff hasn't bumped soname, but API/ABI has changed for 0.2.0 release
+%ifarch %{ix86}
+Requires:       vulkan-loader%{?_isa}
+%else
 Requires:       libliftoff%{?_isa} >= %{libliftoff_minver}
 Requires:       xorg-x11-server-Xwayland
 Recommends:     mesa-dri-drivers
 Recommends:     mesa-vulkan-drivers
+%endif
 
 %description
 %{name} is the micro-compositor optimized for running video games on Wayland.
@@ -108,9 +117,27 @@ tar -xzf %{SOURCE3} --strip-components=1 -C subprojects/vkroots
 
 %autopatch -p1
 
+%ifarch %{ix86}
+# Meson otherwise uses the x86_64 build machine for both layer filenames.
+sed -i 's/build_machine\.cpu_family()/host_machine.cpu_family()/g' layer/meson.build
+%endif
+
 %build
 export PKG_CONFIG_PATH=pkgconfig
 %meson \
+%ifarch %{ix86}
+    -Davif_screenshots=disabled \
+    -Dbenchmark=disabled \
+    -Ddrm_backend=disabled \
+    -Denable_gamescope=false \
+    -Denable_gamescope_wsi_layer=true \
+    -Denable_openvr_support=false \
+    -Dforce_fallback_for=[] \
+    -Dinput_emulation=disabled \
+    -Dpipewire=disabled \
+    -Drt_cap=disabled \
+    -Dsdl2_backend=disabled
+%else
     -Davif_screenshots=enabled \
     -Dbenchmark=enabled \
     -Ddrm_backend=enabled \
@@ -122,13 +149,23 @@ export PKG_CONFIG_PATH=pkgconfig
     -Dpipewire=enabled \
     -Drt_cap=enabled \
     -Dsdl2_backend=enabled
+%endif
 %meson_build
 
 %install
 %meson_install --skip-subprojects
 
+%ifarch %{ix86}
+# default_extras_install.sh runs even when the compositor is disabled.
+rm -rf %{buildroot}%{_datadir}/gamescope
+%endif
+
 %files
 %license LICENSE
+%ifarch %{ix86}
+%{_libdir}/libVkLayer_FROG_gamescope_wsi_*.so
+%{_datadir}/vulkan/implicit_layer.d/VkLayer_FROG_gamescope_wsi.*.json
+%else
 %doc README.md
 %{_bindir}/gamescope
 %{_bindir}/gamescopectl
@@ -138,6 +175,7 @@ export PKG_CONFIG_PATH=pkgconfig
 %{_datadir}/gamescope
 %{_libdir}/libVkLayer_FROG_gamescope_wsi_*.so
 %{_datadir}/vulkan/implicit_layer.d/VkLayer_FROG_gamescope_wsi.*.json
+%endif
 
 %changelog
 %autochangelog

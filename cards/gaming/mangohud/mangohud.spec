@@ -66,7 +66,9 @@ Requires:       vulkan-loader%{?_isa}
 
 Recommends:     (mangohud(x86-32) if glibc(x86-32))
 
+%ifnarch %{ix86}
 Suggests:       %{name}-mangoplot
+%endif
 Suggests:       goverlay
 
 Provides:       bundled(imgui) = %{imgui_ver}
@@ -79,6 +81,7 @@ more.}
 %description %{_description}
 
 
+%ifnarch %{ix86}
 %package        mangoplot
 Summary:        Local visualization "mangoplot" for %{name}
 BuildArch:      noarch
@@ -89,6 +92,7 @@ Requires:       python3-numpy
 
 %description    mangoplot
 Local visualization "mangoplot" for %{name}.
+%endif
 
 
 %prep
@@ -117,9 +121,16 @@ sed -i "s/cmocka_dep = cmocka.get_variable('cmocka_dep')/cmocka_dep = dependency
 
 %build
 %meson \
+%ifarch %{ix86}
+    -Dmangoapp=false \
+    -Dmangohudctl=false \
+    -Dinclude_doc=false \
+    -Dmangoplot=disabled \
+%else
     -Dmangoapp=true \
     -Dmangohudctl=true \
     -Dinclude_doc=true \
+%endif
     -Duse_system_spdlog=enabled \
     -Dwith_wayland=enabled \
     -Dwith_xnvctrl=disabled \
@@ -135,9 +146,14 @@ sed -i "s/cmocka_dep = cmocka.get_variable('cmocka_dep')/cmocka_dep = dependency
 %install
 %meson_install
 
+%ifnarch %{ix86}
 # ERROR: ambiguous python shebang
 sed -i "s@#!/usr/bin/env python@#!/usr/bin/python3@" \
     %{buildroot}%{_bindir}/mangoplot
+%else
+# The 32-bit package only ships the Vulkan and OpenGL overlay libraries.
+rm -rf %{buildroot}%{_bindir}
+%endif
 
 rm %{buildroot}%{_libdir}/libimgui.a
 
@@ -153,6 +169,10 @@ rm %{buildroot}%{_libdir}/libimgui.a
 
 %files
 %license LICENSE
+%ifarch %{ix86}
+%{_datadir}/vulkan/implicit_layer.d/*Mango*.json
+%{_libdir}/%{name}/
+%else
 %doc README.md presets.conf.example
 %{_bindir}/mangoapp
 %{_bindir}/mangohud
@@ -164,9 +184,12 @@ rm %{buildroot}%{_libdir}/libimgui.a
 %{_mandir}/man1/%{name}.1*
 %{_mandir}/man1/mangoapp.1*
 %{_metainfodir}/*.metainfo.xml
+%endif
 
+%ifnarch %{ix86}
 %files mangoplot
 %{_bindir}/mangoplot
+%endif
 
 
 %changelog
