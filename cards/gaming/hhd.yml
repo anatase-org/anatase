@@ -24,15 +24,19 @@ packages:
   - python3-xlib
 
 specs:
-  - spec: git+https://github.com/hhd-dev/hhd:hhd.spec
-    files:
-      - hhd.spec
+  # - spec: git+https://github.com/hhd-dev/hhd:hhd.spec
+  #   files:
+  #     - hhd.spec
+  #   packages:
+  #     - hhd
+  # - spec: git+https://github.com/hhd-dev/hhd-ui-copr:hhd-ui.spec
+  #   packages:
+  #     - hhd-ui
+
+  # Use git for now
+  - spec: git+https://github.com/hhd-dev/hhd:hhd-git.spec
     packages:
       - hhd
-  # - spec: git+https://github.com/hhd-dev/hhd:hhd-git.spec
-  #   hash-revision: true
-  #   packages:
-  #     - hhd-git
-  - spec: git+https://github.com/hhd-dev/hhd-ui-copr:hhd-ui.spec
+  - spec: git+https://github.com/hhd-dev/hhd-ui:pkg/hhd-ui-git.spec
     packages:
       - hhd-ui
