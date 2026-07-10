@@ -11,6 +11,15 @@ mkdir -p build/NVT/centos8/$ARCH
 export DOCKER="podman"
 export PATH="$(pwd):$PATH"
 
+# Nested Podman cannot configure bridge networking because /proc/sys is
+# read-only inside the outer image build. The packaging containers only build
+# and extract artifacts, so reuse the outer build container's network.
+cat > containers.conf <<'EOF'
+[containers]
+netns = "host"
+EOF
+export CONTAINERS_CONF="$(pwd)/containers.conf"
+
 # Upstream mostly honors DOCKER, but a few packaging rules still call docker
 # directly. Keep the source tree untouched and provide a local compatibility
 # shim in PATH.
