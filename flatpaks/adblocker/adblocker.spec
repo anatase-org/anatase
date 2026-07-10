@@ -215,17 +215,6 @@ cat > "%{buildroot}/app/extensions/%{extension_id}.json" <<EOF
 }
 EOF
 
-install -dm0755 "%{buildroot}/app/policies/managed"
-cat > "%{buildroot}/app/policies/managed/anatase-adblocker.json" <<EOF
-{
-  "ExtensionSettings": {
-    "%{extension_id}": {
-      "toolbar_pin": "default_pinned"
-    }
-  }
-}
-EOF
-
 install -dm0755 "%{buildroot}%{_metainfodir}"
 sed "s/@VERSION@/%{version}/g" "%{SOURCE5}" \
     > "%{buildroot}%{_metainfodir}/%{appstream_id}.metainfo.xml"
@@ -246,6 +235,5 @@ appstream-util validate-relax --nonet \
 %files
 %license LICENSE.txt
 /app/extensions
-/app/policies
 %{_datadir}/icons/hicolor/*/apps/org.anatase.Browser.Adblocker.png
 %{_metainfodir}/org.anatase.Browser.Adblocker.metainfo.xml
