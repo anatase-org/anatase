@@ -335,6 +335,7 @@ Patch450: chromium-150-pt_regs-kernel-7.2.0.patch
 # https://github.com/flathub/org.chromium.Chromium/tree/master/patches/chromium
 Patch500: flatpak-Add-initial-sandbox-support.patch
 Patch501: flatpak-Adjust-paths-for-the-sandbox.patch
+Patch502: flatpak-Expose-Widevine-into-the-sandbox.patch
 
 # Patches from ungoogle chromium, https://github.com/ungoogled-software/ungoogled-chromium
 # remove rollup binary, build with wasm-rollup 
@@ -775,6 +776,7 @@ Qt6 UI for chromium.
 %if 0%{?flatpak}
 %patch -P500 -p1 -b .flatpak-initial-sandbox
 %patch -P501 -p1 -b .flatpak-sandbox-paths
+%patch -P502 -p1 -b .flatpak-widevine
 %endif
 
 %patch -P520 -p1 -b .build-with-wasm-rollup
