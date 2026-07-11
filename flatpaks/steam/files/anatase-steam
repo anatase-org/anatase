@@ -39,10 +39,6 @@ fi
 
 case ":${XDG_CURRENT_DESKTOP:-}:" in
     *:gamescope:*)
-        if [[ -n ${WAYLAND_DISPLAY:-} ]]; then
-            export GAMESCOPE_WAYLAND_DISPLAY="$WAYLAND_DISPLAY"
-            unset WAYLAND_DISPLAY
-        fi
         export QT_IM_MODULE=steam
         export GTK_IM_MODULE=Steam
         ;;
