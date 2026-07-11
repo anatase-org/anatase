@@ -179,6 +179,7 @@ fi
 
 export DISPLAY="$response_x_display"
 export GAMESCOPE_WAYLAND_DISPLAY="$response_wl_display"
+export WAYLAND_DISPLAY="$response_wl_display"
 dbus-update-activation-environment --systemd DISPLAY
 
 flatpak run org.anatase.Steam \

@@ -1,0 +1,98 @@
+#!/bin/bash
+
+flatpak_info=
+for candidate in "${FLATPAK_INFO:-}" /.flatpak-info /run/flatpak-info; do
+    [[ -n $candidate ]] || continue
+    [[ -r $candidate ]] || continue
+    flatpak_info=$candidate
+    break
+done
+
+has_filesystem() {
+    [[ -n $flatpak_info ]] || return 1
+    sed -n '/^\[Context\]/,/^\[/{s/^filesystems=//p}' "$flatpak_info" \
+        | tr ';' '\n' \
+        | grep -Fx -- "$1" >/dev/null
+}
+
+if has_filesystem '~/.steam:create' && has_filesystem 'xdg-data/Steam:create'; then
+    host_xdg_data_home=
+    if command -v flatpak-spawn >/dev/null 2>&1; then
+        host_xdg_data_home="$(flatpak-spawn --host sh -c 'printf "%s" "${XDG_DATA_HOME:-}"' 2>/dev/null || true)"
+    fi
+    case "$host_xdg_data_home" in
+        /*) steam_data_home=$host_xdg_data_home ;;
+        *) steam_data_home="$HOME/.local/share" ;;
+    esac
+    if mkdir -p "$HOME/.steam" "$steam_data_home/Steam" 2>/dev/null \
+            && [[ -w $HOME/.steam ]] \
+            && [[ -w $steam_data_home/Steam ]]; then
+        export XDG_DATA_HOME="$steam_data_home"
+    fi
+fi
+
+case ":${XDG_CURRENT_DESKTOP:-}:" in
+    *:gamescope:*)
+        if [[ -n ${WAYLAND_DISPLAY:-} ]]; then
+            export GAMESCOPE_WAYLAND_DISPLAY="$WAYLAND_DISPLAY"
+            unset WAYLAND_DISPLAY
+        fi
+        export QT_IM_MODULE=steam
+        export GTK_IM_MODULE=Steam
+        ;;
+esac
+
+# Install Anatase's Steam Game Mode startup and suspend overrides.
+# If Decky Animation Changer is installed ignore.
+animation_changer="$HOME/homebrew/plugins/SDH-AnimationChanger/main.py"
+if [[ ! -f $animation_changer ]]; then
+    boot_movie=/app/share/anatase/steam/movies/anatase-boot.webm
+    suspend_movie=/app/share/anatase/steam/movies/anatase-suspend.webm
+    movies_dir="${XDG_DATA_HOME:-$HOME/.local/share}/Steam/config/uioverrides/movies"
+    if mkdir -p "$movies_dir"; then
+        startup_movies=(
+            bigpicture_startup.webm
+            deck_startup.webm
+            oled_startup.webm
+            steam_os_startup.webm
+        )
+        for movie in "${startup_movies[@]}"; do
+            destination="$movies_dir/$movie"
+            if ! cmp -s "$boot_movie" "$destination"; then
+                cp "$boot_movie" "$destination"
+            fi
+        done
+
+        suspend_movies=(
+            deck-suspend-animation-from-throbber.webm
+            oled-suspend-animation-from-throbber.webm
+            steam_os_suspend_from_throbber.webm
+            deck-suspend-animation.webm
+            oled-suspend-animation.webm
+            steam_os_suspend.webm
+        )
+        for movie in "${suspend_movies[@]}"; do
+            destination="$movies_dir/$movie"
+            if ! cmp -s "$suspend_movie" "$destination"; then
+                cp "$suspend_movie" "$destination"
+            fi
+        done
+    fi
+fi
+
+notification_pid=
+stop_notification_daemon() {
+    [[ -n $notification_pid ]] || return 0
+    kill "$notification_pid" 2>/dev/null || true
+    wait "$notification_pid" 2>/dev/null || true
+    notification_pid=
+}
+trap stop_notification_daemon EXIT
+trap 'exit 143' HUP INT TERM
+
+if command -v steam_notif_daemon >/dev/null 2>&1; then
+    steam_notif_daemon &
+    notification_pid=$!
+fi
+
+/app/bin/steam "$@"

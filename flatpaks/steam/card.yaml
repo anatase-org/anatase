@@ -75,6 +75,10 @@ flatpak:
     --filesystem=~/.steam:create
     --filesystem=xdg-data/Steam:create
 
+files:
+  - files/anatase-steam
+  - files/anatase-boot.webm
+  - files/anatase-suspend.webm
 
 build-deps:
   - rpm-build
@@ -131,66 +135,14 @@ postprocess: |-
   fi
 
   mkdir -p app/bin app/share/steam/compatibilitytools.d
+  install -Dm0644 files/anatase-boot.webm \
+      app/share/anatase/steam/movies/anatase-boot.webm
+  install -Dm0644 files/anatase-suspend.webm \
+      app/share/anatase/steam/movies/anatase-suspend.webm
   ln -snf /bin/true app/bin/steamdeps
   if [ -x /usr/bin/cmp ]; then
       cp -f /usr/bin/cmp app/bin/cmp
   fi
+  install -Dm0755 files/anatase-steam app/bin/anatase-steam
 
-  cat > app/bin/anatase-steam <<'EOF'
-  #!/bin/sh
-  flatpak_info=
-  for candidate in "${FLATPAK_INFO:-}" /.flatpak-info /run/flatpak-info; do
-      [ -n "$candidate" ] || continue
-      [ -r "$candidate" ] || continue
-      flatpak_info="$candidate"
-      break
-  done
-
-  has_filesystem() {
-      [ -n "$flatpak_info" ] || return 1
-      sed -n '/^\[Context\]/,/^\[/{s/^filesystems=//p}' "$flatpak_info" \
-          | tr ';' '\n' \
-          | grep -Fx -- "$1" >/dev/null
-  }
-
-  if has_filesystem '~/.steam:create' && has_filesystem 'xdg-data/Steam:create'; then
-      host_xdg_data_home=
-      if command -v flatpak-spawn >/dev/null 2>&1; then
-          host_xdg_data_home="$(flatpak-spawn --host sh -c 'printf "%s" "${XDG_DATA_HOME:-}"' 2>/dev/null || true)"
-      fi
-      case "$host_xdg_data_home" in
-          /*) steam_data_home="$host_xdg_data_home" ;;
-          *) steam_data_home="$HOME/.local/share" ;;
-      esac
-      if mkdir -p "$HOME/.steam" "$steam_data_home/Steam" 2>/dev/null \
-              && [ -w "$HOME/.steam" ] \
-              && [ -w "$steam_data_home/Steam" ]; then
-          export XDG_DATA_HOME="$steam_data_home"
-      fi
-  fi
-
-  case ":${XDG_CURRENT_DESKTOP:-}:" in
-      *:gamescope:*)
-          export QT_IM_MODULE=steam
-          export GTK_IM_MODULE=Steam
-          ;;
-  esac
-
-  notification_pid=
-  stop_notification_daemon() {
-      [ -n "$notification_pid" ] || return 0
-      kill "$notification_pid" 2>/dev/null || true
-      wait "$notification_pid" 2>/dev/null || true
-      notification_pid=
-  }
-  trap stop_notification_daemon EXIT
-  trap 'exit 143' HUP INT TERM
-
-  if command -v steam_notif_daemon >/dev/null 2>&1; then
-      steam_notif_daemon &
-      notification_pid=$!
-  fi
-
-  /app/bin/steam "$@"
-  EOF
-  chmod 0755 app/bin/anatase-steam
+  bash -n app/bin/anatase-steam
