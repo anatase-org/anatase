@@ -40,3 +40,12 @@ specs:
   - spec: git+https://github.com/hhd-dev/hhd-ui:pkg/hhd-ui-git.spec
     packages:
       - hhd-ui
+
+postprocess: |
+  set -eux
+
+  install -dm0755 /usr/lib/systemd/system-preset
+  cat > /usr/lib/systemd/system-preset/80-anatase-hhd.preset <<'EOF'
+  enable hhd.service
+  EOF
+  systemctl preset hhd.service || true
