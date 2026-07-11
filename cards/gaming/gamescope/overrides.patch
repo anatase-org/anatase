@@ -12,7 +12,7 @@ Subject: [NA] add dev script
 
 diff --git a/0001-cstdint.patch b/0001-cstdint.patch
 new file mode 100644
-index 0000000..5b43515
+index 000000000000..5b4351521b45
 --- /dev/null
 +++ b/0001-cstdint.patch
 @@ -0,0 +1,37 @@
@@ -55,7 +55,7 @@ index 0000000..5b43515
 +
 diff --git a/sync.sh b/sync.sh
 new file mode 100755
-index 0000000..8dd5815
+index 000000000000..8dd5815d4aeb
 --- /dev/null
 +++ b/sync.sh
 @@ -0,0 +1,21 @@
@@ -98,7 +98,7 @@ Co-authored-by: Antheas Kapenekakis <git@antheas.dev>
  3 files changed, 36 insertions(+), 1 deletion(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 1d34eba..6444578 100644
+index 1d34eba0307b..6444578b136d 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -2401,8 +2401,10 @@ namespace gamescope
@@ -114,7 +114,7 @@ index 1d34eba..6444578 100644
  					const drmModeModeInfo *pPreferredMode = find_mode( m_pConnector.get(), 0, 0, 0 );
  
 diff --git a/src/main.cpp b/src/main.cpp
-index 1397028..3a82506 100644
+index 1397028e7f4c..3a8250680615 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -136,6 +136,7 @@ const struct option *gamescope_options = (struct option[]){
@@ -177,7 +177,7 @@ index 1397028..3a82506 100644
  						   strcmp(opt_name, "fsr-sharpness") == 0) {
  					g_upscaleFilterSharpness = parse_integer( optarg, opt_name );
 diff --git a/src/main.hpp b/src/main.hpp
-index 2e6fb83..390c04a 100644
+index 2e6fb833af12..390c04a63ecd 100644
 --- a/src/main.hpp
 +++ b/src/main.hpp
 @@ -3,6 +3,7 @@
@@ -211,7 +211,7 @@ Suggested-by: Antheas Kapenekakis <git@antheas.dev>
  1 file changed, 22 insertions(+), 1 deletion(-)
 
 diff --git a/src/wlserver.cpp b/src/wlserver.cpp
-index 1631ca7..501f07c 100644
+index 1631ca780d86..501f07c4b214 100644
 --- a/src/wlserver.cpp
 +++ b/src/wlserver.cpp
 @@ -296,6 +296,9 @@ static void wlserver_handle_modifiers(struct wl_listener *listener, void *data)
@@ -272,7 +272,7 @@ custom modeline generation has been provided.
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 6444578..d548511 100644
+index 6444578b136d..d5485115ff9c 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -2317,7 +2317,9 @@ namespace gamescope
@@ -298,7 +298,7 @@ Subject: fix(battery): run at half hz while at steamUI with atom
  2 files changed, 43 insertions(+), 10 deletions(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index c4cee70..8e5bb2a 100644
+index c4cee70a2825..8e5bb2ab0074 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -173,6 +173,8 @@ uint32_t g_reshade_technique_idx = 0;
@@ -453,7 +453,7 @@ index c4cee70..8e5bb2a 100644
  		const bool bVRR = GetBackend()->GetCurrentConnector() && GetBackend()->GetCurrentConnector()->IsVRRActive();
  		if ( bVRR )
 diff --git a/src/xwayland_ctx.hpp b/src/xwayland_ctx.hpp
-index 5c8809f..e1c07c0 100644
+index 5c8809f9224d..e1c07c0a81e4 100644
 --- a/src/xwayland_ctx.hpp
 +++ b/src/xwayland_ctx.hpp
 @@ -257,6 +257,7 @@ struct xwayland_ctx_t final : public gamescope::IWaitable
@@ -483,7 +483,7 @@ Subject: feat(intel): add rotation shader for rotating output
  create mode 100644 src/shaders/cs_rotation.comp
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index d548511..b2cabe2 100644
+index d5485115ff9c..b2cabe2de13e 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -1660,6 +1660,10 @@ static void update_drm_effective_orientations( struct drm_t *drm, const drmModeM
@@ -571,7 +571,7 @@ index d548511..b2cabe2 100644
  			m_bWasCompositing = true;
  
 diff --git a/src/main.cpp b/src/main.cpp
-index 3a82506..bc5c3cf 100644
+index 3a8250680615..bc5c3cf45085 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -134,6 +134,7 @@ const struct option *gamescope_options = (struct option[]){
@@ -610,7 +610,7 @@ index 3a82506..bc5c3cf 100644
  					g_customRefreshRates = parse_custom_refresh_rates( optarg );
  				} else if (strcmp(opt_name, "sharpness") == 0 ||
 diff --git a/src/main.hpp b/src/main.hpp
-index 390c04a..e7b857d 100644
+index 390c04a63ecd..e7b857d44b0d 100644
 --- a/src/main.hpp
 +++ b/src/main.hpp
 @@ -22,6 +22,8 @@ extern bool g_bForceRelativeMouse;
@@ -623,7 +623,7 @@ index 390c04a..e7b857d 100644
  extern bool g_bFullscreen;
  
 diff --git a/src/meson.build b/src/meson.build
-index 8512bf5..e0755d8 100644
+index 8512bf573137..e0755d844f11 100644
 --- a/src/meson.build
 +++ b/src/meson.build
 @@ -70,6 +70,7 @@ shader_src = [
@@ -635,7 +635,7 @@ index 8512bf5..e0755d8 100644
  
  spirv_shaders = glsl_generator.process(shader_src)
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index 65411dc..58491b5 100644
+index 65411dcfa32c..58491b56ef83 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -48,6 +48,7 @@
@@ -873,7 +873,7 @@ index 65411dc..58491b5 100644
  
  	if ( pPipewireTexture != nullptr )
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index 63cc602..93a4a60 100644
+index 63cc6029ac5f..93a4a6027f55 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -408,7 +408,7 @@ gamescope::OwningRc<CVulkanTexture> vulkan_create_texture_from_dmabuf( struct wl
@@ -905,7 +905,7 @@ index 63cc602..93a4a60 100644
  };
 diff --git a/src/shaders/cs_rotation.comp b/src/shaders/cs_rotation.comp
 new file mode 100644
-index 0000000..1a47fd5
+index 000000000000..1a47fd505748
 --- /dev/null
 +++ b/src/shaders/cs_rotation.comp
 @@ -0,0 +1,53 @@
@@ -963,7 +963,7 @@ index 0000000..1a47fd5
 +    imageStore(dst, rotatedCoord, outputValue);
 +}
 diff --git a/src/wlserver.cpp b/src/wlserver.cpp
-index 501f07c..31d3587 100644
+index 501f07c4b214..31d358707379 100644
 --- a/src/wlserver.cpp
 +++ b/src/wlserver.cpp
 @@ -2852,6 +2852,11 @@ static void apply_touchscreen_orientation(GamescopePanelOrientation orientation,
@@ -992,7 +992,7 @@ see: https://github.com/ValveSoftware/gamescope/pull/1671
  1 file changed, 19 insertions(+), 1 deletion(-)
 
 diff --git a/layer/VkLayer_FROG_gamescope_wsi.cpp b/layer/VkLayer_FROG_gamescope_wsi.cpp
-index af0c200..263cbc3 100644
+index af0c2009930b..263cbc37bd88 100644
 --- a/layer/VkLayer_FROG_gamescope_wsi.cpp
 +++ b/layer/VkLayer_FROG_gamescope_wsi.cpp
 @@ -183,6 +183,16 @@ namespace GamescopeWSILayer {
@@ -1049,7 +1049,7 @@ Subject: feat(display): add asus z13
 
 diff --git a/scripts/00-gamescope/displays/asus.z13.lcd.lua b/scripts/00-gamescope/displays/asus.z13.lcd.lua
 new file mode 100644
-index 0000000..891f1ea
+index 000000000000..891f1ea9ca6f
 --- /dev/null
 +++ b/scripts/00-gamescope/displays/asus.z13.lcd.lua
 @@ -0,0 +1,57 @@
@@ -1125,7 +1125,7 @@ Subject: feat(display): consider vporch to avoid timing issues
  4 files changed, 11 insertions(+), 5 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index b2cabe2..5fd5df6 100644
+index b2cabe2de13e..5fd5df64292d 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -213,6 +213,11 @@ namespace gamescope
@@ -1151,7 +1151,7 @@ index b2cabe2..5fd5df6 100644
  
  	switch ( drm->pConnector->GetCurrentOrientation() )
 diff --git a/src/main.cpp b/src/main.cpp
-index bc5c3cf..162b3f1 100644
+index bc5c3cf45085..162b3f19f9bb 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -301,6 +301,7 @@ int g_nNestedDisplayIndex = 0;
@@ -1163,7 +1163,7 @@ index bc5c3cf..162b3f1 100644
  
  bool g_bFullscreen = false;
 diff --git a/src/main.hpp b/src/main.hpp
-index e7b857d..e6f8ff1 100644
+index e7b857d44b0d..e6f8ff133689 100644
 --- a/src/main.hpp
 +++ b/src/main.hpp
 @@ -20,6 +20,7 @@ extern uint32_t g_nOutputWidth;
@@ -1175,7 +1175,7 @@ index e7b857d..e6f8ff1 100644
  extern bool g_bForceInternal;
  extern bool g_bUseRotationShader;
 diff --git a/src/vblankmanager.cpp b/src/vblankmanager.cpp
-index f036d00..e388374 100644
+index f036d000a8e2..e388374c98ba 100644
 --- a/src/vblankmanager.cpp
 +++ b/src/vblankmanager.cpp
 @@ -95,8 +95,6 @@ namespace gamescope
@@ -1209,7 +1209,7 @@ Subject: feat: add Legion Go S display with all framerates
  1 file changed, 42 insertions(+), 29 deletions(-)
 
 diff --git a/scripts/00-gamescope/displays/lenovo.legiongos.lcd.lua b/scripts/00-gamescope/displays/lenovo.legiongos.lcd.lua
-index 32f776c..057850f 100644
+index 32f776c17f3d..057850f374f8 100644
 --- a/scripts/00-gamescope/displays/lenovo.legiongos.lcd.lua
 +++ b/scripts/00-gamescope/displays/lenovo.legiongos.lcd.lua
 @@ -1,44 +1,58 @@
@@ -1320,7 +1320,7 @@ Subject: feat: add DPMS support through an Atom
  4 files changed, 32 insertions(+), 4 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 5fd5df6..664ef02 100644
+index 5fd5df64292d..664ef0228653 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -2890,6 +2890,9 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
@@ -1367,7 +1367,7 @@ index 5fd5df6..664ef02 100644
  
  			if ( bNeedsFullComposite )
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index 93a4a60..0833fc4 100644
+index 93a4a6027f55..0833fc46ffd7 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -292,6 +292,8 @@ struct FrameInfo_t
@@ -1380,7 +1380,7 @@ index 93a4a60..0833fc4 100644
  	struct Layer_t
  	{
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 8e5bb2a..63b1576 100644
+index 8e5bb2ab0074..63b1576fecdf 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -175,6 +175,8 @@ bool g_bSteamIsActiveWindow = false;
@@ -1446,7 +1446,7 @@ index 8e5bb2a..63b1576 100644
  			}
  		}
 diff --git a/src/xwayland_ctx.hpp b/src/xwayland_ctx.hpp
-index e1c07c0..79c4f18 100644
+index e1c07c0a81e4..79c4f1859699 100644
 --- a/src/xwayland_ctx.hpp
 +++ b/src/xwayland_ctx.hpp
 @@ -258,6 +258,7 @@ struct xwayland_ctx_t final : public gamescope::IWaitable
@@ -1468,7 +1468,7 @@ Subject: update misyltoad urls
  1 file changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/.gitmodules b/.gitmodules
-index ec7d4e4..17ba783 100644
+index ec7d4e430ee8..17ba783f809b 100644
 --- a/.gitmodules
 +++ b/.gitmodules
 @@ -1,12 +1,12 @@
@@ -1509,7 +1509,7 @@ the FDs in the OnPollIn handlers to prevent this.
  1 file changed, 6 insertions(+)
 
 diff --git a/src/waitable.h b/src/waitable.h
-index 30edf8f..36ac61e 100644
+index 30edf8f52deb..36ac61ee7233 100644
 --- a/src/waitable.h
 +++ b/src/waitable.h
 @@ -182,6 +182,11 @@ namespace gamescope
@@ -1543,7 +1543,7 @@ Subject: fix(intel): allow night mode and color adjustment via compositing
  1 file changed, 11 insertions(+)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 664ef02..372b80e 100644
+index 664ef0228653..372b80e3dd9b 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -3544,6 +3544,17 @@ namespace gamescope
@@ -1581,7 +1581,7 @@ configs and read the HDR metadata from the displays.
  4 files changed, 15 insertions(+), 1 deletion(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 372b80e..b7951ae 100644
+index 372b80e3dd9b..b7951aee958b 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -2524,7 +2524,13 @@ namespace gamescope
@@ -1600,7 +1600,7 @@ index 372b80e..b7951ae 100644
  					pHDRStaticMetadata->desired_content_max_luminance
  					? nits_to_u16( pHDRStaticMetadata->desired_content_max_luminance )
 diff --git a/src/backend.h b/src/backend.h
-index 607c25d..958f489 100644
+index 607c25d9a0db..958f489ce82a 100644
 --- a/src/backend.h
 +++ b/src/backend.h
 @@ -24,6 +24,7 @@ struct wlr_dmabuf_attributes;
@@ -1612,7 +1612,7 @@ index 607c25d..958f489 100644
  namespace gamescope
  {
 diff --git a/src/main.cpp b/src/main.cpp
-index 162b3f1..c6c2cfe 100644
+index 162b3f19f9bb..c6c2cfe59dcb 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -144,6 +144,7 @@ const struct option *gamescope_options = (struct option[]){
@@ -1640,7 +1640,7 @@ index 162b3f1..c6c2cfe 100644
  
  static void UpdateCompatEnvVars()
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 63b1576..4588da8 100644
+index 63b1576fecdf..4588da82a25d 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -153,6 +153,8 @@ gamescope_color_mgmt_luts g_ScreenshotColorMgmtLutsHDR[ EOTF_Count ];
@@ -1679,7 +1679,7 @@ there are no edge cases where only subproperties are supported.
  1 file changed, 32 insertions(+), 8 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index b7951ae..cfa9488 100644
+index b7951aee958b..cfa9488e8d81 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -567,6 +567,7 @@ extern std::string g_reshade_effect;
@@ -1798,7 +1798,7 @@ Subject: remove zotac zone config (too many panel variants)
 
 diff --git a/scripts/00-gamescope/displays/zotac.zone.oled.lua b/scripts/00-gamescope/displays/zotac.zone.oled.lua
 deleted file mode 100644
-index f800fc7..0000000
+index f800fc7eee6f..000000000000
 --- a/scripts/00-gamescope/displays/zotac.zone.oled.lua
 +++ /dev/null
 @@ -1,56 +0,0 @@
@@ -1879,7 +1879,7 @@ user exits it.
  2 files changed, 54 insertions(+), 26 deletions(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 4588da8..222eb6a 100644
+index 4588da82a25d..222eb6a95abe 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -890,6 +890,7 @@ global_focus_t *GetCurrentFocus()
@@ -2001,7 +2001,7 @@ index 4588da8..222eb6a 100644
  #if HAVE_PIPEWIRE
  			nudge_pipewire();
 diff --git a/src/steamcompmgr_shared.hpp b/src/steamcompmgr_shared.hpp
-index 36a99d4..7be9062 100644
+index 36a99d44e558..7be906206cd2 100644
 --- a/src/steamcompmgr_shared.hpp
 +++ b/src/steamcompmgr_shared.hpp
 @@ -149,6 +149,7 @@ struct steamcompmgr_win_t {
@@ -2023,7 +2023,7 @@ Subject: fix: prevent crashing if display is not connected
  1 file changed, 3 insertions(+), 4 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index cfa9488..58fdb43 100644
+index cfa9488e8d81..58fdb43b7c57 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -712,12 +712,11 @@ static uint32_t pick_plane_format( const struct wlr_drm_format_set *formats, uin
@@ -2054,7 +2054,7 @@ Subject: fix: prevent crash on hotplug if HDR enabled but not supported by
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 222eb6a..73daabb 100644
+index 222eb6a95abe..73daabb330ce 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -8636,7 +8636,9 @@ steamcompmgr_main(int argc, char **argv)
@@ -2068,3 +2068,34 @@ index 222eb6a..73daabb 100644
  
  		// Pick our width/height for this potential frame, regardless of how it might change later
  		// At some point we might even add proper locking so we get real updates atomically instead
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sat, 11 Jul 2026 03:25:06 +0200
+Subject: fix(display): report minimum 8-inch display height
+
+---
+ src/wlserver.cpp | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/src/wlserver.cpp b/src/wlserver.cpp
+index 31d358707379..d94b067b63c7 100644
+--- a/src/wlserver.cpp
++++ b/src/wlserver.cpp
+@@ -1602,7 +1602,16 @@ void wlserver_set_output_info( const wlserver_output_info *info )
+ 	free(wlserver.output_info.description);
+ 	wlserver.output_info.description = strdup(info->description);
+ 	wlserver.output_info.phys_width = info->phys_width;
++	// Steam's default UI scaling becomes too small on sub-8-inch displays.
++	// A 16:9 8-inch display is approximately 100 mm tall, so clamp the
++	// reported height rather than doing a more expensive diagonal check.
+ 	wlserver.output_info.phys_height = info->phys_height;
++	if ( wlserver.output_info.phys_height > 0 && wlserver.output_info.phys_height < 100 )
++	{
++		wlserver.output_info.phys_width =
++			wlserver.output_info.phys_width * 100 / wlserver.output_info.phys_height;
++		wlserver.output_info.phys_height = 100;
++	}
+ 
+ 	if (wlserver.wlr.xwayland_servers.empty())
+ 		return;
