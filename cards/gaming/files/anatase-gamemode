@@ -79,6 +79,9 @@ systemctl --user import-environment \
 # Prepare Steam
 #
 
+# Make Steam Runtime logging visible in the user journal.
+export SRT_LOG_TO_JOURNAL=1
+
 export HOMETEST_DESKTOP=1
 export HOMETEST_DESKTOP_SESSION=plasma
 
