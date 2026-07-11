@@ -183,12 +183,22 @@ export DISPLAY="$response_x_display"
 export GAMESCOPE_WAYLAND_DISPLAY="$response_wl_display"
 dbus-update-activation-environment --systemd DISPLAY
 
+# Steam asks Gamescope to write screenshots to a temporary path, then reads
+# the resulting file. Give the host compositor and Flatpak Steam the same
+# temporary directory instead of their otherwise separate /tmp directories.
+steam_tmp_name=steam-tmp
+steam_tmp="$XDG_RUNTIME_DIR/$steam_tmp_name"
+install -d -m0700 "$steam_tmp"
+
 flatpak run \
-        --filesystem=xdg-run/$response_wl_display:ro \
+        --filesystem="xdg-run/$response_wl_display:ro" \
+        --filesystem="xdg-run/$steam_tmp_name:create" \
+        --env="TMPDIR=$steam_tmp" \
         org.anatase.Steam \
         -steamos3 \
         -steampal \
         -steamdeck \
+        -pipewire \
         -gamepadui &
 steam_pid=$!
 
