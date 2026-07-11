@@ -142,8 +142,51 @@ postprocess: |
   #
 
   install -dm0755 /usr/bin/steamos-polkit-helpers
-  cat > /usr/bin/steamos-polkit-helpers/steamos-set-timezone <<'EOF'
+
+  cat > /usr/bin/steamos-polkit-helpers/dummy <<'EOF'
   #!/bin/sh
-  exit 0
+  case "${0##*/}" in
+      steamos-update)
+          for arg do
+              if [ "$arg" = --supports-duplicate-detection ]; then
+                  exit 0
+              fi
+          done
+          # SteamOS uses 7 to mean that there is no system update to perform.
+          exit 7
+          ;;
+      jupiter-check-support)
+          echo 'Supported: yes'
+          exit 0
+          ;;
+      steamos-factory-reset-config|steamos-format-device|steamos-format-sdcard|\
+      steamos-priv-write|steamos-reboot-other)
+          # Do not claim that an unsupported destructive operation succeeded.
+          exit 1
+          ;;
+      *)
+          exit 0
+          ;;
+  esac
   EOF
-  chmod 0755 /usr/bin/steamos-polkit-helpers/steamos-set-timezone
+  chmod 0755 /usr/bin/steamos-polkit-helpers/dummy
+
+  # Steam hardcodes these paths. Anatase implements none of these SteamOS
+  # privileged helpers, so expose the dispatcher above for every known call.
+  for helper in \
+      jupiter-biosupdate \
+      jupiter-check-support \
+      jupiter-dock-updater \
+      jupiter-fan-control \
+      jupiter-get-als-gain \
+      steamos-factory-reset-config \
+      steamos-format-device \
+      steamos-format-sdcard \
+      steamos-priv-write \
+      steamos-reboot-other \
+      steamos-set-hostname \
+      steamos-set-timezone \
+      steamos-trim-devices \
+      steamos-update; do
+      ln -s dummy "/usr/bin/steamos-polkit-helpers/$helper"
+  done
