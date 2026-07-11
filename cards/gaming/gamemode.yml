@@ -135,3 +135,15 @@ postprocess: |
       /usr/share/wayland-sessions/gamemode.desktop
   grep -Fx 'DesktopNames=gamescope' \
       /usr/share/wayland-sessions/gamemode.desktop
+
+  # 
+  # Dummy polkit helpers for steam. It expects them in hardcoded paths,
+  # so we need to provide them in the image which is unfortunate.
+  #
+
+  install -dm0755 /usr/bin/steamos-polkit-helpers
+  cat > /usr/bin/steamos-polkit-helpers/steamos-set-timezone <<'EOF'
+  #!/bin/sh
+  exit 0
+  EOF
+  chmod 0755 /usr/bin/steamos-polkit-helpers/steamos-set-timezone
