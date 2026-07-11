@@ -44,7 +44,7 @@ packages:
     - plasma-breeze
     - plasma-desktop
     - plasma-desktop-doc
-    - plasma-drkonqi
+    # - plasma-drkonqi # this crashes way too often, bring it back later
     - plasma-keyboard
     - plasma-login-manager
     - plasma-pa
