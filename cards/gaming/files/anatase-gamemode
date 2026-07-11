@@ -47,7 +47,7 @@ gamescope_args=(
     --generate-drm-mode fixed
     # Xwayland 0 hosts the Steam UI; Steam launches games on Xwayland 1 when
     # STEAM_MULTIPLE_XWAYLANDS is enabled.
-    --xwayland-count 2
+    --xwayland-count 1
     --default-touch-mode 4
     --hide-cursor-delay 3000
     --max-scale 2
@@ -104,7 +104,7 @@ export STEAM_ENABLE_DYNAMIC_BACKLIGHT=1
 export STEAM_ENABLE_VOLUME_HANDLER=1
 export SRT_URLOPEN_PREFER_STEAM=1
 export STEAM_DISABLE_AUDIO_DEVICE_SWITCHING=1
-export STEAM_MULTIPLE_XWAYLANDS=1
+# export STEAM_MULTIPLE_XWAYLANDS=1
 export STEAM_GAMESCOPE_DYNAMIC_FPSLIMITER=1
 export STEAM_GAMESCOPE_HAS_TEARING_SUPPORT=1
 export STEAM_GAMESCOPE_NIS_SUPPORTED=1
@@ -183,13 +183,7 @@ export DISPLAY="$response_x_display"
 export GAMESCOPE_WAYLAND_DISPLAY="$response_wl_display"
 dbus-update-activation-environment --systemd DISPLAY
 
-# Flatpak normally masks /tmp/.X11-unix and exposes only the socket selected by
-# DISPLAY. Bind the directory after that mask so Steam can also reach Gamescope's
-# game Xwayland socket.
-# PRESSURE_VESSEL_FILESYSTEMS_RO passes through to game sandboxes (same logic)
-export PRESSURE_VESSEL_FILESYSTEMS_RO=/tmp/.X11-unix
-exec 3</tmp/.X11-unix
-flatpak run --ro-bind-fd=3 \
+flatpak run \
         --filesystem=xdg-run/$response_wl_display:ro \
         org.anatase.Steam \
         -steamos3 \
