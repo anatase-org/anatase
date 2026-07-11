@@ -114,3 +114,24 @@ specs:
       ref: 412a4bff892bdb5726a549d03b11e6ce2f8e8152
       file: overrides.patch
       name: xdg-desktop-portal-gamescope
+
+files:
+  - files/anatase-gamemode
+  - files/gamemode.desktop
+  - files/gamescope-portals.conf
+
+postprocess: |
+  set -eux
+
+  install -Dm0755 /files/files/anatase-gamemode \
+      /usr/bin/anatase-gamemode
+  install -Dm0644 /files/files/gamemode.desktop \
+      /usr/share/wayland-sessions/gamemode.desktop
+  install -Dm0644 /files/files/gamescope-portals.conf \
+      /usr/share/xdg-desktop-portal/gamescope-portals/gamescope-portals.conf
+
+  bash -n /usr/bin/anatase-gamemode
+  grep -Fx 'Exec=/usr/libexec/plasma-dbus-run-session-if-needed /usr/bin/anatase-gamemode' \
+      /usr/share/wayland-sessions/gamemode.desktop
+  grep -Fx 'DesktopNames=gamescope' \
+      /usr/share/wayland-sessions/gamemode.desktop

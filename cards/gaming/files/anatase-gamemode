@@ -1,0 +1,191 @@
+#!/bin/bash
+
+if (( $# != 0 )); then
+    echo "Usage: ${0##*/}" >&2
+    exit 2
+fi
+
+#
+# Prepare Gamescope
+#
+
+# Create the runtime files used by Gamescope and MangoApp.
+tmpdir="$([[ -n ${XDG_RUNTIME_DIR+x} ]] && mktemp -p "$XDG_RUNTIME_DIR" -d -t gamescope.XXXXXXX)"
+socket="${tmpdir:+$tmpdir/startup.socket}"
+stats="${tmpdir:+$tmpdir/stats.pipe}"
+if [[ -z $tmpdir || -z ${XDG_RUNTIME_DIR+x} ]]; then
+    echo >&2 'Failed to find a runtime directory for the Gamescope session'
+    exit 1
+fi
+
+export SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS=0
+export GAMESCOPE_STATS="$stats"
+export MANGOHUD_CONFIGFILE="$tmpdir/mangohud.config"
+export GAMESCOPE_MODE_SAVE_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/gamescope/modes.cfg"
+export GAMESCOPE_PATCHED_EDID_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/gamescope/edid.bin"
+
+mkdir -p \
+    "$(dirname "$GAMESCOPE_MODE_SAVE_FILE")" \
+    "$(dirname "$GAMESCOPE_PATCHED_EDID_FILE")"
+touch "$GAMESCOPE_MODE_SAVE_FILE" "$GAMESCOPE_PATCHED_EDID_FILE"
+echo "no_display" > "$MANGOHUD_CONFIGFILE"
+mkfifo -- "$socket" "$stats"
+
+# Make this the global Gamescope statistics session when no other instance owns
+# it.
+sessionlink="$XDG_RUNTIME_DIR/gamescope-stats"
+lockfile="$sessionlink.lck"
+exec 9>"$lockfile"
+if flock -n 9 && rm -f "$sessionlink" && ln -sf "$tmpdir" "$sessionlink"; then
+    echo >&2 "Claimed global Gamescope statistics session at $sessionlink"
+else
+    echo >&2 "Another Gamescope statistics session is already active"
+fi
+
+gamescope_args=(
+    --backend drm
+    --generate-drm-mode fixed
+    --xwayland-count 1
+    --default-touch-mode 4
+    --hide-cursor-delay 3000
+    --max-scale 2
+    --fade-out-duration 200
+    --cursor-scale-height 720
+    -e
+    -R "$socket"
+    -T "$stats"
+    --mangoapp
+    -O '*',eDP-1
+)
+
+# Gamescope's clients use Xwayland even though the login session is Wayland.
+export XDG_SESSION_TYPE=x11
+
+export DESKTOP_SESSION=gamemode
+export XDG_CURRENT_DESKTOP=gamescope
+export XDG_SESSION_DESKTOP=gamemode
+export XDG_DESKTOP_PORTAL_DIR=/usr/share/xdg-desktop-portal/gamescope-portals
+
+# D-Bus activated portal services are user services, so publish the Gamemode
+# identity and private backend directory to the user manager.
+systemctl --user import-environment \
+    DESKTOP_SESSION \
+    XDG_CURRENT_DESKTOP \
+    XDG_SESSION_DESKTOP \
+    XDG_SESSION_TYPE \
+    XDG_DESKTOP_PORTAL_DIR
+
+#
+# Prepare Steam
+#
+
+export HOMETEST_DESKTOP=1
+export HOMETEST_DESKTOP_SESSION=plasma
+
+export STEAM_MANGOAPP_PRESETS_SUPPORTED=1
+export STEAM_USE_MANGOAPP=1
+
+export STEAM_USE_DYNAMIC_VRS=1
+export RADV_FORCE_VRS_CONFIG_FILE="$(mktemp /tmp/radv_vrs.XXXXXXXX)"
+echo "1x1" > "$RADV_FORCE_VRS_CONFIG_FILE"
+
+export GAMESCOPE_NV12_COLORSPACE=k_EStreamColorspace_BT601
+export STEAM_GAMESCOPE_HDR_SUPPORTED=1
+export VKD3D_SWAPCHAIN_LATENCY_FRAMES=3
+export WINEDLLOVERRIDES=dxgi=n
+export STEAM_ENABLE_DYNAMIC_BACKLIGHT=1
+# We will probably not port this
+# export STEAM_ENABLE_FAN_CONTROL=1
+export STEAM_ENABLE_VOLUME_HANDLER=1
+export SRT_URLOPEN_PREFER_STEAM=1
+export STEAM_DISABLE_AUDIO_DEVICE_SWITCHING=1
+export STEAM_MULTIPLE_XWAYLANDS=1
+export STEAM_GAMESCOPE_DYNAMIC_FPSLIMITER=1
+export STEAM_GAMESCOPE_HAS_TEARING_SUPPORT=1
+export STEAM_GAMESCOPE_NIS_SUPPORTED=1
+export STEAM_GAMESCOPE_TEARING_SUPPORTED=1
+export STEAM_GAMESCOPE_VRR_SUPPORTED=1
+export STEAM_GAMESCOPE_DYNAMIC_REFRESH_IN_STEAM_SUPPORTED=0
+export STEAM_ENABLE_STATUS_LED_BRIGHTNESS=1
+export vk_xwayland_wait_ready=false
+export STEAM_ALLOW_DRIVE_UNMOUNT=1
+export STEAM_ALLOW_DRIVE_ADOPT=1
+export STEAM_DISABLE_MANGOAPP_ATOM_WORKAROUND=1
+export STEAM_MANGOAPP_HORIZONTAL_SUPPORTED=1
+export STEAM_GAMESCOPE_FANCY_SCALING_SUPPORT=1
+export STEAM_GAMESCOPE_COLOR_MANAGED=1
+export STEAM_GAMESCOPE_VIRTUAL_WHITE=1
+# CEC is TODO
+#export STEAM_ENABLE_CEC=1
+export STEAM_LAUNCH_WRAPPER_SCOPE=1
+export GAMESCOPE_DISPLAY_DISABLED=1
+
+export QT_IM_MODULE=steam
+export GTK_IM_MODULE=Steam
+export QT_QPA_PLATFORM_THEME=kde
+
+export ENABLE_GAMESCOPE_WSI=1
+export GAMESCOPE_LIMITER_FILE="$(mktemp /tmp/gamescope-limiter.XXXXXXXX)"
+export XCURSOR_THEME=steam
+export XCURSOR_SCALE=256
+
+# Chromium uses GTK's cursor setting instead of XCURSOR_THEME.
+kwriteconfig6 \
+    --file gtk-3.0/settings.ini \
+    --group Settings \
+    --key gtk-cursor-theme-name \
+    steam
+
+board_name="$(cat /sys/class/dmi/id/board_name 2>/dev/null || true)"
+if [[ $board_name = Galileo ]]; then
+    export STEAM_DISPLAY_REFRESH_LIMITS=45,90
+    export STEAM_GAMESCOPE_FORCE_HDR_DEFAULT=1
+    export STEAM_GAMESCOPE_FORCE_OUTPUT_TO_HDR10PQ_DEFAULT=1
+elif [[ $board_name = Jupiter ]]; then
+    export STEAM_DISPLAY_REFRESH_LIMITS=40,60
+fi
+
+# The Steam Flatpak sees host data files below /run/host/share.
+export STEAM_UPDATEUI_PNG_BACKGROUND=/run/host/share/pixmaps/anatase-logo-sprite.png
+
+ulimit -n 524288
+
+gamescope_pid=
+steam_pid=
+cleanup() {
+    trap - EXIT HUP INT TERM
+
+    [[ -z $steam_pid ]] || kill "$steam_pid" 2>/dev/null || true
+    [[ -z $gamescope_pid ]] || kill "$gamescope_pid" 2>/dev/null || true
+    [[ -z $steam_pid ]] || wait "$steam_pid" 2>/dev/null || true
+    [[ -z $gamescope_pid ]] || wait "$gamescope_pid" 2>/dev/null || true
+}
+trap cleanup EXIT
+trap 'exit 143' HUP INT TERM
+
+# Gamescope publishes the Xwayland and Wayland display names to its startup
+# socket. Steam must be launched separately with the environment Gamescope
+# reports, rather than as Gamescope's primary child.
+gamescope "${gamescope_args[@]}" &
+gamescope_pid=$!
+
+if ! read -r -t 10 response_x_display response_wl_display <> "$socket"; then
+    echo >&2 'Gamescope did not publish its display environment'
+    exit 1
+fi
+
+export DISPLAY="$response_x_display"
+export GAMESCOPE_WAYLAND_DISPLAY="$response_wl_display"
+dbus-update-activation-environment --systemd DISPLAY
+
+flatpak run org.anatase.Steam \
+        -steamos3 \
+        -steampal \
+        -steamdeck \
+        -gamepadui &
+steam_pid=$!
+
+# Ending either half ends the session and cleanup terminates the other half.
+wait -n "$gamescope_pid" "$steam_pid"
+status=$?
+exit "$status"

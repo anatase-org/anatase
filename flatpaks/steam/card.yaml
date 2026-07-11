@@ -35,6 +35,7 @@ flatpak:
     --system-talk-name=org.freedesktop.NetworkManager
     --system-talk-name=org.freedesktop.UDisks2
     --system-talk-name=org.freedesktop.UPower
+    --talk-name=com.steampowered.SteamOSManager1
     --talk-name=org.freedesktop.Flatpak
     --talk-name=org.freedesktop.PowerManagement
     --talk-name=org.freedesktop.ScreenSaver
