@@ -68,8 +68,12 @@ postprocess: |
   DEFAULT_HOSTNAME="anatase"
   HOME_URL="https://anatase.org/"
   DOCUMENTATION_URL="https://docs.anatase.org/"
-  SUPPORT_URL="https://ask.fedoraproject.org/"
+  SUPPORT_URL="https://support.anatase.org/"
   BUG_REPORT_URL="https://github.com/anatase-org/anatase/issues"
+  # Steam reads these
+  VERSION_CODENAME="Anatase"
+  BUILD_ID="$tag"
+  VARIANT_ID="original"
   EOF
   echo "Anatase" > /etc/system-release
 
