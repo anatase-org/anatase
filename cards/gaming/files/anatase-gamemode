@@ -174,7 +174,7 @@ trap 'exit 143' HUP INT TERM
 gamescope "${gamescope_args[@]}" &
 gamescope_pid=$!
 
-if ! read -r -t 10 response_x_display response_wl_display <> "$socket"; then
+if ! read -r -t 30 response_x_display response_wl_display <> "$socket"; then
     echo >&2 'Gamescope did not publish its display environment'
     exit 1
 fi
