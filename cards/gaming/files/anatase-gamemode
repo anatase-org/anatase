@@ -189,7 +189,9 @@ dbus-update-activation-environment --systemd DISPLAY
 # PRESSURE_VESSEL_FILESYSTEMS_RO passes through to game sandboxes (same logic)
 export PRESSURE_VESSEL_FILESYSTEMS_RO=/tmp/.X11-unix
 exec 3</tmp/.X11-unix
-flatpak run --ro-bind-fd=3 org.anatase.Steam \
+flatpak run --ro-bind-fd=3 \
+        --filesystem=xdg-run/$response_wl_display:ro \
+        org.anatase.Steam \
         -steamos3 \
         -steampal \
         -steamdeck \

@@ -25,7 +25,6 @@ flatpak:
     --filesystem=xdg-pictures:ro
     --filesystem=xdg-run/app/com.discordapp.Discord:create
     --filesystem=xdg-run/pipewire-0:ro
-    --filesystem=xdg-run/gamescope-0:ro
     --filesystem=xdg-config/MangoHud:ro
     --filesystem=/run/udev:ro
     --filesystem=xdg-run/speech-dispatcher:ro
