@@ -827,3 +827,40 @@ index 4f1f4b83466c..dec2233c3eb3 100644
      }
  
      #[zbus(property(emits_changed_signal = "const"))]
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sat, 11 Jul 2026 02:45:59 +0200
+Subject: fix: use Fedora libdir for steamos-manager services
+
+---
+ data/system/steamos-manager.service | 2 +-
+ data/user/steamos-manager.service   | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/data/system/steamos-manager.service b/data/system/steamos-manager.service
+index 08f77ccab1e0..5336a76b1442 100644
+--- a/data/system/steamos-manager.service
++++ b/data/system/steamos-manager.service
+@@ -13,7 +13,7 @@ StartLimitBurst=5
+ Type=notify-reload
+ BusName=com.steampowered.SteamOSManager1
+ Environment=RUST_LOG=info
+-ExecStart=/usr/lib/steamos-manager -r
++ExecStart=/usr/lib64/steamos-manager -r
+ Restart=on-failure
+ RestartSec=1
+ RestartMaxDelaySec=10
+diff --git a/data/user/steamos-manager.service b/data/user/steamos-manager.service
+index bdbca489c0df..ec07e453eef4 100644
+--- a/data/user/steamos-manager.service
++++ b/data/user/steamos-manager.service
+@@ -11,7 +11,7 @@ StartLimitBurst=5
+ Type=notify-reload
+ BusName=com.steampowered.SteamOSManager1
+ Environment=RUST_LOG=info
+-ExecStart=/usr/lib/steamos-manager
++ExecStart=/usr/lib64/steamos-manager
+ Restart=on-failure
+ RestartSec=1
+ RestartMaxDelaySec=10
