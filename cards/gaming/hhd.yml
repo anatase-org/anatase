@@ -22,6 +22,10 @@ packages:
   - python3-setuptools
   - python3-six
   - python3-xlib
+  - fpaste
+
+files:
+  - files/hhd.conf
 
 specs:
   # - spec: git+https://github.com/hhd-dev/hhd:hhd.spec
@@ -49,3 +53,7 @@ postprocess: |
   enable hhd.service
   EOF
   systemctl preset hhd.service || true
+
+  # Add our overrides
+  install -dm0755 /usr/lib/systemd/system/hhd.service.d/
+  cp /files/files/hhd.conf /usr/lib/systemd/system/hhd.service.d/override.conf
