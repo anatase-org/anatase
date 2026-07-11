@@ -164,6 +164,14 @@ cleanup() {
     [[ -z $gamescope_pid ]] || kill "$gamescope_pid" 2>/dev/null || true
     [[ -z $steam_pid ]] || wait "$steam_pid" 2>/dev/null || true
     [[ -z $gamescope_pid ]] || wait "$gamescope_pid" 2>/dev/null || true
+
+    systemctl --user unset-environment \
+        DESKTOP_SESSION \
+        DISPLAY \
+        XDG_CURRENT_DESKTOP \
+        XDG_DESKTOP_PORTAL_DIR \
+        XDG_SESSION_DESKTOP \
+        XDG_SESSION_TYPE || true
 }
 trap cleanup EXIT
 trap 'exit 143' HUP INT TERM
