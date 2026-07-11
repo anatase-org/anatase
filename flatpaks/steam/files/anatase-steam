@@ -97,4 +97,4 @@ if command -v steam_notif_daemon >/dev/null 2>&1; then
     notification_pid=$!
 fi
 
-/app/bin/steam -steamdeck -pipewire "$@"
+/app/bin/steam -steamdeck "$@"

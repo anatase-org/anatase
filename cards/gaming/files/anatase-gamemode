@@ -206,7 +206,6 @@ flatpak run \
         -steamos3 \
         -steampal \
         -steamdeck \
-        -pipewire \
         -gamepadui &
 steam_pid=$!
 
