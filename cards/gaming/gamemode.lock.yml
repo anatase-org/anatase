@@ -1,11 +1,11 @@
 gamescope:
   upstream-sha: dd282d499805bdbb55591245e94d550e0adbecaf
-  patch-sha: f8b33d38c5acc35825c7966b208222770c4a623e
+  patch-sha: 38b6a9dc4406d4210f0abad679c1fdba7e13dc3a
 mangohud:
   upstream-sha: 83471e0529dbdf23bdba1e2cd6e5d0b7883fd46a
 xserver:
-  patch-sha: af4b3d7250366e1a3822919e41fcf66da4966af2
-  upstream-sha: 47be547607964501bf347e6210cf543ba5dba2b2
+  patch-sha: c5a47fda896aeefbf1d06a73e392a294344f9e1a
+  upstream-sha: eccfdec0c4b5141f1aac04127751425f215b498d
 steamos-manager:
   patch-sha: 244e21225379af4037aeeabdc6efd5b71984e7dd
 xdg-desktop-portal-gamescope:

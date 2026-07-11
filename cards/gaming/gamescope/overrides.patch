@@ -98,7 +98,7 @@ Co-authored-by: Antheas Kapenekakis <git@antheas.dev>
  3 files changed, 36 insertions(+), 1 deletion(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 1d34eba0307b..6444578b136d 100644
+index 0749d46ba425..26fb628207b4 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -2401,8 +2401,10 @@ namespace gamescope
@@ -211,7 +211,7 @@ Suggested-by: Antheas Kapenekakis <git@antheas.dev>
  1 file changed, 22 insertions(+), 1 deletion(-)
 
 diff --git a/src/wlserver.cpp b/src/wlserver.cpp
-index 1631ca780d86..501f07c4b214 100644
+index 6088a7f8049c..46729cf82fb8 100644
 --- a/src/wlserver.cpp
 +++ b/src/wlserver.cpp
 @@ -296,6 +296,9 @@ static void wlserver_handle_modifiers(struct wl_listener *listener, void *data)
@@ -272,7 +272,7 @@ custom modeline generation has been provided.
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 6444578b136d..d5485115ff9c 100644
+index 26fb628207b4..ac795b89fc3e 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -2317,7 +2317,9 @@ namespace gamescope
@@ -298,7 +298,7 @@ Subject: fix(battery): run at half hz while at steamUI with atom
  2 files changed, 43 insertions(+), 10 deletions(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index c4cee70a2825..8e5bb2ab0074 100644
+index d98222fa1f3d..0dcd11314f51 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -173,6 +173,8 @@ uint32_t g_reshade_technique_idx = 0;
@@ -395,7 +395,7 @@ index c4cee70a2825..8e5bb2ab0074 100644
  }
  
  static int
-@@ -6899,7 +6906,7 @@ void handle_presented_for_window( steamcompmgr_win_t* w )
+@@ -6896,7 +6903,7 @@ void handle_presented_for_window( steamcompmgr_win_t* w )
  
  	uint64_t next_refresh_time = g_SteamCompMgrVBlankTime.schedule.ulTargetVBlank;
  
@@ -404,7 +404,7 @@ index c4cee70a2825..8e5bb2ab0074 100644
  		? g_SteamCompMgrLimitedAppRefreshCycle
  		: g_SteamCompMgrAppRefreshCycle;
  
-@@ -7769,6 +7776,7 @@ void init_xwayland_ctx(uint32_t serverId, gamescope_xwayland_server_t *xwayland_
+@@ -7766,6 +7773,7 @@ void init_xwayland_ctx(uint32_t serverId, gamescope_xwayland_server_t *xwayland_
  
  	ctx->atoms.wm_protocols = XInternAtom(ctx->dpy, "WM_PROTOCOLS", false);
  	ctx->atoms.wm_delete_window = XInternAtom(ctx->dpy, "WM_DELETE_WINDOW", false);
@@ -412,7 +412,7 @@ index c4cee70a2825..8e5bb2ab0074 100644
  
  	ctx->root_width = DisplayWidth(ctx->dpy, ctx->scr);
  	ctx->root_height = DisplayHeight(ctx->dpy, ctx->scr);
-@@ -8199,7 +8207,7 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8196,7 +8204,7 @@ steamcompmgr_main(int argc, char **argv)
  				} else if (strcmp(opt_name, "hdr-itm-target-nits") == 0) {
  					g_flHDRItmTargetNits = atof(optarg);
  				} else if (strcmp(opt_name, "framerate-limit") == 0) {
@@ -421,7 +421,7 @@ index c4cee70a2825..8e5bb2ab0074 100644
  				} else if (strcmp(opt_name, "reshade-effect") == 0) {
  					g_reshade_effect = optarg;
  				} else if (strcmp(opt_name, "reshade-technique-idx") == 0) {
-@@ -8363,6 +8371,30 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8360,6 +8368,30 @@ steamcompmgr_main(int argc, char **argv)
  		// as a question.
  		const bool bIsVBlankFromTimer = vblank;
  
@@ -483,7 +483,7 @@ Subject: feat(intel): add rotation shader for rotating output
  create mode 100644 src/shaders/cs_rotation.comp
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index d5485115ff9c..b2cabe2de13e 100644
+index ac795b89fc3e..13f2d3353630 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -1660,6 +1660,10 @@ static void update_drm_effective_orientations( struct drm_t *drm, const drmModeM
@@ -535,7 +535,7 @@ index d5485115ff9c..b2cabe2de13e 100644
  		if ( this->GetScreenType() == GAMESCOPE_SCREEN_TYPE_INTERNAL && g_DesiredInternalOrientation != GAMESCOPE_PANEL_ORIENTATION_AUTO )
  		{
  			m_ChosenOrientation = g_DesiredInternalOrientation;
-@@ -3248,6 +3267,13 @@ bool drm_set_mode( struct drm_t *drm, const drmModeModeInfo *mode )
+@@ -3259,6 +3278,13 @@ bool drm_set_mode( struct drm_t *drm, const drmModeModeInfo *mode )
  		g_bRotated = false;
  		g_nOutputWidth = mode->hdisplay;
  		g_nOutputHeight = mode->vdisplay;
@@ -549,7 +549,7 @@ index d5485115ff9c..b2cabe2de13e 100644
  		break;
  	case GAMESCOPE_PANEL_ORIENTATION_90:
  	case GAMESCOPE_PANEL_ORIENTATION_270:
-@@ -3512,6 +3538,11 @@ namespace gamescope
+@@ -3523,6 +3549,11 @@ namespace gamescope
  
  			bNeedsFullComposite |= !!(g_uCompositeDebug & CompositeDebugFlag::Heatmap);
  
@@ -561,7 +561,7 @@ index d5485115ff9c..b2cabe2de13e 100644
  			bool bDoComposite = true;
  			if ( !bNeedsFullComposite && !bWantsPartialComposite )
  			{
-@@ -3602,7 +3633,7 @@ namespace gamescope
+@@ -3618,7 +3649,7 @@ namespace gamescope
  			if ( bDefer && !!( g_uCompositeDebug & CompositeDebugFlag::Markers ) )
  				g_uCompositeDebug |= CompositeDebugFlag::Markers_Partial;
  
@@ -635,7 +635,7 @@ index 8512bf573137..e0755d844f11 100644
  
  spirv_shaders = glsl_generator.process(shader_src)
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index 65411dcfa32c..58491b56ef83 100644
+index 45196571b50f..f954df3c564d 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -48,6 +48,7 @@
@@ -662,7 +662,7 @@ index 65411dcfa32c..58491b56ef83 100644
  #undef SHADER
  
  	for (auto& info : pipelineInfos) {
-@@ -3285,8 +3288,16 @@ static bool vulkan_make_output_images( VulkanOutput_t *pOutput )
+@@ -3287,8 +3290,16 @@ static bool vulkan_make_output_images( VulkanOutput_t *pOutput )
  
  	uint32_t uDRMFormat = pOutput->uOutputFormat;
  
@@ -680,7 +680,7 @@ index 65411dcfa32c..58491b56ef83 100644
  	if ( bSuccess != true )
  	{
  		vk_log.errorf( "failed to allocate buffer for KMS" );
-@@ -3294,7 +3305,7 @@ static bool vulkan_make_output_images( VulkanOutput_t *pOutput )
+@@ -3296,7 +3307,7 @@ static bool vulkan_make_output_images( VulkanOutput_t *pOutput )
  	}
  
  	pOutput->outputImages[1] = new CVulkanTexture();
@@ -689,7 +689,7 @@ index 65411dcfa32c..58491b56ef83 100644
  	if ( bSuccess != true )
  	{
  		vk_log.errorf( "failed to allocate buffer for KMS" );
-@@ -3302,7 +3313,7 @@ static bool vulkan_make_output_images( VulkanOutput_t *pOutput )
+@@ -3304,7 +3315,7 @@ static bool vulkan_make_output_images( VulkanOutput_t *pOutput )
  	}
  
  	pOutput->outputImages[2] = new CVulkanTexture();
@@ -698,7 +698,7 @@ index 65411dcfa32c..58491b56ef83 100644
  	if ( bSuccess != true )
  	{
  		vk_log.errorf( "failed to allocate buffer for KMS" );
-@@ -3317,7 +3328,7 @@ static bool vulkan_make_output_images( VulkanOutput_t *pOutput )
+@@ -3319,7 +3330,7 @@ static bool vulkan_make_output_images( VulkanOutput_t *pOutput )
  		uint32_t uPartialDRMFormat = pOutput->uOutputFormatOverlay;
  
  		pOutput->outputImagesPartialOverlay[0] = new CVulkanTexture();
@@ -707,7 +707,7 @@ index 65411dcfa32c..58491b56ef83 100644
  		if ( bSuccess != true )
  		{
  			vk_log.errorf( "failed to allocate buffer for KMS" );
-@@ -3325,7 +3336,7 @@ static bool vulkan_make_output_images( VulkanOutput_t *pOutput )
+@@ -3327,7 +3338,7 @@ static bool vulkan_make_output_images( VulkanOutput_t *pOutput )
  		}
  
  		pOutput->outputImagesPartialOverlay[1] = new CVulkanTexture();
@@ -716,7 +716,7 @@ index 65411dcfa32c..58491b56ef83 100644
  		if ( bSuccess != true )
  		{
  			vk_log.errorf( "failed to allocate buffer for KMS" );
-@@ -3333,7 +3344,7 @@ static bool vulkan_make_output_images( VulkanOutput_t *pOutput )
+@@ -3335,7 +3346,7 @@ static bool vulkan_make_output_images( VulkanOutput_t *pOutput )
  		}
  
  		pOutput->outputImagesPartialOverlay[2] = new CVulkanTexture();
@@ -725,7 +725,7 @@ index 65411dcfa32c..58491b56ef83 100644
  		if ( bSuccess != true )
  		{
  			vk_log.errorf( "failed to allocate buffer for KMS" );
-@@ -3463,6 +3474,28 @@ static void update_tmp_images( uint32_t width, uint32_t height )
+@@ -3467,6 +3478,28 @@ static void update_tmp_images( uint32_t width, uint32_t height )
  	}
  }
  
@@ -754,7 +754,7 @@ index 65411dcfa32c..58491b56ef83 100644
  
  static bool init_nis_data()
  {
-@@ -3948,7 +3981,7 @@ extern uint32_t g_reshade_technique_idx;
+@@ -3976,7 +4009,7 @@ extern uint32_t g_reshade_technique_idx;
  
  ReshadeEffectPipeline *g_pLastReshadeEffect = nullptr;
  
@@ -763,7 +763,7 @@ index 65411dcfa32c..58491b56ef83 100644
  {
  	EOTF outputTF = frameInfo->outputEncodingEOTF;
  	if (!frameInfo->applyOutputColorMgmt)
-@@ -4023,7 +4056,15 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
+@@ -4051,7 +4084,15 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
  		cmdBuffer->setTextureSrgb(0, true);
  		cmdBuffer->setSamplerUnnormalized(0, false);
  		cmdBuffer->setSamplerNearest(0, false);
@@ -780,7 +780,7 @@ index 65411dcfa32c..58491b56ef83 100644
  		cmdBuffer->uploadConstants<RcasPushData_t>(frameInfo, g_upscaleFilterSharpness / 10.0f);
  
  		cmdBuffer->dispatch(div_roundup(currentOutputWidth, pixelsPerGroup), div_roundup(currentOutputHeight, pixelsPerGroup));
-@@ -4066,7 +4107,15 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
+@@ -4094,7 +4135,15 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
  
  		cmdBuffer->bindPipeline( g_device.pipeline(SHADER_TYPE_BLIT, nisFrameInfo.layerCount, nisFrameInfo.ycbcrMask(), 0u, nisFrameInfo.colorspaceMask(), outputTF ));
  		bind_all_layers(cmdBuffer.get(), &nisFrameInfo);
@@ -797,7 +797,7 @@ index 65411dcfa32c..58491b56ef83 100644
  		cmdBuffer->uploadConstants<BlitPushData_t>(&nisFrameInfo);
  
  		int pixelsPerGroup = 8;
-@@ -4104,7 +4153,15 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
+@@ -4132,7 +4181,15 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
  		type = frameInfo->blurLayer0 == BLUR_MODE_COND ? SHADER_TYPE_BLUR_COND : SHADER_TYPE_BLUR;
  		cmdBuffer->bindPipeline(g_device.pipeline(type, frameInfo->layerCount, frameInfo->ycbcrMask(), blur_layer_count, frameInfo->colorspaceMask(), outputTF ));
  		bind_all_layers(cmdBuffer.get(), frameInfo);
@@ -814,7 +814,7 @@ index 65411dcfa32c..58491b56ef83 100644
  		cmdBuffer->bindTexture(VKR_BLUR_EXTRA_SLOT, g_output.tmpOutput);
  		cmdBuffer->setTextureSrgb(VKR_BLUR_EXTRA_SLOT, !useSrgbView); // Inverted because it chooses whether to view as linear (sRGB view) or sRGB (raw view). It's horrible. I need to change it.
  		cmdBuffer->setSamplerUnnormalized(VKR_BLUR_EXTRA_SLOT, true);
-@@ -4114,14 +4171,51 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
+@@ -4142,14 +4199,51 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
  	}
  	else
  	{
@@ -873,7 +873,7 @@ index 65411dcfa32c..58491b56ef83 100644
  
  	if ( pPipewireTexture != nullptr )
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index 63cc6029ac5f..93a4a6027f55 100644
+index a2f9975464b0..944ecd78f780 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -408,7 +408,7 @@ gamescope::OwningRc<CVulkanTexture> vulkan_create_texture_from_dmabuf( struct wl
@@ -885,7 +885,7 @@ index 63cc6029ac5f..93a4a6027f55 100644
  void vulkan_wait( uint64_t ulSeqNo, bool bReset );
  gamescope::Rc<CVulkanTexture> vulkan_get_last_output_image( bool partial, bool defer );
  gamescope::Rc<CVulkanTexture> vulkan_acquire_screenshot_texture(uint32_t width, uint32_t height, bool exportable, uint32_t drmFormat, EStreamColorspace colorspace = k_EStreamColorspace_Unknown);
-@@ -545,6 +545,9 @@ struct VulkanOutput_t
+@@ -547,6 +547,9 @@ struct VulkanOutput_t
  	// NIS
  	gamescope::OwningRc<CVulkanTexture> nisScalerImage;
  	gamescope::OwningRc<CVulkanTexture> nisUsmImage;
@@ -895,7 +895,7 @@ index 63cc6029ac5f..93a4a6027f55 100644
  };
  
  
-@@ -557,6 +560,7 @@ enum ShaderType {
+@@ -559,6 +562,7 @@ enum ShaderType {
  	SHADER_TYPE_RCAS,
  	SHADER_TYPE_NIS,
  	SHADER_TYPE_RGB_TO_NV12,
@@ -963,10 +963,10 @@ index 000000000000..1a47fd505748
 +    imageStore(dst, rotatedCoord, outputValue);
 +}
 diff --git a/src/wlserver.cpp b/src/wlserver.cpp
-index 501f07c4b214..31d358707379 100644
+index 46729cf82fb8..2868cd0206a2 100644
 --- a/src/wlserver.cpp
 +++ b/src/wlserver.cpp
-@@ -2852,6 +2852,11 @@ static void apply_touchscreen_orientation(GamescopePanelOrientation orientation,
+@@ -2876,6 +2876,11 @@ static void apply_touchscreen_orientation(GamescopePanelOrientation orientation,
  			break;
  	}
  
@@ -992,7 +992,7 @@ see: https://github.com/ValveSoftware/gamescope/pull/1671
  1 file changed, 19 insertions(+), 1 deletion(-)
 
 diff --git a/layer/VkLayer_FROG_gamescope_wsi.cpp b/layer/VkLayer_FROG_gamescope_wsi.cpp
-index af0c2009930b..263cbc37bd88 100644
+index a13acc7c1db0..9c5b184fcc15 100644
 --- a/layer/VkLayer_FROG_gamescope_wsi.cpp
 +++ b/layer/VkLayer_FROG_gamescope_wsi.cpp
 @@ -183,6 +183,16 @@ namespace GamescopeWSILayer {
@@ -1012,7 +1012,7 @@ index af0c2009930b..263cbc37bd88 100644
    // Taken from Mesa, licensed under MIT.
    //
    // No real reason to rewrite this code,
-@@ -589,7 +599,11 @@ namespace GamescopeWSILayer {
+@@ -593,7 +603,11 @@ namespace GamescopeWSILayer {
        createInfo.ppEnabledExtensionNames = enabledExts.data();
  
        setenv("vk_xwayland_wait_ready", "false", 0);
@@ -1025,7 +1025,7 @@ index af0c2009930b..263cbc37bd88 100644
  
        VkResult result = pfnCreateInstanceProc(&createInfo, pAllocator, pInstance);
        if (result != VK_SUCCESS)
-@@ -899,6 +913,10 @@ namespace GamescopeWSILayer {
+@@ -903,6 +917,10 @@ namespace GamescopeWSILayer {
        const vkroots::VkInstanceDispatch* pDispatch,
              VkPhysicalDevice             physicalDevice,
              VkPhysicalDeviceFeatures2*   pFeatures) {
@@ -1125,7 +1125,7 @@ Subject: feat(display): consider vporch to avoid timing issues
  4 files changed, 11 insertions(+), 5 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index b2cabe2de13e..5fd5df64292d 100644
+index 13f2d3353630..7d032b563365 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -213,6 +213,11 @@ namespace gamescope
@@ -1140,7 +1140,7 @@ index b2cabe2de13e..5fd5df64292d 100644
  	template <typename T>
  	using CAutoDeletePtr = std::unique_ptr<T, void(*)(T*)>;
  
-@@ -3257,6 +3262,9 @@ bool drm_set_mode( struct drm_t *drm, const drmModeModeInfo *mode )
+@@ -3268,6 +3273,9 @@ bool drm_set_mode( struct drm_t *drm, const drmModeModeInfo *mode )
  	g_nOutputRefresh = gamescope::GetModeRefresh( mode );
  	g_nDynamicRefreshHz = 0;
  
@@ -1320,7 +1320,7 @@ Subject: feat: add DPMS support through an Atom
  4 files changed, 32 insertions(+), 4 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 5fd5df64292d..664ef0228653 100644
+index 7d032b563365..5f870258fe99 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -2890,6 +2890,9 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
@@ -1357,8 +1357,8 @@ index 5fd5df64292d..664ef0228653 100644
 +				drm->pCRTC->GetProperties().ACTIVE->SetPendingValue( drm->req, 1u, true );
  			drm->pCRTC->GetProperties().MODE_ID->SetPendingValue( drm->req, drm->pending.mode_id ? drm->pending.mode_id->GetBlobValue() : 0lu, true );
  
- 			if ( drm->pCRTC->GetProperties().VRR_ENABLED )
-@@ -3657,6 +3669,7 @@ namespace gamescope
+ 			// Clear color properties inherited from a previous DRM master (i.e. KDE's
+@@ -3673,6 +3685,7 @@ namespace gamescope
  
  			FrameInfo_t presentCompFrameInfo = {};
  			presentCompFrameInfo.allowVRR = pFrameInfo->allowVRR;
@@ -1367,7 +1367,7 @@ index 5fd5df64292d..664ef0228653 100644
  
  			if ( bNeedsFullComposite )
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index 93a4a6027f55..0833fc46ffd7 100644
+index 944ecd78f780..28fe8065b3ea 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -292,6 +292,8 @@ struct FrameInfo_t
@@ -1380,7 +1380,7 @@ index 93a4a6027f55..0833fc46ffd7 100644
  	struct Layer_t
  	{
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 8e5bb2ab0074..63b1576fecdf 100644
+index 0dcd11314f51..fe0120b04adc 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -175,6 +175,8 @@ bool g_bSteamIsActiveWindow = false;
@@ -1420,7 +1420,7 @@ index 8e5bb2ab0074..63b1576fecdf 100644
  }
  
  static int
-@@ -7777,6 +7784,7 @@ void init_xwayland_ctx(uint32_t serverId, gamescope_xwayland_server_t *xwayland_
+@@ -7774,6 +7781,7 @@ void init_xwayland_ctx(uint32_t serverId, gamescope_xwayland_server_t *xwayland_
  	ctx->atoms.wm_protocols = XInternAtom(ctx->dpy, "WM_PROTOCOLS", false);
  	ctx->atoms.wm_delete_window = XInternAtom(ctx->dpy, "WM_DELETE_WINDOW", false);
  	ctx->atoms.gamescopeFrameHalveAtom = XInternAtom( ctx->dpy, "GAMESCOPE_STEAMUI_HALFHZ", false );;
@@ -1428,7 +1428,7 @@ index 8e5bb2ab0074..63b1576fecdf 100644
  
  	ctx->root_width = DisplayWidth(ctx->dpy, ctx->scr);
  	ctx->root_height = DisplayHeight(ctx->dpy, ctx->scr);
-@@ -8980,10 +8988,14 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8977,10 +8985,14 @@ steamcompmgr_main(int argc, char **argv)
  				bShouldPaint = false;
  			}
  
@@ -1543,10 +1543,10 @@ Subject: fix(intel): allow night mode and color adjustment via compositing
  1 file changed, 11 insertions(+)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 664ef0228653..372b80e3dd9b 100644
+index 5f870258fe99..b6c9dc151587 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
-@@ -3544,6 +3544,17 @@ namespace gamescope
+@@ -3555,6 +3555,17 @@ namespace gamescope
  			bNeedsFullComposite |= pFrameInfo->bFadingOut;
  			bNeedsFullComposite |= !g_reshade_effect.empty();
  
@@ -1581,7 +1581,7 @@ configs and read the HDR metadata from the displays.
  4 files changed, 15 insertions(+), 1 deletion(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 372b80e3dd9b..b7951aee958b 100644
+index b6c9dc151587..a3fbd3865c06 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -2524,7 +2524,13 @@ namespace gamescope
@@ -1640,7 +1640,7 @@ index 162b3f19f9bb..c6c2cfe59dcb 100644
  
  static void UpdateCompatEnvVars()
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 63b1576fecdf..4588da82a25d 100644
+index fe0120b04adc..101204632c16 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -153,6 +153,8 @@ gamescope_color_mgmt_luts g_ScreenshotColorMgmtLutsHDR[ EOTF_Count ];
@@ -1652,7 +1652,7 @@ index 63b1576fecdf..4588da82a25d 100644
  extern int g_nDynamicRefreshHz;
  
  bool g_bForceHDRSupportDebug = false;
-@@ -8206,6 +8208,8 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8203,6 +8205,8 @@ steamcompmgr_main(int argc, char **argv)
  					g_bForceHDR10OutputDebug = true;
  				} else if (strcmp(opt_name, "hdr-itm-enabled") == 0 || strcmp(opt_name, "hdr-itm-enable") == 0) {
  					g_bHDRItmEnable = true;
@@ -1679,7 +1679,7 @@ there are no edge cases where only subproperties are supported.
  1 file changed, 32 insertions(+), 8 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index b7951aee958b..cfa9488e8d81 100644
+index a3fbd3865c06..d1a8dc270697 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -567,6 +567,7 @@ extern std::string g_reshade_effect;
@@ -1736,7 +1736,7 @@ index b7951aee958b..cfa9488e8d81 100644
  	{
  		if ( !cv_drm_debug_disable_output_tf && !bSinglePlane )
  		{
-@@ -3434,7 +3440,20 @@ bool drm_supports_color_mgmt(struct drm_t *drm)
+@@ -3445,7 +3451,20 @@ bool drm_supports_color_mgmt(struct drm_t *drm)
  	if ( !drm->pPrimaryPlane )
  		return false;
  
@@ -1758,7 +1758,7 @@ index b7951aee958b..cfa9488e8d81 100644
  }
  
  std::span<const uint32_t> drm_get_valid_refresh_rates( struct drm_t *drm )
-@@ -3564,12 +3583,12 @@ namespace gamescope
+@@ -3575,12 +3594,12 @@ namespace gamescope
  			if ( g_bOutputHDREnabled )
  			{
  				bNeedsFullComposite |= g_bHDRItmEnable;
@@ -1773,7 +1773,7 @@ index b7951aee958b..cfa9488e8d81 100644
  					bNeedsFullComposite |= ColorspaceIsHDR( pFrameInfo->layers[0].colorspace );
  			}
  
-@@ -3978,6 +3997,11 @@ namespace gamescope
+@@ -3994,6 +4013,11 @@ namespace gamescope
  			return drm_supports_color_mgmt( &g_DRM );
  		}
  
@@ -1879,7 +1879,7 @@ user exits it.
  2 files changed, 54 insertions(+), 26 deletions(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 4588da82a25d..222eb6a95abe 100644
+index 101204632c16..c8eae8b1aed5 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -890,6 +890,7 @@ global_focus_t *GetCurrentFocus()
@@ -1890,7 +1890,7 @@ index 4588da82a25d..222eb6a95abe 100644
  bool			currentHDRForce = false;
  
  std::vector< uint32_t > vecFocuscontrolAppIDs;
-@@ -6936,6 +6937,8 @@ void handle_presented_for_window( steamcompmgr_win_t* w )
+@@ -6933,6 +6934,8 @@ void handle_presented_for_window( steamcompmgr_win_t* w )
  			}
  		}
  
@@ -1899,7 +1899,7 @@ index 4588da82a25d..222eb6a95abe 100644
  		if (!lastCommit->presentation_feedbacks.empty() || lastCommit->present_id)
  		{
  			if (!lastCommit->presentation_feedbacks.empty())
-@@ -8585,7 +8588,55 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8582,7 +8585,55 @@ steamcompmgr_main(int argc, char **argv)
  
  		g_uCompositeDebug = cv_composite_debug;
  
@@ -1956,7 +1956,7 @@ index 4588da82a25d..222eb6a95abe 100644
  
  		// Pick our width/height for this potential frame, regardless of how it might change later
  		// At some point we might even add proper locking so we get real updates atomically instead
-@@ -8593,8 +8644,7 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8590,8 +8641,7 @@ steamcompmgr_main(int argc, char **argv)
  		if ( currentOutputWidth != g_nOutputWidth ||
  			 currentOutputHeight != g_nOutputHeight ||
  			 currentOutputRefresh != g_nOutputRefresh ||
@@ -1966,7 +1966,7 @@ index 4588da82a25d..222eb6a95abe 100644
  		{
  			if ( g_nXWaylandCount > 1 )
  			{
-@@ -8618,33 +8668,10 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8615,33 +8665,10 @@ steamcompmgr_main(int argc, char **argv)
  				vulkan_remake_output_images();
  			}
  
@@ -2023,7 +2023,7 @@ Subject: fix: prevent crashing if display is not connected
  1 file changed, 3 insertions(+), 4 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index cfa9488e8d81..58fdb43b7c57 100644
+index d1a8dc270697..03e00b6bfc61 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -712,12 +712,11 @@ static uint32_t pick_plane_format( const struct wlr_drm_format_set *formats, uin
@@ -2054,10 +2054,10 @@ Subject: fix: prevent crash on hotplug if HDR enabled but not supported by
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 222eb6a95abe..73daabb330ce 100644
+index c8eae8b1aed5..00f801d60619 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -8636,7 +8636,9 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8633,7 +8633,9 @@ steamcompmgr_main(int argc, char **argv)
  			}
  		}
  		g_bOutputHDREnabled = hdr_supported &&
@@ -2079,10 +2079,10 @@ Subject: fix(display): report minimum 8-inch display height
  1 file changed, 9 insertions(+)
 
 diff --git a/src/wlserver.cpp b/src/wlserver.cpp
-index 31d358707379..d94b067b63c7 100644
+index 2868cd0206a2..096870593935 100644
 --- a/src/wlserver.cpp
 +++ b/src/wlserver.cpp
-@@ -1602,7 +1602,16 @@ void wlserver_set_output_info( const wlserver_output_info *info )
+@@ -1619,7 +1619,16 @@ void wlserver_set_output_info( const wlserver_output_info *info )
  	free(wlserver.output_info.description);
  	wlserver.output_info.description = strdup(info->description);
  	wlserver.output_info.phys_width = info->phys_width;

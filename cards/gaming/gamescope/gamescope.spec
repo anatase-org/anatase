@@ -5,7 +5,7 @@
 %global vkroots_shortcommit %(c=%{vkroots_commit}; echo ${c:0:7})
 
 Name:           gamescope
-Version:        3.16.23
+Version:        3.16.23.3
 Release:        %autorelease
 Summary:        Micro-compositor for video games on Wayland
 # Automatically converted from old format: BSD - review is highly recommended.
