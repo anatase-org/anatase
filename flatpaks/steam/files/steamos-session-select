@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# Steam invokes this helper for "Switch to Desktop". Ending Steam also ends
+# Anatase's Gamescope login session, returning the user to the display manager.
+exec /app/bin/steam -shutdown

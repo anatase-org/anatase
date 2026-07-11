@@ -33,6 +33,7 @@ flatpak:
     --filesystem=/run/media
     --persist=.
     --system-talk-name=org.freedesktop.NetworkManager
+    --system-talk-name=org.freedesktop.login1
     --system-talk-name=org.freedesktop.UDisks2
     --system-talk-name=org.freedesktop.UPower
     --talk-name=com.steampowered.SteamOSManager1
@@ -77,6 +78,8 @@ flatpak:
 
 files:
   - files/anatase-steam
+  - files/dbus-send
+  - files/steamos-session-select
   - files/anatase-boot.webm
   - files/anatase-suspend.webm
   - files/registry.vdf
@@ -148,4 +151,12 @@ postprocess: |-
   fi
   install -Dm0755 files/anatase-steam app/bin/anatase-steam
 
+  # Translate Steam's legacy power-management D-Bus calls to login1.
+  install -Dm0755 files/dbus-send app/bin/dbus-send
+
+  # Add a stub that shutsdown steam with switch to desktop
+  install -Dm0755 files/steamos-session-select app/bin/steamos-session-select
+
   bash -n app/bin/anatase-steam
+  bash -n app/bin/dbus-send
+  bash -n app/bin/steamos-session-select

@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# Steam falls back to obsolete UPower and ConsoleKit power methods when it
+# cannot identify the sandbox as a systemd system. Translate those calls to
+# the login1 API exposed through the Flatpak system-bus proxy.
+dbus_send=${DBUS_SEND:-/usr/bin/dbus-send}
+
+for arg; do
+    case $arg in
+        org.freedesktop.UPower.Suspend)
+            exec "$dbus_send" \
+                --system \
+                --print-reply \
+                --dest=org.freedesktop.login1 \
+                /org/freedesktop/login1 \
+                org.freedesktop.login1.Manager.Suspend \
+                boolean:true
+            ;;
+        org.freedesktop.ConsoleKit.Manager.Stop)
+            exec "$dbus_send" \
+                --system \
+                --print-reply \
+                --dest=org.freedesktop.login1 \
+                /org/freedesktop/login1 \
+                org.freedesktop.login1.Manager.PowerOff \
+                boolean:true
+            ;;
+        org.freedesktop.ConsoleKit.Manager.Restart)
+            exec "$dbus_send" \
+                --system \
+                --print-reply \
+                --dest=org.freedesktop.login1 \
+                /org/freedesktop/login1 \
+                org.freedesktop.login1.Manager.Reboot \
+                boolean:true
+            ;;
+    esac
+done
+
+exec "$dbus_send" "$@"
