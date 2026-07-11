@@ -30,6 +30,8 @@ packages:
   - fmt.i686
   - spdlog.i686
   - libxkbcommon.i686
+  # Host D-Bus service used by the Steam Flatpak for battery information.
+  - upower
 
 specs:
   - spec: gamescope/gamescope.spec
@@ -119,6 +121,7 @@ files:
   - files/anatase-gamemode
   - files/gamemode.desktop
   - files/gamescope-portals.conf
+  - files/xdg-desktop-portal-gamescope.conf
 
 postprocess: |
   set -eux
@@ -129,12 +132,30 @@ postprocess: |
       /usr/share/wayland-sessions/gamemode.desktop
   install -Dm0644 /files/files/gamescope-portals.conf \
       /usr/share/xdg-desktop-portal/gamescope-portals/gamescope-portals.conf
+  install -Dm0644 /files/files/xdg-desktop-portal-gamescope.conf \
+      /usr/lib/systemd/user/xdg-desktop-portal.service.d/gamescope.conf
+
+  # Flatpak's portal broker still uses UseIn to select backend descriptors.
+  sed -i '/^DBusName=/a UseIn=gamescope;' \
+      /usr/share/xdg-desktop-portal/gamescope-portals/gamescope.portal \
+      /usr/share/xdg-desktop-portal/gamescope-portals/holo.portal
+  sed -i \
+      -e '/^After=graphical-session.target$/d' \
+      -e '/^PartOf=graphical-session.target$/d' \
+      /usr/lib/systemd/user/xdg-desktop-portal-holo.service
 
   bash -n /usr/bin/anatase-gamemode
   grep -Fx 'Exec=/usr/libexec/plasma-dbus-run-session-if-needed /usr/bin/anatase-gamemode' \
       /usr/share/wayland-sessions/gamemode.desktop
   grep -Fx 'DesktopNames=gamescope' \
       /usr/share/wayland-sessions/gamemode.desktop
+  grep -Fx 'Requisite=' \
+      /usr/lib/systemd/user/xdg-desktop-portal.service.d/gamescope.conf
+  grep -Fx 'UseIn=gamescope;' \
+      /usr/share/xdg-desktop-portal/gamescope-portals/gamescope.portal \
+      /usr/share/xdg-desktop-portal/gamescope-portals/holo.portal
+  ! grep -Eq '^(After|PartOf)=graphical-session.target$' \
+      /usr/lib/systemd/user/xdg-desktop-portal-holo.service
 
   # 
   # Dummy polkit helpers for steam. It expects them in hardcoded paths,
@@ -158,6 +179,10 @@ postprocess: |
       jupiter-check-support)
           echo 'Supported: yes'
           exit 0
+          ;;
+      jupiter-dock-updater)
+          # Its --check convention uses zero to mean an update is available.
+          exit 1
           ;;
       steamos-factory-reset-config|steamos-format-device|steamos-format-sdcard|\
       steamos-priv-write|steamos-reboot-other)
