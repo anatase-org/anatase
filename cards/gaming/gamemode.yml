@@ -121,7 +121,6 @@ files:
   - files/anatase-gamemode
   - files/gamemode.desktop
   - files/gamescope-portals.conf
-  - files/xdg-desktop-portal-gamescope.conf
 
 postprocess: |
   set -eux
@@ -132,13 +131,19 @@ postprocess: |
       /usr/share/wayland-sessions/gamemode.desktop
   install -Dm0644 /files/files/gamescope-portals.conf \
       /usr/share/xdg-desktop-portal/gamescope-portals/gamescope-portals.conf
-  install -Dm0644 /files/files/xdg-desktop-portal-gamescope.conf \
-      /usr/lib/systemd/user/xdg-desktop-portal.service.d/gamescope.conf
 
   # Flatpak's portal broker still uses UseIn to select backend descriptors.
   sed -i '/^DBusName=/a UseIn=gamescope;' \
       /usr/share/xdg-desktop-portal/gamescope-portals/gamescope.portal \
       /usr/share/xdg-desktop-portal/gamescope-portals/holo.portal
+
+  # Dependency lists cannot be subtracted from a unit with a drop-in. Patch the
+  # packaged frontend unit so it can be D-Bus activated in standalone Game Mode.
+  sed -i \
+      -e '/^After=graphical-session.target$/d' \
+      -e '/^PartOf=graphical-session.target$/d' \
+      -e '/^Requisite=graphical-session.target$/d' \
+      /usr/lib/systemd/user/xdg-desktop-portal.service
   sed -i \
       -e '/^After=graphical-session.target$/d' \
       -e '/^PartOf=graphical-session.target$/d' \
@@ -149,11 +154,11 @@ postprocess: |
       /usr/share/wayland-sessions/gamemode.desktop
   grep -Fx 'DesktopNames=gamescope' \
       /usr/share/wayland-sessions/gamemode.desktop
-  grep -Fx 'Requisite=' \
-      /usr/lib/systemd/user/xdg-desktop-portal.service.d/gamescope.conf
   grep -Fx 'UseIn=gamescope;' \
       /usr/share/xdg-desktop-portal/gamescope-portals/gamescope.portal \
       /usr/share/xdg-desktop-portal/gamescope-portals/holo.portal
+  ! grep -Eq '^(After|PartOf|Requisite)=graphical-session.target$' \
+      /usr/lib/systemd/user/xdg-desktop-portal.service
   ! grep -Eq '^(After|PartOf)=graphical-session.target$' \
       /usr/lib/systemd/user/xdg-desktop-portal-holo.service
 
