@@ -31,6 +31,12 @@ if has_filesystem '~/.steam:create' && has_filesystem 'xdg-data/Steam:create'; t
     fi
 fi
 
+# Skip OOTB by using a baked registry.vdf with values set to 1
+registry="${XDG_DATA_HOME:-$HOME/.local/share}/Steam/registry.vdf"
+if [[ ! -e $registry ]] && mkdir -p "${registry%/*}"; then
+    cp /app/share/anatase/steam/registry.vdf "$registry"
+fi
+
 case ":${XDG_CURRENT_DESKTOP:-}:" in
     *:gamescope:*)
         if [[ -n ${WAYLAND_DISPLAY:-} ]]; then

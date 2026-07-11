@@ -1,0 +1,17 @@
+"Registry"
+{
+	"HKCU"
+	{
+		"Software"
+		{
+			"Valve"
+			{
+				"Steam"
+				{
+					"CompletedOOBEStage1"		"1"
+					"CompletedOOBE"		"1"
+				}
+			}
+		}
+	}
+}
