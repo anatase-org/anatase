@@ -157,6 +157,9 @@ postprocess: |-
   # Add a stub that shutsdown steam with switch to desktop
   install -Dm0755 files/steamos-session-select app/bin/steamos-session-select
 
+  # Add branch-select if the os provides it
+  ln -s /usr/bin/steamos-polkit-helpers/steamos-select-branch app/bin/steamos-select-branch
+
   bash -n app/bin/anatase-steam
   bash -n app/bin/dbus-send
   bash -n app/bin/steamos-session-select

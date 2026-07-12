@@ -177,13 +177,32 @@ postprocess: |
   #!/bin/sh
   case "${0##*/}" in
       steamos-update)
+          check=
           for arg do
-              if [ "$arg" = --supports-duplicate-detection ]; then
-                  exit 0
-              fi
+              case "$arg" in
+                  --supports-duplicate-detection)
+                      exit 0
+                      ;;
+                  check)
+                      check=1
+                      ;;
+              esac
           done
+
+          if [ -n "$check" ]; then
+              [ -r /etc/os-release ] || exit 0
+              . /etc/os-release
+              [ -n "${BUILD_ID:-}" ] || exit 0
+              printf '%s\n' "$BUILD_ID"
+              exit 0
+          fi
+
           # SteamOS uses 7 to mean that there is no system update to perform.
           exit 7
+          ;;
+      steamos-select-branch)
+          # Anatase has no selectable OS update branches.
+          exit 0
           ;;
       jupiter-check-support)
           echo 'Supported: yes'
@@ -218,6 +237,7 @@ postprocess: |
       steamos-format-sdcard \
       steamos-priv-write \
       steamos-reboot-other \
+      steamos-select-branch \
       steamos-set-hostname \
       steamos-set-timezone \
       steamos-trim-devices \
