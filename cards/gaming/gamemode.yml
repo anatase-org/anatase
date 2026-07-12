@@ -59,6 +59,7 @@ specs:
   - spec: mangohud/mangohud.spec
     files:
       - mangohud.spec
+      - overrides.patch
     packages:
       - mangohud
       - mangohud.i686

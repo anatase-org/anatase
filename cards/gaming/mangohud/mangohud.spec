@@ -37,6 +37,8 @@ Source6:        https://wrapdb.mesonbuild.com/v%{implot_wrap_ver}/implot_%{implo
 # https://github.com/flightlessmango/MangoHud/commit/bc282cf300ed5b6831177cf3e6753bc20f48e942
 # Patch0:         mangohud-0.6.9-use-system-vulkan-headers.patch
 
+Patch1000: overrides.patch
+
 BuildRequires:  vulkan-headers
 BuildRequires:  appstream
 BuildRequires:  dbus-devel
