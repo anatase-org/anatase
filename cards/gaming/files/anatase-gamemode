@@ -224,15 +224,16 @@ dbus-update-activation-environment --systemd DISPLAY
 
 mangoapp &
 
-# Steam asks Gamescope to write screenshots to a temporary path, then reads
-# the resulting file. Give the host compositor and Flatpak Steam the same
-# temporary directory instead of their otherwise separate /tmp directories.
+# Steam rewrites MangoApp's config in the Gamescope runtime directory. It also
+# asks Gamescope to write screenshots to a temporary path, then reads the
+# resulting file. Share both locations across the Flatpak sandbox boundary.
 steam_tmp_name=steam-tmp
 steam_tmp="$XDG_RUNTIME_DIR/$steam_tmp_name"
 install -d -m0700 "$steam_tmp"
 
 flatpak run \
         --filesystem="xdg-run/$response_wl_display:ro" \
+        --filesystem="xdg-run/${tmpdir##*/}:rw" \
         --filesystem="xdg-run/$steam_tmp_name:create" \
         --env="TMPDIR=$steam_tmp" \
         org.anatase.Steam \
