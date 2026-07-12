@@ -32,6 +32,8 @@ packages:
   - libxkbcommon.i686
   # Host D-Bus service used by the Steam Flatpak for battery information.
   - upower
+  # Automount
+  - udiskie
 
 specs:
   - spec: gamescope/gamescope.spec

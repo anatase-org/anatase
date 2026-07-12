@@ -138,8 +138,9 @@ export STEAM_GAMESCOPE_VRR_SUPPORTED=1
 export STEAM_GAMESCOPE_DYNAMIC_REFRESH_IN_STEAM_SUPPORTED=0
 export STEAM_ENABLE_STATUS_LED_BRIGHTNESS=1
 export vk_xwayland_wait_ready=false
-export STEAM_ALLOW_DRIVE_UNMOUNT=1
-export STEAM_ALLOW_DRIVE_ADOPT=1
+# Let's not let steam get smart here
+# export STEAM_ALLOW_DRIVE_UNMOUNT=1
+# export STEAM_ALLOW_DRIVE_ADOPT=1
 export STEAM_DISABLE_MANGOAPP_ATOM_WORKAROUND=1
 export STEAM_MANGOAPP_HORIZONTAL_SUPPORTED=1
 export STEAM_GAMESCOPE_FANCY_SCALING_SUPPORT=1
@@ -228,6 +229,9 @@ while true; do
     echo >&2 "MangoApp exited with status $status; restarting"
     sleep 10
 done &
+
+# Allow udiskie to automount disks
+udiskie -a -N -T -P &
 
 # Steam rewrites MangoApp's config in the Gamescope runtime directory. It also
 # asks Gamescope to write screenshots to a temporary path, then reads the
