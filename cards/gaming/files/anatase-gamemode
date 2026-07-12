@@ -5,6 +5,32 @@ if (( $# != 0 )); then
     exit 2
 fi
 
+# Run the session in its own cgroup so teardown also catches subprocesses that
+# outlive their immediate parent. Keep this wrapper outside the scope so it can
+# cull the scope after the session payload exits.
+if [[ ${ANATASE_GAMEMODE_IN_SCOPE:-0} != 1 ]]; then
+    scope="anatase-gamemode-$$.scope"
+    scope_runner=
+    cleanup_scope() {
+        trap - EXIT HUP INT TERM
+
+        systemctl --user kill --kill-whom=all "$scope" 2>/dev/null || true
+        [[ -z $scope_runner ]] || wait "$scope_runner" 2>/dev/null || true
+        systemctl --user stop "$scope" 2>/dev/null || true
+    }
+    trap cleanup_scope EXIT
+    trap 'exit 143' HUP INT TERM
+
+    systemd-run --user --scope --quiet \
+        --unit="$scope" \
+        --setenv=ANATASE_GAMEMODE_IN_SCOPE=1 \
+        -- "$0" &
+    scope_runner=$!
+
+    wait "$scope_runner"
+    exit $?
+fi
+
 #
 # Prepare Gamescope
 #
@@ -166,17 +192,9 @@ export STEAM_UPDATEUI_PNG_BACKGROUND=/run/host/share/pixmaps/anatase-logo-sprite
 ulimit -n 524288
 
 gamescope_pid=
-mangoapp_pid=
 steam_pid=
 cleanup() {
     trap - EXIT HUP INT TERM
-
-    [[ -z $steam_pid ]] || kill "$steam_pid" 2>/dev/null || true
-    [[ -z $mangoapp_pid ]] || kill "$mangoapp_pid" 2>/dev/null || true
-    [[ -z $gamescope_pid ]] || kill "$gamescope_pid" 2>/dev/null || true
-    [[ -z $steam_pid ]] || wait "$steam_pid" 2>/dev/null || true
-    [[ -z $mangoapp_pid ]] || wait "$mangoapp_pid" 2>/dev/null || true
-    [[ -z $gamescope_pid ]] || wait "$gamescope_pid" 2>/dev/null || true
 
     systemctl --user unset-environment \
         DESKTOP_SESSION \
@@ -205,7 +223,6 @@ export GAMESCOPE_WAYLAND_DISPLAY="$response_wl_display"
 dbus-update-activation-environment --systemd DISPLAY
 
 mangoapp &
-mangoapp_pid=$!
 
 # Steam asks Gamescope to write screenshots to a temporary path, then reads
 # the resulting file. Give the host compositor and Flatpak Steam the same
@@ -225,7 +242,8 @@ flatpak run \
         -gamepadui &
 steam_pid=$!
 
-# Ending either half ends the session and cleanup terminates the other half.
+# Ending either half ends the session; the outer launcher then culls the
+# session cgroup.
 wait -n "$gamescope_pid" "$steam_pid"
 status=$?
 exit "$status"
