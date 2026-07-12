@@ -26,6 +26,8 @@ packages:
 
 files:
   - files/hhd.conf
+  - files/power-profiles-daemon.conf.in
+  - files/power-profiles-daemon.dbus.xml.in
   - gamecontrollerdb.txt::https://raw.githubusercontent.com/mdqinc/SDL_GameControllerDB/refs/heads/master/gamecontrollerdb.txt
 
 specs:
@@ -60,3 +62,35 @@ postprocess: |
   cp /files/files/hhd.conf /usr/lib/systemd/system/hhd.service.d/override.conf
 
   install -Dm0644 /files/gamecontrollerdb.txt /usr/share/sdl/gamecontrollerdb.txt
+
+  # These paths conflict when the user installs ppd/tuned, so hhd cannot
+  # provide them or it will cause issues. But we will not install ppd/tuned
+  # so we need to provide them ourselves.
+  BASE_NAME="org.freedesktop.UPower.PowerProfiles"
+  BASE_PATH="/org/freedesktop/UPower/PowerProfiles"
+  LEGACY_NAME="net.hadess.PowerProfiles"
+  LEGACY_PATH="/net/hadess/PowerProfiles"
+
+  install -dm0755 /usr/share/dbus-1/system.d
+  sed \
+    -e "s|@dbus_name@|${BASE_NAME}|g" \
+    -e "s|@dbus_iface@|${BASE_NAME}|g" \
+    /files/files/power-profiles-daemon.conf.in \
+    > "/usr/share/dbus-1/system.d/${BASE_NAME}.conf"
+  sed \
+    -e "s|@dbus_name@|${LEGACY_NAME}|g" \
+    -e "s|@dbus_iface@|${LEGACY_NAME}|g" \
+    /files/files/power-profiles-daemon.conf.in \
+    > "/usr/share/dbus-1/system.d/${LEGACY_NAME}.conf"
+
+  install -dm0755 /usr/share/dbus-1/interfaces
+  sed \
+    -e "s|@dbus_iface@|${BASE_NAME}|g" \
+    -e "s|@dbus_path@|${BASE_PATH}|g" \
+    /files/files/power-profiles-daemon.dbus.xml.in \
+    > "/usr/share/dbus-1/interfaces/${BASE_NAME}.xml"
+  sed \
+    -e "s|@dbus_iface@|${LEGACY_NAME}|g" \
+    -e "s|@dbus_path@|${LEGACY_PATH}|g" \
+    /files/files/power-profiles-daemon.dbus.xml.in \
+    > "/usr/share/dbus-1/interfaces/${LEGACY_NAME}.xml"
