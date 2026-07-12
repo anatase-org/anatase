@@ -222,7 +222,12 @@ export DISPLAY="$response_x_display"
 export GAMESCOPE_WAYLAND_DISPLAY="$response_wl_display"
 dbus-update-activation-environment --systemd DISPLAY
 
-mangoapp &
+while true; do
+    mangoapp
+    status=$?
+    echo >&2 "MangoApp exited with status $status; restarting"
+    sleep 10
+done &
 
 # Steam rewrites MangoApp's config in the Gamescope runtime directory. It also
 # asks Gamescope to write screenshots to a temporary path, then reads the
