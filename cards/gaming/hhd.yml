@@ -26,6 +26,7 @@ packages:
 
 files:
   - files/hhd.conf
+  - gamecontrollerdb.txt::https://raw.githubusercontent.com/mdqinc/SDL_GameControllerDB/refs/heads/master/gamecontrollerdb.txt
 
 specs:
   # - spec: git+https://github.com/hhd-dev/hhd:hhd.spec
@@ -57,3 +58,5 @@ postprocess: |
   # Add our overrides
   install -dm0755 /usr/lib/systemd/system/hhd.service.d/
   cp /files/files/hhd.conf /usr/lib/systemd/system/hhd.service.d/override.conf
+
+  install -Dm0644 /files/gamecontrollerdb.txt /usr/share/sdl/gamecontrollerdb.txt
