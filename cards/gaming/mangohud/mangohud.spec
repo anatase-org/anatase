@@ -3,8 +3,8 @@
 
 %global imgui_ver 1.91.6
 %global imgui_wrap_ver 2
-%global vulkan_headers_ver 1.3.283
-%global vulkan_headers_wrap_ver 2
+%global vulkan_headers_ver 1.4.346
+%global vulkan_utility_libraries_ver 1.4.346
 %global implot_ver 0.16
 %global implot_wrap_ver 2
 
@@ -14,7 +14,7 @@
 %bcond_with tests
 
 Name:           mangohud
-Version:        0.8.3~rc1
+Version:        0.8.4
 %forgemeta
 Release:        %autorelease
 Summary:        Vulkan and OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load
@@ -27,7 +27,8 @@ Source1:        https://github.com/ocornut/imgui/archive/v%{imgui_ver}/imgui-%{i
 Source2:        https://wrapdb.mesonbuild.com/v%{imgui_wrap_ver}/imgui_%{imgui_ver}-1/get_patch#/imgui-%{imgui_ver}-wrap.zip
 # Vulkan-Headers
 Source3:        https://github.com/KhronosGroup/Vulkan-Headers/archive/v%{vulkan_headers_ver}/Vulkan-Headers-%{vulkan_headers_ver}.tar.gz
-Source4:        https://wrapdb.mesonbuild.com/v%{vulkan_headers_wrap_ver}/vulkan-headers_%{vulkan_headers_ver}-1/get_patch#/vulkan-headers-%{vulkan_headers_ver}-wrap.zip
+# Vulkan-Utility-Libraries
+Source4:        https://github.com/KhronosGroup/Vulkan-Utility-Libraries/archive/v%{vulkan_utility_libraries_ver}/Vulkan-Utility-Libraries-%{vulkan_utility_libraries_ver}.tar.gz
 # implot
 Source5:        https://github.com/epezent/implot/archive/v%{implot_ver}/implot-%{implot_ver}.tar.gz
 Source6:        https://wrapdb.mesonbuild.com/v%{implot_wrap_ver}/implot_%{implot_ver}-1/get_patch#/implot-%{implot_ver}-wrap.zip
@@ -73,6 +74,7 @@ Suggests:       goverlay
 
 Provides:       bundled(imgui) = %{imgui_ver}
 Provides:       bundled(vulkan-headers) = %{vulkan_headers_ver}
+Provides:       bundled(vulkan-utility-libraries) = %{vulkan_utility_libraries_ver}
 
 %global _description %{expand:
 A Vulkan and OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and
@@ -107,7 +109,13 @@ Local visualization "mangoplot" for %{name}.
 # imgui
 mv imgui-%{imgui_ver} subprojects/
 # Vulkan-Headers
+cp -a subprojects/packagefiles/vulkan-headers/. \
+    Vulkan-Headers-%{vulkan_headers_ver}/
 mv Vulkan-Headers-%{vulkan_headers_ver} subprojects/
+# Vulkan-Utility-Libraries
+cp -a subprojects/packagefiles/vulkan-utility-libraries/. \
+    Vulkan-Utility-Libraries-%{vulkan_utility_libraries_ver}/
+mv Vulkan-Utility-Libraries-%{vulkan_utility_libraries_ver} subprojects/
 # implot
 mv implot-%{implot_ver} subprojects/
 
@@ -173,13 +181,14 @@ rm %{buildroot}%{_libdir}/libimgui.a
 %{_datadir}/vulkan/implicit_layer.d/*Mango*.json
 %{_libdir}/%{name}/
 %else
-%doc README.md presets.conf.example
+%doc README.md
 %{_bindir}/mangoapp
 %{_bindir}/mangohud
 %{_bindir}/mangohudctl
 %{_datadir}/icons/hicolor/scalable/*/*.svg
 %{_datadir}/vulkan/implicit_layer.d/*Mango*.json
 %{_docdir}/%{name}/%{appname}.conf.example
+%{_docdir}/%{name}/presets.conf.example
 %{_libdir}/%{name}/
 %{_mandir}/man1/%{name}.1*
 %{_mandir}/man1/mangoapp.1*

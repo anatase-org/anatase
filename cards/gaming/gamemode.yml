@@ -59,7 +59,6 @@ specs:
   - spec: mangohud/mangohud.spec
     files:
       - mangohud.spec
-      - sources
     packages:
       - mangohud
       - mangohud.i686
@@ -67,6 +66,11 @@ specs:
       type: dist-git
       url: https://src.fedoraproject.org/rpms/mangohud
       branch: f$releasever
+    patch:
+      type: git
+      url: https://github.com/flightlessmango/MangoHud/
+      ref: v${spec:Version}
+      file: overrides.patch
 
   - spec: xserver/xorg-x11-server-Xwayland.spec
     files:
