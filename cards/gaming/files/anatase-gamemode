@@ -56,7 +56,6 @@ gamescope_args=(
     -e
     -R "$socket"
     -T "$stats"
-    --mangoapp
     -O '*',eDP-1
 )
 
@@ -167,13 +166,16 @@ export STEAM_UPDATEUI_PNG_BACKGROUND=/run/host/share/pixmaps/anatase-logo-sprite
 ulimit -n 524288
 
 gamescope_pid=
+mangoapp_pid=
 steam_pid=
 cleanup() {
     trap - EXIT HUP INT TERM
 
     [[ -z $steam_pid ]] || kill "$steam_pid" 2>/dev/null || true
+    [[ -z $mangoapp_pid ]] || kill "$mangoapp_pid" 2>/dev/null || true
     [[ -z $gamescope_pid ]] || kill "$gamescope_pid" 2>/dev/null || true
     [[ -z $steam_pid ]] || wait "$steam_pid" 2>/dev/null || true
+    [[ -z $mangoapp_pid ]] || wait "$mangoapp_pid" 2>/dev/null || true
     [[ -z $gamescope_pid ]] || wait "$gamescope_pid" 2>/dev/null || true
 
     systemctl --user unset-environment \
@@ -201,6 +203,9 @@ fi
 export DISPLAY="$response_x_display"
 export GAMESCOPE_WAYLAND_DISPLAY="$response_wl_display"
 dbus-update-activation-environment --systemd DISPLAY
+
+mangoapp &
+mangoapp_pid=$!
 
 # Steam asks Gamescope to write screenshots to a temporary path, then reads
 # the resulting file. Give the host compositor and Flatpak Steam the same
