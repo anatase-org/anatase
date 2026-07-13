@@ -278,6 +278,10 @@ postprocess: |
 
     cat >> /usr/lib/systemd/system-preset/81-atomic-desktop.preset <<'EOF'
 
+    # DNF metadata is not used to update bootc systems. Enabling this timer
+    # also pulls network-online.target into every boot through Wants=.
+    disable dnf-makecache.timer
+
     # See: https://gitlab.com/fedora/ostree/sig/-/work_items/103
     enable fedora-atomic-desktop-appstream-cache-refresh.service
 
@@ -285,6 +289,7 @@ postprocess: |
     enable fedora-atomic-desktop-mandb-update.service
     EOF
 
+    systemctl preset dnf-makecache.timer || true
     systemctl preset fedora-atomic-desktop-appstream-cache-refresh.service || true
     systemctl preset fedora-atomic-desktop-mandb-update.service || true
 
