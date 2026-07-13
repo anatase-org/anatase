@@ -94,10 +94,11 @@ installer:
         - org.anatase.TextEditor
         - org.anatase.Calculator
         - org.anatase.DocumentViewer
-      installer:
         # Codecs, sigh
         - org.anatase.Browser
         - org.anatase.Browser.Adblocker
+        - org.anatase.Steam
+      installer:
 
   files:
     - installer/anaconda.conf

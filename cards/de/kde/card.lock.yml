@@ -1,7 +1,12 @@
 plasma-setup:
-  upstream-sha: 81678c593fccdaed0a97bbf13c85424a303d2c8a
-  patch-sha: 45f67a552db7127f9e6553557088ea6a1bec9532
+  upstream-sha: d93e86bde3e98ec07bf5380bbaaeb46eead1a393
+  patch-sha: 4008a52e0dc73a644234789d577ff86325c22ffd
 kwin:
   patch-sha: e34ec104bd373692eeb167947654e8411ccb1c1c
+  upstream-sha: 1256144f47d050d4f92a73a37447e1b3a669a965
 plasma-mobile:
   patch-sha: 5765658ba43fe2469466e17d5f7ef66e4fdd2f5b
+  upstream-sha: c76bfc90db033cdde42c1d5950944cc13d879482
+plasma-login-manager:
+  patch-sha: eabe161054c01814d3b8b1d29df9448a249adb6a
+  upstream-sha: 525264f7498a514c19b51860d61a03854883d4d4

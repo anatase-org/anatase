@@ -452,15 +452,15 @@ index 6b9c7224dcf0..c15c72f108bd 100644
  #: src/qml/LandingComponent.qml:140
  #, kde-format
 diff --git a/po/nn/org.kde.plasmasetup.po b/po/nn/org.kde.plasmasetup.po
-index 0bce4a997e15..4bc7b467920d 100644
+index 13406bca9fd3..a89a725a8abd 100644
 --- a/po/nn/org.kde.plasmasetup.po
 +++ b/po/nn/org.kde.plasmasetup.po
-@@ -340,8 +340,8 @@ msgstr ""
+@@ -340,8 +340,8 @@ msgstr "Velkommen til<br/><b>Plasma Mobile</b>"
  
  #: src/qml/LandingComponent.qml:126
  #, kde-format
 -msgid "Welcome to<br/><b>Plasma Desktop</b>"
--msgstr ""
+-msgstr "Velkommen til<br/><b>Plasma-skrivebordet</b>"
 +msgid "Welcome to<br/><b>Your New Desktop</b>"
 +msgstr "Velkomen til<br/><b>det nye skrivebordet ditt</b>"
  
@@ -512,7 +512,7 @@ index a86a46e2f53c..32e6d74f1a24 100644
  #: src/qml/LandingComponent.qml:140
  #, kde-format
 diff --git a/po/ru/org.kde.plasmasetup.po b/po/ru/org.kde.plasmasetup.po
-index dbaec8cf9393..fa50e85d0b24 100644
+index 8080ae15293d..8ba42f26fb26 100644
 --- a/po/ru/org.kde.plasmasetup.po
 +++ b/po/ru/org.kde.plasmasetup.po
 @@ -350,8 +350,8 @@ msgstr "Добро пожаловать в<br/><b>Plasma Mobile</b>"
