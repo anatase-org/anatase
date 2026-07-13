@@ -877,3 +877,556 @@ index 670e643df7df..2c6fdb868701 100644
  Restart=on-failure
  RestartSec=1
  RestartMaxDelaySec=10
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 13 Jul 2026 23:15:06 +0200
+Subject: remove inputplumber handling
+
+---
+ steamos-manager/src/daemon/root.rs | 4 ----
+ steamos-manager/src/lib.rs         | 1 -
+ 2 files changed, 5 deletions(-)
+
+diff --git a/steamos-manager/src/daemon/root.rs b/steamos-manager/src/daemon/root.rs
+index 7a7121533fec..69bf42ffff01 100644
+--- a/steamos-manager/src/daemon/root.rs
++++ b/steamos-manager/src/daemon/root.rs
+@@ -19,7 +19,6 @@ use zbus::connection::Connection;
+ 
+ use crate::daemon::{Daemon, DaemonCommand, DaemonContext, channel};
+ use crate::ds_inhibit::Inhibitor;
+-use crate::inputplumber::DeckService;
+ use crate::manager::root::SteamOSManager;
+ use crate::path;
+ use crate::sls::ftrace::Ftrace;
+@@ -127,9 +126,6 @@ impl DaemonContext for RootContext {
+         let ftrace = Ftrace::init(&connection).await?;
+         daemon.add_service(ftrace);
+ 
+-        let ip = DeckService::init(connection);
+-        daemon.add_service(ip);
+-
+         let sysfs = SysfsWriterService::init()?;
+         daemon.add_service(sysfs);
+ 
+diff --git a/steamos-manager/src/lib.rs b/steamos-manager/src/lib.rs
+index 17e607bff42d..ed2908f974d1 100644
+--- a/steamos-manager/src/lib.rs
++++ b/steamos-manager/src/lib.rs
+@@ -27,7 +27,6 @@ pub use steamos_manager_proxy as proxy;
+ 
+ mod ds_inhibit;
+ mod error;
+-mod inputplumber;
+ mod job;
+ mod manager;
+ mod platform;
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 13 Jul 2026 23:22:42 +0200
+Subject: drop wifi interfaces
+
+---
+ steamos-manager/src/manager/user.rs | 42 +++++++++--------------------
+ 1 file changed, 12 insertions(+), 30 deletions(-)
+
+diff --git a/steamos-manager/src/manager/user.rs b/steamos-manager/src/manager/user.rs
+index dec2233c3eb3..ddfec3107186 100644
+--- a/steamos-manager/src/manager/user.rs
++++ b/steamos-manager/src/manager/user.rs
+@@ -1876,7 +1876,7 @@ pub(crate) async fn create_interfaces(
+     if device_type().await.unwrap_or_default() == "steam_deck" {
+         object_server.at(MANAGER_PATH, als).await?;
+     }
+-    object_server.at(MANAGER_PATH, wifi_backend).await?;
++    drop(wifi_backend);
+     if steam_deck_variant().await.unwrap_or_default() == SteamDeckVariant::Galileo {
+         let wifi_debug = WifiDebug1 {
+             proxy: proxy.clone(),
+@@ -1884,8 +1884,8 @@ pub(crate) async fn create_interfaces(
+         let wifi_debug_dump = WifiDebugDump1 {
+             proxy: proxy.clone(),
+         };
+-        object_server.at(MANAGER_PATH, wifi_debug).await?;
+-        object_server.at(MANAGER_PATH, wifi_debug_dump).await?;
++        drop(wifi_debug);
++        drop(wifi_debug_dump);
+     }
+ 
+     if power_features {
+@@ -2005,9 +2005,7 @@ pub(crate) async fn create_interfaces(
+     }
+ 
+     if !list_wifi_interfaces().await.unwrap_or_default().is_empty() {
+-        object_server
+-            .at(MANAGER_PATH, wifi_power_management)
+-            .await?;
++        drop(wifi_power_management);
+     }
+ 
+     remote_interface.context_tdp_limit1 = tdp_manager;
+@@ -2883,25 +2881,17 @@ mod test {
+     }
+ 
+     #[tokio::test]
+-    async fn interface_matches_wifi_backend1() {
++    async fn interface_missing_wifi_backend1() {
+         let test = start(TestConfig::all()).await.expect("start");
+ 
+-        assert!(
+-            test_interface_matches::<WifiBackend1>(&test.connection)
+-                .await
+-                .unwrap()
+-        );
++        assert!(test_interface_missing::<WifiBackend1>(&test.connection).await);
+     }
+ 
+     #[tokio::test]
+-    async fn interface_matches_wifi_debug1() {
++    async fn interface_missing_wifi_debug1_with_all_config() {
+         let test = start(TestConfig::all()).await.expect("start");
+ 
+-        assert!(
+-            test_interface_matches::<WifiDebug1>(&test.connection)
+-                .await
+-                .unwrap()
+-        );
++        assert!(test_interface_missing::<WifiDebug1>(&test.connection).await);
+     }
+ 
+     #[tokio::test]
+@@ -2912,14 +2902,10 @@ mod test {
+     }
+ 
+     #[tokio::test]
+-    async fn interface_matches_wifi_debug_dump1() {
++    async fn interface_missing_wifi_debug_dump1_with_all_config() {
+         let test = start(TestConfig::all()).await.expect("start");
+ 
+-        assert!(
+-            test_interface_matches::<WifiDebugDump1>(&test.connection)
+-                .await
+-                .unwrap()
+-        );
++        assert!(test_interface_missing::<WifiDebugDump1>(&test.connection).await);
+     }
+ 
+     #[tokio::test]
+@@ -2930,14 +2916,10 @@ mod test {
+     }
+ 
+     #[tokio::test]
+-    async fn interface_matches_wifi_power_management1() {
++    async fn interface_missing_wifi_power_management1() {
+         let test = start(TestConfig::all()).await.expect("start");
+ 
+-        assert!(
+-            test_interface_matches::<WifiPowerManagement1>(&test.connection)
+-                .await
+-                .unwrap()
+-        );
++        assert!(test_interface_missing::<WifiPowerManagement1>(&test.connection).await);
+     }
+ 
+     async fn register_remote<I: RemoteInterface + Interface>(
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 13 Jul 2026 23:24:37 +0200
+Subject: drop session management
+
+---
+ steamos-manager/src/manager/user.rs | 10 +++-------
+ 1 file changed, 3 insertions(+), 7 deletions(-)
+
+diff --git a/steamos-manager/src/manager/user.rs b/steamos-manager/src/manager/user.rs
+index ddfec3107186..2d4229859fde 100644
+--- a/steamos-manager/src/manager/user.rs
++++ b/steamos-manager/src/manager/user.rs
+@@ -2001,7 +2001,7 @@ pub(crate) async fn create_interfaces(
+                 }
+             },
+         }
+-        object_server.at(MANAGER_PATH, session_management).await?;
++        drop(session_management);
+     }
+ 
+     if !list_wifi_interfaces().await.unwrap_or_default().is_empty() {
+@@ -2693,16 +2693,12 @@ mod test {
+     }
+ 
+     #[tokio::test]
+-    async fn interface_matches_session_management1() {
++    async fn interface_missing_session_management1_with_managed_setup() {
+         let test = start(TestConfig::only_setup(ManagedSetup {}))
+             .await
+             .expect("start");
+ 
+-        assert!(
+-            test_interface_matches::<SessionManagement1>(&test.connection)
+-                .await
+-                .unwrap()
+-        );
++        assert!(test_interface_missing::<SessionManagement1>(&test.connection).await);
+     }
+ 
+     #[tokio::test]
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 13 Jul 2026 23:30:19 +0200
+Subject: drop storage management and reset
+
+---
+ steamos-manager/src/manager/user.rs | 20 ++++++--------------
+ 1 file changed, 6 insertions(+), 14 deletions(-)
+
+diff --git a/steamos-manager/src/manager/user.rs b/steamos-manager/src/manager/user.rs
+index 2d4229859fde..293d2808200c 100644
+--- a/steamos-manager/src/manager/user.rs
++++ b/steamos-manager/src/manager/user.rs
+@@ -208,8 +208,6 @@ struct RemoteInterface1 {
+     #[remote]
+     remote_cpu_boost1: Option<CpuBoost1RemoteOwner>,
+     #[remote]
+-    remote_factory_reset1: Option<FactoryReset1RemoteOwner>,
+-    #[remote]
+     remote_fan_control1: Option<FanControl1RemoteOwner>,
+     #[remote]
+     remote_gpu_performance_level1: Option<GpuPerformanceLevel1RemoteOwner>,
+@@ -872,7 +870,6 @@ impl RemoteInterface1 {
+             job_manager,
+             remote_battery_charge_limit1: None,
+             remote_cpu_boost1: None,
+-            remote_factory_reset1: None,
+             remote_fan_control1: None,
+             remote_gpu_performance_level1: None,
+             remote_gpu_power_profile1: None,
+@@ -1679,7 +1676,7 @@ async fn create_platform_interfaces(
+     if let Some(config) = config.factory_reset.as_ref() {
+         match config.is_valid(true).await {
+             Ok(true) => {
+-                object_server.at(MANAGER_PATH, factory_reset).await?;
++                drop(factory_reset);
+             }
+             Ok(false) => (),
+             Err(e) => error!("Failed to verify if factory reset config is valid: {e}"),
+@@ -1699,7 +1696,7 @@ async fn create_platform_interfaces(
+     if let Some(config) = config.storage.as_ref() {
+         match config.is_valid(true).await {
+             Ok(true) => {
+-                object_server.at(MANAGER_PATH, storage).await?;
++                drop(storage);
+             }
+             Ok(false) => (),
+             Err(e) => error!("Failed to verify if storage config is valid: {e}"),
+@@ -2429,14 +2426,10 @@ mod test {
+     }
+ 
+     #[tokio::test]
+-    async fn interface_matches_factory_reset1() {
++    async fn interface_missing_factory_reset1_with_all_config() {
+         let test = start(TestConfig::all()).await.expect("start");
+ 
+-        assert!(
+-            test_interface_matches::<FactoryReset1>(&test.connection)
+-                .await
+-                .unwrap()
+-        );
++        assert!(test_interface_missing::<FactoryReset1>(&test.connection).await);
+     }
+ 
+     #[tokio::test]
+@@ -2709,13 +2702,12 @@ mod test {
+     }
+ 
+     #[tokio::test]
+-    async fn interface_matches_storage1() {
++    async fn interface_missing_storage1_with_all_config() {
+         let test = start(TestConfig::all()).await.expect("start");
+ 
+         assert!(
+-            test_interface_matches::<Storage1>(&test.connection)
++            test_interface_missing::<Storage1>(&test.connection)
+                 .await
+-                .unwrap()
+         );
+     }
+ 
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 13 Jul 2026 23:39:14 +0200
+Subject: drop other hardware methods
+
+---
+ steamos-manager/src/manager/user.rs | 35 +++++++++++++----------------
+ 1 file changed, 15 insertions(+), 20 deletions(-)
+
+diff --git a/steamos-manager/src/manager/user.rs b/steamos-manager/src/manager/user.rs
+index 293d2808200c..8843f0d5b0d5 100644
+--- a/steamos-manager/src/manager/user.rs
++++ b/steamos-manager/src/manager/user.rs
+@@ -1686,7 +1686,7 @@ async fn create_platform_interfaces(
+     if let Some(config) = config.fan_control.as_ref() {
+         match config.is_valid(connection, true).await {
+             Ok(true) => {
+-                object_server.at(MANAGER_PATH, fan_control).await?;
++                drop(fan_control);
+             }
+             Ok(false) => (),
+             Err(e) => error!("Failed to verify if fan control config is valid: {e}"),
+@@ -1887,16 +1887,16 @@ pub(crate) async fn create_interfaces(
+ 
+     if power_features {
+         if get_max_charge_level().await.is_ok() {
+-            object_server.at(MANAGER_PATH, battery_charge_limit).await?;
++            drop(battery_charge_limit);
+         }
+ 
+         if get_cpu_boost_state().await.is_ok() {
+-            object_server.at(MANAGER_PATH, cpu_boost).await?;
++            drop(cpu_boost);
+         }
+ 
+-        object_server.at(MANAGER_PATH, cpu_scaling).await?;
++        drop(cpu_scaling);
+         if CpuSchedulerManager::is_supported().await? {
+-            object_server.at(MANAGER_PATH, cpu_scheduler).await?;
++            drop(cpu_scheduler);
+         }
+ 
+         match gpu_power_profile_driver().await {
+@@ -2361,13 +2361,12 @@ mod test {
+     }
+ 
+     #[tokio::test]
+-    async fn interface_matches_battery_charge_limit() {
++    async fn interface_missing_battery_charge_limit_with_all_config() {
+         let test = start(TestConfig::all()).await.expect("start");
+ 
+         assert!(
+-            test_interface_matches::<BatteryChargeLimit1>(&test.connection)
++            test_interface_missing::<BatteryChargeLimit1>(&test.connection)
+                 .await
+-                .unwrap()
+         );
+     }
+ 
+@@ -2379,13 +2378,12 @@ mod test {
+     }
+ 
+     #[tokio::test]
+-    async fn interface_matches_cpu_boost1() {
++    async fn interface_missing_cpu_boost1_with_all_config() {
+         let test = start(TestConfig::all()).await.expect("start");
+ 
+         assert!(
+-            test_interface_matches::<CpuBoost1>(&test.connection)
++            test_interface_missing::<CpuBoost1>(&test.connection)
+                 .await
+-                .unwrap()
+         );
+     }
+ 
+@@ -2397,24 +2395,22 @@ mod test {
+     }
+ 
+     #[tokio::test]
+-    async fn interface_matches_cpu_scaling1() {
++    async fn interface_missing_cpu_scaling1() {
+         let test = start(TestConfig::all()).await.expect("start");
+ 
+         assert!(
+-            test_interface_matches::<CpuScaling1>(&test.connection)
++            test_interface_missing::<CpuScaling1>(&test.connection)
+                 .await
+-                .unwrap()
+         );
+     }
+ 
+     #[tokio::test]
+-    async fn interface_matches_cpu_scheduler1() {
++    async fn interface_missing_cpu_scheduler1_with_all_config() {
+         let test = start(TestConfig::all()).await.expect("start");
+ 
+         assert!(
+-            test_interface_matches::<CpuScheduler1>(&test.connection)
++            test_interface_missing::<CpuScheduler1>(&test.connection)
+                 .await
+-                .unwrap()
+         );
+     }
+ 
+@@ -2494,13 +2490,12 @@ mod test {
+     }
+ 
+     #[tokio::test]
+-    async fn interface_matches_fan_control1() {
++    async fn interface_missing_fan_control1_with_all_config() {
+         let test = start(TestConfig::all()).await.expect("start");
+ 
+         assert!(
+-            test_interface_matches::<FanControl1>(&test.connection)
++            test_interface_missing::<FanControl1>(&test.connection)
+                 .await
+-                .unwrap()
+         );
+     }
+ 
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 13 Jul 2026 23:43:21 +0200
+Subject: drop cec handling
+
+---
+ steamos-manager/src/manager/user.rs | 34 ++++++++++-------------------
+ 1 file changed, 11 insertions(+), 23 deletions(-)
+
+diff --git a/steamos-manager/src/manager/user.rs b/steamos-manager/src/manager/user.rs
+index 8843f0d5b0d5..a3c2fbeae2be 100644
+--- a/steamos-manager/src/manager/user.rs
++++ b/steamos-manager/src/manager/user.rs
+@@ -1950,23 +1950,13 @@ pub(crate) async fn create_interfaces(
+ 
+     if let Ok(hdmi_cec) = hdmi_cec {
+         let hdmi_cec = Arc::new(Mutex::new(hdmi_cec));
+-        object_server
+-            .at(
+-                MANAGER_PATH,
+-                HdmiCec1 {
+-                    hdmi_cec: hdmi_cec.clone(),
+-                },
+-            )
+-            .await?;
+-        object_server
+-            .at(
+-                MANAGER_PATH,
+-                HdmiCec2 {
+-                    hdmi_cec,
+-                    manager: root_manager,
+-                },
+-            )
+-            .await?;
++        drop(HdmiCec1 {
++            hdmi_cec: hdmi_cec.clone(),
++        });
++        drop(HdmiCec2 {
++            hdmi_cec,
++            manager: root_manager,
++        });
+     }
+ 
+     object_server.at(MANAGER_PATH, manager2).await?;
+@@ -2543,15 +2533,14 @@ mod test {
+     }
+ 
+     #[tokio::test]
+-    async fn interface_matches_hdmi_cec1() {
++    async fn interface_missing_hdmi_cec1_with_cecd() {
+         let test = start(TestConfig::only_setup(CecdSetup {}))
+             .await
+             .expect("start");
+ 
+         assert!(
+-            test_interface_matches::<HdmiCec1>(&test.connection)
++            test_interface_missing::<HdmiCec1>(&test.connection)
+                 .await
+-                .unwrap()
+         );
+     }
+ 
+@@ -2563,15 +2552,14 @@ mod test {
+     }
+ 
+     #[tokio::test]
+-    async fn interface_matches_hdmi_cec2() {
++    async fn interface_missing_hdmi_cec2_with_cecd() {
+         let test = start(TestConfig::only_setup(CecdSetup {}))
+             .await
+             .expect("start");
+ 
+         assert!(
+-            test_interface_matches::<HdmiCec2>(&test.connection)
++            test_interface_missing::<HdmiCec2>(&test.connection)
+                 .await
+-                .unwrap()
+         );
+     }
+ 
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 13 Jul 2026 23:44:51 +0200
+Subject: drop firmware update methods
+
+---
+ steamos-manager/src/manager/user.rs | 16 +++++++---------
+ 1 file changed, 7 insertions(+), 9 deletions(-)
+
+diff --git a/steamos-manager/src/manager/user.rs b/steamos-manager/src/manager/user.rs
+index a3c2fbeae2be..96a4e0ea5875 100644
+--- a/steamos-manager/src/manager/user.rs
++++ b/steamos-manager/src/manager/user.rs
+@@ -1646,7 +1646,7 @@ impl Service for ScreenReaderSetupService {
+ 
+ async fn create_platform_interfaces(
+     proxy: &Proxy<'static>,
+-    object_server: &ObjectServer,
++    _object_server: &ObjectServer,
+     connection: &Connection,
+     job_manager: &UnboundedSender<JobManagerCommand>,
+ ) -> Result<()> {
+@@ -1706,7 +1706,7 @@ async fn create_platform_interfaces(
+     if let Some(config) = config.update_bios.as_ref() {
+         match config.is_valid(true).await {
+             Ok(true) => {
+-                object_server.at(MANAGER_PATH, update_bios).await?;
++                drop(update_bios);
+             }
+             Ok(false) => (),
+             Err(e) => error!("Failed to verify if BIOS update config is valid: {e}"),
+@@ -1716,7 +1716,7 @@ async fn create_platform_interfaces(
+     if let Some(config) = config.update_dock.as_ref() {
+         match config.is_valid(true).await {
+             Ok(true) => {
+-                object_server.at(MANAGER_PATH, update_dock).await?;
++                drop(update_dock);
+             }
+             Ok(false) => (),
+             Err(e) => error!("Failed to verify if dock update config is valid: {e}"),
+@@ -2780,13 +2780,12 @@ mod test {
+     }
+ 
+     #[tokio::test]
+-    async fn interface_matches_update_bios1() {
++    async fn interface_missing_update_bios1_with_all_config() {
+         let test = start(TestConfig::all()).await.expect("start");
+ 
+         assert!(
+-            test_interface_matches::<UpdateBios1>(&test.connection)
++            test_interface_missing::<UpdateBios1>(&test.connection)
+                 .await
+-                .unwrap()
+         );
+     }
+ 
+@@ -2816,13 +2815,12 @@ mod test {
+     }
+ 
+     #[tokio::test]
+-    async fn interface_matches_update_dock1() {
++    async fn interface_missing_update_dock1_with_all_config() {
+         let test = start(TestConfig::all()).await.expect("start");
+ 
+         assert!(
+-            test_interface_matches::<UpdateDock1>(&test.connection)
++            test_interface_missing::<UpdateDock1>(&test.connection)
+                 .await
+-                .unwrap()
+         );
+     }
+ 

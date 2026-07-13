@@ -165,7 +165,7 @@ endi = { path = "vendor/endi-%{rust_endi_ver}" }
 EOF
 
 %build
-%cargo_build
+%cargo_build -- --package steamos-manager --bin steamos-manager
 %{cargo_license_summary}
 %{cargo_license} > LICENSE.dependencies
 
@@ -180,7 +180,6 @@ install -d -m0755 %{buildroot}%{_libdir}/
 
 # Install binaries
 install -D -m755 target/rpm/steamos-manager %{buildroot}%{_libdir}/steamos-manager
-install -D -m755 target/rpm/steamosctl %{buildroot}%{_bindir}/steamosctl
 
 # Install license
 install -D -m644 LICENSE %{buildroot}%{_datadir}/licenses/%{name}/LICENSE
@@ -215,7 +214,6 @@ ln -s ../steamos-manager.service %{buildroot}%{_userunitdir}/gamescope-session-p
 %doc README.md
 
 # Binaries
-%{_bindir}/steamosctl
 %{_libdir}/steamos-manager
 
 # DBus Service Files
