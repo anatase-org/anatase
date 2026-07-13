@@ -5,6 +5,7 @@ files:
   - memlock.conf
   - modules-load.conf
   - zram-generator.conf
+  - systemd-zram-setup-reset.conf
   - dev-hugepages1G.mount
   - override-zsh.sh
 
@@ -49,6 +50,9 @@ postprocess: |
   # Add zram and huge pages
   install -Dm0644 /files/zram-generator.conf \
       /etc/systemd/zram-generator.conf
+  # https://github.com/systemd/systemd/issues/43015
+  install -Dm0644 /files/systemd-zram-setup-reset.conf \
+      /usr/lib/systemd/system/systemd-zram-setup@.service.d/10-anatase-reset.conf
   install -Dm0644 /files/dev-hugepages1G.mount \
       /usr/lib/systemd/system/dev-hugepages1G.mount
 
