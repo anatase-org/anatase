@@ -17,3 +17,6 @@ postprocess: |
     /usr/lib/sysimage/libdnf5/transaction_history.sqlite \
     /usr/lib/sysimage/libdnf5/transaction_history.sqlite-shm \
     /usr/lib/sysimage/libdnf5/transaction_history.sqlite-wal
+  
+  # Force the client to regenerate this
+  rm /etc/brlapi.key
