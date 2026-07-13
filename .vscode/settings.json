@@ -1,0 +1,31 @@
+{
+  // These are super painful and can cause vs code to hang
+  "search.exclude": {
+    "**/cache/**": true,
+    "**/ref/**": true,
+    "**/patchwork/**": true
+  },
+  "files.watcherExclude": {
+    "**/cache/**": true,
+    "**/ref/**": true,
+    "**/patchwork/**": true
+  },
+  "python.analysis.exclude": [
+    "**/cache/**",
+    "**/ref/**",
+    "**/patchwork/**",
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.*",
+    "venv"
+  ],
+  // "files.exclude": {
+  //   "**/cache/**": true,
+  //   "**/ref/**": true,
+  //   "**/patchwork/**": true
+  // },
+  "python-envs.workspaceSearchPaths": [
+    ".venv",
+    "venv"
+  ],
+}
