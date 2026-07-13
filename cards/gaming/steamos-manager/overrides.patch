@@ -243,16 +243,20 @@ SteamOS Manager will manage power features as before.
 In addition, re-use the conflict detection of Decky plugins from
 handheld daemon to disable power features if they are detected.
 ---
- steamos-manager/src/gpu.rs          | 130 ++++++++++++++++++++++++++-
- steamos-manager/src/manager/user.rs |  68 ++++++++------
- steamos-manager/src/power.rs        | 132 +++++++++++++++++++++++++---
- 3 files changed, 293 insertions(+), 37 deletions(-)
+ steamos-manager/src/gpu.rs          | 142 +++++++++++++++++++++++++++-
+ steamos-manager/src/manager/user.rs |  68 ++++++++-----
+ steamos-manager/src/power.rs        | 132 ++++++++++++++++++++++++--
+ 3 files changed, 305 insertions(+), 37 deletions(-)
 
 diff --git a/steamos-manager/src/gpu.rs b/steamos-manager/src/gpu.rs
-index a828071f60bd..85f8fe51ebcb 100644
+index a828071f60bd..03e39b7966fa 100644
 --- a/steamos-manager/src/gpu.rs
 +++ b/steamos-manager/src/gpu.rs
-@@ -18,10 +18,11 @@ use std::sync::LazyLock;
+@@ -15,13 +15,15 @@ use std::ops::RangeInclusive;
+ use std::path::{Path, PathBuf};
+ use std::str::FromStr;
+ use std::sync::LazyLock;
++use std::sync::atomic::{AtomicBool, Ordering};
  use strum::{Display, EnumString, VariantNames};
  use tokio::fs::{self, File, try_exists};
  use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -261,11 +265,11 @@ index a828071f60bd..85f8fe51ebcb 100644
  
  use crate::hardware::{device_config, device_type};
 -use crate::power::find_hwmon;
-+use crate::power::{find_hwmon, HhdStatus, HHD_CMD};
++use crate::power::{HHD_CMD, HhdStatus, find_hwmon};
  use crate::{path, write_synced};
  
  pub(crate) const AMDGPU_HWMON_NAME: &str = "amdgpu";
-@@ -150,7 +151,134 @@ pub(crate) async fn gpu_power_profile_driver() -> Result<Box<dyn GpuPowerProfile
+@@ -150,7 +152,145 @@ pub(crate) async fn gpu_power_profile_driver() -> Result<Box<dyn GpuPowerProfile
      })
  }
  
@@ -289,7 +293,9 @@ index a828071f60bd..85f8fe51ebcb 100644
 +}
 +
 +#[derive(Debug)]
-+pub(crate) struct HhdPerformanceLevelDriver {}
++pub(crate) struct HhdPerformanceLevelDriver {
++    manual: AtomicBool,
++}
 +
 +impl AmdgpuGpuPerfDriver for HhdPerformanceLevelDriver {}
 +
@@ -319,7 +325,10 @@ index a828071f60bd..85f8fe51ebcb 100644
 +    }
 +
 +    async fn set_performance_level(&self, level: GpuPerformanceLevel) -> Result<()> {
-+        if level == GpuPerformanceLevel::Intel(IntelPerformanceLevel::Manual) {
++        let manual = level == GpuPerformanceLevel::Intel(IntelPerformanceLevel::Manual);
++        self.manual.store(manual, Ordering::Relaxed);
++
++        if manual {
 +            return Ok(());
 +        }
 +        let output = Command::new(HHD_CMD)
@@ -370,6 +379,10 @@ index a828071f60bd..85f8fe51ebcb 100644
 +    }
 +
 +    async fn set_clocks(&self, clocks: u32) -> Result<()> {
++        if !self.manual.load(Ordering::Relaxed) {
++            return Ok(());
++        }
++
 +        let output = Command::new(HHD_CMD)
 +            .arg("steamos-gpu")
 +            .arg(clocks.to_string())
@@ -392,7 +405,9 @@ index a828071f60bd..85f8fe51ebcb 100644
 +
 +    if hhd_status == HhdStatus::Active {
 +        debug!("Using handheld daemon for TDP limiting");
-+        return Ok(Box::new(HhdPerformanceLevelDriver {}));
++        return Ok(Box::new(HhdPerformanceLevelDriver {
++            manual: AtomicBool::new(false),
++        }));
 +    } else if hhd_status == HhdStatus::Conflicts {
 +        bail!("Conflicting GPU controls found");
 +    }
@@ -698,14 +713,14 @@ index 52554283ee48..168fa6c19faa 100644
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
-Date: Thu, 5 Feb 2026 21:30:25 +0100
+Date: Mon, 13 Jul 2026 22:34:27 +0200
 Subject: fix: add targets to ensure this starts before hhd and steam
 
 Signed-off-by: Antheas Kapenekakis <git@antheas.dev>
 ---
  data/system/steamos-manager.service | 4 ++++
- data/user/steamos-manager.service   | 4 ++++
- 2 files changed, 8 insertions(+)
+ data/user/steamos-manager.service   | 2 ++
+ 2 files changed, 6 insertions(+)
 
 diff --git a/data/system/steamos-manager.service b/data/system/steamos-manager.service
 index e49ea157d6a3..08f77ccab1e0 100644
@@ -723,16 +738,14 @@ index e49ea157d6a3..08f77ccab1e0 100644
  StartLimitBurst=5
  
 diff --git a/data/user/steamos-manager.service b/data/user/steamos-manager.service
-index c6dc9febe6c9..bdbca489c0df 100644
+index c6dc9febe6c9..670e643df7df 100644
 --- a/data/user/steamos-manager.service
 +++ b/data/user/steamos-manager.service
-@@ -1,5 +1,9 @@
+@@ -1,5 +1,7 @@
  [Unit]
  Description=SteamOS Manager Daemon
-+Before=graphical-session.target
 +After=hhd.service
 +After=hhdl.service
-+Before=gamescope-session-plus@steam.service
  StartLimitIntervalSec=120
  StartLimitBurst=5
  
@@ -852,10 +865,10 @@ index 08f77ccab1e0..5336a76b1442 100644
  RestartSec=1
  RestartMaxDelaySec=10
 diff --git a/data/user/steamos-manager.service b/data/user/steamos-manager.service
-index bdbca489c0df..ec07e453eef4 100644
+index 670e643df7df..2c6fdb868701 100644
 --- a/data/user/steamos-manager.service
 +++ b/data/user/steamos-manager.service
-@@ -11,7 +11,7 @@ StartLimitBurst=5
+@@ -9,7 +9,7 @@ StartLimitBurst=5
  Type=notify-reload
  BusName=com.steampowered.SteamOSManager1
  Environment=RUST_LOG=info
