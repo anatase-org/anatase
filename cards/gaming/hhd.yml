@@ -26,6 +26,7 @@ packages:
 
 files:
   - files/hhd.conf
+  - files/hhd-modprobe.conf
   - files/power-profiles-daemon.conf.in
   - files/power-profiles-daemon.dbus.xml.in
   - gamecontrollerdb.txt::https://raw.githubusercontent.com/mdqinc/SDL_GameControllerDB/refs/heads/master/gamecontrollerdb.txt
@@ -61,6 +62,11 @@ postprocess: |
   install -dm0755 /usr/lib/systemd/system/hhd.service.d/
   cp /files/files/hhd.conf /usr/lib/systemd/system/hhd.service.d/override.conf
 
+  # Add modprobe.d for weird modules
+  cp /files/files/hhd-modprobe.conf \
+    /etc/modprobe.d/70-hhd.conf
+
+  # Add controller DB for hhd's external controller support
   install -Dm0644 /files/gamecontrollerdb.txt /usr/share/sdl/gamecontrollerdb.txt
 
   # These paths conflict when the user installs ppd/tuned, so hhd cannot
