@@ -1,8 +1,5 @@
 version: 1
 
-env:
-  tag: $tag
-
 build-deps:
   - bash
   - cmake
@@ -55,7 +52,7 @@ postprocess: |
   echo "OS Release file (/etc/os-release):"
   tee /usr/lib/os-release <<'EOF'
   NAME="Anatase"
-  VERSION="$tag"
+  VERSION=""
   RELEASE_TYPE=stable
   ID=anatase
   ID_LIKE=fedora
@@ -72,7 +69,7 @@ postprocess: |
   BUG_REPORT_URL="https://github.com/anatase-org/anatase/issues"
   # Steam reads these
   VERSION_CODENAME="Anatase"
-  BUILD_ID="$tag"
+  BUILD_ID=""
   VARIANT_ID="original"
   EOF
   echo "Anatase" > /etc/system-release

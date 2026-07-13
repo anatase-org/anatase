@@ -76,6 +76,7 @@ files:
   - flatpak/anatase.flatpakrepo
   - flatpak/flathub.filter
   - flatpak/flathub.flatpakrepo
+  - dracut_cleanup_shadow.sh
 
 postprocess: |
     set -eux
@@ -99,6 +100,10 @@ postprocess: |
     # Add installer dracut modules so we do not need to regenerate initramfs
     add_dracutmodules+=" dmsquash-live "
     EOF
+
+    # Drop days from /etc/shadow so that initramfs is reproducible
+    install -Dm0755 /files/dracut_cleanup_shadow.sh \
+        /usr/lib/dracut/modules.d/99anatase-shadow/module-setup.sh
 
     for glibc_post_upgrade in /usr/sbin/glibc_post_upgrade.*; do
         if [ -f "${glibc_post_upgrade}" ]; then

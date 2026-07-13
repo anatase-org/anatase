@@ -1,0 +1,19 @@
+version: 1
+
+env:
+  tag: $tag
+
+postprocess: |
+  # The tag is included in the initramfs and invalidates it,
+  # therefore add it at the end here. This breaks soft reboots
+  # and forces everyone to redownload it otherwise.
+  sed -i \
+    -e 's/^VERSION=""$/VERSION="$tag"/' \
+    -e 's/^BUILD_ID=""$/BUILD_ID="$tag"/' \
+    /usr/lib/os-release
+
+  # Drop these as they change and can be regenerated
+  rm -f \
+    /usr/lib/sysimage/libdnf5/transaction_history.sqlite \
+    /usr/lib/sysimage/libdnf5/transaction_history.sqlite-shm \
+    /usr/lib/sysimage/libdnf5/transaction_history.sqlite-wal

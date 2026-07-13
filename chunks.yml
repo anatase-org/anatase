@@ -29,6 +29,9 @@ meta:
       - /usr/share/distribution-gpg-keys*
       # This small dir is affected by multiple packages
       - /usr/src/kernels/*scripts*
+      - /usr/lib/bootupd/updates/EFI.json # has a timestamp
+      - /usr/lib/os-release # changes every version, owned by fedora-release
+      - /usr/lib/sysimage/libdnf5 # package information owned by its rpm
 
   #
   # Core

@@ -55,6 +55,7 @@ cards:
   - cards/gaming/gamemode
   - cards/gaming/hhd
   - cards/base/tweaks
+  - cards/base/finalize
 
 runtime:
   # DO NOT CHANGE THESE, THEY AFFECT THE UPDATE HASH OF THE RUNTIME.
