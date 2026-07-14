@@ -37,13 +37,6 @@ if [[ ! -e $registry ]] && mkdir -p "${registry%/*}"; then
     cp /app/share/anatase/steam/registry.vdf "$registry"
 fi
 
-case ":${XDG_CURRENT_DESKTOP:-}:" in
-    *:gamescope:*)
-        export QT_IM_MODULE=steam
-        export GTK_IM_MODULE=Steam
-        ;;
-esac
-
 # Install Anatase's Steam Game Mode startup and suspend overrides.
 # If Decky Animation Changer is installed ignore.
 animation_changer="$HOME/homebrew/plugins/SDH-AnimationChanger/main.py"
@@ -80,21 +73,6 @@ if [[ ! -f $animation_changer ]]; then
             fi
         done
     fi
-fi
-
-notification_pid=
-stop_notification_daemon() {
-    [[ -n $notification_pid ]] || return 0
-    kill "$notification_pid" 2>/dev/null || true
-    wait "$notification_pid" 2>/dev/null || true
-    notification_pid=
-}
-trap stop_notification_daemon EXIT
-trap 'exit 143' HUP INT TERM
-
-if command -v steam_notif_daemon >/dev/null 2>&1; then
-    steam_notif_daemon &
-    notification_pid=$!
 fi
 
 /app/bin/steam -steamdeck "$@"
