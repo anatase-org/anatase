@@ -33,7 +33,6 @@ flatpak:
     --filesystem=/run/media
     --persist=.
     --system-talk-name=org.freedesktop.NetworkManager
-    --system-talk-name=org.freedesktop.login1
     --system-talk-name=org.freedesktop.UDisks2
     --system-talk-name=org.freedesktop.UPower
     --talk-name=com.steampowered.SteamOSManager1
@@ -75,6 +74,8 @@ flatpak:
     # Our changes
     --filesystem=~/.steam:create
     --filesystem=xdg-data/Steam:create
+    --system-talk-name=org.freedesktop.login1
+    --system-talk-name=org.bluez
 
 files:
   - files/anatase-steam
