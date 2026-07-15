@@ -2,3 +2,6 @@
 deny org.anatase.*
 deny app/org.anatase.*
 deny runtime/org.anatase.*
+
+# Steam is provided by the Anatase remote as org.anatase.Steam.
+deny com.valvesoftware.Steam
