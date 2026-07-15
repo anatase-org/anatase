@@ -134,6 +134,7 @@ specs:
 
 files:
   - files/anatase-gamemode
+  - files/anatase-gamemode-udiskie.yml
   - files/anatase-preflight
   - files/gamemode.desktop
   - files/gamescope-portals.conf
@@ -144,6 +145,8 @@ postprocess: |
 
   install -Dm0755 /files/files/anatase-gamemode \
       /usr/bin/anatase-gamemode
+  install -Dm0644 /files/files/anatase-gamemode-udiskie.yml \
+      /usr/share/anatase/gamemode/anatase-gamemode-udiskie.yml
   install -Dm0755 /files/files/anatase-preflight \
       /usr/libexec/anatase-preflight
   install -Dm0644 /files/files/gamemode.desktop \

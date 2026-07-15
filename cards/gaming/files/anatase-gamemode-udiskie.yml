@@ -1,0 +1,4 @@
+device_config:
+  - id_type: [ext4, btrfs]
+    ignore: false
+  - ignore: true

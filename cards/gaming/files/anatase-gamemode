@@ -229,7 +229,8 @@ while true; do
 done &
 
 # Allow udiskie to automount disks
-udiskie -a -N -T -P &
+udiskie -c /usr/share/anatase/gamemode/anatase-gamemode-udiskie.yml \
+    -a -N -T -P &
 
 # Steam rewrites MangoApp's config in the Gamescope runtime directory. It also
 # asks Gamescope to write screenshots to a temporary path, then reads the
