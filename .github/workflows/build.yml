@@ -84,7 +84,7 @@ jobs:
                 echo "manifest_$index="
               fi
             done
-            echo "builds=$(jq -c '[.builds | to_entries[] | {id: .key, name: .value.block}]' cache/ci/build.json)"
+            echo "builds=$(jq -c '[.builds | to_entries[] | {id: .key, name: (.value.block // .value.flatpak.app)}]' cache/ci/build.json)"
             echo "images=$(jq -c '[.images | to_entries[] | {id: .key, name: .value.build.image}]' cache/ci/build.json)"
             echo "flatpaks=$(jq -c '.flatpaks | length > 0' cache/ci/build.json)"
           } >> "$GITHUB_OUTPUT"
@@ -117,7 +117,13 @@ jobs:
   packages:
     name: Build · ${{ matrix.build.name }}
     needs: build
-    runs-on: ubuntu-26.04
+    runs-on: >-
+      ${{
+        (matrix.build.name == 'base-scx' ||
+         matrix.build.name == 'browser' ||
+         matrix.build.name == 'okular') &&
+        'large' || 'ubuntu-26.04'
+      }}
     strategy:
       fail-fast: false
       matrix:
