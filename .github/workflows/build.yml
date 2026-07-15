@@ -16,7 +16,7 @@ concurrency:
 jobs:
   build:
     name: Prepare Build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       manifest_0: ${{ steps.orchestration.outputs.manifest_0 }}
       manifest_1: ${{ steps.orchestration.outputs.manifest_1 }}
@@ -117,7 +117,7 @@ jobs:
   packages:
     name: Build Packages
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:
@@ -181,7 +181,7 @@ jobs:
         needs.build.result == 'success' &&
         (needs.packages.result == 'success' || needs.packages.result == 'skipped')
       }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:
@@ -246,7 +246,7 @@ jobs:
         (needs.packages.result == 'success' || needs.packages.result == 'skipped') &&
         needs.build.outputs.flatpaks == 'true'
       }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Checkout
