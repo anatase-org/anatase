@@ -88,7 +88,19 @@ jobs:
                 echo "manifest_$index="
               fi
             done
-            echo "builds=$(jq -c '[.builds | to_entries[] | {id: .key, name: (.value.block // .value.flatpak.app)}]' cache/ci/build.json)"
+            echo "builds=$(jq -c '
+              [.builds | to_entries[] |
+                (.value.block // .value.flatpak.app) as $name |
+                {
+                  id: .key,
+                  name: $name,
+                  large: (
+                    $name == "base-scx" or
+                    $name == "browser" or
+                    $name == "okular"
+                  )
+                }
+              ]' cache/ci/build.json)"
             echo "images=$(jq -c '[.images | to_entries[] | {id: .key, name: .value.build.image}]' cache/ci/build.json)"
             echo "flatpaks=$(jq -c '.flatpaks | length > 0' cache/ci/build.json)"
           } >> "$GITHUB_OUTPUT"
@@ -121,13 +133,9 @@ jobs:
   packages:
     name: Build · ${{ matrix.build.name }}
     needs: build
-    runs-on: >-
-      ${{
-        (matrix.build.name == 'base-scx' ||
-         matrix.build.name == 'browser' ||
-         matrix.build.name == 'okular') &&
-        'large' || 'ubuntu-26.04'
-      }}
+    runs-on: ${{ matrix.build.large && 'large' || 'ubuntu-26.04' }}
+    env:
+      LARGE_BUILDER: ${{ matrix.build.large }}
     strategy:
       fail-fast: false
       matrix:
@@ -182,16 +190,11 @@ jobs:
             | xz --decompress > cache/ci/build.yml
 
       - name: Build package image
-        env:
-          USE_CCACHE: >-
-            ${{
-              matrix.build.name == 'base-scx' ||
-              matrix.build.name == 'browser' ||
-              matrix.build.name == 'okular'
-            }}
         run: |
           args=()
-          if [[ "$USE_CCACHE" == "true" ]]; then
+          if [[ "$LARGE_BUILDER" == "true" ]]; then
+            export CCACHE_MAXSIZE=75G
+            export CCACHE_DIR="$HOME/ccache"
             args+=(--ccache)
           fi
           venv/bin/ludos ci build "${args[@]}" "${{ matrix.build.id }}"
