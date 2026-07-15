@@ -62,7 +62,7 @@ jobs:
       - name: Prepare CI build manifest
         id: orchestration
         run: |
-          venv/bin/ludos ci prepare anatase.yml
+          venv/bin/ludos ci prepare --no-ccache anatase.yml
 
           # Emit metadata for follow-ups
           venv/bin/python -c \
