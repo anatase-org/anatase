@@ -316,9 +316,21 @@ button {{
     font-weight: 600;
 }}
 
-spinner {{
-    min-width: {px(64)};
-    min-height: {px(64)};
+progressbar {{
+    min-width: {px(420)};
+}}
+
+progressbar trough,
+progressbar progress {{
+    min-height: {px(10)};
+}}
+
+progressbar trough {{
+    background-color: #292929;
+}}
+
+progressbar progress {{
+    background-color: #ffffff;
 }}
 """
 
@@ -374,6 +386,7 @@ class Preflight(Gtk.Application):
         self.action_b = None
         self.action_pending = False
         self.install_process = None
+        self.install_pulse_source = None
         self.result = 1
         self.qr_surface = None
         self.scale_factor = 1.0
@@ -437,6 +450,7 @@ class Preflight(Gtk.Application):
             self.quit()
 
     def do_shutdown(self):
+        self._stop_install_pulse()
         if self.listener:
             self.listener.close()
             self.listener = None
@@ -487,10 +501,20 @@ class Preflight(Gtk.Application):
         return row
 
     def _set_page(self, page, action_a=None, action_b=None):
+        self._stop_install_pulse()
         self.action_a = action_a
         self.action_b = action_b
         self.action_pending = False
         self.window.set_child(page)
+
+    def _stop_install_pulse(self):
+        if self.install_pulse_source is not None:
+            GLib.source_remove(self.install_pulse_source)
+            self.install_pulse_source = None
+
+    def _pulse_install_progress(self, progress):
+        progress.pulse()
+        return GLib.SOURCE_CONTINUE
 
     def _key_pressed(self, _controller, keyval, _keycode, _state):
         if keyval in (Gdk.KEY_a, Gdk.KEY_A):
@@ -590,15 +614,19 @@ class Preflight(Gtk.Application):
             spacing=self._scale(24),
         )
         self._center(content)
-        spinner = Gtk.Spinner()
-        spinner.start()
-        self._center(spinner)
-        content.append(spinner)
         content.append(
-            self._label(_("Installing Steam® <org.anatase.Steam>"), "status")
+            self._label(_("Installing Steam®"), "status")
         )
+        progress = Gtk.ProgressBar()
+        progress.set_pulse_step(0.08)
+        self._center(progress)
+        content.append(progress)
         page.set_center_widget(content)
         self._set_page(page)
+        progress.pulse()
+        self.install_pulse_source = GLib.timeout_add(
+            100, self._pulse_install_progress, progress
+        )
 
     def start_install(self):
         self.show_installing()
