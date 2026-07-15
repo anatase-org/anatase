@@ -50,4 +50,26 @@ jobs:
         run: venv/bin/ludos ci prepare anatase.yml
 
       - name: Seed CI images
-        run: venv/bin/ludos ci seed --autoremove
+        run: |
+          status=0
+          venv/bin/ludos ci seed --autoremove || status=$?
+          if (( status == 0 )); then
+            exit 0
+          fi
+          if (( status != 7 )); then
+            exit "$status"
+          fi
+
+          echo Saving space due to insufficient size
+          df -h
+          sudo swapoff -a
+          sudo rm -f /swapfile
+          shopt -s nullglob
+          printf '%s\0' /opt/PyPy /opt/az /opt/node/ /opt/pipx /opt/go /opt/Ruby \
+              /usr/lib/llvm-* /usr/local/julia* /usr/local/lib/android /usr/share/dotnet \
+              /usr/share/swift /usr/local/.ghcup /usr/lib/firefox /opt/google/chrome \
+              /opt/microsoft/msedge \
+              | sudo xargs -0 -n1 -P4 rm -rf
+          df -h
+
+          venv/bin/ludos ci seed --autoremove
