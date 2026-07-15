@@ -15,7 +15,13 @@ concurrency:
 
 jobs:
   build:
+    name: Prepare Build
     runs-on: ubuntu-latest
+    outputs:
+      manifest: ${{ steps.orchestration.outputs.manifest }}
+      builds: ${{ steps.orchestration.outputs.builds }}
+      images: ${{ steps.orchestration.outputs.images }}
+      flatpaks: ${{ steps.orchestration.outputs.flatpaks }}
 
     steps:
       - name: Checkout
@@ -47,7 +53,20 @@ jobs:
           venv/bin/ludos ci init anatase.yml # add more later
 
       - name: Prepare CI build manifest
-        run: venv/bin/ludos ci prepare anatase.yml
+        id: orchestration
+        run: |
+          venv/bin/ludos ci prepare anatase.yml
+
+          # Emit metadata for follow-ups
+          venv/bin/python -c \
+            'import json, yaml; print(json.dumps(yaml.safe_load(open("cache/ci/build.yml"))))' \
+            > cache/ci/build.json
+          {
+            echo "manifest=$(<cache/ci/build.yml.encoded)"
+            echo "builds=$(jq -c '.builds | keys' cache/ci/build.json)"
+            echo "images=$(jq -c '.images | keys' cache/ci/build.json)"
+            echo "flatpaks=$(jq -c '.flatpaks | length > 0' cache/ci/build.json)"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Seed CI images
         run: |
@@ -73,3 +92,148 @@ jobs:
           df -h
 
           venv/bin/ludos ci seed --autoremove
+
+  packages:
+    name: Build Packages
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        build: ${{ fromJSON(needs.build.outputs.builds) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 100
+          token: ${{ secrets.ANATASE_READ }}
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Install ludos
+        run: |
+          python3 -m venv venv
+          venv/bin/pip install --upgrade pip
+          pushd ludos
+          ../venv/bin/pip install -r requirements.txt
+          popd
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io \
+            --username "${{ github.actor }}" \
+            --password-stdin
+
+      - name: Restore CI build manifest
+        env:
+          CI_BUILD_MANIFEST: ${{ needs.build.outputs.manifest }}
+        run: |
+          mkdir -p cache/ci
+          printf '%s' "$CI_BUILD_MANIFEST" > cache/ci/build.yml.encoded
+          base64 --decode cache/ci/build.yml.encoded \
+            | xz --decompress > cache/ci/build.yml
+
+      - name: Build package image
+        run: venv/bin/ludos ci build "${{ matrix.build }}"
+
+  images:
+    name: Build Images
+    needs:
+      - build
+      - packages
+    if: >-
+      ${{
+        always() &&
+        needs.build.result == 'success' &&
+        (needs.packages.result == 'success' || needs.packages.result == 'skipped')
+      }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(needs.build.outputs.images) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 100
+          token: ${{ secrets.ANATASE_READ }}
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Install ludos
+        run: |
+          python3 -m venv venv
+          venv/bin/pip install --upgrade pip
+          pushd ludos
+          ../venv/bin/pip install -r requirements.txt
+          popd
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io \
+            --username "${{ github.actor }}" \
+            --password-stdin
+
+      - name: Restore CI build manifest
+        env:
+          CI_BUILD_MANIFEST: ${{ needs.build.outputs.manifest }}
+        run: |
+          mkdir -p cache/ci
+          printf '%s' "$CI_BUILD_MANIFEST" > cache/ci/build.yml.encoded
+          base64 --decode cache/ci/build.yml.encoded \
+            | xz --decompress > cache/ci/build.yml
+
+      - name: Build final image
+        run: venv/bin/ludos ci build "${{ matrix.image }}"
+
+  flatpaks:
+    name: Build Flatpaks
+    needs:
+      - build
+      - packages
+    if: >-
+      ${{
+        always() &&
+        needs.build.result == 'success' &&
+        (needs.packages.result == 'success' || needs.packages.result == 'skipped') &&
+        needs.build.outputs.flatpaks == 'true'
+      }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 100
+          token: ${{ secrets.ANATASE_READ }}
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Install ludos
+        run: |
+          python3 -m venv venv
+          venv/bin/pip install --upgrade pip
+          pushd ludos
+          ../venv/bin/pip install -r requirements.txt
+          popd
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io \
+            --username "${{ github.actor }}" \
+            --password-stdin
+
+      - name: Restore CI build manifest
+        env:
+          CI_BUILD_MANIFEST: ${{ needs.build.outputs.manifest }}
+        run: |
+          mkdir -p cache/ci
+          printf '%s' "$CI_BUILD_MANIFEST" > cache/ci/build.yml.encoded
+          base64 --decode cache/ci/build.yml.encoded \
+            | xz --decompress > cache/ci/build.yml
+
+      - name: Build flatpaks
+        run: venv/bin/ludos ci build --flatpaks --autoremove
