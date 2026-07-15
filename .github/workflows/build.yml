@@ -49,7 +49,11 @@ jobs:
 
       - name: Login to GHCR
         run: |
+          auth_file="$RUNNER_TEMP/containers/auth.json"
+          mkdir -p "$(dirname "$auth_file")"
+          echo "REGISTRY_AUTH_FILE=$auth_file" >> "$GITHUB_ENV"
           echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io \
+            --authfile "$auth_file" \
             --username "${{ github.actor }}" \
             --password-stdin
 
@@ -148,7 +152,11 @@ jobs:
 
       - name: Login to GHCR
         run: |
+          auth_file="$RUNNER_TEMP/containers/auth.json"
+          mkdir -p "$(dirname "$auth_file")"
+          echo "REGISTRY_AUTH_FILE=$auth_file" >> "$GITHUB_ENV"
           echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io \
+            --authfile "$auth_file" \
             --username "${{ github.actor }}" \
             --password-stdin
 
@@ -224,7 +232,11 @@ jobs:
 
       - name: Login to GHCR
         run: |
+          auth_file="$RUNNER_TEMP/containers/auth.json"
+          mkdir -p "$(dirname "$auth_file")"
+          echo "REGISTRY_AUTH_FILE=$auth_file" >> "$GITHUB_ENV"
           echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io \
+            --authfile "$auth_file" \
             --username "${{ github.actor }}" \
             --password-stdin
 
@@ -285,7 +297,11 @@ jobs:
 
       - name: Login to GHCR
         run: |
+          auth_file="$RUNNER_TEMP/containers/auth.json"
+          mkdir -p "$(dirname "$auth_file")"
+          echo "REGISTRY_AUTH_FILE=$auth_file" >> "$GITHUB_ENV"
           echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io \
+            --authfile "$auth_file" \
             --username "${{ github.actor }}" \
             --password-stdin
 
