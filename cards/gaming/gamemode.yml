@@ -34,6 +34,14 @@ packages:
   - upower
   # Automount
   - udiskie
+  # Steam setup screen
+  # These are free and that;s why the script uses cairo :(
+  # hhd, ibus, and anaconda pull them
+  - gtk4
+  - python3-cairo
+  - python3-evdev
+  - python3-gobject
+  - python3-xlib
 
 specs:
   - spec: gamescope/gamescope.spec
@@ -126,18 +134,39 @@ specs:
 
 files:
   - files/anatase-gamemode
+  - files/anatase-preflight
   - files/gamemode.desktop
   - files/gamescope-portals.conf
+  - files/steam-subscriber-agreement-qr.png
 
 postprocess: |
   set -eux
 
   install -Dm0755 /files/files/anatase-gamemode \
       /usr/bin/anatase-gamemode
+  install -Dm0755 /files/files/anatase-preflight \
+      /usr/libexec/anatase-preflight
   install -Dm0644 /files/files/gamemode.desktop \
       /usr/share/wayland-sessions/gamemode.desktop
   install -Dm0644 /files/files/gamescope-portals.conf \
       /usr/share/xdg-desktop-portal/gamescope-portals/gamescope-portals.conf
+  install -Dm0644 /files/files/steam-subscriber-agreement-qr.png \
+      /usr/share/anatase/gamemode/steam-subscriber-agreement-qr.png
+
+  # Sanity check preflight
+  python3 - <<'PY'
+  source = "/usr/libexec/anatase-preflight"
+  with open(source, encoding="utf-8") as script:
+      compile(script.read(), source, "exec")
+  import cairo
+  import evdev
+  import gi
+  import Xlib
+  gi.require_version("Gdk", "4.0")
+  gi.require_version("GdkX11", "4.0")
+  gi.require_version("Gtk", "4.0")
+  from gi.repository import Gdk, GdkX11, Gtk
+  PY
 
   # Flatpak's portal broker still uses UseIn to select backend descriptors.
   sed -i '/^DBusName=/a UseIn=gamescope;' \

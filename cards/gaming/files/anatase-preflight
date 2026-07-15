@@ -1,0 +1,694 @@
+#!/usr/bin/python3
+
+import glob
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+
+import cairo
+from evdev import InputDevice, ecodes, list_devices
+import gi
+from Xlib import Xatom
+from Xlib.display import Display as XDisplay
+
+gi.require_version("Gtk", "4.0")
+gi.require_version("Gdk", "4.0")
+gi.require_version("GdkX11", "4.0")
+from gi.repository import Gdk, GdkX11, Gio, GLib, Gtk
+
+
+def _(text):
+    return text
+
+
+APP_ID = "org.anatase.Steam"
+QR_PATH = "/usr/share/anatase/gamemode/steam-subscriber-agreement-qr.png"
+CONTROLLER_DB_PATH = "/usr/share/sdl/gamecontrollerdb.txt"
+USER_EXIT = 10
+STEAM_APP_ID = 769
+QR_SCREEN_FRACTION = 0.35
+UI_BASE_WIDTH = 1280
+UI_ZOOM_RATIO = 1.1
+UI_MAX_SCALE = 3.0
+
+
+#
+# Controller handling
+#
+
+
+def crc16_for_byte(byte):
+    crc = 0
+    for _index in range(8):
+        if (byte ^ crc) & 1:
+            crc = (crc >> 1) ^ 0xA001
+        else:
+            crc >>= 1
+        byte >>= 1
+    return crc
+
+
+def sdl_crc16(crc, data):# -> Any:
+    for byte in data:
+        crc = crc16_for_byte(crc ^ byte) ^ (crc >> 8)
+    return crc
+
+
+def create_joystick_guid(device):
+    """Create the Linux SDL GUID used by the controller mapping database."""
+    info = device.info
+    name = (device.name or "").encode()
+    guid = bytearray(16)
+    guid[0:2] = info.bustype.to_bytes(2, "little")
+    guid[2:4] = sdl_crc16(0, name).to_bytes(2, "little")
+    if info.vendor:
+        guid[4:6] = info.vendor.to_bytes(2, "little")
+        guid[8:10] = info.product.to_bytes(2, "little")
+        guid[12:14] = info.version.to_bytes(2, "little")
+    else:
+        guid[4:16] = name[:12].ljust(12, b"\0")
+    return guid
+
+
+def parse_sdl_mappings(lines):
+    mappings = {}
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        try:
+            guid_text, _name, *bindings = line.split(",")
+            if guid_text == "xinput":
+                continue
+            guid = bytes.fromhex(guid_text)
+            if len(guid) != 16:
+                continue
+
+            platform = None
+            ab = {}
+            for binding in bindings:
+                if ":" not in binding:
+                    continue
+                key, value = binding.split(":", 1)
+                if key == "platform":
+                    platform = value.strip().casefold()
+                elif key in ("a", "b") and re.fullmatch(r"b\d+", value):
+                    ab[key] = int(value[1:])
+            if platform not in (None, "linux") or not ab:
+                continue
+            mappings[guid] = ab
+        except (TypeError, ValueError):
+            continue
+    return mappings
+
+
+def load_sdl_mappings():
+    mappings = {}
+    try:
+        with open(CONTROLLER_DB_PATH, encoding="utf-8") as database:
+            mappings.update(parse_sdl_mappings(database))
+    except OSError as error:
+        print(f"Could not read {CONTROLLER_DB_PATH}: {error}", file=sys.stderr)
+
+    environment = os.environ.get("SDL_GAMECONTROLLERCONFIG", "")
+    mappings.update(parse_sdl_mappings(environment.splitlines()))
+    return mappings
+
+
+def _event_codes(capabilities, event_type):
+    codes = []
+    for value in capabilities.get(event_type, ()):
+        code = value[0] if isinstance(value, tuple) else value
+        codes.append(code)
+    return sorted(codes)
+
+
+def _mapped_guid(guid, mappings):
+    candidate = bytearray(guid)
+    candidate[2:4] = b"\0\0"
+    binding = mappings.get(bytes(candidate))
+    if binding is not None:
+        return binding
+    candidate[12:14] = b"\0\0"
+    return mappings.get(bytes(candidate))
+
+
+def controller_ab_mapping(device, mappings):
+    key_codes = _event_codes(device.capabilities(), ecodes.EV_KEY)
+    mapping = {}
+
+    # This follows the SDL GUID and joydev button-index approach used by
+    # hhd/plugins/overlay/sdl.py, without importing or depending on HHD APIs.
+    binding = _mapped_guid(create_joystick_guid(device), mappings)
+    if binding:
+        before_joystick = [code for code in key_codes if code < ecodes.BTN_JOYSTICK]
+        after_joystick = [code for code in key_codes if code >= ecodes.BTN_JOYSTICK]
+        joypad_buttons = after_joystick + before_joystick
+        for action in ("a", "b"):
+            index = binding.get(action)
+            if index is not None and index < len(joypad_buttons):
+                mapping[joypad_buttons[index]] = action
+
+    if "a" not in mapping.values() and ecodes.BTN_SOUTH in key_codes:
+        mapping[ecodes.BTN_SOUTH] = "a"
+    if "b" not in mapping.values() and ecodes.BTN_EAST in key_codes:
+        mapping[ecodes.BTN_EAST] = "b"
+    return mapping
+
+
+class ControllerListener:
+    def __init__(self, callback):
+        self.callback = callback
+        self.mappings = load_sdl_mappings()
+        self.devices = {}
+        self.scan_source = GLib.timeout_add_seconds(2, self._scan)
+        self._scan()
+
+    def _scan(self):
+        available = set(list_devices())
+        for path in set(self.devices) - available:
+            self._remove(path)
+        for path in available - set(self.devices):
+            self._add(path)
+        return GLib.SOURCE_CONTINUE
+
+    def _add(self, path):
+        try:
+            device = InputDevice(path)
+            mapping = controller_ab_mapping(device, self.mappings)
+            if not mapping:
+                device.close()
+                return
+            source = GLib.io_add_watch(
+                device.fd,
+                GLib.PRIORITY_DEFAULT,
+                GLib.IO_IN | GLib.IO_HUP | GLib.IO_ERR,
+                self._read,
+                path,
+            )
+            self.devices[path] = (device, mapping, source)
+        except (OSError, PermissionError) as error:
+            print(f"Could not monitor controller {path}: {error}", file=sys.stderr)
+
+    def _remove(self, path, remove_source=True):
+        record = self.devices.pop(path, None)
+        if not record:
+            return
+        device, _mapping, source = record
+        if remove_source:
+            GLib.source_remove(source)
+        device.close()
+
+    def _read(self, _fd, condition, path):
+        if condition & (GLib.IO_HUP | GLib.IO_ERR):
+            self._remove(path, remove_source=False)
+            return GLib.SOURCE_REMOVE
+        record = self.devices.get(path)
+        if not record:
+            return GLib.SOURCE_REMOVE
+        device, mapping, _source = record
+        try:
+            for event in device.read():
+                if event.type == ecodes.EV_KEY and event.value == 1:
+                    action = mapping.get(event.code)
+                    if action:
+                        self.callback(action)
+        except BlockingIOError:
+            pass
+        except OSError as error:
+            print(f"Controller {path} stopped responding: {error}", file=sys.stderr)
+            self._remove(path, remove_source=False)
+            return GLib.SOURCE_REMOVE
+        return GLib.SOURCE_CONTINUE
+
+    def close(self):
+        if self.scan_source:
+            GLib.source_remove(self.scan_source)
+            self.scan_source = None
+        for path in list(self.devices):
+            self._remove(path)
+
+
+#
+# Error handling
+#
+
+
+def install_error_message(output):
+    message = output.casefold()
+    if any(
+        phrase in message
+        for phrase in (
+            "could not resolve",
+            "couldn't resolve",
+            "connection refused",
+            "connection reset",
+            "network is unreachable",
+            "name or service not known",
+            "temporary failure in name resolution",
+            "timed out",
+            "timeout was reached",
+            "tls connection",
+        )
+    ):
+        return _(
+            "Steam could not be downloaded\nGo to desktop mode and check your internet connection"
+        )
+    if any(
+        phrase in message
+        for phrase in ("no space left on device", "not enough disk space", "disk full")
+    ):
+        return _(
+            "There is not enough free storage to install Steam"
+        )
+    return _("Steam could not be installed\nTry installing it from the Discover App store")
+
+
+#
+# Preflight
+#
+
+
+def calculate_ui_scale(display_width):
+    return min(UI_MAX_SCALE, UI_ZOOM_RATIO * display_width / UI_BASE_WIDTH)
+
+
+def make_css(scale_factor):
+    def px(value):
+        return f"{value * scale_factor:.2f}px"
+
+    return f"""
+window, .page {{
+    background-color: #000000;
+    color: #ffffff;
+}}
+
+.page {{
+    padding: {px(32)};
+}}
+
+label {{
+    color: #ffffff;
+    font-size: {px(22)};
+}}
+
+.title {{
+    font-size: {px(34)};
+    font-weight: 700;
+}}
+
+.status {{
+    font-size: {px(28)};
+    font-weight: 600;
+}}
+
+.error {{
+    color: #ffb4ab;
+}}
+
+button {{
+    min-width: {px(130)};
+    min-height: {px(40)};
+    padding: {px(8)} {px(22)};
+    font-size: {px(22)};
+    font-weight: 600;
+}}
+
+spinner {{
+    min-width: {px(64)};
+    min-height: {px(64)};
+}}
+"""
+
+
+def steam_installed(run=subprocess.run):
+    for scope in ("--system", "--user"):
+        result = run(
+            ["flatpak", "info", scope, APP_ID],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        if result.returncode == 0:
+            return True
+    return False
+
+
+def steam_data_directories(home=None, xdg_data_home=None):
+    home = Path(home or os.path.expanduser("~"))
+    configured_data = xdg_data_home
+    if configured_data is None:
+        configured_data = os.environ.get("XDG_DATA_HOME")
+    user_data = Path(configured_data) if configured_data else home / ".local/share"
+    return (
+        user_data / "Steam",
+        home / ".var/app" / APP_ID / "data/Steam",
+    )
+
+
+def steam_primed(data_directories=None):
+    roots = data_directories or steam_data_directories()
+    for root in roots:
+        pattern = str(Path(root) / "package/steam_client_*_ubuntu12.installed")
+        for marker_name in glob.glob(pattern):
+            marker = Path(marker_name)
+            try:
+                if marker.is_file() and marker.stat().st_size > 0:
+                    return True
+            except OSError:
+                continue
+    return False
+
+
+class Preflight(Gtk.Application):
+    def __init__(self):
+        super().__init__(
+            application_id="org.anatase.Preflight",
+            flags=Gio.ApplicationFlags.NON_UNIQUE,
+        )
+        self.window = None
+        self.listener = None
+        self.action_a = None
+        self.action_b = None
+        self.action_pending = False
+        self.install_process = None
+        self.result = 1
+        self.qr_surface = None
+        self.scale_factor = 1.0
+
+    def do_activate(self):
+        monitors = Gdk.Display.get_default().get_monitors()
+        if monitors.get_n_items():
+            display_width = monitors.get_item(0).get_geometry().width
+        else:
+            display_width = UI_BASE_WIDTH
+        self.scale_factor = calculate_ui_scale(display_width)
+
+        provider = Gtk.CssProvider()
+        provider.load_from_string(make_css(self.scale_factor))
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(),
+            provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+        )
+
+        self.window = Gtk.ApplicationWindow(application=self)
+        self.window.set_title(_("Steam® setup"))
+        self.window.set_decorated(False)
+        self.window.connect("realize", self._register_with_gamescope)
+        self.window.fullscreen()
+
+        keys = Gtk.EventControllerKey()
+        keys.connect("key-pressed", self._key_pressed)
+        self.window.add_controller(keys)
+        self.listener = ControllerListener(self.activate_action)
+
+        if steam_installed():
+            self.show_final_page()
+        else:
+            self.show_agreement()
+        self.window.present()
+
+    def _register_with_gamescope(self, window):
+        """Make this window Steam's base layer while Steam is not running."""
+        try:
+            xid = GdkX11.X11Surface.get_xid(window.get_surface())
+            display = XDisplay(os.environ.get("DISPLAY"))
+            xwindow = display.create_resource_object("window", xid)
+            xwindow.change_property(
+                display.intern_atom("STEAM_GAME"),
+                Xatom.CARDINAL,
+                32,
+                [STEAM_APP_ID],
+            )
+            display.screen().root.change_property(
+                display.intern_atom("GAMESCOPECTRL_BASELAYER_APPID"),
+                Xatom.CARDINAL,
+                32,
+                [STEAM_APP_ID],
+            )
+            display.sync()
+            display.close()
+        except Exception as error:
+            print(f"Could not register the preflight window with Gamescope: {error}", file=sys.stderr)
+            self.result = 1
+            self.quit()
+
+    def do_shutdown(self):
+        if self.listener:
+            self.listener.close()
+            self.listener = None
+        Gio.Application.do_shutdown(self)
+
+    def _page(self):
+        page = Gtk.CenterBox(orientation=Gtk.Orientation.VERTICAL)
+        page.add_css_class("page")
+        page.set_halign(Gtk.Align.FILL)
+        page.set_valign(Gtk.Align.FILL)
+        page.set_hexpand(True)
+        page.set_vexpand(True)
+        return page
+
+    def _center(self, widget):
+        widget.set_halign(Gtk.Align.CENTER)
+        widget.set_valign(Gtk.Align.CENTER)
+        return widget
+
+    def _scale(self, value):
+        return round(value * self.scale_factor)
+
+    def _label(self, text, css_class=None):
+        label = Gtk.Label(label=text)
+        label.set_wrap(True)
+        label.set_justify(Gtk.Justification.CENTER)
+        label.set_max_width_chars(72)
+        label.set_halign(Gtk.Align.CENTER)
+        if css_class:
+            label.add_css_class(css_class)
+        return label
+
+    def _buttons(self, left_text, left_action, right_text, right_action):
+        row = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=self._scale(42),
+        )
+        row.set_halign(Gtk.Align.CENTER)
+
+        left = Gtk.Button(label=left_text)
+        left.connect("clicked", lambda _button: self.activate_action(left_action))
+        row.append(left)
+
+        right = Gtk.Button(label=right_text)
+        right.connect("clicked", lambda _button: self.activate_action(right_action))
+        row.append(right)
+        right.grab_focus()
+        return row
+
+    def _set_page(self, page, action_a=None, action_b=None):
+        self.action_a = action_a
+        self.action_b = action_b
+        self.action_pending = False
+        self.window.set_child(page)
+
+    def _key_pressed(self, _controller, keyval, _keycode, _state):
+        if keyval in (Gdk.KEY_a, Gdk.KEY_A):
+            self.activate_action("a")
+            return True
+        if keyval in (Gdk.KEY_b, Gdk.KEY_B):
+            self.activate_action("b")
+            return True
+        return False
+
+    def activate_action(self, action):
+        if self.action_pending:
+            return
+        callback = self.action_a if action == "a" else self.action_b
+        if callback is None:
+            return
+        self.action_pending = True
+        callback()
+
+    def _qr_draw(self, _area, context, width, height):
+        if self.qr_surface is None:
+            try:
+                self.qr_surface = cairo.ImageSurface.create_from_png(QR_PATH)
+            except (cairo.Error, OSError) as error:
+                print(f"Could not load QR code {QR_PATH}: {error}", file=sys.stderr)
+                return
+
+        source_width = self.qr_surface.get_width()
+        source_height = self.qr_surface.get_height()
+        target = min(width, height)
+        if target <= 0:
+            return
+        x = (width - target) / 2
+        y = (height - target) / 2
+
+        context.save()
+        context.translate(x, y)
+        context.scale(target / source_width, target / source_height)
+        mask = cairo.SurfacePattern(self.qr_surface)
+        mask.set_filter(cairo.FILTER_NEAREST)
+        context.set_source_rgb(1, 1, 1)
+        context.mask(mask)
+        context.restore()
+
+    def _qr_size(self):
+        monitors = Gdk.Display.get_default().get_monitors()
+        if monitors.get_n_items():
+            height = monitors.get_item(0).get_geometry().height
+        else:
+            height = 1080
+        return max(1, round(height * QR_SCREEN_FRACTION))
+
+    def show_agreement(self):
+        page = self._page()
+        content = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=self._scale(14),
+        )
+        self._center(content)
+
+        content.append(self._label(_("Steam® Client Installation"), "title"))
+
+        content.append(
+            self._label(
+                _(
+                    "Currently, gamemode only supports Valve Software's Steam® storefront"
+                )
+            )
+        )
+        content.append(
+            self._label(
+                _(
+                    "By installing Steam®, you accept the Steam Subscriber Agreement (QR Code)"
+                )
+            )
+        )
+
+        # QR Code
+        qr = Gtk.DrawingArea()
+        qr_size = self._qr_size()
+        qr.set_content_width(qr_size)
+        qr.set_content_height(qr_size)
+        qr.set_draw_func(self._qr_draw)
+        self._center(qr)
+        content.append(qr)
+
+        content.append(
+            self._buttons(_("Exit [B]"), "b", _("Install [A]"), "a")
+        )
+        page.set_center_widget(content)
+        self._set_page(page, self.start_install, self.exit_requested)
+
+    def show_installing(self):
+        page = self._page()
+        content = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=self._scale(24),
+        )
+        self._center(content)
+        spinner = Gtk.Spinner()
+        spinner.start()
+        self._center(spinner)
+        content.append(spinner)
+        content.append(
+            self._label(_("Installing Steam® <org.anatase.Steam>"), "status")
+        )
+        page.set_center_widget(content)
+        self._set_page(page)
+
+    def start_install(self):
+        self.show_installing()
+        flags = Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE
+        try:
+            self.install_process = Gio.Subprocess.new(
+                [
+                    "flatpak",
+                    "install",
+                    "--system",
+                    "--assumeyes",
+                    "--noninteractive",
+                    "anatase",
+                    APP_ID,
+                ],
+                flags,
+            )
+            self.install_process.communicate_utf8_async(
+                None, None, self._install_complete
+            )
+        except GLib.Error as error:
+            output = str(error)
+            print(f"Steam installation failed: {output}", file=sys.stderr)
+            self.show_install_error(output)
+
+    def _install_complete(self, process, result):
+        try:
+            _communicated, stdout, _stderr = process.communicate_utf8_finish(result)
+            output = stdout or ""
+            if output:
+                print(output, file=sys.stderr, end="" if output.endswith("\n") else "\n")
+            successful = process.get_successful()
+        except GLib.Error as error:
+            output = str(error)
+            successful = False
+            print(f"Steam installation failed: {output}", file=sys.stderr)
+        self.install_process = None
+
+        if successful and steam_installed():
+            self.show_final_page()
+        else:
+            self.show_install_error(output)
+
+    def show_install_error(self, output):
+        page = self._page()
+        content = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=self._scale(24),
+        )
+        self._center(content)
+        title = self._label(_("Steam® installation failed"), "title")
+        title.add_css_class("error")
+        content.append(title)
+        content.append(self._label(install_error_message(output)))
+        content.append(self._buttons(_("Exit [B]"), "b", _("Retry [A]"), "a"))
+        page.set_center_widget(content)
+        self._set_page(page, self.start_install, self.exit_requested)
+
+    def show_final_page(self):
+        page = self._page()
+        if not steam_primed():
+            page.set_center_widget(
+                self._center(
+                    self._label(
+                        _(
+                            "Steam is preparing. This may take a while...\n"
+                        ),
+                        "status",
+                    )
+                )
+            )
+        self._set_page(page)
+        self.window.queue_draw()
+        GLib.timeout_add(500, self.finish_ready)
+
+    def finish_ready(self):
+        self.result = 0
+        self.quit()
+        return GLib.SOURCE_REMOVE
+
+    def exit_requested(self):
+        self.result = USER_EXIT
+        self.quit()
+
+
+def main():
+    application = Preflight()
+    application.run(sys.argv)
+    return application.result
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

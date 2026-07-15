@@ -238,6 +238,9 @@ steam_tmp_name=steam-tmp
 steam_tmp="$XDG_RUNTIME_DIR/$steam_tmp_name"
 install -d -m0700 "$steam_tmp"
 
+# First sanity checks
+/usr/libexec/anatase-preflight || exit $?
+
 flatpak run \
         --filesystem="xdg-run/$response_wl_display:ro" \
         --filesystem="xdg-run/${tmpdir##*/}:rw" \

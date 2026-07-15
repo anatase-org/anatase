@@ -94,10 +94,9 @@ installer:
         - org.anatase.TextEditor
         - org.anatase.Calculator
         - org.anatase.DocumentViewer
-        # Codecs, sigh
+        # Codecs, sigh, but this is for end users
         - org.anatase.Browser
         - org.anatase.Browser.Adblocker
-        - org.anatase.Steam
       installer:
 
   files:
