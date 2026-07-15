@@ -84,8 +84,8 @@ jobs:
                 echo "manifest_$index="
               fi
             done
-            echo "builds=$(jq -c '.builds | keys' cache/ci/build.json)"
-            echo "images=$(jq -c '.images | keys' cache/ci/build.json)"
+            echo "builds=$(jq -c '[.builds | to_entries[] | {id: .key, name: .value.block}]' cache/ci/build.json)"
+            echo "images=$(jq -c '[.images | to_entries[] | {id: .key, name: .value.build.image}]' cache/ci/build.json)"
             echo "flatpaks=$(jq -c '.flatpaks | length > 0' cache/ci/build.json)"
           } >> "$GITHUB_OUTPUT"
 
@@ -115,7 +115,7 @@ jobs:
           venv/bin/ludos ci seed --autoremove
 
   packages:
-    name: Build Packages
+    name: Build · ${{ matrix.build.name }}
     needs: build
     runs-on: ubuntu-26.04
     strategy:
@@ -168,10 +168,10 @@ jobs:
             | xz --decompress > cache/ci/build.yml
 
       - name: Build package image
-        run: venv/bin/ludos ci build "${{ matrix.build }}"
+        run: venv/bin/ludos ci build "${{ matrix.build.id }}"
 
   images:
-    name: Build Images
+    name: Image · ${{ matrix.image.name }}
     needs:
       - build
       - packages
@@ -232,10 +232,10 @@ jobs:
             | xz --decompress > cache/ci/build.yml
 
       - name: Build final image
-        run: venv/bin/ludos ci build "${{ matrix.image }}"
+        run: venv/bin/ludos ci build "${{ matrix.image.id }}"
 
   flatpaks:
-    name: Build Flatpaks
+    name: Flatpaks
     needs:
       - build
       - packages
