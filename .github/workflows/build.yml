@@ -62,7 +62,7 @@ jobs:
       - name: Prepare CI build manifest
         id: orchestration
         run: |
-          venv/bin/ludos ci prepare --no-ccache anatase.yml
+          venv/bin/ludos ci prepare anatase.yml
 
           # Emit metadata for follow-ups
           venv/bin/python -c \
@@ -174,7 +174,19 @@ jobs:
             | xz --decompress > cache/ci/build.yml
 
       - name: Build package image
-        run: venv/bin/ludos ci build "${{ matrix.build.id }}"
+        env:
+          USE_CCACHE: >-
+            ${{
+              matrix.build.name == 'base-scx' ||
+              matrix.build.name == 'browser' ||
+              matrix.build.name == 'okular'
+            }}
+        run: |
+          args=()
+          if [[ "$USE_CCACHE" == "true" ]]; then
+            args+=(--ccache)
+          fi
+          venv/bin/ludos ci build "${args[@]}" "${{ matrix.build.id }}"
 
   images:
     name: Image · ${{ matrix.image.name }}
