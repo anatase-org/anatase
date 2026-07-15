@@ -67,8 +67,7 @@ files:
   - keys/anatase-gpg.pub.asc
   - keys/anatase-cosign-root.pem
   - containers/anatase-registries.yaml
-  - containers/anatase-container-policy
-  - containers/anatase-container-policy.service
+  - containers/anatase-default-policy.json
   - flatpak/anatase-runtime-deploy
   - flatpak/anatase-flatpak-extensions
   - flatpak/anatase-flatpak-extensions.service
@@ -137,21 +136,19 @@ postprocess: |
         /usr/share/flatpak/remotes.d/flathub.flatpakrepo
     install -Dm0644 /files/flatpak/anatase.flatpakrepo \
         /usr/share/flatpak/remotes.d/anatase.flatpakrepo
+
+    #
+    # Registries
+    #
+
     install -Dm0644 /files/keys/anatase-gpg.pub.asc \
         /usr/share/anatase/keys/anatase-gpg.pub.asc
     install -Dm0644 /files/keys/anatase-cosign-root.pem \
         /usr/share/anatase/keys/anatase-cosign-root.pem
     install -Dm0644 /files/containers/anatase-registries.yaml \
         /etc/containers/registries.d/anatase.yaml
-    install -Dm0755 /files/containers/anatase-container-policy \
-        /usr/libexec/anatase-container-policy
-    install -Dm0644 /files/containers/anatase-container-policy.service \
-        /usr/lib/systemd/system/anatase-container-policy.service
-    cat > /usr/lib/systemd/system-preset/80-anatase-container-policy.preset <<'EOF'
-    enable anatase-container-policy.service
-    EOF
-    /usr/libexec/anatase-container-policy
-    systemctl preset anatase-container-policy.service || true
+    install -Dm0644 /files/containers/anatase-default-policy.json \
+        /etc/containers/policy.json
     gpg_key="$(awk '
         /^-----BEGIN PGP PUBLIC KEY BLOCK-----$/ { body = 1; next }
         /^-----END PGP PUBLIC KEY BLOCK-----$/ { body = 0; next }
