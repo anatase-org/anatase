@@ -580,7 +580,7 @@ class Preflight(Gtk.Application):
         content.append(
             self._label(
                 _(
-                    "Currently, gamemode only supports Valve Software's Steam® storefront"
+                    "Currently, gamemode only supports the Valve Software Steam® storefront"
                 )
             )
         )
