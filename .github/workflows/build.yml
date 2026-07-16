@@ -278,6 +278,7 @@ jobs:
             | xz --decompress > cache/ci/build.yml
 
       - name: Build final image
+        id: build_output
         run: venv/bin/ludos ci build "${{ matrix.image.id }}"
 
       - name: Authenticate to Google Cloud
@@ -290,6 +291,7 @@ jobs:
           token_format: access_token
 
       - name: Upload final image
+        id: upload
         env:
           LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
           LUDOS_S3_KEY: ${{ secrets.LUDOS_S3_KEY }}
@@ -299,6 +301,16 @@ jobs:
         run: |
           venv/bin/ludos ci upload "${{ matrix.image.id }}" \
             --tag "${{ matrix.image.version }}" --tag latest --tag rolling
+
+      - name: Remove failed CI image
+        if: >-
+          ${{
+            failure() &&
+            (steps.build_output.outcome == 'failure' ||
+             steps.auth.outcome == 'failure' ||
+             steps.upload.outcome == 'failure')
+          }}
+        run: venv/bin/ludos ci remove "${{ matrix.image.id }}"
 
   flatpaks:
     name: Flatpaks
@@ -363,6 +375,7 @@ jobs:
             | xz --decompress > cache/ci/build.yml
 
       - name: Build flatpaks
+        id: build_output
         run: venv/bin/ludos ci build --flatpaks
 
       - name: Authenticate to Google Cloud
@@ -375,6 +388,7 @@ jobs:
           token_format: access_token
 
       - name: Upload flatpaks
+        id: upload
         env:
           LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
           LUDOS_S3_KEY: ${{ secrets.LUDOS_S3_KEY }}
@@ -383,3 +397,13 @@ jobs:
           LUDOS_GPG_CERT: ${{ secrets.LUDOS_GPG_CERT }}
         run: |
           venv/bin/ludos ci upload --flatpaks --refresh --prefix "rolling-"
+
+      - name: Remove failed CI flatpaks
+        if: >-
+          ${{
+            failure() &&
+            (steps.build_output.outcome == 'failure' ||
+             steps.auth.outcome == 'failure' ||
+             steps.upload.outcome == 'failure')
+          }}
+        run: venv/bin/ludos ci remove --flatpaks
