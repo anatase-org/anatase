@@ -277,8 +277,16 @@ jobs:
             | xz --decompress > cache/ci/build.yml
 
       - name: Build final image
+        run: venv/bin/ludos ci build "${{ matrix.image.id }}"
+
+      - name: Upload final image
+        env:
+          LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
+          LUDOS_S3_KEY: ${{ secrets.LUDOS_S3_KEY }}
+          LUDOS_S3_SECRET: ${{ secrets.LUDOS_S3_SECRET }}
+          LUDOS_COSIGN_KEY: ${{ secrets.LUDOS_COSIGN_KEY }}
+          LUDOS_COSIGN_CERT: ${{ secrets.LUDOS_COSIGN_CERT }}
         run: |
-          venv/bin/ludos ci build "${{ matrix.image.id }}"
           venv/bin/ludos ci upload "${{ matrix.image.id }}" \
             --tag "${{ matrix.image.version }}" --tag latest --tag rolling
 
@@ -345,6 +353,14 @@ jobs:
             | xz --decompress > cache/ci/build.yml
 
       - name: Build flatpaks
+        run: venv/bin/ludos ci build --flatpaks
+
+      - name: Upload flatpaks
+        env:
+          LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
+          LUDOS_S3_KEY: ${{ secrets.LUDOS_S3_KEY }}
+          LUDOS_S3_SECRET: ${{ secrets.LUDOS_S3_SECRET }}
+          LUDOS_GPG_KEY: ${{ secrets.LUDOS_GPG_KEY }}
+          LUDOS_GPG_CERT: ${{ secrets.LUDOS_GPG_CERT }}
         run: |
-          venv/bin/ludos ci build --flatpaks
           venv/bin/ludos ci upload --flatpaks --refresh --prefix "rolling-"
