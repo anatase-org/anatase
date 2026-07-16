@@ -1,0 +1,47 @@
+#!/bin/bash
+set -euo pipefail
+
+if (( $# != 1 )) || [[ -z $1 ]]; then
+    echo "usage: anatase-flatpak-remote DISTRO" >&2
+    exit 2
+fi
+
+distro=$1
+remote_tag=$distro
+tracked_image=$(
+    /usr/bin/bootc status --format=json \
+        | /usr/bin/jq --raw-output '.spec.image.image? | strings'
+) || tracked_image=
+case $tracked_image in
+    *:rolling)
+        remote_tag="rolling-$distro"
+        ;;
+    *:testing)
+        remote_tag="testing-$distro"
+        ;;
+esac
+
+echo "Configuring Anatase Flatpak remote for ${remote_tag}"
+/usr/bin/flatpak remote-add \
+    --system \
+    --if-not-exists \
+    --from \
+    anatase \
+    /usr/share/flatpak/remotes.d/anatase.flatpakrepo
+/usr/bin/flatpak remote-modify \
+    --title "Anatase" \
+    --prio=10 \
+    --url "oci+https://flatpaks.anatase.org/${remote_tag}" \
+    --gpg-verify \
+    --gpg-import=/usr/share/anatase/keys/anatase-gpg.pub.asc \
+    --signature-lookaside=https://flatpaks.anatase.org/gpg \
+    anatase
+
+echo "Configuring Flathub Flatpak remote"
+if ! /usr/bin/flatpak remote-modify \
+        --title "Flathub" \
+        --url https://dl.flathub.org/repo/ \
+        --filter=/usr/share/flatpak/filters/flathub.filter \
+        flathub; then
+    echo "Flathub remote is unavailable; leaving it unchanged" >&2
+fi

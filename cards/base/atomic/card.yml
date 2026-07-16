@@ -6,6 +6,7 @@ env:
 packages:
     # Atomic boot
     - bootupd
+    - jq
 
     # Package management
     - dnf5-plugins
@@ -71,6 +72,7 @@ files:
   - flatpak/anatase-runtime-deploy
   - flatpak/anatase-flatpak-extensions
   - flatpak/anatase-flatpak-extensions.service
+  - flatpak/anatase-flatpak-remote
   - flatpak/anatase-flatpaks.service
   - flatpak/anatase.flatpakrepo
   - flatpak/flathub.filter
@@ -158,6 +160,8 @@ postprocess: |
         /usr/share/flatpak/remotes.d/anatase.flatpakrepo
     sed -i "s|%distro%|${distro}|g" \
         /usr/share/flatpak/remotes.d/anatase.flatpakrepo
+    install -Dm0755 /files/flatpak/anatase-flatpak-remote \
+        /usr/libexec/anatase-flatpak-remote
     install -Dm0644 /files/flatpak/anatase-flatpaks.service \
         /usr/lib/systemd/system/anatase-flatpaks.service
     sed -i "s|%distro%|${distro}|g" \
