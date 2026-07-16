@@ -101,7 +101,19 @@ jobs:
                   )
                 }
               ]' cache/ci/build.json)"
-            echo "images=$(jq -c '[.images | to_entries[] | {id: .key, name: .value.build.image}]' cache/ci/build.json)"
+            echo "images=$(jq -c '
+              [.images | to_entries[] |
+                {
+                  id: .key,
+                  name: .value.build.image,
+                  version: (
+                    .value.build.manifest_env
+                    | map(select(.[0] == "tag"))
+                    | first
+                    | .[1]
+                  )
+                }
+              ]' cache/ci/build.json)"
             echo "flatpaks=$(jq -c '.flatpaks | length > 0' cache/ci/build.json)"
           } >> "$GITHUB_OUTPUT"
 
@@ -265,7 +277,10 @@ jobs:
             | xz --decompress > cache/ci/build.yml
 
       - name: Build final image
-        run: venv/bin/ludos ci build "${{ matrix.image.id }}"
+        run: |
+          venv/bin/ludos ci build "${{ matrix.image.id }}"
+          venv/bin/ludos ci upload "${{ matrix.image.id }}" \
+            --tag "${{ matrix.image.version }}" --tag latest --tag rolling
 
   flatpaks:
     name: Flatpaks
@@ -330,4 +345,6 @@ jobs:
             | xz --decompress > cache/ci/build.yml
 
       - name: Build flatpaks
-        run: venv/bin/ludos ci build --flatpaks --autoremove
+        run: |
+          venv/bin/ludos ci build --flatpaks
+          venv/bin/ludos ci upload --flatpaks --refresh --prefix "rolling-"
