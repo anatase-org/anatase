@@ -298,6 +298,8 @@ postprocess: |
           done
   }
 
+  set +x
+
   build_flatpak_payload /usr/lib64 /usr/lib/anatase/flatpak/nvidia "$flatpak_arch"
   if [ "$flatpak_arch" = "x86_64" ] && [ -e /usr/lib/libGLX_nvidia.so.0 ]; then
       build_flatpak_payload /usr/lib /usr/lib/anatase/flatpak/nvidia32 i686
@@ -313,3 +315,5 @@ postprocess: |
   org.freedesktop.Platform.GL32.nvidia-$driver_version_dashed/$flatpak_arch/1.4 /usr/lib/anatase/flatpak/nvidia32
   EOF
   fi
+
+  set -x
