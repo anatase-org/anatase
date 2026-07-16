@@ -278,6 +278,20 @@ jobs:
             > cache/ci/build.yml.encoded
           base64 --decode cache/ci/build.yml.encoded \
             | xz --decompress > cache/ci/build.yml
+      
+      - name: Save Storage Space
+        run: |
+          echo Saving space due to insufficient size
+          df -h
+          sudo swapoff -a
+          sudo rm -f /swapfile
+          shopt -s nullglob
+          printf '%s\0' /opt/PyPy /opt/az /opt/node/ /opt/pipx /opt/go /opt/Ruby \
+              /usr/lib/llvm-* /usr/local/julia* /usr/local/lib/android /usr/share/dotnet \
+              /usr/share/swift /usr/local/.ghcup /usr/lib/firefox /opt/google/chrome \
+              /opt/microsoft/msedge \
+              | sudo xargs -0 -n1 -P4 rm -rf
+          df -h
 
       - name: Build final image
         id: build_output
