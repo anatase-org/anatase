@@ -146,6 +146,7 @@ jobs:
   packages:
     name: Build · ${{ matrix.build.name }}
     needs: build
+    if: ${{ needs.build.result == 'success' && needs.build.outputs.builds != '[]' }}
     runs-on: ${{ matrix.build.large && 'large' || 'ubuntu-26.04' }}
     env:
       LARGE_BUILDER: ${{ matrix.build.large }}
@@ -221,7 +222,8 @@ jobs:
       ${{
         always() &&
         needs.build.result == 'success' &&
-        (needs.packages.result == 'success' || needs.packages.result == 'skipped')
+        (needs.packages.result == 'success' || needs.packages.result == 'skipped') &&
+        needs.build.outputs.images != '[]'
       }}
     runs-on: ubuntu-26.04
     strategy:
