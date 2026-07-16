@@ -6,3 +6,5 @@ packages:
   - filesystem
   - rpm
   - setup
+  - libcurl-minimal
+  - systemd-sysusers
