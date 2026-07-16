@@ -211,7 +211,7 @@ jobs:
             export CCACHE_DIR="$HOME/ccache"
             args+=(--ccache)
           fi
-          venv/bin/ludos ci build "${args[@]}" "${{ matrix.build.id }}"
+          venv/bin/ludos ci build --upload "${args[@]}" "${{ matrix.build.id }}"
 
   images:
     name: Image · ${{ matrix.image.name }}
