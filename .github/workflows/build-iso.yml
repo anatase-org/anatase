@@ -1,0 +1,100 @@
+name: Build Anatase ISO
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: build-iso
+
+jobs:
+  iso:
+    name: Build x86_64 ISO
+    runs-on: ubuntu-26.04
+    environment: "prod"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+          token: ${{ secrets.ANATASE_READ }}
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Install ludos
+        run: |
+          python3 -m venv venv
+          venv/bin/pip install --upgrade pip
+          pushd ludos
+          ../venv/bin/pip install -r requirements.txt
+          popd
+
+      - name: Save Storage Space
+        run: |
+          echo Saving space due to insufficient size
+          df -h
+          sudo swapoff -a
+          sudo rm -f /swapfile
+          shopt -s nullglob
+          printf '%s\0' /opt/PyPy /opt/az /opt/node/ /opt/pipx /opt/go /opt/Ruby \
+              /usr/lib/llvm-* /usr/local/julia* /usr/local/lib/android /usr/share/dotnet \
+              /usr/share/swift /usr/local/.ghcup /usr/lib/firefox /opt/google/chrome \
+              /opt/microsoft/msedge \
+              | sudo xargs -0 -n1 -P4 rm -rf
+          df -h
+
+      - name: Resolve stable image
+        id: image
+        run: |
+          stable_ref=docker://i.anatase.org/anatase:stable
+          podman pull --quiet "$stable_ref"
+          digest=$(podman image inspect i.anatase.org/anatase:stable \
+            --format '{{.Digest}}')
+
+          image_ref="docker://i.anatase.org/anatase@${digest}"
+          image_info=$(skopeo inspect --no-tags "$image_ref")
+
+          version=$(jq -r \
+            '.Labels["org.opencontainers.image.version"] // empty' \
+            <<< "$image_info")
+          if [[ -z "$version" ]]; then
+            echo "Stable image has no version label" >&2
+            exit 1
+          fi
+
+          echo "ref=$image_ref" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Build ISO
+        env:
+          SOURCE_REF: ${{ steps.image.outputs.ref }}
+        run: venv/bin/ludos bootc installer anatase.yml "$SOURCE_REF"
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          token_format: access_token
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+
+      - name: Upload ISO
+        env:
+          VERSION: ${{ steps.image.outputs.version }}
+          LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
+          LUDOS_S3_KEY: ${{ secrets.LUDOS_S3_KEY }}
+          LUDOS_S3_SECRET: ${{ secrets.LUDOS_S3_SECRET }}
+          LUDOS_GPG_KEY: ${{ secrets.LUDOS_GPG_KEY }}
+          LUDOS_GPG_CERT: ${{ secrets.LUDOS_GPG_CERT }}
+        run: |
+          venv/bin/ludos registry file upload \
+            ./cache/iso/anatase-f44-x86_64/installer.iso \
+            iso/anatase.iso "anatase-${VERSION}.iso" --sign
