@@ -215,6 +215,7 @@ jobs:
 
   images:
     name: Image · ${{ matrix.image.name }}
+    environment: "prod"
     needs:
       - build
       - packages
@@ -330,6 +331,7 @@ jobs:
 
   flatpaks:
     name: Flatpaks
+    environment: "prod"
     needs:
       - build
       - packages

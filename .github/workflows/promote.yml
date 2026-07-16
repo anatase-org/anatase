@@ -25,6 +25,7 @@ jobs:
   promote:
     name: Promote
     runs-on: ubuntu-26.04
+    environment: "prod"
     env:
       LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
       LUDOS_S3_KEY: ${{ secrets.LUDOS_S3_KEY }}
