@@ -7,6 +7,10 @@ on:
         description: Architecture to build
         required: true
         type: string
+    outputs:
+      images:
+        description: Final images produced by this architecture build
+        value: ${{ jobs.build.outputs.images }}
 
 permissions:
   contents: read
