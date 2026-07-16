@@ -239,6 +239,25 @@ postprocess: |
     RequiredNotificationInterval=604800
     EOF
 
+    # Feature the Flatpaks published by Anatase in Discover's Editor's Choice
+    install -dm0755 /usr/share/discover
+    cat > /usr/share/discover/anatase-featured.json <<'EOF'
+    [
+        "appstream://org.anatase.Browser",
+        "appstream://org.anatase.Steam",
+        "appstream://org.anatase.ArchiveManager",
+        "appstream://org.anatase.DiskUsageAnalyzer",
+        "appstream://org.anatase.ImageViewer",
+        "appstream://org.anatase.TextEditor",
+        "appstream://org.anatase.Calculator",
+        "appstream://org.anatase.DocumentViewer",
+    ]
+    EOF
+    cat > /usr/share/discover/featuredurlrc <<'EOF'
+    [Software]
+    FeaturedListingURL="file:///usr/share/discover/anatase-featured.json"
+    EOF
+
     # Keep Discover's update notifier out of the temporary first-run setup
     # session, while preserving the global update defaults for real users.
     cat > /usr/lib/tmpfiles.d/zz-anatase-plasma-setup-discover.conf <<'EOF'
