@@ -6,10 +6,14 @@ on:
     branches:
       - main
       - master
+      - testing
 permissions:
   contents: read
   packages: write
   id-token: write
+
+env:
+  LUDOS_CHANNEL: ${{ github.ref_name == 'testing' && 'testing' || 'rolling' }}
 
 concurrency:
   group: build
@@ -62,13 +66,17 @@ jobs:
         run: |
           # Derive dist from main image
           venv/bin/ludos ci env anatase.yml i.anatase.org/anatase:stable
+          if [[ "$LUDOS_CHANNEL" == "testing" ]]; then
+            echo "prefix=${LUDOS_CHANNEL}-" >> .env
+          fi
           venv/bin/ludos ci init anatase.yml # add more later
 
       - name: Prepare CI build manifest
         id: orchestration
         run: |
           venv/bin/ludos ci prepare anatase.yml \
-            --prefix "rolling-" --tag rolling --registry i.anatase.org
+            --prefix "${LUDOS_CHANNEL}-" --tag "$LUDOS_CHANNEL" \
+            --registry i.anatase.org
 
           # Emit metadata for follow-ups
           venv/bin/python -c \
@@ -317,8 +325,11 @@ jobs:
           LUDOS_COSIGN_KEY: ${{ secrets.LUDOS_COSIGN_KEY }}
           LUDOS_COSIGN_CERT: ${{ secrets.LUDOS_COSIGN_CERT }}
         run: |
-          venv/bin/ludos ci upload "${{ matrix.image.id }}" \
-            --tag "${{ matrix.image.version }}" --tag latest --tag rolling
+          tags=(--tag "${{ matrix.image.version }}" --tag "$LUDOS_CHANNEL")
+          if [[ "$LUDOS_CHANNEL" == "rolling" ]]; then
+            tags+=(--tag latest)
+          fi
+          venv/bin/ludos ci upload "${{ matrix.image.id }}" "${tags[@]}"
 
   flatpaks:
     name: Flatpaks
@@ -405,4 +416,5 @@ jobs:
           LUDOS_GPG_KEY: ${{ secrets.LUDOS_GPG_KEY }}
           LUDOS_GPG_CERT: ${{ secrets.LUDOS_GPG_CERT }}
         run: |
-          venv/bin/ludos ci upload --flatpaks --refresh --prefix "rolling-"
+          venv/bin/ludos ci upload --flatpaks --refresh \
+            --prefix "${LUDOS_CHANNEL}-"

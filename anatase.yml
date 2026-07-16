@@ -2,7 +2,8 @@ version: 1
 env:
   releasever: 44
   dist: ""
-  tag: $version$dist
+  prefix: ""
+  tag: $prefix$version$dist
 
 name: Anatase
 releasever: $releasever
