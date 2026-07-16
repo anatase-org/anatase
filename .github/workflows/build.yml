@@ -325,7 +325,7 @@ jobs:
           LUDOS_COSIGN_KEY: ${{ secrets.LUDOS_COSIGN_KEY }}
           LUDOS_COSIGN_CERT: ${{ secrets.LUDOS_COSIGN_CERT }}
         run: |
-          tags=(--tag "${{ matrix.image.version }}" --tag "$LUDOS_CHANNEL")
+          tags=(--tag "$LUDOS_CHANNEL")
           if [[ "$LUDOS_CHANNEL" == "rolling" ]]; then
             tags+=(--tag latest)
           fi
