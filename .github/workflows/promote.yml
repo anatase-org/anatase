@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       images:
-        description: Promote bootc images from rolling to stable
+        description: Images
         required: true
         type: boolean
         default: true
       flatpaks:
-        description: Promote Flatpaks from rolling to stable
+        description: Flatpaks
         required: true
         type: boolean
         default: true
