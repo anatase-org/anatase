@@ -250,12 +250,12 @@ postprocess: |
         "appstream://org.anatase.ImageViewer",
         "appstream://org.anatase.TextEditor",
         "appstream://org.anatase.Calculator",
-        "appstream://org.anatase.DocumentViewer",
+        "appstream://org.anatase.DocumentViewer"
     ]
     EOF
     cat > /usr/share/discover/featuredurlrc <<'EOF'
     [Software]
-    FeaturedListingURL="file:///usr/share/discover/anatase-featured.json"
+    FeaturedListingURL=file:///usr/share/discover/anatase-featured.json
     EOF
 
     # Keep Discover's update notifier out of the temporary first-run setup
