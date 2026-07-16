@@ -67,7 +67,8 @@ jobs:
       - name: Prepare CI build manifest
         id: orchestration
         run: |
-          venv/bin/ludos ci prepare anatase.yml
+          venv/bin/ludos ci prepare anatase.yml \
+            --prefix "rolling-" --tag rolling --registry i.anatase.org
 
           # Emit metadata for follow-ups
           venv/bin/python -c \
@@ -296,7 +297,7 @@ jobs:
 
       - name: Build final image
         id: build_output
-        run: venv/bin/ludos ci build "${{ matrix.image.id }}"
+        run: venv/bin/ludos ci build "${{ matrix.image.id }}" --autoremove
 
       - name: Authenticate to Google Cloud
         id: auth
@@ -318,16 +319,6 @@ jobs:
         run: |
           venv/bin/ludos ci upload "${{ matrix.image.id }}" \
             --tag "${{ matrix.image.version }}" --tag latest --tag rolling
-
-      - name: Remove failed CI image
-        if: >-
-          ${{
-            failure() &&
-            (steps.build_output.outcome == 'failure' ||
-             steps.auth.outcome == 'failure' ||
-             steps.upload.outcome == 'failure')
-          }}
-        run: venv/bin/ludos ci remove "${{ matrix.image.id }}"
 
   flatpaks:
     name: Flatpaks
@@ -394,7 +385,7 @@ jobs:
 
       - name: Build flatpaks
         id: build_output
-        run: venv/bin/ludos ci build --flatpaks
+        run: venv/bin/ludos ci build --flatpaks --autoremove
 
       - name: Authenticate to Google Cloud
         id: auth
@@ -415,13 +406,3 @@ jobs:
           LUDOS_GPG_CERT: ${{ secrets.LUDOS_GPG_CERT }}
         run: |
           venv/bin/ludos ci upload --flatpaks --refresh --prefix "rolling-"
-
-      - name: Remove failed CI flatpaks
-        if: >-
-          ${{
-            failure() &&
-            (steps.build_output.outcome == 'failure' ||
-             steps.auth.outcome == 'failure' ||
-             steps.upload.outcome == 'failure')
-          }}
-        run: venv/bin/ludos ci remove --flatpaks
