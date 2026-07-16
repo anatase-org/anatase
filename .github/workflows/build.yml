@@ -329,7 +329,8 @@ jobs:
           if [[ "$LUDOS_CHANNEL" == "rolling" ]]; then
             tags+=(--tag latest)
           fi
-          venv/bin/ludos ci upload "${{ matrix.image.id }}" "${tags[@]}"
+          venv/bin/ludos ci upload "${{ matrix.image.id }}" "${tags[@]}" \
+            --previous-manifest i.anatase.org/anatase:stable
 
   flatpaks:
     name: Flatpaks
