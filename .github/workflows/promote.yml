@@ -83,6 +83,11 @@ jobs:
             args+=(--images)
           fi
           if [[ "$PROMOTE_FLATPAKS" == "true" ]]; then
-            args+=(--flatpaks --refresh)
+            args+=(
+              --flatpaks
+              --refresh
+              --arch x86_64
+              )
+              # --arch aarch64 # lets skip you for now, until builds start
           fi
           venv/bin/ludos ci promote "${args[@]}"
