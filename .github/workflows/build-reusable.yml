@@ -55,12 +55,7 @@ jobs:
           submodules: recursive
 
       - name: Install ludos
-        run: |
-          python3 -m venv venv
-          venv/bin/pip install --upgrade pip
-          pushd ludos
-          ../venv/bin/pip install -r requirements-base.txt
-          popd
+        run: ./ludos/prepare.sh base
 
       - name: Login to GHCR
         run: |
@@ -190,12 +185,7 @@ jobs:
           submodules: recursive
 
       - name: Install ludos
-        run: |
-          python3 -m venv venv
-          venv/bin/pip install --upgrade pip
-          pushd ludos
-          ../venv/bin/pip install -r requirements-base.txt
-          popd
+        run: ./ludos/prepare.sh base
 
       - name: Login to GHCR
         run: |
@@ -267,12 +257,7 @@ jobs:
           submodules: recursive
 
       - name: Install ludos
-        run: |
-          python3 -m venv venv
-          venv/bin/pip install --upgrade pip
-          pushd ludos
-          ../venv/bin/pip install -r requirements-images.txt
-          popd
+        run: ./ludos/prepare.sh images
 
       - name: Login to GHCR
         run: |
@@ -378,12 +363,7 @@ jobs:
           submodules: recursive
 
       - name: Install ludos
-        run: |
-          python3 -m venv venv
-          venv/bin/pip install --upgrade pip
-          pushd ludos
-          ../venv/bin/pip install -r requirements-flatpaks.txt
-          popd
+        run: ./ludos/prepare.sh flatpaks
 
       - name: Login to GHCR
         run: |

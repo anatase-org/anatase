@@ -35,12 +35,7 @@ jobs:
           submodules: recursive
 
       - name: Install ludos
-        run: |
-          python3 -m venv venv
-          venv/bin/pip install --upgrade pip
-          pushd ludos
-          ../venv/bin/pip install -r requirements-flatpaks.txt
-          popd
+        run: ./ludos/prepare.sh flatpaks
 
       - name: Login to GHCR
         run: |

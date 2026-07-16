@@ -56,12 +56,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
 
       - name: Install ludos
-        run: |
-          python3 -m venv venv
-          venv/bin/pip install --upgrade pip
-          pushd ludos
-          ../venv/bin/pip install -r requirements-flatpaks.txt
-          popd
+        run: ./ludos/prepare.sh flatpaks
 
       - name: Promote
         env:
