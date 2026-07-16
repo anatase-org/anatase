@@ -64,8 +64,8 @@ jobs:
 
       - name: Initialize Orchestrator & Repos
         run: |
-          # Derive dist from main image
-          venv/bin/ludos ci env anatase.yml i.anatase.org/anatase:stable
+          # Derive dist from previous
+          venv/bin/ludos ci env anatase.yml i.anatase.org/anatase:${LUDOS_CHANNEL}
           if [[ "$LUDOS_CHANNEL" == "testing" ]]; then
             echo "prefix=${LUDOS_CHANNEL}-" >> .env
           fi
