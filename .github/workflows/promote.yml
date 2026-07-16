@@ -1,4 +1,4 @@
-name: promote
+name: Promote Rolling to Stable
 
 on:
   workflow_dispatch:
