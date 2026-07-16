@@ -61,7 +61,7 @@ jobs:
       - name: Initialize Orchestrator & Repos
         run: |
           # Derive dist from main image
-          venv/bin/ludos ci env anatase.yml i.anatase.org/anatase:stable
+          venv/bin/ludos ci env anatase.yml i.anatase.org/anatase:rolling
           venv/bin/ludos ci init anatase.yml # add more later
 
       - name: Prepare CI build manifest
