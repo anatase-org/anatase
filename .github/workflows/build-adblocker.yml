@@ -1,0 +1,100 @@
+name: Build Adblocker
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build Adblocker · ${{ matrix.arch }}
+    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-26.04-arm' || 'ubuntu-26.04' }}
+    environment: "prod"
+    concurrency:
+      group: build-adblocker-${{ matrix.arch }}
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+    env:
+      ARCH: ${{ matrix.arch }}
+      OCI_ARCH: ${{ matrix.arch == 'aarch64' && 'arm64' || 'amd64' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 100
+          token: ${{ secrets.ANATASE_READ }}
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Install ludos
+        run: |
+          python3 -m venv venv
+          venv/bin/pip install --upgrade pip
+          pushd ludos
+          ../venv/bin/pip install -r requirements-flatpaks.txt
+          popd
+
+      - name: Login to GHCR
+        run: |
+          auth_file="$RUNNER_TEMP/containers/auth.json"
+          mkdir -p "$(dirname "$auth_file")"
+          echo "REGISTRY_AUTH_FILE=$auth_file" >> "$GITHUB_ENV"
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io \
+            --authfile "$auth_file" \
+            --username "${{ github.actor }}" \
+            --password-stdin
+
+      - name: Initialize build environment
+        run: |
+          venv/bin/ludos ci env anatase.yml \
+            "i.anatase.org/anatase:rolling" --arch "$OCI_ARCH"
+          venv/bin/ludos ci init anatase.yml
+
+      - name: Prepare adblocker build
+        id: prepare
+        run: |
+          venv/bin/ludos ci prepare anatase.yml \
+            --full --prefix rolling- --tag "$ARCH" \
+            --registry i.anatase.org
+          flatpak_id=$(venv/bin/python -c 'import yaml; data = yaml.safe_load(open("cache/ci/build.yml")); print(next(key for key, value in data["flatpaks"].items() if value["app"] == "adblocker"))')
+          echo "flatpak_id=$flatpak_id" >> "$GITHUB_OUTPUT"
+
+      - name: Seed CI images
+        run: venv/bin/ludos ci seed --autoremove
+
+      - name: Build adblocker
+        run: venv/bin/ludos ci build "${{ steps.prepare.outputs.flatpak_id }}" --autoremove
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          token_format: access_token
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+
+      - name: Upload adblocker and refresh remotes
+        env:
+          FLATPAK_ID: ${{ steps.prepare.outputs.flatpak_id }}
+          LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
+          LUDOS_S3_KEY: ${{ secrets.LUDOS_S3_KEY }}
+          LUDOS_S3_SECRET: ${{ secrets.LUDOS_S3_SECRET }}
+          LUDOS_GPG_KEY: ${{ secrets.LUDOS_GPG_KEY }}
+          LUDOS_GPG_CERT: ${{ secrets.LUDOS_GPG_CERT }}
+        run: |
+          for prefix in rolling- ""; do # testing-
+            venv/bin/ludos ci upload "$FLATPAK_ID" \
+              --prefix "$prefix" --refresh
+          done
