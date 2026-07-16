@@ -24,6 +24,7 @@ env:
 
 concurrency:
   group: build
+  cancel-in-progress: true
 
 jobs:
   x86:
@@ -123,6 +124,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.image.outputs.version }}
         run: |
+          branch_sha=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/git/ref/heads/${GITHUB_REF_NAME}" \
+            --jq '.object.sha')
+          if [[ "$branch_sha" != "$GITHUB_SHA" ]]; then
+            echo "Build is stale: ${GITHUB_REF_NAME} now points to $branch_sha" >&2
+            exit 1
+          fi
+
           error_file="$RUNNER_TEMP/git-tag-error"
           if existing=$(gh api \
               "repos/${GITHUB_REPOSITORY}/git/ref/tags/${VERSION}" \
@@ -144,6 +153,16 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Create Git tag
+        if: ${{ steps.git_tag.outputs.exists != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.image.outputs.version }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/git/refs" \
+            -f ref="refs/tags/${VERSION}" \
+            -f sha="$GITHUB_SHA"
+
       - name: Publish OCI image index
         env:
           INCLUDE_ARM: ${{ steps.image.outputs.include_arm }}
@@ -163,13 +182,3 @@ jobs:
           fi
           venv/bin/ludos registry oci index anatase \
             "${tags[@]}" "${sources[@]}"
-
-      - name: Create Git tag
-        if: ${{ steps.git_tag.outputs.exists != 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.image.outputs.version }}
-        run: |
-          gh api "repos/${GITHUB_REPOSITORY}/git/refs" \
-            -f ref="refs/tags/${VERSION}" \
-            -f sha="$GITHUB_SHA"
