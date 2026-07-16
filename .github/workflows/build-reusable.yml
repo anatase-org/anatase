@@ -59,7 +59,7 @@ jobs:
           python3 -m venv venv
           venv/bin/pip install --upgrade pip
           pushd ludos
-          ../venv/bin/pip install -r requirements.txt
+          ../venv/bin/pip install -r requirements-base.txt
           popd
 
       - name: Login to GHCR
@@ -194,7 +194,7 @@ jobs:
           python3 -m venv venv
           venv/bin/pip install --upgrade pip
           pushd ludos
-          ../venv/bin/pip install -r requirements.txt
+          ../venv/bin/pip install -r requirements-base.txt
           popd
 
       - name: Login to GHCR
@@ -271,7 +271,7 @@ jobs:
           python3 -m venv venv
           venv/bin/pip install --upgrade pip
           pushd ludos
-          ../venv/bin/pip install -r requirements.txt
+          ../venv/bin/pip install -r requirements-images.txt
           popd
 
       - name: Login to GHCR
@@ -382,7 +382,7 @@ jobs:
           python3 -m venv venv
           venv/bin/pip install --upgrade pip
           pushd ludos
-          ../venv/bin/pip install -r requirements.txt
+          ../venv/bin/pip install -r requirements-flatpaks.txt
           popd
 
       - name: Login to GHCR
