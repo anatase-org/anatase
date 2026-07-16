@@ -94,16 +94,26 @@ jobs:
             exit 1
           fi
 
+          include_arm=false
+          if arm_info=$(skopeo inspect --no-tags \
+              docker://i.anatase.org/anatase:aarch64 2>/dev/null); then
+            include_arm=true
+            arm_version=$(jq -r \
+              '.Labels["org.opencontainers.image.version"] // empty' \
+              <<< "$arm_info")
+          elif [[ "$ARM_ENABLED" == "true" ]]; then
+            echo "The requested aarch64 image was not published" >&2
+            exit 1
+          fi
+
           if [[ "$ARM_ENABLED" == "true" ]]; then
-            arm_version=$(skopeo inspect --no-tags \
-              docker://i.anatase.org/anatase:aarch64 \
-              | jq -r '.Labels["org.opencontainers.image.version"] // empty')
             if [[ "$arm_version" != "$version" ]]; then
               echo "Architecture image versions differ: x86_64=$version aarch64=$arm_version" >&2
               exit 1
             fi
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "include_arm=$include_arm" >> "$GITHUB_OUTPUT"
 
       - name: Preflight Git tag
         id: git_tag
@@ -134,7 +144,7 @@ jobs:
 
       - name: Publish OCI image index
         env:
-          ARM_ENABLED: ${{ inputs.arm }}
+          INCLUDE_ARM: ${{ steps.image.outputs.include_arm }}
           LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
           LUDOS_S3_KEY: ${{ secrets.LUDOS_S3_KEY }}
           LUDOS_S3_SECRET: ${{ secrets.LUDOS_S3_SECRET }}
@@ -143,7 +153,7 @@ jobs:
         run: |
           sources=(--source-tag x86_64)
           tags=(--tag "$LUDOS_CHANNEL")
-          if [[ "$ARM_ENABLED" == "true" ]]; then
+          if [[ "$INCLUDE_ARM" == "true" ]]; then
             sources+=(--source-tag aarch64)
           fi
           if [[ "$LUDOS_CHANNEL" == "rolling" ]]; then
