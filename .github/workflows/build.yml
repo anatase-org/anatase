@@ -9,6 +9,7 @@ on:
 permissions:
   contents: read
   packages: write
+  id-token: write
 
 concurrency:
   group: build
@@ -279,6 +280,15 @@ jobs:
       - name: Build final image
         run: venv/bin/ludos ci build "${{ matrix.image.id }}"
 
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          token_format: access_token
+
       - name: Upload final image
         env:
           LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
@@ -354,6 +364,15 @@ jobs:
 
       - name: Build flatpaks
         run: venv/bin/ludos ci build --flatpaks
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          token_format: access_token
 
       - name: Upload flatpaks
         env:

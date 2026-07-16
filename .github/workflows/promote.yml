@@ -1,0 +1,87 @@
+name: promote
+
+on:
+  workflow_dispatch:
+    inputs:
+      images:
+        description: Promote bootc images from rolling to stable
+        required: true
+        type: boolean
+        default: true
+      flatpaks:
+        description: Promote Flatpaks from rolling to stable
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: promote
+
+jobs:
+  promote:
+    name: Promote
+    runs-on: ubuntu-26.04
+    env:
+      LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
+      LUDOS_S3_KEY: ${{ secrets.LUDOS_S3_KEY }}
+      LUDOS_S3_SECRET: ${{ secrets.LUDOS_S3_SECRET }}
+      LUDOS_GPG_CERT: ${{ secrets.LUDOS_GPG_CERT }}
+      LUDOS_GPG_KEY: ${{ secrets.LUDOS_GPG_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+          token: ${{ secrets.ANATASE_READ }}
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          token_format: access_token
+
+      - name: Set up Google Cloud SDK
+        if: ${{ inputs.flatpaks }}
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+
+      - name: Install ludos
+        run: |
+          python3 -m venv venv
+          venv/bin/pip install --upgrade pip
+          pushd ludos
+          ../venv/bin/pip install -r requirements.txt
+          popd
+
+      - name: Promote
+        env:
+          PROMOTE_IMAGES: ${{ inputs.images }}
+          PROMOTE_FLATPAKS: ${{ inputs.flatpaks }}
+        run: |
+          if [[ "$PROMOTE_IMAGES" != "true" && "$PROMOTE_FLATPAKS" != "true" ]]; then
+            echo "Select at least one of Images or Flatpaks" >&2
+            exit 1
+          fi
+
+          args=(
+            anatase.yml
+            --prefix rolling-
+            --from rolling
+            --to stable
+          )
+          if [[ "$PROMOTE_IMAGES" == "true" ]]; then
+            args+=(--images)
+          fi
+          if [[ "$PROMOTE_FLATPAKS" == "true" ]]; then
+            args+=(--flatpaks --refresh)
+          fi
+          venv/bin/ludos ci promote "${args[@]}"
