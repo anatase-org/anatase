@@ -114,43 +114,7 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "include_arm=$include_arm" >> "$GITHUB_OUTPUT"
 
-      - name: Preflight Git tag
-        id: git_tag
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.image.outputs.version }}
-        run: |
-          branch_sha=$(gh api \
-            "repos/${GITHUB_REPOSITORY}/git/ref/heads/${GITHUB_REF_NAME}" \
-            --jq '.object.sha')
-          if [[ "$branch_sha" != "$GITHUB_SHA" ]]; then
-            echo "Build is stale: ${GITHUB_REF_NAME} now points to $branch_sha" >&2
-            exit 1
-          fi
-
-          error_file="$RUNNER_TEMP/git-tag-error"
-          if existing=$(gh api \
-              "repos/${GITHUB_REPOSITORY}/git/ref/tags/${VERSION}" \
-              --jq '.object.sha' 2>"$error_file"); then
-            :
-          elif grep -q '(HTTP 404)' "$error_file"; then
-            existing=""
-          else
-            cat "$error_file" >&2
-            exit 1
-          fi
-          if [[ -n "$existing" && "$existing" != "$GITHUB_SHA" ]]; then
-            echo "Git tag $VERSION already points to $existing" >&2
-            exit 1
-          fi
-          if [[ "$existing" == "$GITHUB_SHA" ]]; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Create Git tag
-        if: ${{ steps.git_tag.outputs.exists != 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.image.outputs.version }}
