@@ -2,13 +2,20 @@ name: Build Anatase
 
 on:
   workflow_dispatch:
+    inputs:
+      arm:
+        description: Build the ARM image
+        required: false
+        type: boolean
+        default: false
   push:
     branches:
       - main
       - master
       - testing
+
 permissions:
-  contents: read
+  contents: write
   packages: write
   id-token: write
 
@@ -19,233 +26,40 @@ concurrency:
   group: build
 
 jobs:
-  build:
-    name: Prepare Build
-    runs-on: ubuntu-26.04
-    outputs:
-      manifest_0: ${{ steps.orchestration.outputs.manifest_0 }}
-      manifest_1: ${{ steps.orchestration.outputs.manifest_1 }}
-      manifest_2: ${{ steps.orchestration.outputs.manifest_2 }}
-      manifest_3: ${{ steps.orchestration.outputs.manifest_3 }}
-      manifest_4: ${{ steps.orchestration.outputs.manifest_4 }}
-      manifest_5: ${{ steps.orchestration.outputs.manifest_5 }}
-      manifest_6: ${{ steps.orchestration.outputs.manifest_6 }}
-      manifest_7: ${{ steps.orchestration.outputs.manifest_7 }}
-      builds: ${{ steps.orchestration.outputs.builds }}
-      images: ${{ steps.orchestration.outputs.images }}
-      flatpaks: ${{ steps.orchestration.outputs.flatpaks }}
+  x86:
+    name: Build x86_64
+    uses: ./.github/workflows/build-reusable.yml
+    with:
+      arch: x86_64
+    secrets: inherit
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 100
-          token: ${{ secrets.ANATASE_READ }}
-          persist-credentials: false
-          submodules: recursive
+  arm:
+    name: Build aarch64
+    if: ${{ inputs.arm }}
+    uses: ./.github/workflows/build-reusable.yml
+    with:
+      arch: aarch64
+    secrets: inherit
 
-      - name: Install ludos
-        run: |
-          python3 -m venv venv
-          venv/bin/pip install --upgrade pip
-          pushd ludos
-          ../venv/bin/pip install -r requirements.txt
-          popd
-
-      - name: Login to GHCR
-        run: |
-          auth_file="$RUNNER_TEMP/containers/auth.json"
-          mkdir -p "$(dirname "$auth_file")"
-          echo "REGISTRY_AUTH_FILE=$auth_file" >> "$GITHUB_ENV"
-          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io \
-            --authfile "$auth_file" \
-            --username "${{ github.actor }}" \
-            --password-stdin
-
-      - name: Initialize Orchestrator & Repos
-        run: |
-          # Derive dist from previous
-          venv/bin/ludos ci env anatase.yml i.anatase.org/anatase:${LUDOS_CHANNEL}
-          if [[ "$LUDOS_CHANNEL" == "testing" ]]; then
-            echo "prefix=${LUDOS_CHANNEL}-" >> .env
-          fi
-          venv/bin/ludos ci init anatase.yml # add more later
-
-      - name: Prepare CI build manifest
-        id: orchestration
-        run: |
-          venv/bin/ludos ci prepare anatase.yml \
-            --prefix "${LUDOS_CHANNEL}-" --tag "$LUDOS_CHANNEL" \
-            --registry i.anatase.org
-
-          # Emit metadata for follow-ups
-          venv/bin/python -c \
-            'import json, yaml; print(json.dumps(yaml.safe_load(open("cache/ci/build.yml"))))' \
-            > cache/ci/build.json
-          manifest_size=$(stat --format=%s cache/ci/build.yml.encoded)
-          if (( manifest_size > 480000 )); then
-            echo "Encoded CI build manifest exceeds the 480000-byte job output limit" >&2
-            exit 1
-          fi
-          split --bytes=60000 --numeric-suffixes=0 --suffix-length=1 \
-            cache/ci/build.yml.encoded cache/ci/build.yml.encoded.
-          {
-            for index in {0..7}; do
-              chunk="cache/ci/build.yml.encoded.$index"
-              if [[ -f "$chunk" ]]; then
-                echo "manifest_$index=$(<"$chunk")"
-              else
-                echo "manifest_$index="
-              fi
-            done
-            echo "builds=$(jq -c '
-              [.builds | to_entries[] |
-                (.value.block // .value.flatpak.app) as $name |
-                {
-                  id: .key,
-                  name: $name,
-                  large: (
-                    $name == "base-scx" or
-                    $name == "browser" or
-                    $name == "okular"
-                  )
-                }
-              ]' cache/ci/build.json)"
-            echo "images=$(jq -c '
-              [.images | to_entries[] |
-                {
-                  id: .key,
-                  name: .value.build.image,
-                  version: (
-                    .value.build.manifest_env
-                    | map(select(.[0] == "tag"))
-                    | first
-                    | .[1]
-                  )
-                }
-              ]' cache/ci/build.json)"
-            echo "flatpaks=$(jq -c '.flatpaks | length > 0' cache/ci/build.json)"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Seed CI images
-        run: |
-          status=0
-          venv/bin/ludos ci seed --autoremove || status=$?
-          if (( status == 0 )); then
-            exit 0
-          fi
-          if (( status != 7 )); then
-            exit "$status"
-          fi
-
-          echo Saving space due to insufficient size
-          df -h
-          sudo swapoff -a
-          sudo rm -f /swapfile
-          shopt -s nullglob
-          printf '%s\0' /opt/PyPy /opt/az /opt/node/ /opt/pipx /opt/go /opt/Ruby \
-              /usr/lib/llvm-* /usr/local/julia* /usr/local/lib/android /usr/share/dotnet \
-              /usr/share/swift /usr/local/.ghcup /usr/lib/firefox /opt/google/chrome \
-              /opt/microsoft/msedge \
-              | sudo xargs -0 -n1 -P4 rm -rf
-          df -h
-
-          venv/bin/ludos ci seed --autoremove
-
-  packages:
-    name: Build · ${{ matrix.build.name }}
-    needs: build
-    if: ${{ needs.build.result == 'success' && needs.build.outputs.builds != '[]' }}
-    runs-on: ${{ matrix.build.large && 'large' || 'ubuntu-26.04' }}
-    env:
-      LARGE_BUILDER: ${{ matrix.build.large }}
-    strategy:
-      fail-fast: false
-      matrix:
-        build: ${{ fromJSON(needs.build.outputs.builds) }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 100
-          token: ${{ secrets.ANATASE_READ }}
-          persist-credentials: false
-          submodules: recursive
-
-      - name: Install ludos
-        run: |
-          python3 -m venv venv
-          venv/bin/pip install --upgrade pip
-          pushd ludos
-          ../venv/bin/pip install -r requirements.txt
-          popd
-
-      - name: Login to GHCR
-        run: |
-          auth_file="$RUNNER_TEMP/containers/auth.json"
-          mkdir -p "$(dirname "$auth_file")"
-          echo "REGISTRY_AUTH_FILE=$auth_file" >> "$GITHUB_ENV"
-          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io \
-            --authfile "$auth_file" \
-            --username "${{ github.actor }}" \
-            --password-stdin
-
-      - name: Restore CI build manifest
-        env:
-          CI_BUILD_MANIFEST_0: ${{ needs.build.outputs.manifest_0 }}
-          CI_BUILD_MANIFEST_1: ${{ needs.build.outputs.manifest_1 }}
-          CI_BUILD_MANIFEST_2: ${{ needs.build.outputs.manifest_2 }}
-          CI_BUILD_MANIFEST_3: ${{ needs.build.outputs.manifest_3 }}
-          CI_BUILD_MANIFEST_4: ${{ needs.build.outputs.manifest_4 }}
-          CI_BUILD_MANIFEST_5: ${{ needs.build.outputs.manifest_5 }}
-          CI_BUILD_MANIFEST_6: ${{ needs.build.outputs.manifest_6 }}
-          CI_BUILD_MANIFEST_7: ${{ needs.build.outputs.manifest_7 }}
-        run: |
-          mkdir -p cache/ci
-          printf '%s' \
-            "$CI_BUILD_MANIFEST_0" "$CI_BUILD_MANIFEST_1" \
-            "$CI_BUILD_MANIFEST_2" "$CI_BUILD_MANIFEST_3" \
-            "$CI_BUILD_MANIFEST_4" "$CI_BUILD_MANIFEST_5" \
-            "$CI_BUILD_MANIFEST_6" "$CI_BUILD_MANIFEST_7" \
-            > cache/ci/build.yml.encoded
-          base64 --decode cache/ci/build.yml.encoded \
-            | xz --decompress > cache/ci/build.yml
-
-      - name: Build package image
-        run: |
-          args=()
-          if [[ "$LARGE_BUILDER" == "true" ]]; then
-            export CCACHE_MAXSIZE=75G
-            export CCACHE_DIR="$HOME/ccache"
-            args+=(--ccache)
-          fi
-          venv/bin/ludos ci build --upload "${args[@]}" "${{ matrix.build.id }}"
-
-  images:
-    name: Image · ${{ matrix.image.name }}
-    environment: "prod"
+  publish:
+    name: Publish multi-platform image
+    environment: prod
     needs:
-      - build
-      - packages
+      - x86
+      - arm
     if: >-
       ${{
         always() &&
-        needs.build.result == 'success' &&
-        (needs.packages.result == 'success' || needs.packages.result == 'skipped') &&
-        needs.build.outputs.images != '[]'
+        needs.x86.result == 'success' &&
+        (needs.arm.result == 'success' || needs.arm.result == 'skipped')
       }}
     runs-on: ubuntu-26.04
-    strategy:
-      fail-fast: false
-      matrix:
-        image: ${{ fromJSON(needs.build.outputs.images) }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 100
+          fetch-depth: 1
           token: ${{ secrets.ANATASE_READ }}
           persist-credentials: false
           submodules: recursive
@@ -257,55 +71,6 @@ jobs:
           pushd ludos
           ../venv/bin/pip install -r requirements.txt
           popd
-
-      - name: Login to GHCR
-        run: |
-          auth_file="$RUNNER_TEMP/containers/auth.json"
-          mkdir -p "$(dirname "$auth_file")"
-          echo "REGISTRY_AUTH_FILE=$auth_file" >> "$GITHUB_ENV"
-          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io \
-            --authfile "$auth_file" \
-            --username "${{ github.actor }}" \
-            --password-stdin
-
-      - name: Restore CI build manifest
-        env:
-          CI_BUILD_MANIFEST_0: ${{ needs.build.outputs.manifest_0 }}
-          CI_BUILD_MANIFEST_1: ${{ needs.build.outputs.manifest_1 }}
-          CI_BUILD_MANIFEST_2: ${{ needs.build.outputs.manifest_2 }}
-          CI_BUILD_MANIFEST_3: ${{ needs.build.outputs.manifest_3 }}
-          CI_BUILD_MANIFEST_4: ${{ needs.build.outputs.manifest_4 }}
-          CI_BUILD_MANIFEST_5: ${{ needs.build.outputs.manifest_5 }}
-          CI_BUILD_MANIFEST_6: ${{ needs.build.outputs.manifest_6 }}
-          CI_BUILD_MANIFEST_7: ${{ needs.build.outputs.manifest_7 }}
-        run: |
-          mkdir -p cache/ci
-          printf '%s' \
-            "$CI_BUILD_MANIFEST_0" "$CI_BUILD_MANIFEST_1" \
-            "$CI_BUILD_MANIFEST_2" "$CI_BUILD_MANIFEST_3" \
-            "$CI_BUILD_MANIFEST_4" "$CI_BUILD_MANIFEST_5" \
-            "$CI_BUILD_MANIFEST_6" "$CI_BUILD_MANIFEST_7" \
-            > cache/ci/build.yml.encoded
-          base64 --decode cache/ci/build.yml.encoded \
-            | xz --decompress > cache/ci/build.yml
-      
-      - name: Save Storage Space
-        run: |
-          echo Saving space due to insufficient size
-          df -h
-          sudo swapoff -a
-          sudo rm -f /swapfile
-          shopt -s nullglob
-          printf '%s\0' /opt/PyPy /opt/az /opt/node/ /opt/pipx /opt/go /opt/Ruby \
-              /usr/lib/llvm-* /usr/local/julia* /usr/local/lib/android /usr/share/dotnet \
-              /usr/share/swift /usr/local/.ghcup /usr/lib/firefox /opt/google/chrome \
-              /opt/microsoft/msedge \
-              | sudo xargs -0 -n1 -P4 rm -rf
-          df -h
-
-      - name: Build final image
-        id: build_output
-        run: venv/bin/ludos ci build "${{ matrix.image.id }}" --autoremove
 
       - name: Authenticate to Google Cloud
         id: auth
@@ -316,106 +81,83 @@ jobs:
           create_credentials_file: true
           token_format: access_token
 
-      - name: Upload final image
-        id: upload
+      - name: Resolve image version
+        id: image
         env:
+          ARM_ENABLED: ${{ inputs.arm }}
+        run: |
+          version=$(skopeo inspect --no-tags \
+            docker://i.anatase.org/anatase:x86_64 \
+            | jq -r '.Labels["org.opencontainers.image.version"] // empty')
+          if [[ -z "$version" ]]; then
+            echo "x86_64 image has no version label" >&2
+            exit 1
+          fi
+
+          if [[ "$ARM_ENABLED" == "true" ]]; then
+            arm_version=$(skopeo inspect --no-tags \
+              docker://i.anatase.org/anatase:aarch64 \
+              | jq -r '.Labels["org.opencontainers.image.version"] // empty')
+            if [[ "$arm_version" != "$version" ]]; then
+              echo "Architecture image versions differ: x86_64=$version aarch64=$arm_version" >&2
+              exit 1
+            fi
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Preflight Git tag
+        id: git_tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.image.outputs.version }}
+        run: |
+          error_file="$RUNNER_TEMP/git-tag-error"
+          if existing=$(gh api \
+              "repos/${GITHUB_REPOSITORY}/git/ref/tags/${VERSION}" \
+              --jq '.object.sha' 2>"$error_file"); then
+            :
+          elif grep -q '(HTTP 404)' "$error_file"; then
+            existing=""
+          else
+            cat "$error_file" >&2
+            exit 1
+          fi
+          if [[ -n "$existing" && "$existing" != "$GITHUB_SHA" ]]; then
+            echo "Git tag $VERSION already points to $existing" >&2
+            exit 1
+          fi
+          if [[ "$existing" == "$GITHUB_SHA" ]]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish OCI image index
+        env:
+          ARM_ENABLED: ${{ inputs.arm }}
           LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
           LUDOS_S3_KEY: ${{ secrets.LUDOS_S3_KEY }}
           LUDOS_S3_SECRET: ${{ secrets.LUDOS_S3_SECRET }}
           LUDOS_COSIGN_KEY: ${{ secrets.LUDOS_COSIGN_KEY }}
           LUDOS_COSIGN_CERT: ${{ secrets.LUDOS_COSIGN_CERT }}
         run: |
+          sources=(--source-tag x86_64)
           tags=(--tag "$LUDOS_CHANNEL")
+          if [[ "$ARM_ENABLED" == "true" ]]; then
+            sources+=(--source-tag aarch64)
+          fi
           if [[ "$LUDOS_CHANNEL" == "rolling" ]]; then
             tags+=(--tag latest)
           fi
-          venv/bin/ludos ci upload "${{ matrix.image.id }}" "${tags[@]}" \
-            --previous-manifest i.anatase.org/anatase:stable
+          venv/bin/ludos registry oci index anatase \
+            "${tags[@]}" "${sources[@]}"
 
-  flatpaks:
-    name: Flatpaks
-    environment: "prod"
-    needs:
-      - build
-      - packages
-    if: >-
-      ${{
-        always() &&
-        needs.build.result == 'success' &&
-        (needs.packages.result == 'success' || needs.packages.result == 'skipped') &&
-        needs.build.outputs.flatpaks == 'true'
-      }}
-    runs-on: ubuntu-26.04
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 100
-          token: ${{ secrets.ANATASE_READ }}
-          persist-credentials: false
-          submodules: recursive
-
-      - name: Install ludos
-        run: |
-          python3 -m venv venv
-          venv/bin/pip install --upgrade pip
-          pushd ludos
-          ../venv/bin/pip install -r requirements.txt
-          popd
-
-      - name: Login to GHCR
-        run: |
-          auth_file="$RUNNER_TEMP/containers/auth.json"
-          mkdir -p "$(dirname "$auth_file")"
-          echo "REGISTRY_AUTH_FILE=$auth_file" >> "$GITHUB_ENV"
-          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io \
-            --authfile "$auth_file" \
-            --username "${{ github.actor }}" \
-            --password-stdin
-
-      - name: Restore CI build manifest
+      - name: Create Git tag
+        if: ${{ steps.git_tag.outputs.exists != 'true' }}
         env:
-          CI_BUILD_MANIFEST_0: ${{ needs.build.outputs.manifest_0 }}
-          CI_BUILD_MANIFEST_1: ${{ needs.build.outputs.manifest_1 }}
-          CI_BUILD_MANIFEST_2: ${{ needs.build.outputs.manifest_2 }}
-          CI_BUILD_MANIFEST_3: ${{ needs.build.outputs.manifest_3 }}
-          CI_BUILD_MANIFEST_4: ${{ needs.build.outputs.manifest_4 }}
-          CI_BUILD_MANIFEST_5: ${{ needs.build.outputs.manifest_5 }}
-          CI_BUILD_MANIFEST_6: ${{ needs.build.outputs.manifest_6 }}
-          CI_BUILD_MANIFEST_7: ${{ needs.build.outputs.manifest_7 }}
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.image.outputs.version }}
         run: |
-          mkdir -p cache/ci
-          printf '%s' \
-            "$CI_BUILD_MANIFEST_0" "$CI_BUILD_MANIFEST_1" \
-            "$CI_BUILD_MANIFEST_2" "$CI_BUILD_MANIFEST_3" \
-            "$CI_BUILD_MANIFEST_4" "$CI_BUILD_MANIFEST_5" \
-            "$CI_BUILD_MANIFEST_6" "$CI_BUILD_MANIFEST_7" \
-            > cache/ci/build.yml.encoded
-          base64 --decode cache/ci/build.yml.encoded \
-            | xz --decompress > cache/ci/build.yml
-
-      - name: Build flatpaks
-        id: build_output
-        run: venv/bin/ludos ci build --flatpaks --autoremove
-
-      - name: Authenticate to Google Cloud
-        id: auth
-        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
-        with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-          create_credentials_file: true
-          token_format: access_token
-
-      - name: Upload flatpaks
-        id: upload
-        env:
-          LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
-          LUDOS_S3_KEY: ${{ secrets.LUDOS_S3_KEY }}
-          LUDOS_S3_SECRET: ${{ secrets.LUDOS_S3_SECRET }}
-          LUDOS_GPG_KEY: ${{ secrets.LUDOS_GPG_KEY }}
-          LUDOS_GPG_CERT: ${{ secrets.LUDOS_GPG_CERT }}
-        run: |
-          venv/bin/ludos ci upload --flatpaks --refresh \
-            --prefix "${LUDOS_CHANNEL}-"
+          gh api "repos/${GITHUB_REPOSITORY}/git/refs" \
+            -f ref="refs/tags/${VERSION}" \
+            -f sha="$GITHUB_SHA"
