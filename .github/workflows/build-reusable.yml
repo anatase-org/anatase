@@ -310,7 +310,7 @@ jobs:
 
       - name: Build final image
         id: build_output
-        run: venv/bin/ludos ci build "${{ matrix.image.id }}" --autoremove
+        run: venv/bin/ludos ci build "${{ matrix.image.id }}" --cache --autoremove
 
       - name: Authenticate to Google Cloud
         id: auth
