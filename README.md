@@ -95,8 +95,6 @@ Anatase does not currently accept external contributions. You are welcome to pos
 
 ## License
 
-Copyright (C) 2026 Antheas Kapenekakis
-
 A copy of the files in this repository is provided to you under the terms of [GNU Affero General Public License v3.0 or later](LICENSE). Exceptions: `.patch` files carry the license of their respective project solely and files with an SDPX license header carry that license solely.
 
 You may reuse the Anatase mark when producing derived images or rehosting unmodified images that are for personal or internal organizational use. Otherwise, [fork](https://github.com/anatase-org/anatase/fork) Anatase and replace the identity card with your type and marks.
