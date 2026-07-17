@@ -19,7 +19,7 @@ Anatase is a second generation immutable image. Rewritten from scratch, it disti
 
 From a user perspective, perhaps at first glance these do not mean much. So, let's boil it down to two axes.
 
- - **Smaller, more stable, and universal**. There is only one image to cover all handhelds, desktops, laptops, HTPCs, Nvidia devices**. The ISO is 2x smaller, the image is 2x smaller, and they both install / update much faster without functionality loss**. The ISO preinstalls a small set of (removable) applications, so you can open your PDFs and watch Youtube out of the box.
+ - **Smaller, more stable, and universal**. There is only one image to cover all handhelds, desktops, laptops, HTPCs, Nvidia devices*. The ISO is 2x smaller, the image is 2x smaller, and they both install / update much faster without functionality loss**. The ISO preinstalls a small set of (removable) applications, so you can open your PDFs and watch Youtube out of the box.
  - **Compliance, Security, Provenance**. Examples: Steam is not pre-installed (but if you install it, Anatase's gamemode has parity with SteamOS and can offer other launchers in the future), everything is signed using HSM cloud keys (the kernel; which meets Microsoft Secure boot requirements, Flatpaks, and Updates), and the Anatase image as installed only relies on its infrastructure for updates (no GHCR, COPR, Flathub; although included).
 
 *And a placeholder for a second future ARM one.
@@ -48,7 +48,7 @@ Then, plug it in to your computer and start it. Installation is simple.
 If you wish to keep secure boot enabled, you will be faced with:
 
  - **Verification failed: (0x1A) Security Violation:** Press Enter for OK
- - **Press Any Key to perform MOK Management:** Press enter
+ - **Press Any Key to perform MOK Management:** Press Enter
  - Select **Enroll key from disk** -> **ANATASE_KEY** -> **ANATASE-KEY-ENROLLME.der**
  - If you select **View key 0**, the fingerprint is **6A:18:4E:3F:50:82:6A:C2:C8:A8:65:CA:BD:D1:CD:8F:16:0A:4E:8D**
  - **Continue** -> **Enroll Key: Yes** -> **Reboot**
@@ -73,7 +73,7 @@ Anatase ships with KDE Plasma as its main desktop session. It is performant, _fe
 ![Anatase Plasma application launcher](docs/kde2.png)
 
 ### Plasma Mobile
-Anatase is also the first desktop distribution to deliver Plasma Mobile as a secondary session for tablet-like devices, such as handhelds and two-in-ones (Asus Z13). While Plasma mobile is still in its early days, it already feels great to use, and for its 20MB install size, it delivers a punch and great for use in e.g., Airplanes.
+Anatase is also the first desktop distribution to deliver Plasma Mobile as a secondary session for tablet-like devices, such as handhelds and two-in-ones (Asus Z13). While Plasma Mobile is still in its early days, it already feels great to use, and for its 20MB install size, it delivers a punch and is great for use in e.g., flights.
 
 Also shown, the Anatase Browser. A Chromium based browser with **working GPU acceleration**, **support for Spotify & 720p Netflix**, and **a built-in adblocker** that works great and updates with the system**. _Yes, having working GPU acceleration is a big deal in Linux._
 
@@ -81,7 +81,7 @@ Also shown, the Anatase Browser. A Chromium based browser with **working GPU acc
 
 ![Plasma Mobile application launcher](docs/mobile2.png)
 
-**Adblocker is based on UBOLite, a completely offline adblocker, and can be rebuilt on demand if the filter lists become outdated without Chrome Store approval.
+**Adblocker is based on UBOLite, a completely offline adblocker, and can be rebuilt on demand if the filter lists become outdated without delays from Chrome Store approval and delivered as a signed Flatpak.
 
 ### Gamemode
 Anatase also ships a Gamemode session that brings in elements from SteamOS as an optional addon to the core desktop experience. Compared to gaming in Plasma Desktop:
