@@ -194,7 +194,14 @@ gamescope_pid=
 steam_pid=
 cleanup() {
     trap - EXIT HUP INT TERM
+    
+    # Teardown services that use the overrides
+    systemctl --user stop \
+        flatpak-portal.service \
+        flatpak-session-helper.service \
+        xdg-desktop-portal.service
 
+    # Unset the environment variables
     systemctl --user unset-environment \
         DESKTOP_SESSION \
         DISPLAY \
