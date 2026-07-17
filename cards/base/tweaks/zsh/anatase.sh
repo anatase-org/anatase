@@ -688,6 +688,16 @@ ex ()
   fi
 }
 
+# Docker-compatible Podman aliases
+# Use sudo so that user expectations are met
+if (( $+commands[podman-compose] && ! $+commands[docker-compose] )); then
+  alias docker-compose='sudo podman-compose'
+fi
+
+if (( $+commands[podman] && ! $+commands[docker] )); then
+  alias docker='sudo podman'
+fi
+
 #
 # Show fastfetch as MOTD
 #
