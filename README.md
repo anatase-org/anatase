@@ -55,6 +55,12 @@ After power failures, or your batter draining to 0, you might face the same scre
 These steps will become unnecessary once Anatase gets secureboot keys. Want that to happen sooner? **Share Anatase with your friends!**
 
 ## Features
+> [!TIP]
+> Anatase uses three sessions. You can switch between them on the login screen, by pressing the button on the bottom right of the login screen.
+>
+> To select a default one, in desktop mode **Settings** -> **Login Screen** -> **Automatically Log in ✔️ as user:** your user -> **with session: ** your session
+> 
+> **Do not tick "Login again immediately after logging off" or you will get stuck in Gamemode**
 
 ### Plasma Desktop
 Anatase ships with KDE Plasma as its main desktop session. It is performant, it _feels_ like Windows, and is progressing rapidly with a core team of competent developers. In addition, the applications in the KDE ecosystem make strong defaults. Anatase preinstalls Ark (Archive Manager), Filelight (Disk Usage Analyzer), Kate (Text Editor), and Okular (Document Viewer), and all of those come from KDE, with styling to match.
