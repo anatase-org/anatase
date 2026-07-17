@@ -29,6 +29,7 @@ env:
 
 concurrency:
   group: anatase-build-${{ inputs.arch }}
+  cancel-in-progress: true
 
 jobs:
   build:
