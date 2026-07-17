@@ -85,7 +85,7 @@ jobs:
         id: orchestration
         run: |
           venv/bin/ludos ci prepare anatase.yml \
-            --prefix "${LUDOS_CHANNEL}-" --tag "$ARCH" \
+            --prefix "${LUDOS_CHANNEL}-" --tag "${LUDOS_CHANNEL}" \
             --registry i.anatase.org
 
           # Emit metadata for follow-ups
