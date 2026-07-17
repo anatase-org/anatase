@@ -84,7 +84,7 @@ jobs:
       - name: Prepare CI build manifest
         id: orchestration
         run: |
-          venv/bin/ludos ci prepare anatase.yml \
+          venv/bin/ludos ci prepare --ci anatase.yml \
             --prefix "${LUDOS_CHANNEL}-" --tag "${LUDOS_CHANNEL}" \
             --registry i.anatase.org
 
@@ -310,7 +310,7 @@ jobs:
 
       - name: Build final image
         id: build_output
-        run: venv/bin/ludos ci build "${{ matrix.image.id }}" --cache --autoremove
+        run: venv/bin/ludos ci build "${{ matrix.image.id }}" --ci --autoremove
 
       - name: Authenticate to Google Cloud
         id: auth
