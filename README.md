@@ -19,26 +19,29 @@ Anatase is a second generation immutable image. Rewritten from scratch, it disti
 
 From a user perspective, perhaps at first glance these do not mean much. So, let's boil it down to two axes.
 
- - **Smaller, more stable, and universal**. There is only one image to cover all handhelds, desktops, laptops, HTPCs, Nvidia*. The ISO is 2x smaller, the image is 2x smaller, and they both install / update much faster without functionality loss**. The ISO preinstalls a small set of (removable) applications, so you can open your PDFs and watch Youtube out of the box.
+ - **Smaller, more stable, and universal**. There is only one image to cover all handhelds, desktops, laptops, HTPCs, Nvidia devices**. The ISO is 2x smaller, the image is 2x smaller, and they both install / update much faster without functionality loss**. The ISO preinstalls a small set of (removable) applications, so you can open your PDFs and watch Youtube out of the box.
  - **Compliance, Security, Provenance**. Examples: Steam is not pre-installed (but if you install it, Anatase's gamemode has parity with SteamOS and can offer other launchers in the future), everything is signed using HSM cloud keys (the kernel; which meets Microsoft Secure boot requirements, Flatpaks, and Updates), and the Anatase image as installed only relies on its infrastructure for updates (no GHCR, COPR, Flathub; although included).
 
 *And a placeholder for a second future ARM one.
 
-**Compared to bazzite-deck-nvidia, the closest image with matching functionality, 15/07/2026
+**Compared to bazzite-deck-nvidia, the closest image with matching functionality as of 15/07/2026
 
-The end result is an OS that _feels boring_. You install it and move on with your day. There are games to play, reels to doomscroll, and homework to do. The **optimized drivers are installed already**. Your **PDFs open**, **Spotify works**, **Zoom does not make your laptop prepare for take-off**, **all your controllers work**. Your handheld **power** and **controller settings** are all here too, both on **Desktop** and **Gamemode**. 
+The end result is an OS that _feels boring_. You install it and move on with your day. There are games to play, reels to doomscroll, and homework to do. The **optimized drivers are installed already**. Your **PDFs open**, **Spotify works**, **Zoom does not make your laptop prepare for take-off**, **all your controllers work**, and your handheld **power** and **controller settings** are all here, both on **Desktop** and **Gamemode**. 
 
 ## Installation
 
 Grab the ISO from [here](https://downloads.anatase.org/iso/anatase.iso), then:
  - In Windows, use Rufus or Balena Etcher
  - In Anatase/Linux, ISO Image Writer
- - or your Ventoy Stick
+ - or your Ventoy USB
 
 Then, plug it in to your computer and start it. Installation is simple.
 
- - If you want to use encryption, specify a password during the encryption step. It is not possible to encrypt after installation
- - If you want to dualboot, select the option to share your disk and how much space you want to use. Anatase will automatically configure the bootloader so that CMOS wipes do not make it unbootable.
+ - If you want to use encryption, specify a password during the encryption step. It is not possible to encrypt after installation.
+ - If you want to dualboot, select the option to share your disk and how much space you want to use. Anatase will automatically configure the bootloader so that CMOS wipes do not forget Anatase.
+
+> [!WARNING]
+> NVIDIA GPUs from GTX 1000 generation and older (such as GTX 1080) are not currently supported.
 
 ### Secure boot
 
@@ -50,27 +53,27 @@ If you wish to keep secure boot enabled, you will be faced with:
  - If you select **View key 0**, the fingerprint is **6A:18:4E:3F:50:82:6A:C2:C8:A8:65:CA:BD:D1:CD:8F:16:0A:4E:8D**
  - **Continue** -> **Enroll Key: Yes** -> **Reboot**
 
-After power failures, or your batter draining to 0, you might face the same screen. In this case, follow the same steps, where in this case **ANATASE_KEY** becomes **ANATASE_EFI**. Anatase automatically keeps a copy of its key in your disk in case this happens 😉
+After power failures, or your battery draining to 0, you might face the same screen. In this case, follow the same steps, where in this case **ANATASE_KEY** becomes **ANATASE_EFI**. Anatase automatically keeps a copy of its key in your disk in case this happens 😉
 
 These steps will become unnecessary once Anatase gets secureboot keys. Want that to happen sooner? **Share Anatase with your friends!**
 
-## Features
+## Overview
 > [!TIP]
-> Anatase uses three sessions. You can switch between them on the login screen, by pressing the button on the bottom right of the login screen.
+> Anatase uses three sessions. You can switch between them on the login screen, by opening the drop-down on the bottom left of the screen.
 >
-> To select a default one, in desktop mode **Settings** -> **Login Screen** -> **Automatically Log in ✔️ as user:** your user -> **with session: ** your session
+> To select a default one, in desktop mode **Settings** -> **Login Screen** -> **Automatically Log in ✔️ as user:** your user -> **with session:** your session
 > 
 > **Do not tick "Login again immediately after logging off" or you will get stuck in Gamemode**
 
 ### Plasma Desktop
-Anatase ships with KDE Plasma as its main desktop session. It is performant, it _feels_ like Windows, and is progressing rapidly with a core team of competent developers. In addition, the applications in the KDE ecosystem make strong defaults. Anatase preinstalls Ark (Archive Manager), Filelight (Disk Usage Analyzer), Kate (Text Editor), and Okular (Document Viewer), and all of those come from KDE, with styling to match.
+Anatase ships with KDE Plasma as its main desktop session. It is performant, _feels_ like Windows, and is progressing rapidly with a core team of competent developers. In addition, the applications in the KDE ecosystem make strong defaults. Anatase preinstalls Ark (Archive Manager), Filelight (Disk Usage Analyzer), Kate (Text Editor), and Okular (Document Viewer), and all of those happen to come from KDE. It is not a coincidence.
 
 ![Anatase Plasma desktop](docs/kde1.png)
 
 ![Anatase Plasma application launcher](docs/kde2.png)
 
 ### Plasma Mobile
-Anatase is also the first desktop distribution to deliver Plasma Mobile as a secondary session for tablet-like devices, such as handhelds and tablet-likes (Asus Z13). While Plasma mobile is still in its early days, it already feels great to use, and for its 20MB install size, it delivers a punch and great for use in e.g., Airplanes.
+Anatase is also the first desktop distribution to deliver Plasma Mobile as a secondary session for tablet-like devices, such as handhelds and two-in-ones (Asus Z13). While Plasma mobile is still in its early days, it already feels great to use, and for its 20MB install size, it delivers a punch and great for use in e.g., Airplanes.
 
 Also shown, the Anatase Browser. A Chromium based browser with **working GPU acceleration**, **support for Spotify & 720p Netflix**, and **a built-in adblocker** that works great and updates with the system**. _Yes, having working GPU acceleration is a big deal in Linux._
 
