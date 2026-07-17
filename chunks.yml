@@ -25,6 +25,8 @@ meta:
     dedicated: False
   # Random stuff
   unpackaged:
+    packages:
+      - hhd # very small, lets not invalidate bigger layers with it
     files:
       - /usr/share/distribution-gpg-keys*
       # This small dir is affected by multiple packages
