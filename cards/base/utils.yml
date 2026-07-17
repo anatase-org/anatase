@@ -46,6 +46,15 @@ packages:
   - unzip
   - zip
 
+  # Containers
+  - flatpak
+  - fuse-overlayfs
+  - podman
+  - podman-compose
+  - buildah
+  - skopeo
+  - slirp4netns
+
 postprocess: |
   set -eux
 

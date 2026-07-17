@@ -102,13 +102,6 @@ packages:
   - sssd-common
   - sssd-kcm
 
-  # Containers
-  - flatpak
-  - fuse-overlayfs
-  - podman
-  - skopeo
-  - slirp4netns
-
   # Graphics and media
   - alsa-ucm
   - alsa-utils
