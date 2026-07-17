@@ -28,6 +28,32 @@ From a user perspective, perhaps at first glance these do not mean much. So, let
 
 The end result is an OS that _feels boring_. You install it and move on with your day. There are games to play, reels to doomscroll, and homework to do. The **optimized drivers are installed already**. Your **PDFs open**, **Spotify works**, **Zoom does not make your laptop prepare for take-off**, **all your controllers work**. Your handheld **power** and **controller settings** are all here too, both on **Desktop** and **Gamemode**. 
 
+## Installation
+
+Grab the ISO from [here](https://downloads.anatase.org/iso/anatase.iso), then:
+ - In Windows, use Rufus or Balena Etcher
+ - In Anatase/Linux, ISO Image Writer
+ - or your Ventoy Stick
+
+Then, plug it in to your computer and start it. Installation is simple.
+
+ - If you want to use encryption, specify a password during the encryption step. It is not possible to encrypt after installation
+ - If you want to dualboot, select the option to share your disk and how much space you want to use. Anatase will automatically configure the bootloader so that CMOS wipes do not make it unbootable.
+
+### Secure boot
+
+If you wish to keep secure boot enabled, you will be faced with:
+
+ - **Verification failed: (0x1A) Security Violation:** Press Enter for OK
+ - **Press Any Key to perform MOK Management:** Press enter
+ - Select **Enroll key from disk** -> **ANATASE_KEY** -> **ANATASE-KEY-ENROLLME.der**
+ - If you select **View key 0**, the fingerprint is **6A:18:4E:3F:50:82:6A:C2:C8:A8:65:CA:BD:D1:CD:8F:16:0A:4E:8D**
+ - **Continue** -> **Enroll Key: Yes** -> **Reboot**
+
+After power failures, or your batter draining to 0, you might face the same screen. In this case, follow the same steps, where in this case **ANATASE_KEY** becomes **ANATASE_EFI**. Anatase automatically keeps a copy of its key in your disk in case this happens 😉
+
+These steps will become unnecessary once Anatase gets secureboot keys. Want that to happen sooner? **Share Anatase with your friends!**
+
 ## Features
 
 ### Plasma Desktop

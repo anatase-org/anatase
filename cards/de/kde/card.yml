@@ -13,6 +13,7 @@ packages:
     - ffmpegthumbs
     - kde-connect
     - kde-partitionmanager
+    - isoimagewriter # this was installed before and disappeared?
     - kdegraphics-thumbnailers
     - kdialog
     - kdnssd
