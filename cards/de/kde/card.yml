@@ -219,7 +219,6 @@ postprocess: |
         echo "KWin and Plasma Workspace versions diverged: kwin=${kwin_version}, plasma-workspace=${plasma_workspace_version}" >&2
         exit 1
     fi
-    
 
     install -dm0755 \
         /etc/xdg \
