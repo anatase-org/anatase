@@ -7,6 +7,11 @@ on:
         description: Architecture to build
         required: true
         type: string
+      refresh_cache:
+        description: Recreate and upload the CI cache images
+        required: false
+        type: boolean
+        default: false
     outputs:
       images:
         description: Final images produced by this architecture build
@@ -72,6 +77,8 @@ jobs:
             --password-stdin
 
       - name: Initialize Orchestrator & Repos
+        env:
+          REFRESH_CACHE: ${{ inputs.refresh_cache }}
         run: |
           # Derive dist from previous
           venv/bin/ludos ci env anatase.yml \
@@ -79,7 +86,11 @@ jobs:
           if [[ "$LUDOS_CHANNEL" == "testing" ]]; then
             echo "prefix=${LUDOS_CHANNEL}-" >> .env
           fi
-          venv/bin/ludos ci init anatase.yml # add more later
+          args=(anatase.yml)
+          if [[ "$REFRESH_CACHE" == "true" ]]; then
+            args+=(--recreate)
+          fi
+          venv/bin/ludos ci init "${args[@]}" # add more later
 
       - name: Prepare CI build manifest
         id: orchestration

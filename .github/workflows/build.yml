@@ -2,7 +2,12 @@ name: Build Anatase
 
 on:
   workflow_dispatch:
-    # inputs:
+    inputs:
+      refresh_cache:
+        description: Refresh Cache
+        required: false
+        type: boolean
+        default: false
     #   arm:
     #     description: Build the ARM image
     #     required: false
@@ -32,6 +37,7 @@ jobs:
     uses: ./.github/workflows/build-reusable.yml
     with:
       arch: x86_64
+      refresh_cache: ${{ github.event_name == 'workflow_dispatch' && inputs.refresh_cache || false }}
     secrets: inherit
 
   # arm:
