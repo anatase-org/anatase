@@ -11,7 +11,7 @@ Interim solution even so
  1 file changed, 1 insertion(+), 21 deletions(-)
 
 diff --git a/src/daemon/DaemonApp.cpp b/src/daemon/DaemonApp.cpp
-index e53b5a101584..d8a99efbb611 100644
+index f2171ad30601..d8a99efbb611 100644
 --- a/src/daemon/DaemonApp.cpp
 +++ b/src/daemon/DaemonApp.cpp
 @@ -92,27 +92,7 @@ bool DaemonApp::tryLockFirstLogin()
@@ -29,13 +29,13 @@ index e53b5a101584..d8a99efbb611 100644
 -
 -    if (reply.type() == QDBusMessage::ErrorMessage) {
 -        qWarning() << "DBus error:" << reply.errorName() << "-" << reply.errorMessage();
--        return false;
+-        return true;
 -    }
 -
 -    const QVariant soft_reboot_count = qvariant_cast<QDBusVariant>(reply.arguments().at(0)).variant();
 -    if (!soft_reboot_count.isValid()) {
 -        qWarning() << "DBus variant is invalid:" << reply;
--        return false;
+-        return true;
 -    }
 -
 -    return soft_reboot_count.toUInt() == 0;

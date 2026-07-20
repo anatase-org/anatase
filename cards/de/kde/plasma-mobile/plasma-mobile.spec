@@ -2,7 +2,7 @@
 ExcludeArch: %{ix86}
 
 Name:           plasma-mobile
-Version:        6.7.2
+Version:        6.7.3
 Release:        1%{?dist}
 License:        CC0-1.0 AND GPL-2.0-only AND GPL-2.0-or-later AND GPL-3.0-only AND GPL-3.0-or-later AND LGPL-2.0-or-later AND LGPL-2.0-only AND LGPL-2.0-or-later AND LGPL-2.1-or-later AND LGPL-3.0-only AND LGPL-3.0-only AND MIT
 Summary:        General UI components for Plasma Phone including shell, containment and applets
@@ -186,6 +186,9 @@ desktop-file-validate %{buildroot}/%{_datadir}/applications/kcm_{mobile_info,mob
 #%{_kf6_datadir}/plasma/look-and-feel/org.fedoraproject.fedora.mobile
 
 %changelog
+* Tue Jul 14 2026 Steve Cossette <farchord@gmail.com> - 6.7.3-1
+- 6.7.3
+
 * Wed Jul 01 2026 Steve Cossette <farchord@gmail.com> - 6.7.2-1
 - 6.7.2
 

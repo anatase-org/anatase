@@ -186,7 +186,7 @@ specs:
       - plasmalogin.conf
       - plasmalogin.sysconfig
       - plasmalogin.sysusers
-      - overrides.patch
+      - "*.patch"
     packages:
       - plasma-login-manager
     upstream:
