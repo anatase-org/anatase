@@ -1430,3 +1430,61 @@ index a3c2fbeae2be..96a4e0ea5875 100644
          );
      }
  
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 20 Jul 2026 13:16:58 +0200
+Subject: drop ftrace, it also does not have a selinux policy
+
+---
+ data/system/steamos-manager.service | 2 --
+ steamos-manager/src/daemon/root.rs  | 5 -----
+ steamos-manager/src/sls/mod.rs      | 2 --
+ 3 files changed, 9 deletions(-)
+
+diff --git a/data/system/steamos-manager.service b/data/system/steamos-manager.service
+index 5336a76b1442..6e97c829cdc0 100644
+--- a/data/system/steamos-manager.service
++++ b/data/system/steamos-manager.service
+@@ -1,7 +1,5 @@
+ [Unit]
+ Description=SteamOS Manager Daemon
+-Wants=steamos-log-submitter.service
+-After=steamos-log-submitter.service
+ Wants=hhd.service
+ Wants=hhdl.service
+ After=hhd.service
+diff --git a/steamos-manager/src/daemon/root.rs b/steamos-manager/src/daemon/root.rs
+index 69bf42ffff01..87d6710bdaec 100644
+--- a/steamos-manager/src/daemon/root.rs
++++ b/steamos-manager/src/daemon/root.rs
+@@ -21,7 +21,6 @@ use crate::daemon::{Daemon, DaemonCommand, DaemonContext, channel};
+ use crate::ds_inhibit::Inhibitor;
+ use crate::manager::root::SteamOSManager;
+ use crate::path;
+-use crate::sls::ftrace::Ftrace;
+ use crate::sls::{LogLayer, LogReceiver};
+ use crate::sysfs::SysfsWriterService;
+ 
+@@ -122,10 +121,6 @@ impl DaemonContext for RootContext {
+     ) -> Result<()> {
+         self.state = state;
+ 
+-        let connection = daemon.get_connection();
+-        let ftrace = Ftrace::init(&connection).await?;
+-        daemon.add_service(ftrace);
+-
+         let sysfs = SysfsWriterService::init()?;
+         daemon.add_service(sysfs);
+ 
+diff --git a/steamos-manager/src/sls/mod.rs b/steamos-manager/src/sls/mod.rs
+index 2ecba2a92997..f2da031b2ec4 100644
+--- a/steamos-manager/src/sls/mod.rs
++++ b/steamos-manager/src/sls/mod.rs
+@@ -1,6 +1,4 @@
+ /* SPDX-License-Identifier: BSD-2-Clause */
+-pub mod ftrace;
+-
+ use anyhow::Result;
+ use std::fmt::Debug;
+ use std::time::SystemTime;
