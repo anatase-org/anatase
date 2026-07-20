@@ -1,6 +1,6 @@
 Name:           nvidia-settings
-Version:        610.43.02
-Release:        2%{?dist}
+Version:        610.43.03
+Release:        1%{?dist}
 Summary:        Configure the NVIDIA graphics driver
 Epoch:          3
 License:        GPLv2+
@@ -134,6 +134,9 @@ appstream-util validate-relax --nonet %{buildroot}/%{_metainfodir}/%{name}.appda
 %{_libdir}/libXNVCtrl.so
 
 %changelog
+* Wed Jul 08 2026 Simone Caronni <negativo17@gmail.com> - 3:610.43.03-1
+- Update to 610.43.03.
+
 * Mon Jun 22 2026 Simone Caronni <negativo17@gmail.com> - 3:610.43.02-2
 - Do not try to load nvidia-settings when no GPUs are present (thanks Antheas).
 

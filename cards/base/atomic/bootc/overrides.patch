@@ -8,10 +8,10 @@ Subject: rename back to --json-fd
  1 file changed, 6 insertions(+), 3 deletions(-)
 
 diff --git a/crates/lib/src/cli.rs b/crates/lib/src/cli.rs
-index dd80fd6ad5ee..ca330a23a8c8 100644
+index 31567f7f98d7..becd45f59104 100644
 --- a/crates/lib/src/cli.rs
 +++ b/crates/lib/src/cli.rs
-@@ -66,16 +66,19 @@ pub(crate) struct ProgressOptions {
+@@ -67,16 +67,19 @@ pub(crate) struct ProgressOptions {
      /// File descriptor number which must refer to an open pipe.
      ///
      /// Progress is written as JSON lines to this file descriptor.
@@ -109,7 +109,7 @@ index ff96de69239b..93673eae3e9a 100644
  
  # Run this to also take over the functionality of `ostree container` for example.
 diff --git a/crates/cli/Cargo.toml b/crates/cli/Cargo.toml
-index 5baa26bb0f20..c12122b059f8 100644
+index 241371b4b870..d80e6b066378 100644
 --- a/crates/cli/Cargo.toml
 +++ b/crates/cli/Cargo.toml
 @@ -15,7 +15,7 @@ platforms = ["*-unknown-linux-gnu"]
@@ -118,7 +118,7 @@ index 5baa26bb0f20..c12122b059f8 100644
  # Internal crates
 -bootc-lib = { version = "1.16", path = "../lib" }
 +bootc-lib = { version = "1.16", path = "../lib", features = ["docgen"] }
- bootc-utils = { package = "bootc-internal-utils", path = "../utils", version = "1.16.0" }
+ bootc-utils = { package = "bootc-internal-utils", path = "../utils", version = "1.16.4" }
  
  # Workspace dependencies
 diff --git a/crates/xtask/src/man.rs b/crates/xtask/src/man.rs
@@ -761,10 +761,10 @@ index c012797abc98..425b63b08510 100644
  
  impl ExportOpts<'_, '_> {
 diff --git a/crates/ostree-ext/tests/it/main.rs b/crates/ostree-ext/tests/it/main.rs
-index 14c6dd3b3ea7..dad5c5653872 100644
+index e43aab027b29..fa536d125e73 100644
 --- a/crates/ostree-ext/tests/it/main.rs
 +++ b/crates/ostree-ext/tests/it/main.rs
-@@ -13,7 +13,8 @@ use ocidir::oci_spec::distribution::Reference;
+@@ -14,7 +14,8 @@ use ocidir::oci_spec::distribution::Reference;
  use ocidir::oci_spec::image::{Arch, DigestAlgorithm};
  use ostree_ext::chunking::ObjectMetaSized;
  use ostree_ext::container::{
@@ -774,7 +774,7 @@ index 14c6dd3b3ea7..dad5c5653872 100644
  };
  use ostree_ext::container::{ManifestDiff, OSTREE_COMMIT_LABEL, store};
  use ostree_ext::prelude::{Cast, FileExt};
-@@ -532,6 +533,9 @@ async fn impl_test_container_import_export(chunked: bool) -> Result<()> {
+@@ -533,6 +534,9 @@ async fn impl_test_container_import_export(chunked: bool) -> Result<()> {
      opts.max_layers = std::num::NonZeroU32::new(PKGS_V0_LEN as u32);
      opts.package_contentmeta = contentmeta.as_ref();
      opts.container_config = Some(container_config);
@@ -784,7 +784,7 @@ index 14c6dd3b3ea7..dad5c5653872 100644
      let digest = ostree_ext::container::encapsulate(
          fixture.srcrepo(),
          fixture.testref(),
-@@ -541,6 +545,7 @@ async fn impl_test_container_import_export(chunked: bool) -> Result<()> {
+@@ -542,6 +546,7 @@ async fn impl_test_container_import_export(chunked: bool) -> Result<()> {
      )
      .await
      .context("exporting")?;
@@ -792,7 +792,7 @@ index 14c6dd3b3ea7..dad5c5653872 100644
      assert!(srcoci_path.exists());
  
      let inspect = skopeo_inspect(&srcoci_imgref.to_string())?;
-@@ -575,6 +580,13 @@ async fn impl_test_container_import_export(chunked: bool) -> Result<()> {
+@@ -576,6 +581,13 @@ async fn impl_test_container_import_export(chunked: bool) -> Result<()> {
      let n_chunks = if chunked { LAYERS_V0_LEN } else { 1 };
      assert_eq!(cfg.rootfs().diff_ids().len(), n_chunks);
      assert_eq!(cfg.history().as_ref().unwrap().len(), n_chunks);
@@ -853,7 +853,7 @@ Subject: Preserve image version in merge commits
  1 file changed, 7 insertions(+)
 
 diff --git a/crates/ostree-ext/src/container/store.rs b/crates/ostree-ext/src/container/store.rs
-index 8acf5831ea93..517c6510ad62 100644
+index 449d3db2ec97..0634de9c76c2 100644
 --- a/crates/ostree-ext/src/container/store.rs
 +++ b/crates/ostree-ext/src/container/store.rs
 @@ -61,6 +61,7 @@
@@ -873,7 +873,7 @@ index 8acf5831ea93..517c6510ad62 100644
  /// The type used to store content filtering information.
  pub type MetaFilteredData = HashMap<String, HashMap<String, u32>>;
  
-@@ -1461,6 +1464,7 @@ impl ImageImporter {
+@@ -1462,6 +1465,7 @@ impl ImageImporter {
              .ostree_commit_layer
              .as_ref()
              .map(|c| c.commit.clone().unwrap());
@@ -881,7 +881,7 @@ index 8acf5831ea93..517c6510ad62 100644
  
          let root_is_transient = if let Some(base) = base_commit.as_ref() {
              let rootf = self.repo.read_commit(&base, gio::Cancellable::NONE)?.0;
-@@ -1577,6 +1581,9 @@ impl ImageImporter {
+@@ -1578,6 +1582,9 @@ impl ImageImporter {
              META_CONFIG,
              import.config.to_canon_json_string()?.to_variant(),
          );
@@ -902,10 +902,10 @@ Subject: Optimize pure OSTree image imports
  1 file changed, 38 insertions(+)
 
 diff --git a/crates/ostree-ext/src/container/store.rs b/crates/ostree-ext/src/container/store.rs
-index 517c6510ad62..f2ad3fe32b9a 100644
+index 0634de9c76c2..041ccf8a77b2 100644
 --- a/crates/ostree-ext/src/container/store.rs
 +++ b/crates/ostree-ext/src/container/store.rs
-@@ -1222,6 +1222,44 @@ impl ImageImporter {
+@@ -1223,6 +1223,44 @@ impl ImageImporter {
  
          let txn = repo.auto_transaction(cancellable)?;
  

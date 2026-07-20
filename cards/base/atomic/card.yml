@@ -49,7 +49,6 @@ build-deps:
 specs:
   - spec: bootc/bootc.spec
     files:
-      - sources
       - overrides.patch
     packages:
       - bootc

@@ -251,10 +251,10 @@ gamescope the game could get stuck in low power states.
  1 file changed, 4 insertions(+)
 
 diff --git a/src/util/00-radv-defaults.conf b/src/util/00-radv-defaults.conf
-index 9df6d0434b31..7ed750907036 100644
+index add51ece24a8..989e4476b209 100644
 --- a/src/util/00-radv-defaults.conf
 +++ b/src/util/00-radv-defaults.conf
-@@ -338,6 +338,10 @@ Application bugs worked around in this file:
+@@ -346,6 +346,10 @@ Application bugs worked around in this file:
              <option name="radv_zero_vram" value="true"/>
          </application>
  
@@ -279,10 +279,10 @@ Signed-off-by: Samuel Pitoiset <samuel.pitoiset@gmail.com>
  1 file changed, 5 insertions(+)
 
 diff --git a/src/util/00-radv-defaults.conf b/src/util/00-radv-defaults.conf
-index 7ed750907036..5e38ca34dd88 100644
+index 989e4476b209..b2a4cf8b1d6d 100644
 --- a/src/util/00-radv-defaults.conf
 +++ b/src/util/00-radv-defaults.conf
-@@ -251,6 +251,11 @@ Application bugs worked around in this file:
+@@ -259,6 +259,11 @@ Application bugs worked around in this file:
              <option name="radv_gfx12_hiz_wa" value="partial" />
          </application>
  

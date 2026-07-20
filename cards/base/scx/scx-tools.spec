@@ -7,7 +7,7 @@
 %global debug_package %{nil}
 
 Name:           scx-tools
-Version:        1.1.1
+Version:        1.1.2
 Release:        1%{?dist}
 Summary:        Sched_ext Tools
 
@@ -115,7 +115,7 @@ tar -xvf %{SOURCE23} -C vendor/
 tar -xvf %{SOURCE24} -C vendor/
 tar -xvf %{SOURCE25} -C vendor/
 tar -xvf %{SOURCE26} -C vendor/
-sed -i 's/^sysinfo = "0\.39\.2"/sysinfo = "0.38.4"/' crates/scx_loader/Cargo.toml
+sed -i 's/^sysinfo = "0\.39\.5"/sysinfo = "0.38.4"/' crates/scx_loader/Cargo.toml
 sed -i \
     -e '/"windows\//d' \
     -e '/"objc2-core-foundation\//d' \

@@ -7,7 +7,7 @@
 %global debug_package %{nil}
 
 Name:           scx-scheds
-Version:        1.1.1
+Version:        1.1.2
 Release:        2%{?dist}
 Summary:        Sched_ext Schedulers and Tools
 
@@ -16,19 +16,22 @@ URL:            https://github.com/sched-ext/scx
 Source0:        %{URL}/archive/refs/tags/v%{version}.tar.gz
 %global rust_affinity_ver 0.1.2
 %global rust_anpa_ver 0.10.0
+%global rust_ascii_ver 1.1.0
 %global rust_blazesym_ver 0.2.3
-%global rust_buddy_system_allocator_ver 0.12.0
+%global rust_buddy_system_allocator_ver 0.13.0
 %global rust_cargo_metadata_ver 0.19.2
+%global rust_chunked_transfer_ver 1.5.0
 %global rust_clap_main_ver 0.2.9
 %global rust_combinations_ver 0.1.0
 %global rust_convert_case_ver 0.11.0
-%global rust_gpoint_ver 0.2.1
+%global rust_gpoint_ver 0.3.0
+%global rust_httpdate_ver 1.0.3
 %global rust_libbpf_cargo_ver 0.26.2
 %global rust_libbpf_rs_ver 0.26.2
 %global rust_libbpf_sys_ver 1.7.0+v1.7.0
 %global rust_micromath_ver 2.1.0
-%global rust_nvml_wrapper_ver 0.12.0
-%global rust_nvml_wrapper_sys_ver 0.9.0
+%global rust_nvml_wrapper_ver 0.12.1
+%global rust_nvml_wrapper_sys_ver 0.9.1
 %global rust_perf_event_open_sys_ver 6.0.0
 %global rust_perfetto_protos_ver 0.51.1
 %global rust_seccomp_ver 0.1.2
@@ -38,6 +41,7 @@ Source0:        %{URL}/archive/refs/tags/v%{version}.tar.gz
 %global rust_sscanf_macro_ver 0.5.0
 %global rust_sysinfo_ver 0.38.4
 %global rust_tachyonfx_ver 0.25.0
+%global rust_tiny_http_ver 0.12.0
 %global rust_vsprintf_ver 2.0.0
 %global rust_wrapcenum_derive_ver 0.4.1
 Source10:       https://crates.io/api/v1/crates/affinity/%{rust_affinity_ver}/download#/affinity-%{rust_affinity_ver}.tar.gz
@@ -66,6 +70,10 @@ Source32:       https://crates.io/api/v1/crates/seccomp-sys/%{rust_seccomp_sys_v
 Source33:       https://crates.io/api/v1/crates/anpa/%{rust_anpa_ver}/download#/anpa-%{rust_anpa_ver}.tar.gz
 Source34:       https://crates.io/api/v1/crates/micromath/%{rust_micromath_ver}/download#/micromath-%{rust_micromath_ver}.tar.gz
 Source35:       https://crates.io/api/v1/crates/convert_case/%{rust_convert_case_ver}/download#/convert_case-%{rust_convert_case_ver}.tar.gz
+Source36:       https://crates.io/api/v1/crates/ascii/%{rust_ascii_ver}/download#/ascii-%{rust_ascii_ver}.tar.gz
+Source37:       https://crates.io/api/v1/crates/chunked_transfer/%{rust_chunked_transfer_ver}/download#/chunked_transfer-%{rust_chunked_transfer_ver}.tar.gz
+Source38:       https://crates.io/api/v1/crates/httpdate/%{rust_httpdate_ver}/download#/httpdate-%{rust_httpdate_ver}.tar.gz
+Source39:       https://crates.io/api/v1/crates/tiny_http/%{rust_tiny_http_ver}/download#/tiny_http-%{rust_tiny_http_ver}.tar.gz
 
 BuildRequires:  gcc
 BuildRequires:  git
@@ -87,6 +95,8 @@ BuildRequires:  systemd
 BuildRequires:  bpftool
 BuildRequires:  protobuf-compiler
 BuildRequires:  libseccomp-devel
+BuildRequires: openssl-devel
+
 BuildRequires:  (crate(anyhow/default) >= 1.0.0 with crate(anyhow/default) < 2.0.0~)
 BuildRequires:  (crate(arboard/default) >= 3.0.0 with crate(arboard/default) < 4.0.0~)
 BuildRequires:  (crate(bitvec/default) >= 1.0.0 with crate(bitvec/default) < 2.0.0~)
@@ -203,6 +213,7 @@ BuildRequires:  (crate(xdg/default) >= 3.0.0 with crate(xdg/default) < 4.0.0~)
 BuildRequires:  (crate(zbus/default) >= 5.0.0 with crate(zbus/default) < 6.0.0~)
 BuildRequires:  crate(bindgen/default) >= 0.69.0
 BuildRequires:  rust >= 1.56
+
 Requires:  elfutils-libelf
 Requires:  libseccomp
 Requires:  protobuf
@@ -252,6 +263,10 @@ tar -xvf %{SOURCE32} -C vendor/
 tar -xvf %{SOURCE33} -C vendor/
 tar -xvf %{SOURCE34} -C vendor/
 tar -xvf %{SOURCE35} -C vendor/
+tar -xvf %{SOURCE36} -C vendor/
+tar -xvf %{SOURCE37} -C vendor/
+tar -xvf %{SOURCE38} -C vendor/
+tar -xvf %{SOURCE39} -C vendor/
 sed -i \
     -e '/^\[build-dependencies.protoc-bin-vendored\]/,/^$/d' \
     vendor/perfetto_protos-%{rust_perfetto_protos_ver}/Cargo.toml
@@ -278,13 +293,16 @@ cat >> .cargo/config.toml << EOF
 [patch.crates-io]
 affinity = { path = "vendor/affinity-%{rust_affinity_ver}" }
 anpa = { path = "vendor/anpa-%{rust_anpa_ver}" }
+ascii = { path = "vendor/ascii-%{rust_ascii_ver}" }
 blazesym = { path = "vendor/blazesym-%{rust_blazesym_ver}" }
 buddy_system_allocator = { path = "vendor/buddy_system_allocator-%{rust_buddy_system_allocator_ver}" }
 cargo_metadata = { path = "vendor/cargo_metadata-%{rust_cargo_metadata_ver}" }
+chunked_transfer = { path = "vendor/chunked_transfer-%{rust_chunked_transfer_ver}" }
 clap_main = { path = "vendor/clap_main-%{rust_clap_main_ver}" }
 combinations = { path = "vendor/combinations-%{rust_combinations_ver}" }
 convert_case = { path = "vendor/convert_case-%{rust_convert_case_ver}" }
 gpoint = { path = "vendor/gpoint-%{rust_gpoint_ver}" }
+httpdate = { path = "vendor/httpdate-%{rust_httpdate_ver}" }
 libbpf-cargo = { path = "vendor/libbpf-cargo-%{rust_libbpf_cargo_ver}" }
 libbpf-rs = { path = "vendor/libbpf-rs-%{rust_libbpf_rs_ver}" }
 libbpf-sys = { path = "vendor/libbpf-sys-%{rust_libbpf_sys_ver}" }
@@ -300,12 +318,13 @@ sscanf = { path = "vendor/sscanf-%{rust_sscanf_ver}" }
 sscanf_macro = { path = "vendor/sscanf_macro-%{rust_sscanf_macro_ver}" }
 sysinfo = { path = "vendor/sysinfo-%{rust_sysinfo_ver}" }
 tachyonfx = { path = "vendor/tachyonfx-%{rust_tachyonfx_ver}" }
+tiny_http = { path = "vendor/tiny_http-%{rust_tiny_http_ver}" }
 vsprintf = { path = "vendor/vsprintf-%{rust_vsprintf_ver}" }
 wrapcenum-derive = { path = "vendor/wrapcenum-derive-%{rust_wrapcenum_derive_ver}" }
 EOF
 
 %build
-%cargo_build -a -- --workspace --exclude scx_rlfifo --exclude scx_mitosis --exclude xtask --exclude scxcash --exclude vmlinux_docify --exclude scx_arena_selftests
+%cargo_build -a -- --frozen --workspace --exclude scx_rlfifo --exclude scx_mitosis --exclude xtask --exclude scx_characterize --exclude vmlinux_docify --exclude scx_arena_selftests --exclude scx_forge_agent
 
 %install
 
