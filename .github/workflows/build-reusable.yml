@@ -12,6 +12,11 @@ on:
         required: false
         type: boolean
         default: false
+      release_outputs:
+        description: Build final images and Flatpaks
+        required: false
+        type: boolean
+        default: true
     outputs:
       images:
         description: Final images produced by this architecture build
@@ -253,6 +258,7 @@ jobs:
     if: >-
       ${{
         always() &&
+        inputs.release_outputs &&
         needs.build.result == 'success' &&
         (needs.packages.result == 'success' || needs.packages.result == 'skipped') &&
         needs.build.outputs.images != '[]'
@@ -363,6 +369,7 @@ jobs:
     if: >-
       ${{
         always() &&
+        inputs.release_outputs &&
         needs.build.result == 'success' &&
         (needs.packages.result == 'success' || needs.packages.result == 'skipped') &&
         needs.build.outputs.flatpaks == 'true'

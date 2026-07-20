@@ -1,6 +1,8 @@
 name: Build Anatase
 
 on:
+  schedule:
+    - cron: "5 0 * * 1"
   workflow_dispatch:
     inputs:
       refresh_cache:
@@ -38,6 +40,7 @@ jobs:
     with:
       arch: x86_64
       refresh_cache: ${{ github.event_name == 'workflow_dispatch' && inputs.refresh_cache || false }}
+      release_outputs: ${{ github.event_name != 'schedule' }}
     secrets: inherit
 
   # arm:
@@ -57,6 +60,7 @@ jobs:
     if: >-
       ${{
         always() &&
+        github.event_name != 'schedule' &&
         needs.x86.result == 'success' &&
         needs.x86.outputs.images != '[]'
         }}
