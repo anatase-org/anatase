@@ -57,6 +57,40 @@ After power failures, or your battery draining to 0, you might face the same scr
 
 These steps will become unnecessary once Anatase gets secureboot keys. Want that to happen sooner? **Share Anatase with your friends!**
 
+## Roadmap
+ * Fix remaining bugs through user reports to achieve a stable release
+ * Port remaining handheld power controls to reach parity with old Bazzite kernel
+   * The Anatase kernel is secure-boot compatible. This meant dropping /dev/mem access when secure boot is enabled (ryzenadj) and acpi_call
+   * acpi_call was used for the Lenovo Legion Gos and Ayaneo/GPD/OneXPlayer handhelds
+   * Lenovo Legion Go currently lacks a custom TDP slider (bug) and fan curve support is missing from the kernel
+   * Ayaneo/GPD/OneXPlayer handhelds use a new kernel driver and power backend that is currently being fleshed out (has parity with previous backend, custom TDP, fan curves, etc)
+ * Add changelogs and release schedule
+ * Add proper development environments with systemd support for Arch/Fedora/Ubuntu
+   * `sudo systemctl enable --now docker` needs to work intuitively
+ * Add CEC support for gamemode only
+     * on startup or wake-up, if a TV is connected:
+       * if off, turn it on and switch to output
+       * if on other channel, switch to gamemode output
+     * when entering sleep or shutdown
+       * if the tv was turned on, turn it off
+       * if the channel was switched, switch to the previous channel
+       * on other cases, do nothing
+     * allow the tv remote to navigate the interface via up/down/left/right/ok and back
+     * if possible and intuitive, enable controlling the TV / soundbar audio
+ * Achieve SLSA3
+   * Port github attestations and use them verify CI images end-to-end
+   * Add SBOM support using a custom metadata format to record transient changes (new fedora packages, git+ repo pulls)
+ * Build an arm image
+   * Begin with one handheld: Pocket Retroid 6, as it supports UEFI compatible booting from SD card without invasive changes
+   * Test on one UEFI ARM device (DGX Spark or laptop)
+   * Expand device coverage
+ * Expand kernel to support TPM attestation for hibernation and initramfs verification
+   * Hibernation is currently forcibly disabled when secure boot is enabled to comply with secure boot requirements
+   * Use a TPM Policy from the current kernel to HMAC verify the hibernation image and block kernel takeovers
+   * The initramfs is not currently verified. Automatic unlock of encrypted hard disks through the TPM can be bypassed
+   * Sign the initramfs with an attached signature. Make the kernel extend an unused PCR depending on initramfs status, use that PCR as part of unlock policy and re-extend the PCR when exiting the initramfs
+ * In the future, apply for Secureboot
+
 ## Overview
 > [!TIP]
 > Anatase uses three sessions. You can switch between them on the login screen, by opening the drop-down on the bottom left of the screen.
