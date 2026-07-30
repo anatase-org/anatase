@@ -71,6 +71,7 @@ specs:
   - spec: git+https://github.com/anatase-org/spaces:spaces-git.spec
     packages:
       - spaces
+      - spaces-selinux
 
 postprocess: |
   set -eux
