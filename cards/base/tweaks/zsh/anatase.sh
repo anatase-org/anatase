@@ -714,6 +714,14 @@ if (( $+commands[podman] && ! $+commands[docker] )); then
   alias docker='sudo podman'
 fi
 
+# Spaces aliases
+if (( $+commands[spaces] )); then
+  alias kali='spaces enter kali --'
+  alias fedora='spaces enter fedora --'
+  alias arch='spaces enter arch --'
+  alias ubuntu='spaces enter ubuntu --'
+fi
+
 #
 # Show fastfetch as MOTD
 #
