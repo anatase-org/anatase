@@ -8,6 +8,14 @@
         {"source": "/usr/share/fonts/anatase", "destination": "/usr/share/fonts/anatase"},
         {"source": "/etc/profile.d/override-zsh.sh", "destination": "/etc/profile.d/override-zsh.sh"},
         {"source": "/usr/share/anatase/zsh/zshrc/arch", "destination": "/etc/zsh/zshrc"},
+        {"source": "/usr/bin/nvidia-ngx-updater", "destination": "/usr/bin/nvidia-ngx-updater"},
+        {"source": "/usr/bin/nvidia-pcc", "destination": "/usr/bin/nvidia-pcc"},
+        {"source": "/usr/bin/nvidia-cuda-mps-control", "destination": "/usr/bin/nvidia-cuda-mps-control"},
+        {"source": "/usr/bin/nvidia-cuda-mps-server", "destination": "/usr/bin/nvidia-cuda-mps-server"},
+        {"source": "/usr/bin/nvidia-debugdump", "destination": "/usr/bin/nvidia-debugdump"},
+        {"source": "/usr/bin/nvidia-smi", "destination": "/usr/bin/nvidia-smi"},
+        {"source": "/usr/bin/nvidia-bug-report.sh", "destination": "/usr/bin/nvidia-bug-report.sh"},
+        {"source": "/etc/X11/xorg.conf.d/10-nvidia.conf", "destination": "/etc/X11/xorg.conf.d/10-nvidia.conf"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/glvnd/egl_vendor.d/10_nvidia.json", "destination": "/usr/share/glvnd/egl_vendor.d/10_nvidia.json"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/09_nvidia_wayland2.json", "destination": "/usr/share/egl/egl_external_platform.d/09_nvidia_wayland2.json"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/10_nvidia_wayland.json", "destination": "/usr/share/egl/egl_external_platform.d/10_nvidia_wayland.json"},
@@ -23,6 +31,7 @@
         {"source": "/usr/lib/anatase/flatpak/nvidia32/vulkan/icd.d/nvidia_icd.i686.json", "destination": "/usr/share/vulkan/icd.d/nvidia_icd.i686.json"}
       ],
       "overlays": [
+        {"source": "/usr/lib/anatase/flatpak/nvidia/share", "destination": "/usr/share"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/lib", "destination": "/usr/lib"},
         {"source": "/usr/lib/anatase/flatpak/nvidia32/lib", "destination": "/usr/lib32"}
       ]
@@ -34,6 +43,14 @@
         {"source": "/usr/share/fonts/anatase", "destination": "/usr/share/fonts/anatase"},
         {"source": "/etc/profile.d/override-zsh.sh", "destination": "/etc/profile.d/override-zsh.sh"},
         {"source": "/etc/zshrc", "destination": "/etc/zshrc"},
+        {"source": "/usr/bin/nvidia-ngx-updater", "destination": "/usr/bin/nvidia-ngx-updater"},
+        {"source": "/usr/bin/nvidia-pcc", "destination": "/usr/bin/nvidia-pcc"},
+        {"source": "/usr/bin/nvidia-cuda-mps-control", "destination": "/usr/bin/nvidia-cuda-mps-control"},
+        {"source": "/usr/bin/nvidia-cuda-mps-server", "destination": "/usr/bin/nvidia-cuda-mps-server"},
+        {"source": "/usr/bin/nvidia-debugdump", "destination": "/usr/bin/nvidia-debugdump"},
+        {"source": "/usr/bin/nvidia-smi", "destination": "/usr/bin/nvidia-smi"},
+        {"source": "/usr/bin/nvidia-bug-report.sh", "destination": "/usr/bin/nvidia-bug-report.sh"},
+        {"source": "/etc/X11/xorg.conf.d/10-nvidia.conf", "destination": "/etc/X11/xorg.conf.d/10-nvidia.conf"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/glvnd/egl_vendor.d/10_nvidia.json", "destination": "/usr/share/glvnd/egl_vendor.d/10_nvidia.json"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/09_nvidia_wayland2.json", "destination": "/usr/share/egl/egl_external_platform.d/09_nvidia_wayland2.json"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/10_nvidia_wayland.json", "destination": "/usr/share/egl/egl_external_platform.d/10_nvidia_wayland.json"},
@@ -49,6 +66,7 @@
         {"source": "/usr/lib/anatase/flatpak/nvidia32/vulkan/icd.d/nvidia_icd.i686.json", "destination": "/usr/share/vulkan/icd.d/nvidia_icd.i686.json"}
       ],
       "overlays": [
+        {"source": "/usr/lib/anatase/flatpak/nvidia/share", "destination": "/usr/share"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/lib", "destination": "/usr/lib64"},
         {"source": "/usr/lib/anatase/flatpak/nvidia32/lib", "destination": "/usr/lib"}
       ]
@@ -60,6 +78,14 @@
         {"source": "/usr/share/fonts/anatase", "destination": "/usr/share/fonts/anatase"},
         {"source": "/etc/profile.d/override-zsh.sh", "destination": "/etc/profile.d/override-zsh.sh"},
         {"source": "/usr/share/anatase/zsh/zshrc/ubuntu", "destination": "/etc/zsh/zshrc"},
+        {"source": "/usr/bin/nvidia-ngx-updater", "destination": "/usr/bin/nvidia-ngx-updater"},
+        {"source": "/usr/bin/nvidia-pcc", "destination": "/usr/bin/nvidia-pcc"},
+        {"source": "/usr/bin/nvidia-cuda-mps-control", "destination": "/usr/bin/nvidia-cuda-mps-control"},
+        {"source": "/usr/bin/nvidia-cuda-mps-server", "destination": "/usr/bin/nvidia-cuda-mps-server"},
+        {"source": "/usr/bin/nvidia-debugdump", "destination": "/usr/bin/nvidia-debugdump"},
+        {"source": "/usr/bin/nvidia-smi", "destination": "/usr/bin/nvidia-smi"},
+        {"source": "/usr/bin/nvidia-bug-report.sh", "destination": "/usr/bin/nvidia-bug-report.sh"},
+        {"source": "/etc/X11/xorg.conf.d/10-nvidia.conf", "destination": "/etc/X11/xorg.conf.d/10-nvidia.conf"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/glvnd/egl_vendor.d/10_nvidia.json", "destination": "/usr/share/glvnd/egl_vendor.d/10_nvidia.json"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/09_nvidia_wayland2.json", "destination": "/usr/share/egl/egl_external_platform.d/09_nvidia_wayland2.json"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/10_nvidia_wayland.json", "destination": "/usr/share/egl/egl_external_platform.d/10_nvidia_wayland.json"},
@@ -75,6 +101,7 @@
         {"source": "/usr/lib/anatase/flatpak/nvidia32/vulkan/icd.d/nvidia_icd.i686.json", "destination": "/usr/share/vulkan/icd.d/nvidia_icd.i686.json"}
       ],
       "overlays": [
+        {"source": "/usr/lib/anatase/flatpak/nvidia/share", "destination": "/usr/share"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/lib", "destination": "/usr/lib/x86_64-linux-gnu"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/lib", "destination": "/usr/lib/aarch64-linux-gnu"},
         {"source": "/usr/lib/anatase/flatpak/nvidia32/lib", "destination": "/usr/lib/i386-linux-gnu"}
@@ -87,6 +114,14 @@
         {"source": "/usr/share/fonts/anatase", "destination": "/usr/share/fonts/anatase"},
         {"source": "/etc/profile.d/override-zsh.sh", "destination": "/etc/profile.d/override-zsh.sh"},
         {"source": "/usr/share/anatase/zsh/zshrc/kali", "destination": "/etc/zsh/zshrc"},
+        {"source": "/usr/bin/nvidia-ngx-updater", "destination": "/usr/bin/nvidia-ngx-updater"},
+        {"source": "/usr/bin/nvidia-pcc", "destination": "/usr/bin/nvidia-pcc"},
+        {"source": "/usr/bin/nvidia-cuda-mps-control", "destination": "/usr/bin/nvidia-cuda-mps-control"},
+        {"source": "/usr/bin/nvidia-cuda-mps-server", "destination": "/usr/bin/nvidia-cuda-mps-server"},
+        {"source": "/usr/bin/nvidia-debugdump", "destination": "/usr/bin/nvidia-debugdump"},
+        {"source": "/usr/bin/nvidia-smi", "destination": "/usr/bin/nvidia-smi"},
+        {"source": "/usr/bin/nvidia-bug-report.sh", "destination": "/usr/bin/nvidia-bug-report.sh"},
+        {"source": "/etc/X11/xorg.conf.d/10-nvidia.conf", "destination": "/etc/X11/xorg.conf.d/10-nvidia.conf"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/glvnd/egl_vendor.d/10_nvidia.json", "destination": "/usr/share/glvnd/egl_vendor.d/10_nvidia.json"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/09_nvidia_wayland2.json", "destination": "/usr/share/egl/egl_external_platform.d/09_nvidia_wayland2.json"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/10_nvidia_wayland.json", "destination": "/usr/share/egl/egl_external_platform.d/10_nvidia_wayland.json"},
@@ -102,6 +137,7 @@
         {"source": "/usr/lib/anatase/flatpak/nvidia32/vulkan/icd.d/nvidia_icd.i686.json", "destination": "/usr/share/vulkan/icd.d/nvidia_icd.i686.json"}
       ],
       "overlays": [
+        {"source": "/usr/lib/anatase/flatpak/nvidia/share", "destination": "/usr/share"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/lib", "destination": "/usr/lib/x86_64-linux-gnu"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/lib", "destination": "/usr/lib/aarch64-linux-gnu"},
         {"source": "/usr/lib/anatase/flatpak/nvidia32/lib", "destination": "/usr/lib/i386-linux-gnu"}

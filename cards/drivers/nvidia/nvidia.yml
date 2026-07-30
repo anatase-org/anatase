@@ -239,7 +239,11 @@ postprocess: |
   rewrite_flatpak_metadata() {
       payload="$1"
 
-      find "$payload" -type f \( -name '*.json' -o -name '*.icd' \) -exec sed -i \
+      find "$payload" \
+          -type f \
+          \( -name '*.json' -o -name '*.icd' \) \
+          ! -path "$payload/share/nvidia/files.d/*" \
+          -exec sed -i \
               -e 's|/usr/lib64/||g' \
               -e 's|/usr/lib/||g' \
               -e 's|__NV_VK_ICD__|libGLX_nvidia.so.0|g' \
@@ -266,9 +270,12 @@ postprocess: |
           "$payload/lib/dri:$libdir/dri/nvidia*.so" \
           "$payload/lib/gbm:$libdir/gbm/nvidia*.so" \
           "$payload/lib/vdpau:$libdir/vdpau/libvdpau_nvidia.so*" \
+          "$payload/lib/xorg/modules/drivers:$libdir/xorg/modules/drivers/nvidia_drv.so" \
+          "$payload/lib/xorg/modules/extensions:$libdir/xorg/modules/extensions/libglxserver_nvidia.so" \
           "$payload/lib/nvidia/wine:$libdir/nvidia/wine/*.dll" \
           "$payload/share/nvidia:/usr/share/nvidia/nvidia-application-profiles*" \
           "$payload/share/nvidia:/usr/share/nvidia/nvoptix.bin" \
+          "$payload/share/nvidia/files.d:/usr/share/nvidia/files.d/sandboxutils-filelist.json" \
           "$payload/glvnd/egl_vendor.d:/usr/share/glvnd/egl_vendor.d/*nvidia*.json" \
           "$payload/egl/egl_external_platform.d:/usr/share/egl/egl_external_platform.d/*nvidia*.json" \
           "$payload/vulkan/icd.d:/usr/share/vulkan/icd.d/*nvidia*$vulkan_cpu*.json" \
@@ -287,7 +294,11 @@ postprocess: |
       rewrite_flatpak_metadata "$payload"
 
       # Sanity check we did not miss libraries
-      find "$payload" -type f \( -name '*.json' -o -name '*.icd' \) -print0 |
+      find "$payload" \
+          -type f \
+          \( -name '*.json' -o -name '*.icd' \) \
+          ! -path "$payload/share/nvidia/files.d/*" \
+          -print0 |
           xargs -0 -r grep -hoE 'lib[^"[:space:]]+\.so([^"[:space:]]*)?' |
           sort -u |
           while read -r lib; do
