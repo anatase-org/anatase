@@ -1,14 +1,13 @@
 {
   "version": 1,
-  "default_shell": "/usr/bin/zsh",
   "distros": {
     "arch": {
       "packages": ["fastfetch", "screen", "tmux", "zsh"],
       "mounts": [
         {"source": "/usr/share/anatase/zsh", "destination": "/usr/share/anatase/zsh"},
         {"source": "/usr/share/fonts/anatase", "destination": "/usr/share/fonts/anatase"},
-        {"source": "/etc/zshrc", "destination": "/etc/zshrc"},
-        {"source": "/etc/zshrc", "destination": "/etc/zsh/zshrc"},
+        {"source": "/etc/profile.d/override-zsh.sh", "destination": "/etc/profile.d/override-zsh.sh"},
+        {"source": "/usr/share/anatase/zsh/zshrc/arch", "destination": "/etc/zsh/zshrc"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/glvnd/egl_vendor.d/10_nvidia.json", "destination": "/usr/share/glvnd/egl_vendor.d/10_nvidia.json"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/09_nvidia_wayland2.json", "destination": "/usr/share/egl/egl_external_platform.d/09_nvidia_wayland2.json"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/10_nvidia_wayland.json", "destination": "/usr/share/egl/egl_external_platform.d/10_nvidia_wayland.json"},
@@ -33,8 +32,8 @@
       "mounts": [
         {"source": "/usr/share/anatase/zsh", "destination": "/usr/share/anatase/zsh"},
         {"source": "/usr/share/fonts/anatase", "destination": "/usr/share/fonts/anatase"},
+        {"source": "/etc/profile.d/override-zsh.sh", "destination": "/etc/profile.d/override-zsh.sh"},
         {"source": "/etc/zshrc", "destination": "/etc/zshrc"},
-        {"source": "/etc/zshrc", "destination": "/etc/zsh/zshrc"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/glvnd/egl_vendor.d/10_nvidia.json", "destination": "/usr/share/glvnd/egl_vendor.d/10_nvidia.json"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/09_nvidia_wayland2.json", "destination": "/usr/share/egl/egl_external_platform.d/09_nvidia_wayland2.json"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/10_nvidia_wayland.json", "destination": "/usr/share/egl/egl_external_platform.d/10_nvidia_wayland.json"},
@@ -59,8 +58,8 @@
       "mounts": [
         {"source": "/usr/share/anatase/zsh", "destination": "/usr/share/anatase/zsh"},
         {"source": "/usr/share/fonts/anatase", "destination": "/usr/share/fonts/anatase"},
-        {"source": "/etc/zshrc", "destination": "/etc/zshrc"},
-        {"source": "/etc/zshrc", "destination": "/etc/zsh/zshrc"},
+        {"source": "/etc/profile.d/override-zsh.sh", "destination": "/etc/profile.d/override-zsh.sh"},
+        {"source": "/usr/share/anatase/zsh/zshrc/ubuntu", "destination": "/etc/zsh/zshrc"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/glvnd/egl_vendor.d/10_nvidia.json", "destination": "/usr/share/glvnd/egl_vendor.d/10_nvidia.json"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/09_nvidia_wayland2.json", "destination": "/usr/share/egl/egl_external_platform.d/09_nvidia_wayland2.json"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/10_nvidia_wayland.json", "destination": "/usr/share/egl/egl_external_platform.d/10_nvidia_wayland.json"},
@@ -86,8 +85,8 @@
       "mounts": [
         {"source": "/usr/share/anatase/zsh", "destination": "/usr/share/anatase/zsh"},
         {"source": "/usr/share/fonts/anatase", "destination": "/usr/share/fonts/anatase"},
-        {"source": "/etc/zshrc", "destination": "/etc/zshrc"},
-        {"source": "/etc/zshrc", "destination": "/etc/zsh/zshrc"},
+        {"source": "/etc/profile.d/override-zsh.sh", "destination": "/etc/profile.d/override-zsh.sh"},
+        {"source": "/usr/share/anatase/zsh/zshrc/kali", "destination": "/etc/zsh/zshrc"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/glvnd/egl_vendor.d/10_nvidia.json", "destination": "/usr/share/glvnd/egl_vendor.d/10_nvidia.json"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/09_nvidia_wayland2.json", "destination": "/usr/share/egl/egl_external_platform.d/09_nvidia_wayland2.json"},
         {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/10_nvidia_wayland.json", "destination": "/usr/share/egl/egl_external_platform.d/10_nvidia_wayland.json"},

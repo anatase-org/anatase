@@ -1,0 +1,4 @@
+# Anatase system-wide zshrc for Arch Linux guests.
+if [ -r /usr/share/anatase/zsh/anatase.sh ]; then
+    source /usr/share/anatase/zsh/anatase.sh
+fi

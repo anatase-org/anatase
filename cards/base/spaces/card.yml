@@ -54,6 +54,9 @@ packages:
 
 files:
   - config.json
+  - zshrc.arch
+  - zshrc.kali
+  - zshrc.ubuntu
 
 specs:
   - spec: python-textual/python-textual.spec
@@ -73,3 +76,9 @@ postprocess: |
   set -eux
 
   install -Dm0644 /files/config.json /etc/spaces/config.json
+  install -Dm0644 /files/zshrc.arch \
+      /usr/share/anatase/zsh/zshrc/arch
+  install -Dm0644 /files/zshrc.kali \
+      /usr/share/anatase/zsh/zshrc/kali
+  install -Dm0644 /files/zshrc.ubuntu \
+      /usr/share/anatase/zsh/zshrc/ubuntu
