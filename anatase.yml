@@ -54,6 +54,7 @@ cards:
   - cards/de/kde
   - cards/gaming/gamemode
   - cards/gaming/hhd
+  - cards/base/spaces
   - cards/base/tweaks
   - cards/base/finalize
 

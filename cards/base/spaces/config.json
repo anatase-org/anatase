@@ -1,0 +1,112 @@
+{
+  "version": 1,
+  "default_shell": "/usr/bin/zsh",
+  "distros": {
+    "arch": {
+      "packages": ["screen", "tmux", "zsh"],
+      "mounts": [
+        {"source": "/usr/share/anatase/zsh", "destination": "/usr/share/anatase/zsh"},
+        {"source": "/usr/share/fonts/anatase", "destination": "/usr/share/fonts/anatase"},
+        {"source": "/etc/zshrc", "destination": "/etc/zshrc"},
+        {"source": "/etc/zshrc", "destination": "/etc/zsh/zshrc"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/glvnd/egl_vendor.d/10_nvidia.json", "destination": "/usr/share/glvnd/egl_vendor.d/10_nvidia.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/09_nvidia_wayland2.json", "destination": "/usr/share/egl/egl_external_platform.d/09_nvidia_wayland2.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/10_nvidia_wayland.json", "destination": "/usr/share/egl/egl_external_platform.d/10_nvidia_wayland.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/15_nvidia_gbm.json", "destination": "/usr/share/egl/egl_external_platform.d/15_nvidia_gbm.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/20_nvidia_xcb.json", "destination": "/usr/share/egl/egl_external_platform.d/20_nvidia_xcb.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/20_nvidia_xlib.json", "destination": "/usr/share/egl/egl_external_platform.d/20_nvidia_xlib.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkan/icd.d/nvidia_icd.x86_64.json", "destination": "/usr/share/vulkan/icd.d/nvidia_icd.x86_64.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkan/icd.d/nvidia_icd.aarch64.json", "destination": "/usr/share/vulkan/icd.d/nvidia_icd.aarch64.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkansc/icd.d/nvidia_icd.x86_64.json", "destination": "/usr/share/vulkansc/icd.d/nvidia_icd.x86_64.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkansc/icd.d/nvidia_icd.aarch64.json", "destination": "/usr/share/vulkansc/icd.d/nvidia_icd.aarch64.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkan/implicit_layer.d/nvidia_layers.json", "destination": "/usr/share/vulkan/implicit_layer.d/nvidia_layers.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/OpenCL/vendors/nvidia.icd", "destination": "/etc/OpenCL/vendors/nvidia.icd"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia32/vulkan/icd.d/nvidia_icd.i686.json", "destination": "/usr/share/vulkan/icd.d/nvidia_icd.i686.json"}
+      ],
+      "overlays": [
+        {"source": "/usr/lib/anatase/flatpak/nvidia/lib", "destination": "/usr/lib"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia32/lib", "destination": "/usr/lib32"}
+      ]
+    },
+    "fedora": {
+      "packages": ["screen", "tmux", "zsh"],
+      "mounts": [
+        {"source": "/usr/share/anatase/zsh", "destination": "/usr/share/anatase/zsh"},
+        {"source": "/usr/share/fonts/anatase", "destination": "/usr/share/fonts/anatase"},
+        {"source": "/etc/zshrc", "destination": "/etc/zshrc"},
+        {"source": "/etc/zshrc", "destination": "/etc/zsh/zshrc"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/glvnd/egl_vendor.d/10_nvidia.json", "destination": "/usr/share/glvnd/egl_vendor.d/10_nvidia.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/09_nvidia_wayland2.json", "destination": "/usr/share/egl/egl_external_platform.d/09_nvidia_wayland2.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/10_nvidia_wayland.json", "destination": "/usr/share/egl/egl_external_platform.d/10_nvidia_wayland.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/15_nvidia_gbm.json", "destination": "/usr/share/egl/egl_external_platform.d/15_nvidia_gbm.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/20_nvidia_xcb.json", "destination": "/usr/share/egl/egl_external_platform.d/20_nvidia_xcb.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/20_nvidia_xlib.json", "destination": "/usr/share/egl/egl_external_platform.d/20_nvidia_xlib.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkan/icd.d/nvidia_icd.x86_64.json", "destination": "/usr/share/vulkan/icd.d/nvidia_icd.x86_64.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkan/icd.d/nvidia_icd.aarch64.json", "destination": "/usr/share/vulkan/icd.d/nvidia_icd.aarch64.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkansc/icd.d/nvidia_icd.x86_64.json", "destination": "/usr/share/vulkansc/icd.d/nvidia_icd.x86_64.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkansc/icd.d/nvidia_icd.aarch64.json", "destination": "/usr/share/vulkansc/icd.d/nvidia_icd.aarch64.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkan/implicit_layer.d/nvidia_layers.json", "destination": "/usr/share/vulkan/implicit_layer.d/nvidia_layers.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/OpenCL/vendors/nvidia.icd", "destination": "/etc/OpenCL/vendors/nvidia.icd"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia32/vulkan/icd.d/nvidia_icd.i686.json", "destination": "/usr/share/vulkan/icd.d/nvidia_icd.i686.json"}
+      ],
+      "overlays": [
+        {"source": "/usr/lib/anatase/flatpak/nvidia/lib", "destination": "/usr/lib64"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia32/lib", "destination": "/usr/lib"}
+      ]
+    },
+    "ubuntu": {
+      "packages": ["screen", "tmux", "zsh"],
+      "mounts": [
+        {"source": "/usr/share/anatase/zsh", "destination": "/usr/share/anatase/zsh"},
+        {"source": "/usr/share/fonts/anatase", "destination": "/usr/share/fonts/anatase"},
+        {"source": "/etc/zshrc", "destination": "/etc/zshrc"},
+        {"source": "/etc/zshrc", "destination": "/etc/zsh/zshrc"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/glvnd/egl_vendor.d/10_nvidia.json", "destination": "/usr/share/glvnd/egl_vendor.d/10_nvidia.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/09_nvidia_wayland2.json", "destination": "/usr/share/egl/egl_external_platform.d/09_nvidia_wayland2.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/10_nvidia_wayland.json", "destination": "/usr/share/egl/egl_external_platform.d/10_nvidia_wayland.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/15_nvidia_gbm.json", "destination": "/usr/share/egl/egl_external_platform.d/15_nvidia_gbm.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/20_nvidia_xcb.json", "destination": "/usr/share/egl/egl_external_platform.d/20_nvidia_xcb.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/20_nvidia_xlib.json", "destination": "/usr/share/egl/egl_external_platform.d/20_nvidia_xlib.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkan/icd.d/nvidia_icd.x86_64.json", "destination": "/usr/share/vulkan/icd.d/nvidia_icd.x86_64.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkan/icd.d/nvidia_icd.aarch64.json", "destination": "/usr/share/vulkan/icd.d/nvidia_icd.aarch64.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkansc/icd.d/nvidia_icd.x86_64.json", "destination": "/usr/share/vulkansc/icd.d/nvidia_icd.x86_64.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkansc/icd.d/nvidia_icd.aarch64.json", "destination": "/usr/share/vulkansc/icd.d/nvidia_icd.aarch64.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkan/implicit_layer.d/nvidia_layers.json", "destination": "/usr/share/vulkan/implicit_layer.d/nvidia_layers.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/OpenCL/vendors/nvidia.icd", "destination": "/etc/OpenCL/vendors/nvidia.icd"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia32/vulkan/icd.d/nvidia_icd.i686.json", "destination": "/usr/share/vulkan/icd.d/nvidia_icd.i686.json"}
+      ],
+      "overlays": [
+        {"source": "/usr/lib/anatase/flatpak/nvidia/lib", "destination": "/usr/lib/x86_64-linux-gnu"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/lib", "destination": "/usr/lib/aarch64-linux-gnu"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia32/lib", "destination": "/usr/lib/i386-linux-gnu"}
+      ]
+    },
+    "kali": {
+      "packages": ["screen", "tmux", "zsh"],
+      "mounts": [
+        {"source": "/usr/share/anatase/zsh", "destination": "/usr/share/anatase/zsh"},
+        {"source": "/usr/share/fonts/anatase", "destination": "/usr/share/fonts/anatase"},
+        {"source": "/etc/zshrc", "destination": "/etc/zshrc"},
+        {"source": "/etc/zshrc", "destination": "/etc/zsh/zshrc"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/glvnd/egl_vendor.d/10_nvidia.json", "destination": "/usr/share/glvnd/egl_vendor.d/10_nvidia.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/09_nvidia_wayland2.json", "destination": "/usr/share/egl/egl_external_platform.d/09_nvidia_wayland2.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/10_nvidia_wayland.json", "destination": "/usr/share/egl/egl_external_platform.d/10_nvidia_wayland.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/15_nvidia_gbm.json", "destination": "/usr/share/egl/egl_external_platform.d/15_nvidia_gbm.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/20_nvidia_xcb.json", "destination": "/usr/share/egl/egl_external_platform.d/20_nvidia_xcb.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/egl/egl_external_platform.d/20_nvidia_xlib.json", "destination": "/usr/share/egl/egl_external_platform.d/20_nvidia_xlib.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkan/icd.d/nvidia_icd.x86_64.json", "destination": "/usr/share/vulkan/icd.d/nvidia_icd.x86_64.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkan/icd.d/nvidia_icd.aarch64.json", "destination": "/usr/share/vulkan/icd.d/nvidia_icd.aarch64.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkansc/icd.d/nvidia_icd.x86_64.json", "destination": "/usr/share/vulkansc/icd.d/nvidia_icd.x86_64.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkansc/icd.d/nvidia_icd.aarch64.json", "destination": "/usr/share/vulkansc/icd.d/nvidia_icd.aarch64.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/vulkan/implicit_layer.d/nvidia_layers.json", "destination": "/usr/share/vulkan/implicit_layer.d/nvidia_layers.json"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/OpenCL/vendors/nvidia.icd", "destination": "/etc/OpenCL/vendors/nvidia.icd"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia32/vulkan/icd.d/nvidia_icd.i686.json", "destination": "/usr/share/vulkan/icd.d/nvidia_icd.i686.json"}
+      ],
+      "overlays": [
+        {"source": "/usr/lib/anatase/flatpak/nvidia/lib", "destination": "/usr/lib/x86_64-linux-gnu"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia/lib", "destination": "/usr/lib/aarch64-linux-gnu"},
+        {"source": "/usr/lib/anatase/flatpak/nvidia32/lib", "destination": "/usr/lib/i386-linux-gnu"}
+      ]
+    }
+  }
+}
