@@ -59,6 +59,20 @@ packages:
   # GPT loves rg, don't fight it
   - ripgrep
 
+  # Translation binfmts that are loaded
+  # from the initramfs to the kernel
+  # Required for foreign arch emulation
+  # We need to provide these
+  - qemu-user-static
+
+  # Guest integration in VMs
+  - hyperv-daemons
+  - open-vm-tools-desktop
+  - qemu-guest-agent
+  - spice-vdagent
+  - spice-webdavd
+  - virtualbox-guest-additions
+
 postprocess: |
   set -eux
 

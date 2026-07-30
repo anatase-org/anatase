@@ -48,7 +48,6 @@ cards:
   - cards/base/grub
   - cards/base/utils
   - cards/base/atomic
-  - cards/base/virt
   - cards/base/scx
   - cards/drivers/nvidia/nvidia
   - cards/drivers/nvidia/nct
