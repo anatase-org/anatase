@@ -3,7 +3,7 @@
   "default_shell": "/usr/bin/zsh",
   "distros": {
     "arch": {
-      "packages": ["screen", "tmux", "zsh"],
+      "packages": ["fastfetch", "screen", "tmux", "zsh"],
       "mounts": [
         {"source": "/usr/share/anatase/zsh", "destination": "/usr/share/anatase/zsh"},
         {"source": "/usr/share/fonts/anatase", "destination": "/usr/share/fonts/anatase"},
@@ -29,7 +29,7 @@
       ]
     },
     "fedora": {
-      "packages": ["screen", "tmux", "zsh"],
+      "packages": ["fastfetch", "screen", "tmux", "zsh"],
       "mounts": [
         {"source": "/usr/share/anatase/zsh", "destination": "/usr/share/anatase/zsh"},
         {"source": "/usr/share/fonts/anatase", "destination": "/usr/share/fonts/anatase"},
@@ -55,7 +55,7 @@
       ]
     },
     "ubuntu": {
-      "packages": ["screen", "tmux", "zsh"],
+      "packages": ["fastfetch", "screen", "tmux", "zsh"],
       "mounts": [
         {"source": "/usr/share/anatase/zsh", "destination": "/usr/share/anatase/zsh"},
         {"source": "/usr/share/fonts/anatase", "destination": "/usr/share/fonts/anatase"},
@@ -82,7 +82,7 @@
       ]
     },
     "kali": {
-      "packages": ["screen", "tmux", "zsh"],
+      "packages": ["fastfetch", "screen", "tmux", "zsh"],
       "mounts": [
         {"source": "/usr/share/anatase/zsh", "destination": "/usr/share/anatase/zsh"},
         {"source": "/usr/share/fonts/anatase", "destination": "/usr/share/fonts/anatase"},
