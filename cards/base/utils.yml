@@ -63,7 +63,8 @@ packages:
   # from the initramfs to the kernel
   # Required for foreign arch emulation
   # We need to provide these
-  - qemu-user-static
+  - qemu-user-static-x86
+  - qemu-user-static-aarch64
 
   # Guest integration in VMs
   - hyperv-daemons
