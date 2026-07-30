@@ -107,9 +107,25 @@ ${FG[032]}%~\$(git_prompt_info)\$(hg_prompt_info) ${FG[105]}%(!.#.»)%f%k "
 
 anatase_configure_powerlevel10k() {
   local background_color=8
+  local directory_background_color=$background_color
   local foreground_color=254
   local foreground_color_weaker=250
   local foreground_color_stronger=255
+
+  local os_release_id
+  if [[ -r /etc/os-release ]]; then
+    os_release_id=$(
+      . /etc/os-release
+      print -r -- "$ID"
+    )
+  fi
+
+  case "$os_release_id" in
+    ubuntu) directory_background_color=1 ;;
+    kali) directory_background_color=25 ;;
+    fedora) directory_background_color=27 ;;
+    arch) directory_background_color=32 ;;
+  esac
 
   unset -m '(POWERLEVEL9K_*|DEFAULT_USER)~POWERLEVEL9K_GITSTATUS_DIR'
 
@@ -192,7 +208,7 @@ anatase_configure_powerlevel10k() {
   typeset -g POWERLEVEL9K_OS_ICON_FOREGROUND=232
   typeset -g POWERLEVEL9K_OS_ICON_BACKGROUND=255
 
-  typeset -g POWERLEVEL9K_DIR_BACKGROUND=$background_color
+  typeset -g POWERLEVEL9K_DIR_BACKGROUND=$directory_background_color
   typeset -g POWERLEVEL9K_DIR_FOREGROUND=$foreground_color
   typeset -g POWERLEVEL9K_SHORTEN_STRATEGY=truncate_to_unique
   typeset -g POWERLEVEL9K_SHORTEN_DELIMITER=
