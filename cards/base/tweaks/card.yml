@@ -7,6 +7,8 @@ files:
   - zram-generator.conf
   - systemd-zram-setup-reset.conf
   - dev-hugepages1G.mount
+  - ssh-agent.conf
+  - plasma-core-ssh-agent.conf
   - override-zsh.sh
 
 build-deps:
@@ -55,6 +57,26 @@ postprocess: |
       /usr/lib/systemd/system/systemd-zram-setup@.service.d/10-anatase-reset.conf
   install -Dm0644 /files/dev-hugepages1G.mount \
       /usr/lib/systemd/system/dev-hugepages1G.mount
+
+  #
+  # SSH and GPG agent socket enabling
+  #
+
+  # Load default SSH keys when the socket-activated user agent starts
+  # Allows forwarding to spaces
+  install -Dm0644 /files/ssh-agent.conf \
+      /usr/lib/systemd/user/ssh-agent.service.d/10-anatase-load-keys.conf
+  # Skip automatic activation to avoid prompting for passwords on boot
+  install -Dm0644 /files/plasma-core-ssh-agent.conf \
+      /etc/systemd/user/plasma-core.target.d/ssh-agent.conf
+  install -dm0755 /usr/lib/systemd/user-preset
+  {
+      echo "enable ssh-agent.socket"
+      echo "enable gpg-agent-extra.socket"
+  } > /usr/lib/systemd/user-preset/80-anatase-ssh-agent.preset
+  systemctl --user --global preset \
+      ssh-agent.socket \
+      gpg-agent-extra.socket
 
   #
   # Shell integration
