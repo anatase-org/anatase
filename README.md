@@ -66,7 +66,7 @@ These steps will become unnecessary once Anatase gets secureboot keys. Want that
 > **Do not tick "Login again immediately after logging off" or you will get stuck in Gamemode**
 
 ### Access the Linux world with Spaces
-You have your Linux preferences, you like specific distributions and their packages, or maybe you want to experiment and see what's the best one: Arch, Fedora, or Ubuntu? In Anatase, you do not have to choose. By typing `arch` (Arch Linux), `fedora` (Fedora), `ubuntu` (Ubuntu), or `kali` (Kali Linux) in your terminal, it transforms to that distribution and gives you access to all its packages, both terminal and desktop ones.
+You have your Linux preferences, you like specific distributions and their packages, or maybe you want to experiment and see what's the best one: Arch, Fedora, or Ubuntu? In Anatase, you do not have to choose. By typing `arch-linux`, `fedora`, `ubuntu`, or `kali` in your terminal, it transforms to that distribution and gives you access to all its packages, both terminal and desktop ones.
 
 Everything is supported: Docker, VMs, browsers, Visual Studio code, hacking tools, partition managers, package managers, even snap. They integrate seamlessly with your desktop, supporting conveniences such as screen sharing, systemd services, and even your sudo password. Applications appear in your task bar as you install them. A permission system ensures you share only what you need, and SELinux enforcement ensures your SSH and GPG keys remain safe.
 

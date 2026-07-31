@@ -54,6 +54,7 @@ packages:
 
 files:
   - config.json
+  - enter-space
   - zshrc.arch
   - zshrc.kali
   - zshrc.ubuntu
@@ -77,6 +78,9 @@ postprocess: |
   set -eux
 
   install -Dm0644 /files/config.json /etc/spaces/config.json
+  for space in arch-linux fedora kali ubuntu; do
+      install -Dm0755 /files/enter-space "/usr/bin/${space}"
+  done
   install -Dm0644 /files/zshrc.arch \
       /usr/share/anatase/zsh/zshrc/arch
   install -Dm0644 /files/zshrc.kali \

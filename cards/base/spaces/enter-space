@@ -1,0 +1,4 @@
+#!/bin/sh
+
+space=${0##*/}
+exec spaces enter "${space%-linux}" -- "$@"
