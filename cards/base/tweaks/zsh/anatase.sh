@@ -714,6 +714,12 @@ if (( $+commands[podman] && ! $+commands[docker] )); then
   alias docker='sudo podman'
 fi
 
+# The arch executable is provided by coreutils, so expose the Arch space only
+# as an interactive alias rather than replacing it with another executable.
+if (( $+commands[spaces] )); then
+  alias arch='spaces enter arch --'
+fi
+
 #
 # Show fastfetch as MOTD
 #
