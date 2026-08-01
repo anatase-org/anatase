@@ -70,6 +70,7 @@ specs:
       url: https://src.fedoraproject.org/rpms/python-textual
       branch: rawhide
   - spec: git+https://github.com/anatase-org/spaces:spaces-git.spec
+    auth: "github"
     packages:
       - spaces
       - spaces-selinux

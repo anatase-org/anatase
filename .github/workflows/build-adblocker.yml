@@ -23,6 +23,7 @@ jobs:
           - x86_64
     env:
       ARCH: ${{ matrix.arch }}
+      GH_TOKEN: ${{ secrets.ANATASE_READ }}
       OCI_ARCH: ${{ matrix.arch == 'aarch64' && 'arm64' || 'amd64' }}
 
     steps:
@@ -33,6 +34,9 @@ jobs:
           token: ${{ secrets.ANATASE_READ }}
           persist-credentials: false
           submodules: recursive
+
+      - name: Configure private GitHub access
+        run: gh auth setup-git
 
       - name: Install ludos
         run: ./ludos/prepare.sh flatpaks

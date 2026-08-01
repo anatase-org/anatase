@@ -40,6 +40,8 @@ jobs:
   build:
     name: Prepare Build · ${{ inputs.arch }}
     runs-on: ${{ inputs.arch == 'aarch64' && 'ubuntu-26.04-arm' || 'ubuntu-26.04' }}
+    env:
+      GH_TOKEN: ${{ secrets.ANATASE_READ }}
     outputs:
       manifest_0: ${{ steps.orchestration.outputs.manifest_0 }}
       manifest_1: ${{ steps.orchestration.outputs.manifest_1 }}
@@ -68,6 +70,9 @@ jobs:
           token: ${{ secrets.ANATASE_READ }}
           persist-credentials: false
           submodules: recursive
+
+      - name: Configure private GitHub access
+        run: gh auth setup-git
 
       - name: Install ludos
         run: ./ludos/prepare.sh base
@@ -190,6 +195,7 @@ jobs:
         (matrix.build.large && 'large' || 'ubuntu-26.04')
       }}
     env:
+      GH_TOKEN: ${{ secrets.ANATASE_READ }}
       LARGE_BUILDER: ${{ matrix.build.large }}
     strategy:
       fail-fast: false
@@ -204,6 +210,9 @@ jobs:
           token: ${{ secrets.ANATASE_READ }}
           persist-credentials: false
           submodules: recursive
+
+      - name: Configure private GitHub access
+        run: gh auth setup-git
 
       - name: Install ludos
         run: ./ludos/prepare.sh base

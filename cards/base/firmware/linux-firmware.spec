@@ -8,10 +8,10 @@ Version:	20260622.an01
 Release:	1%{?dist}
 Summary:	Firmware files used by the Linux kernel
 License:	GPL-1.0-or-later AND GPL-2.0-or-later AND MIT AND LicenseRef-Callaway-Redistributable-no-modification-permitted
-URL:		https://github.com/hhd-dev/linux-firmware
+URL:		https://github.com/anatase-org/linux-firmware
 BuildArch:	noarch
 
-Source0:	https://github.com/hhd-dev/linux-firmware/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.tar.gz
+Source0:	https://github.com/anatase-org/linux-firmware/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 BuildRequires:	make
 BuildRequires:	git-core
