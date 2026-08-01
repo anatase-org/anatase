@@ -65,21 +65,6 @@ These steps will become unnecessary once Anatase gets secureboot keys. Want that
 > 
 > **Do not tick "Login again immediately after logging off" or you will get stuck in Gamemode**
 
-### Access the Linux world with Spaces
-You have your Linux preferences, you like specific distributions and their packages, or maybe you want to experiment and see what's the best one: Arch, Fedora, or Ubuntu? In Anatase, you do not have to choose. By typing `arch-linux`, `fedora`, `ubuntu`, or `kali` in your terminal, it transforms to that distribution and gives you access to all its packages, both terminal and desktop ones.
-
-Everything is supported: Docker, VMs, browsers, Visual Studio code, hacking tools, partition managers, package managers, even snap. They integrate seamlessly with your desktop, supporting conveniences such as screen sharing, systemd services, and even your sudo password. Applications appear in your task bar as you install them. A permission system ensures you share only what you need, and SELinux enforcement ensures your SSH and GPG keys remain safe.
-
-Below, you can see an Anatase system running the Shelly AUR package manager from Arch, Visual Studio Code in Fedora, nmap in Kali Linux, and Docker in Ubuntu, all at the same time! Even better, there is no performance overhead. Develop your way, just the way you are used to.
-
-And if you blow up the Space, because perhaps you [typed "Yes, do as I say!"](https://www.youtube.com/watch?v=siEIKFy1Q0I) or your agent decided to fix a problem [through unconventional means](https://www.theregister.com/ai-and-ml/2026/07/16/openai-admits-gpt-56-occasionally-deletes-files-but-its-an-honest-mistake/5274008), `spaces create <space>` will recreate it and you will be back to developing in 5 minutes. Your home is separate, with a Space accessing only the folders you choose to share, limiting the potential damage.
-
-![Spaces in Anatase, shown with Ubuntu running docker, Kali Linux running nmap, VS Code running in Fedora, and the Shelly AUR Store running in arch ](docs/spaces.png)
-
-Finally, you can `claude --dangerously-skip-permissions` and go to the bathroom in peace. Go ahead, install 50 AUR packages with 3 crypto miners*. It's ok if it breaks, your system will be fine. More information [here](https://github.com/anatase-org/spaces).
-
-*Spaces has not undergone a formal security review, so installing malware is unwise.
-
 ### Plasma Desktop
 Anatase ships with KDE Plasma as its main desktop session. It is performant, _feels_ like Windows, and is progressing rapidly with a core team of competent developers. In addition, the applications in the KDE ecosystem make strong defaults. Anatase preinstalls Ark (Archive Manager), Filelight (Disk Usage Analyzer), Kate (Text Editor), and Okular (Document Viewer), and all of those happen to come from KDE. It is not a coincidence.
 
@@ -106,6 +91,21 @@ Anatase also ships a Gamemode session that brings in elements from SteamOS as an
  * Brings the game closer to the GPU, with advanced controls for VRR, Framerate, and HDR. 
 
 ![Anatase Gamemode performance controls](docs/gamemode.png)
+
+### Access the Linux world with Spaces
+You have your Linux preferences, you like specific distributions and their packages, or maybe you want to experiment and see what's the best one: Arch, Fedora, or Ubuntu? In Anatase, you do not have to choose. By typing `arch`, `fedora`, `ubuntu`, or `kali` in your terminal, it transforms to that distribution and gives you access to all its packages, both terminal and desktop ones.
+
+Everything is supported: Docker, VMs, browsers, Visual Studio code, hacking tools, partition managers, package managers, even snap. They integrate seamlessly with your desktop, supporting conveniences such as screen sharing, systemd services, and even your sudo password. Applications appear in your task bar as you install them. A permission system ensures you share only what you need, and SELinux enforcement ensures your SSH and GPG keys remain safe.
+
+Below, you can see an Anatase system running the Shelly AUR package manager from Arch, Visual Studio Code in Fedora, nmap in Kali Linux, and Docker in Ubuntu, all at the same time! Even better, there is no performance overhead. Develop your way, just the way you are used to.
+
+And if you blow up the Space, because perhaps you [typed "Yes, do as I say!"](https://www.youtube.com/watch?v=siEIKFy1Q0I) or your agent decided to fix a problem [through unconventional means](https://www.theregister.com/ai-and-ml/2026/07/16/openai-admits-gpt-56-occasionally-deletes-files-but-its-an-honest-mistake/5274008), `spaces create <space>` will recreate it and you will be back to developing in 5 minutes. Your home is separate, with a Space accessing only the folders you choose to share, limiting the potential damage.
+
+![Spaces in Anatase, shown with Ubuntu running docker, Kali Linux running nmap, VS Code running in Fedora, and the Shelly AUR Store running in arch ](docs/spaces.png)
+
+Finally, you can `claude --dangerously-skip-permissions` and go to the bathroom in peace. Go ahead, install 50 AUR packages with 3 crypto miners*. It's ok if it breaks, your system will be fine. More information [here](https://github.com/anatase-org/spaces).
+
+*Spaces has not undergone a formal security review, so installing malware is unwise.
 
 ## Roadmap
  * Fix remaining bugs through user reports to achieve a stable release
