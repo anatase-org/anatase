@@ -268,6 +268,7 @@ class HostLaunchTests(unittest.TestCase):
                 completed.stdout.splitlines(),
                 [
                     "<--host>",
+                    "<--watch-bus>",
                     f"<--directory={base}/home>",
                     "<--env=SteamAppId=1234>",
                     "<--env=SteamGameId=5678>",
@@ -313,6 +314,7 @@ class HostLaunchTests(unittest.TestCase):
                 completed.stdout.splitlines(),
                 [
                     "<--host>",
+                    "<--watch-bus>",
                     f"<--directory={base}/home>",
                     "<--env=SteamAppId=1234>",
                     "<--env=SteamGameId=5678>",

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-spawn=(flatpak-spawn --host "--directory=$HOME")
+spawn=(flatpak-spawn --host --watch-bus "--directory=$HOME")
 if [[ -n ${SteamAppId:-} ]]; then
     spawn+=("--env=SteamAppId=$SteamAppId")
 fi
