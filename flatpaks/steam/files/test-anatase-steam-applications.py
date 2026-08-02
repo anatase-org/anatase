@@ -129,8 +129,6 @@ class ApplicationCatalogTests(unittest.TestCase):
                 "hidden.desktop": "Hidden=true\n",
                 "nodisplay.desktop": "NoDisplay=true\n",
                 "terminal.desktop": "Terminal=true\n",
-                "system.desktop": "Categories=Utility;System;\n",
-                "development.desktop": "Categories=Development;Utility;\n",
                 "link.desktop": "Type=Link\n",
             }
             for desktop_id, extra in excluded.items():
@@ -142,6 +140,22 @@ class ApplicationCatalogTests(unittest.TestCase):
                     "Exec=/usr/bin/excluded\n"
                     f"{extra}",
                 )
+            write_desktop(
+                runtime_apps,
+                "system.desktop",
+                "Type=Application\n"
+                "Name=System Application\n"
+                "Exec=/usr/bin/system-application\n"
+                "Categories=Utility;System;\n",
+            )
+            write_desktop(
+                runtime_apps,
+                "development.desktop",
+                "Type=Application\n"
+                "Name=Development Application\n"
+                "Exec=/usr/bin/development-application\n"
+                "Categories=Development;Utility;\n",
+            )
             write_desktop(
                 runtime_apps,
                 "missing-exec.desktop",
@@ -218,6 +232,19 @@ class ApplicationCatalogTests(unittest.TestCase):
             self.assertEqual(
                 Path(spaces["Desktop Entry"]["Icon"]).read_bytes(),
                 b"spaces-png",
+            )
+
+            system = parse_desktop(root / "applications/system.desktop")
+            self.assertEqual(
+                system["Desktop Entry"]["Exec"],
+                "/app/bin/hrun /usr/bin/system-application",
+            )
+            development = parse_desktop(
+                root / "applications/development.desktop"
+            )
+            self.assertEqual(
+                development["Desktop Entry"]["Exec"],
+                "/app/bin/hrun /usr/bin/development-application",
             )
 
             for desktop_id in (*excluded, "missing-exec.desktop"):

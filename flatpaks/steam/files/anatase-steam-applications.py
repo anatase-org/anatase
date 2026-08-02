@@ -12,7 +12,6 @@ from pathlib import Path
 
 
 HOST_LAUNCH = "/app/bin/hrun"
-EXCLUDED_CATEGORIES = {"Development", "System"}
 IMAGE_EXTENSIONS = {".png", ".svg"}
 
 
@@ -54,18 +53,12 @@ def true_value(entry: configparser.SectionProxy, key: str) -> bool:
 
 def included(parser: configparser.ConfigParser) -> bool:
     entry = parser["Desktop Entry"]
-    categories = {
-        category
-        for category in entry.get("Categories", "").split(";")
-        if category
-    }
     return (
         entry.get("Type", "Application").strip() == "Application"
         and bool(entry.get("Exec", "").strip())
         and not true_value(entry, "Hidden")
         and not true_value(entry, "NoDisplay")
         and not true_value(entry, "Terminal")
-        and not categories.intersection(EXCLUDED_CATEGORIES)
     )
 
 
