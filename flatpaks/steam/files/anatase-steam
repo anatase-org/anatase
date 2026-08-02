@@ -1,5 +1,7 @@
 #!/bin/bash
 
+anatase_sandbox_data_home="${XDG_DATA_HOME:-$HOME/.var/app/org.anatase.Steam/data}"
+
 flatpak_info=
 for candidate in "${FLATPAK_INFO:-}" /.flatpak-info /run/flatpak-info; do
     [[ -n $candidate ]] || continue
@@ -75,4 +77,20 @@ if [[ ! -f $animation_changer ]]; then
     fi
 fi
 
-/app/bin/steam -steamdeck "$@"
+anatase_runtime_root="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/anatase-steam"
+if mkdir -p \
+        "$anatase_runtime_root/applications" \
+        "$anatase_runtime_root/icons" \
+        "$anatase_runtime_root/bin"; then
+    chmod 0700 \
+        "$anatase_runtime_root" \
+        "$anatase_runtime_root/applications" \
+        "$anatase_runtime_root/icons" \
+        "$anatase_runtime_root/bin"
+    export ANATASE_STEAM_SANDBOX_DATA_HOME="$anatase_sandbox_data_home"
+    export XDG_DATA_DIRS="$anatase_runtime_root:${XDG_DATA_DIRS:-/app/share:/usr/share}"
+    /app/libexec/anatase-steam-applications \
+        >"$anatase_runtime_root/rewrite.log" 2>&1 </dev/null &
+fi
+
+exec /app/bin/steam -steamdeck "$@"

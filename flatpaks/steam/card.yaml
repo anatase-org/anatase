@@ -27,6 +27,7 @@ flatpak:
     --filesystem=xdg-config/MangoHud:ro
     --filesystem=/run/udev:ro
     --filesystem=xdg-run/speech-dispatcher:ro
+    --filesystem=xdg-run/anatase-steam:create
     --filesystem=/mnt
     --filesystem=/media
     --filesystem=/run/media
@@ -73,11 +74,20 @@ flatpak:
     # Our changes
     --filesystem=~/.steam:create
     --filesystem=xdg-data/Steam:create
+    --filesystem=xdg-data/flatpak/exports/share:ro
+    --filesystem=xdg-data/flatpak/app:ro
+    --filesystem=/var/lib/flatpak/exports/share:ro
+    --filesystem=/var/lib/flatpak/app:ro
+    --filesystem=/var/usrlocal/share/applications:ro
     --system-talk-name=org.freedesktop.login1
     --system-talk-name=org.bluez
 
 files:
   - files/anatase-steam
+  - files/anatase-steam-applications.py
+  - files/hrun
+  - files/anatase-steam-reaper.c
+  - files/test-anatase-steam-applications.py
   - files/dbus-send
   - files/steamos-session-select
   - files/anatase-boot.webm
@@ -136,6 +146,12 @@ postprocess: |-
       cp -f /usr/bin/cmp app/bin/cmp
   fi
   install -Dm0755 files/anatase-steam app/bin/anatase-steam
+  install -Dm0755 files/anatase-steam-applications.py \
+      app/libexec/anatase-steam-applications
+  install -Dm0755 files/hrun app/bin/hrun
+  cc -O2 -Wall -Wextra -Werror \
+      files/anatase-steam-reaper.c \
+      -o app/libexec/anatase-steam-reaper
 
   # Translate Steam's legacy power-management D-Bus calls to login1.
   install -Dm0755 files/dbus-send app/bin/dbus-send
@@ -147,5 +163,10 @@ postprocess: |-
   ln -s /usr/bin/steamos-polkit-helpers/steamos-select-branch app/bin/steamos-select-branch
 
   bash -n app/bin/anatase-steam
+  bash -n app/bin/hrun
   bash -n app/bin/dbus-send
   bash -n app/bin/steamos-session-select
+  ANATASE_STEAM_APPLICATIONS=files/anatase-steam-applications.py \
+  ANATASE_STEAM_HRUN=files/hrun \
+  ANATASE_STEAM_REAPER=files/anatase-steam-reaper.c \
+      python3 files/test-anatase-steam-applications.py

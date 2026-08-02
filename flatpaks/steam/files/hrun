@@ -1,0 +1,24 @@
+#!/bin/bash
+
+spawn=(flatpak-spawn --host "--directory=$HOME")
+if [[ -n ${SteamAppId:-} ]]; then
+    spawn+=("--env=SteamAppId=$SteamAppId")
+fi
+if [[ -n ${SteamGameId:-} ]]; then
+    spawn+=("--env=SteamGameId=$SteamGameId")
+fi
+
+case "${1##*/}" in
+    spaces)
+        exec "${spawn[@]}" "$@"
+        ;;
+esac
+
+if [[ -n ${SteamAppId:-} ]]; then
+    runtime_root="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/anatase-steam"
+    exec "${spawn[@]}" \
+        "$runtime_root/bin/reaper" \
+        SteamLaunch "AppId=$SteamAppId" -- "$@"
+fi
+
+exec "${spawn[@]}" "$@"

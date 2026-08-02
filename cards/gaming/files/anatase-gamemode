@@ -99,6 +99,7 @@ systemctl --user import-environment \
     DESKTOP_SESSION \
     XDG_CURRENT_DESKTOP \
     XDG_SESSION_DESKTOP \
+    XDG_SESSION_ID \
     XDG_SESSION_TYPE \
     XDG_DESKTOP_PORTAL_DIR
 
@@ -208,6 +209,7 @@ cleanup() {
         XDG_CURRENT_DESKTOP \
         XDG_DESKTOP_PORTAL_DIR \
         XDG_SESSION_DESKTOP \
+        XDG_SESSION_ID \
         XDG_SESSION_TYPE || true
 }
 trap cleanup EXIT

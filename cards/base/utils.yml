@@ -48,6 +48,7 @@ packages:
 
   # Containers
   - flatpak
+  - flatpak-spawn
   - fuse-overlayfs
   - podman
   - podman-compose
