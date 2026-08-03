@@ -1,4 +1,152 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 3 Aug 2026 18:57:48 +0200
+Subject: add sync script
+
+---
+ sync.sh | 131 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 131 insertions(+)
+ create mode 100755 sync.sh
+
+diff --git a/sync.sh b/sync.sh
+new file mode 100755
+index 000000000000..719f9cf5b4c1
+--- /dev/null
++++ b/sync.sh
+@@ -0,0 +1,131 @@
++#!/bin/sh
++
++usage() {
++    echo "Usage: $0 [--appid ID] <host>"
++}
++
++HOST=
++APPID=
++BUILD_DIR=build-sync
++
++while [ "$#" -gt 0 ]; do
++    case "$1" in
++        --appid)
++            if [ "$#" -lt 2 ]; then
++                echo "--appid requires a Steam application ID" >&2
++                usage >&2
++                exit 1
++            fi
++            APPID=$2
++            shift 2
++            ;;
++        -h|--help)
++            usage
++            exit 0
++            ;;
++        -*)
++            echo "Unknown option: $1" >&2
++            usage >&2
++            exit 1
++            ;;
++        *)
++            if [ -n "$HOST" ]; then
++                echo "Only one host may be specified" >&2
++                usage >&2
++                exit 1
++            fi
++            HOST=$1
++            shift
++            ;;
++    esac
++done
++
++if [ -z "$HOST" ]; then
++    usage >&2
++    exit 1
++fi
++
++case "$APPID" in
++    "") ;;
++    0|*[!0-9]*)
++        echo "Invalid Steam application ID: $APPID" >&2
++        exit 1
++        ;;
++esac
++
++set -e
++
++if [ ! -f "$BUILD_DIR/build.ninja" ]; then
++    meson setup "$BUILD_DIR" -Dmangoapp=true
++else
++    meson configure "$BUILD_DIR" -Dmangoapp=true
++fi
++ninja -C "$BUILD_DIR"
++
++ssh "$HOST" mkdir -p ./deploy
++scp \
++    "$BUILD_DIR/src/mangoapp" \
++    "$BUILD_DIR/src/libMangoHud.so" \
++    "$BUILD_DIR/src/libMangoHud_opengl.so" \
++    "$BUILD_DIR/src/libMangoHud_shim.so" \
++    "${HOST}:deploy/"
++
++ssh "$HOST" /bin/bash -s -- "$APPID" <<'EOF'
++    set -e
++
++    appid=$1
++    deploy_dir="$HOME/deploy"
++    steam_pipe="$HOME/.steam/steam.pipe"
++    old_steam_pids=
++    cleanup() {
++        rm -f \
++            "$deploy_dir/mangoapp" \
++            "$deploy_dir/libMangoHud.so" \
++            "$deploy_dir/libMangoHud_opengl.so" \
++            "$deploy_dir/libMangoHud_shim.so"
++        rmdir "$deploy_dir" 2>/dev/null || true
++    }
++    trap cleanup EXIT
++
++    if [ -n "$appid" ]; then
++        old_steam_pids=$(lsof -t "$steam_pipe" 2>/dev/null || true)
++    fi
++
++    sudo rpm-ostree usroverlay || true
++    sudo install -m 755 "$deploy_dir/mangoapp" /usr/bin/mangoapp
++    sudo install -m 755 "$deploy_dir/libMangoHud.so" /usr/lib64/mangohud/libMangoHud.so
++    sudo install -m 755 "$deploy_dir/libMangoHud_opengl.so" /usr/lib64/mangohud/libMangoHud_opengl.so
++    sudo install -m 755 "$deploy_dir/libMangoHud_shim.so" /usr/lib64/mangohud/libMangoHud_shim.so
++
++    if ! mountpoint -q /etc/plasmalogin.conf; then
++        sudo cp --preserve=context /etc/plasmalogin.conf /run/plasmalogin.conf
++        sudo sed -i '/^\[Autologin\]$/a Relogin=true' /run/plasmalogin.conf
++        sudo mount --bind /run/plasmalogin.conf /etc/plasmalogin.conf
++    fi
++    sudo systemctl restart plasmalogin
++    pkill mangoapp || true
++
++    if [ -n "$appid" ]; then
++        attempts=0
++        while :; do
++            steam_pid=$(lsof -t "$steam_pipe" 2>/dev/null | head -n 1 || true)
++            if [ -n "$steam_pid" ] && ! printf '%s\n' "$old_steam_pids" | grep -Fxq "$steam_pid"; then
++                break
++            fi
++
++            attempts=$((attempts + 1))
++            if [ "$attempts" -ge 120 ]; then
++                echo "Timed out waiting for Steam to accept launch requests" >&2
++                exit 1
++            fi
++            sleep 0.5
++        done
++
++        game_uri="steam://rungameid/$appid"
++        if ! timeout 5 sh -c 'printf "%s\n" "$1" > "$2"' sh "$game_uri" "$steam_pipe"; then
++            echo "Failed to send Steam launch request for app $appid" >&2
++            exit 1
++        fi
++        echo "Requested Steam app $appid"
++    fi
++EOF
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Matthew Schwartz <matthew.schwartz@linux.dev>
 Date: Sat, 6 Jun 2026 14:55:46 -0700
 Subject: mangoapp: throttle overlay to one render per game frame
@@ -115,12 +263,12 @@ Date: Mon, 3 Aug 2026 18:27:06 +0200
 Subject: mangoapp: show frame generation performance
 
 ---
- src/app/main.cpp         |  75 +++++++++++++++++++++++--
+ src/app/main.cpp         |  75 ++++++++++++++++++++--
  src/app/mangoapp_proto.h |   5 ++
- src/hud_elements.cpp     | 116 ++++++++++++++++++++++++++-------------
+ src/hud_elements.cpp     | 130 ++++++++++++++++++++++++++++-----------
  src/hud_elements.h       |   7 +++
- src/overlay.cpp          |   9 ++-
- 5 files changed, 167 insertions(+), 45 deletions(-)
+ src/overlay.cpp          |  28 ++++++++-
+ 5 files changed, 201 insertions(+), 44 deletions(-)
 
 diff --git a/src/app/main.cpp b/src/app/main.cpp
 index 19c465fbea42..93be59888c6c 100644
@@ -267,10 +415,10 @@ index 8bc9c905091a..02bc8f510db2 100644
  } __attribute__((packed));
  
 diff --git a/src/hud_elements.cpp b/src/hud_elements.cpp
-index 764651181b3b..cb5b864f088d 100644
+index 764651181b3b..2c7c5820e019 100644
 --- a/src/hud_elements.cpp
 +++ b/src/hud_elements.cpp
-@@ -832,12 +832,45 @@ void HudElements::procmem()
+@@ -832,12 +832,48 @@ void HudElements::procmem()
  #endif
  }
  
@@ -296,7 +444,10 @@ index 764651181b3b..cb5b864f088d 100644
 +        const float width = ImGui::CalcTextSize(real_fps).x +
 +                            ImGui::CalcTextSize("/").x +
 +                            ImGui::CalcTextSize(total_fps).x;
-+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + HUDElements.ralign_width - width);
++        const float min_width = std::max(HUDElements.ralign_width,
++                                         ImGui::CalcTextSize("000/000").x);
++        ImGui::SetCursorPosX(ImGui::GetCursorPosX() +
++                             std::max(0.0f, min_width - width));
 +    }
 +
 +    HUDElements.TextColored(real_color, "%s", real_fps);
@@ -316,7 +467,7 @@ index 764651181b3b..cb5b864f088d 100644
          if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_fps_color_change]){
              int fps = int(HUDElements.sw_stats->fps);
              struct LOAD_DATA fps_data = {
-@@ -847,12 +880,9 @@ void HudElements::fps(){
+@@ -847,12 +883,9 @@ void HudElements::fps(){
              HUDElements.params->fps_value[0],
              HUDElements.params->fps_value[1]
              };
@@ -331,7 +482,7 @@ index 764651181b3b..cb5b864f088d 100644
          ImGui::SameLine(0, 1.0f);
          if(!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hide_fps_superscript]){
              ImGui::PushFont(HUDElements.sw_stats->font_small);
-@@ -888,7 +918,7 @@ void HudElements::fps_only(){
+@@ -888,7 +921,7 @@ void HudElements::fps_only(){
              };
              load_color = change_on_load_temp(fps_data, fps);
          }
@@ -340,7 +491,7 @@ index 764651181b3b..cb5b864f088d 100644
      }
  }
  
-@@ -972,6 +1002,17 @@ static inline double TransformInverse_Custom(double v, void*) {
+@@ -972,6 +1005,17 @@ static inline double TransformInverse_Custom(double v, void*) {
  
  void HudElements::frame_timing(){
      if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frame_timing]){
@@ -358,16 +509,7 @@ index 764651181b3b..cb5b864f088d 100644
          ImguiNextColumnFirstItem();
          ImGui::PushFont(HUDElements.sw_stats->font_small);
          if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
-@@ -979,7 +1020,7 @@ void HudElements::frame_timing(){
-             HUDElements.TextColored(HUDElements.colors.engine, "%s", "Frametime");
-             ImGui::TableSetColumnIndex(ImGui::TableGetColumnCount() - 1);
-             ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
--            right_aligned_text(HUDElements.colors.text, ImGui::GetContentRegionAvail().x, "min: %.1fms, max: %.1fms", min_frametime, max_frametime);
-+            right_aligned_text(HUDElements.colors.text, ImGui::GetContentRegionAvail().x, "min: %.1fms, max: %.1fms", graph_min_frametime, graph_max_frametime);
-             ImGui::Dummy(ImVec2(0.0f, real_font_size.y / 2));
-             ImguiNextColumnFirstItem();
-         }
-@@ -1000,8 +1041,8 @@ void HudElements::frame_timing(){
+@@ -1000,8 +1044,8 @@ void HudElements::frame_timing(){
          }
  
          if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_dynamic_frame_timing]){
@@ -378,12 +520,14 @@ index 764651181b3b..cb5b864f088d 100644
          }
          if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frame_timing_detailed]){
              height = 125;
-@@ -1021,36 +1062,35 @@ void HudElements::frame_timing(){
+@@ -1020,37 +1064,51 @@ void HudElements::frame_timing(){
+                                 NULL, min_time, max_time,
                                  ImVec2(width, height));
  #else
- 
--                if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
--                    ImGui::PlotLines(hash, get_time_stat, HUDElements.sw_stats,
+-
+                 if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
++                    const ImVec2 graph_pos = ImGui::GetCursorPos();
+                     ImGui::PlotLines(hash, get_time_stat, HUDElements.sw_stats,
 -                    ARRAY_SIZE(HUDElements.sw_stats->frames_stats), 0,
 -                    NULL, min_time, max_time,
 -                    ImVec2(width, height));
@@ -411,7 +555,20 @@ index 764651181b3b..cb5b864f088d 100644
 -                            ImPlot::PlotLine("thermal line", gpus->active_gpu()->throttling()->thermal.data(), gpus->active_gpu()->throttling()->thermal.size());
 -                        }
 -                        ImPlot::EndPlot();
-+                if (ImPlot::BeginPlot(hash, ImVec2(width, height), ImPlotFlags_CanvasOnly | ImPlotFlags_NoInputs)) {
++                                     ARRAY_SIZE(HUDElements.sw_stats->frames_stats), 0,
++                                     NULL, min_time, max_time,
++                                     ImVec2(width, height));
++                    if (HUDElements.frame_generation.enabled && HUDElements.frame_generation.fps > 0.0) {
++                        ImGui::SetCursorPos(graph_pos);
++                        ImGui::PushStyleColor(ImGuiCol_PlotLines, HUDElements.colors.engine);
++                        ImGui::PlotLines("##frame_generation_frame_timing",
++                                         HUDElements.frame_generation.frametime_data.data(),
++                                         HUDElements.frame_generation.frametime_data.size(), 0,
++                                         NULL, min_time, max_time,
++                                         ImVec2(width, height));
++                        ImGui::PopStyleColor();
++                    }
++                } else if (ImPlot::BeginPlot(hash, ImVec2(width, height), ImPlotFlags_CanvasOnly | ImPlotFlags_NoInputs)) {
 +                    ImPlotStyle& style = ImPlot::GetStyle();
 +                    style.Colors[ImPlotCol_PlotBg] = ImVec4(0.92f, 0.92f, 0.95f, 0.00f);
 +                    style.Colors[ImPlotCol_AxisGrid] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -462,22 +619,44 @@ index 405e0baaaebc..09316999f57d 100644
          const std::vector<std::string> permitted_params = {
              "gpu_load", "cpu_load", "gpu_core_clock", "gpu_mem_clock",
 diff --git a/src/overlay.cpp b/src/overlay.cpp
-index 2196953ac791..f069e72101fd 100644
+index 2196953ac791..2f05905df733 100644
 --- a/src/overlay.cpp
 +++ b/src/overlay.cpp
-@@ -677,7 +677,14 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2&
+@@ -677,11 +677,35 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2&
     static float ralign_width = 0, old_scale = 0;
     auto io = ImGui::GetIO();
     if (real_params->enabled[OVERLAY_PARAM_ENABLED_fps_only]){
 -      window_size = ImVec2((to_string(int(HUDElements.sw_stats->fps)).length() * ImGui::CalcTextSize("A").x) + 15.f, get_params()->height);
 +      std::string fps_text = to_string(int(HUDElements.sw_stats->fps));
++      float fps_width = fps_text.length() * ImGui::CalcTextSize("A").x;
 +      if (HUDElements.frame_generation.enabled) {
 +         const double total_fps = HUDElements.frame_generation.fps > 0.0
 +            ? HUDElements.frame_generation.fps
 +            : HUDElements.sw_stats->fps;
 +         fps_text += "/" + to_string(int(total_fps));
++         fps_width = std::max(ImGui::CalcTextSize(fps_text.c_str()).x,
++                              ImGui::CalcTextSize("000/000").x);
 +      }
-+      window_size = ImVec2((fps_text.length() * ImGui::CalcTextSize("A").x) + 15.f, get_params()->height);
++      window_size = ImVec2(fps_width + 15.f, get_params()->height);
     } else if (real_params->enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
        window_size = ImVec2(io.DisplaySize.x, real_params->height);
     } else {
+-      window_size = ImVec2(real_params->width, real_params->height);
++      float width = real_params->width;
++      if (HUDElements.frame_generation.enabled &&
++          real_params->enabled[OVERLAY_PARAM_ENABLED_fps]) {
++         const double total_fps = HUDElements.frame_generation.fps > 0.0
++            ? HUDElements.frame_generation.fps
++            : HUDElements.sw_stats->fps;
++         char fps_text[32];
++         snprintf(fps_text, sizeof(fps_text), "%.0f/%.0f",
++                  HUDElements.sw_stats->fps, total_fps);
++         const float fps_width = std::max(ImGui::CalcTextSize(fps_text).x,
++                                          ImGui::CalcTextSize("000/000").x);
++         const float legacy_width = ImGui::CalcTextSize("A").x * 4.0f;
++         width += std::max(0.0f, fps_width - legacy_width);
++      }
++      window_size = ImVec2(width, real_params->height);
+    }
+    unsigned height = io.DisplaySize.y;
+    auto now = Clock::now();
