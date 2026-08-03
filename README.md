@@ -89,6 +89,7 @@ Anatase also ships a Gamemode session that brings in elements from SteamOS as an
  * Gamemode is intuitive to touch
  * It uses less RAM than a Desktop session
  * Brings the game closer to the GPU, with advanced controls for VRR, Framerate, and HDR. 
+ * New in Anatase: Frame Generation (2X). After enabled, games are rendered at half of your target FPS and the other half is generated. Works in all games and with all anticheat!
 
 ![Anatase Gamemode performance controls](docs/gamemode.png)
 

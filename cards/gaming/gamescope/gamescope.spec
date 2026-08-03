@@ -1,4 +1,6 @@
 %global libliftoff_minver 0.5.0
+%global fidelityfx_commit c6efa6bf7f2027b3ec94f28578bb5965eabb9e55
+%global fidelityfx_shortcommit %(c=%{fidelityfx_commit}; echo ${c:0:7})
 %global reshade_commit 696b14cd6006ae9ca174e6164450619ace043283
 %global reshade_shortcommit %(c=%{reshade_commit}; echo ${c:0:7})
 %global vkroots_commit 5106d8a0df95de66cc58dc1ea37e69c99afc9540
@@ -20,6 +22,7 @@ Source0:        %{url}/archive/%{version}/%{name}-%{version}.tar.gz
 Source1:        stb.pc
 Source2:        https://github.com/misyltoad/reshade/archive/%{reshade_commit}/reshade-%{reshade_shortcommit}.tar.gz
 Source3:        https://github.com/misyltoad/vkroots/archive/%{vkroots_commit}/vkroots-%{vkroots_shortcommit}.tar.gz
+Source4:        https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK/archive/%{fidelityfx_commit}/FidelityFX-SDK-%{fidelityfx_shortcommit}.tar.gz
 
 # https://github.com/misyltoad/reshade/pull/1:
 Patch:          0001-cstdint.patch
@@ -88,6 +91,7 @@ BuildRequires:  /usr/bin/glslangValidator
 %endif
 
 Provides:       bundled(vkroots) = 0^20240429git5106d8a
+Provides:       bundled(FidelityFX-SDK) = 1.1.4
 
 # libliftoff hasn't bumped soname, but API/ABI has changed for 0.2.0 release
 %ifarch %{ix86}
@@ -111,11 +115,16 @@ cp %{SOURCE1} pkgconfig/stb.pc
 # Replace spirv-headers include with the system directory
 sed -i 's^../thirdparty/SPIRV-Headers/include/spirv/^/usr/include/spirv/^' src/meson.build
 
-# Push in reshade and vkroots from sources instead of submodule
+# Push in subprojects from sources instead of submodules
 tar -xzf %{SOURCE2} --strip-components=1 -C src/reshade
 tar -xzf %{SOURCE3} --strip-components=1 -C subprojects/vkroots
 
 %autopatch -p1
+
+# Replace the gitlink created by overrides.patch with the pinned source archive.
+rm -f subprojects/FidelityFX-SDK
+mkdir -p subprojects/FidelityFX-SDK
+tar -xzf %{SOURCE4} --strip-components=1 -C subprojects/FidelityFX-SDK
 
 %ifarch %{ix86}
 # Meson otherwise uses the x86_64 build machine for both layer filenames.
