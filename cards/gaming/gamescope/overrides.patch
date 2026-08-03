@@ -8375,13 +8375,69 @@ Date: Mon, 3 Aug 2026 18:27:06 +0200
 Subject: mangoapp: report frame generation output timing
 
 ---
- src/mangoapp.cpp     | 40 ++++++++++++++++++++++++++++++++++------
- src/steamcompmgr.cpp |  2 +-
- src/steamcompmgr.hpp |  1 +
- 3 files changed, 36 insertions(+), 7 deletions(-)
+ src/Backends/DRMBackend.cpp |  7 ++--
+ src/Backends/SDLBackend.cpp |  2 +-
+ src/mangoapp.cpp            | 69 ++++++++++++++++++++++++++++++++-----
+ src/rendervulkan.cpp        | 32 ++++++++++++++---
+ src/rendervulkan.hpp        |  3 +-
+ src/steamcompmgr.cpp        |  2 +-
+ src/steamcompmgr.hpp        |  1 +
+ 7 files changed, 98 insertions(+), 18 deletions(-)
 
+diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
+index d898739f431f..d79a444879e0 100644
+--- a/src/Backends/DRMBackend.cpp
++++ b/src/Backends/DRMBackend.cpp
+@@ -562,6 +562,7 @@ extern bool g_bDebugLayers;
+ struct DRMPresentCtx
+ {
+ 	uint64_t ulPendingFlipCount = 0;
++	uint64_t frameGenerationOutputId = 0;
+ };
+ 
+ extern gamescope::ConVar<bool> cv_composite_force;
+@@ -751,7 +752,7 @@ static bool have_overlay_planes(struct drm_t *drm)
+ 	return false;
+ }
+ 
+-extern void mangoapp_output_update( uint64_t vblanktime );
++extern void mangoapp_output_update( uint64_t vblanktime, uint64_t frameGenerationOutputId );
+ static void page_flip_handler(int fd, unsigned int frame, unsigned int sec, unsigned int usec, unsigned int crtc_id, void *data)
+ {
+ 	DRMPresentCtx *pCtx = reinterpret_cast<DRMPresentCtx *>( data );
+@@ -788,7 +789,7 @@ static void page_flip_handler(int fd, unsigned int frame, unsigned int sec, unsi
+ 	g_DRM.uPendingFlipCount--;
+ 	g_DRM.uPendingFlipCount.notify_all();
+ 
+-	mangoapp_output_update( vblanktime );
++	mangoapp_output_update( vblanktime, pCtx->frameGenerationOutputId );
+ 
+ 	// Nudge so that steamcompmgr releases commits.
+ 	nudge_steamcompmgr();
+@@ -4122,6 +4123,8 @@ namespace gamescope
+ 			uint32_t uCurrentPresentCtx = m_uNextPresentCtx;
+ 			m_uNextPresentCtx = ( m_uNextPresentCtx + 1 ) % 3;
+ 			m_PresentCtxs[uCurrentPresentCtx].ulPendingFlipCount = GetCurrentConnector()->PresentationFeedback().m_uQueuedPresents;
++			m_PresentCtxs[uCurrentPresentCtx].frameGenerationOutputId =
++				pFrameInfo->frameGenerationOutputId;
+ 
+ 			drm_log.debugf("flip commit %" PRIu64, (uint64_t)GetCurrentConnector()->PresentationFeedback().m_uQueuedPresents);
+ 			gpuvis_trace_printf( "flip commit %" PRIu64, (uint64_t)GetCurrentConnector()->PresentationFeedback().m_uQueuedPresents );
+diff --git a/src/Backends/SDLBackend.cpp b/src/Backends/SDLBackend.cpp
+index 87bde7e2f13b..1b95c9fe5cb6 100644
+--- a/src/Backends/SDLBackend.cpp
++++ b/src/Backends/SDLBackend.cpp
+@@ -345,7 +345,7 @@ namespace gamescope
+ 		if ( !oCompositeResult )
+ 			return -EINVAL;
+ 
+-		vulkan_present_to_window();
++		vulkan_present_to_window( pFrameInfo->frameGenerationOutputId );
+ 
+ 		// TODO: Hook up PresentationFeedback.
+ 
 diff --git a/src/mangoapp.cpp b/src/mangoapp.cpp
-index 16e1feb09907..7c0295f79ed6 100644
+index 16e1feb09907..166d24cd674e 100644
 --- a/src/mangoapp.cpp
 +++ b/src/mangoapp.cpp
 @@ -32,6 +32,8 @@ struct mangoapp_msg_v1 {
@@ -8404,7 +8460,7 @@ index 16e1feb09907..7c0295f79ed6 100644
      if (!inited)
          init_mangoapp();
  
-@@ -67,9 +71,16 @@ void mangoapp_update( uint64_t visible_frametime, uint64_t app_frametime_ns, uin
+@@ -67,34 +71,83 @@ void mangoapp_update( uint64_t visible_frametime, uint64_t app_frametime_ns, uin
          engine->copy(mangoapp_msg_v1.engineName, sizeof(mangoapp_msg_v1.engineName) / sizeof(char));
      else
          std::string("gamescope").copy(mangoapp_msg_v1.engineName, sizeof(mangoapp_msg_v1.engineName) / sizeof(char));
@@ -8421,20 +8477,42 @@ index 16e1feb09907..7c0295f79ed6 100644
  extern uint64_t g_uCurrentBasePlaneCommitID;
  extern bool g_bCurrentBasePlaneIsFifo;
  extern uint32_t g_uCurrentBasePlaneAppID;
-@@ -77,24 +88,41 @@ extern gamescope::ConVar<bool> cv_mangoapp_use_output_timing;
+ extern gamescope::ConVar<bool> cv_mangoapp_use_output_timing;
  
- void mangoapp_output_update( uint64_t vblanktime )
+-void mangoapp_output_update( uint64_t vblanktime )
++void mangoapp_output_update( uint64_t vblanktime, uint64_t frameGenerationOutputId )
  {
-+	static uint64_t s_uLastOutputVBlankTime = 0;
-+	const uint64_t outputFrametime = s_uLastOutputVBlankTime > 0 &&
-+		s_uLastOutputVBlankTime <= vblanktime
-+		? vblanktime - s_uLastOutputVBlankTime
-+		: uint64_t(~0ull);
-+	s_uLastOutputVBlankTime = vblanktime;
 +	const bool frameGenerationEnabled = steamcompmgr_frame_generation_enabled_for_focus();
++	static bool s_bFrameGenerationEnabled = false;
++	static uint64_t s_uLastOutputVBlankTime = 0;
++	static uint64_t s_uLastFrameGenerationOutputId = 0;
++	const bool frameGenerationChanged =
++		s_bFrameGenerationEnabled != frameGenerationEnabled;
++	if ( frameGenerationChanged )
++	{
++		s_bFrameGenerationEnabled = frameGenerationEnabled;
++		s_uLastOutputVBlankTime = 0;
++		s_uLastFrameGenerationOutputId = 0;
++	}
 +
  	static uint64_t s_uLastBasePlaneCommitID = 0;
- 	if ( s_uLastBasePlaneCommitID != g_uCurrentBasePlaneCommitID )
+-	if ( s_uLastBasePlaneCommitID != g_uCurrentBasePlaneCommitID )
++	const bool basePlaneChanged =
++		s_uLastBasePlaneCommitID != g_uCurrentBasePlaneCommitID;
++	const bool outputChanged = frameGenerationEnabled &&
++		( frameGenerationOutputId != 0
++			? frameGenerationOutputId != s_uLastFrameGenerationOutputId
++			: basePlaneChanged );
++	uint64_t outputFrametime = uint64_t(~0ull);
++	if ( outputChanged )
++	{
++		if ( s_uLastOutputVBlankTime > 0 && s_uLastOutputVBlankTime <= vblanktime )
++			outputFrametime = vblanktime - s_uLastOutputVBlankTime;
++		s_uLastOutputVBlankTime = vblanktime;
++		s_uLastFrameGenerationOutputId = frameGenerationOutputId;
++	}
++
++	if ( basePlaneChanged )
  	{
  		static uint64_t s_uLastBasePlaneUpdateVBlankTime = vblanktime;
          uint64_t last_frametime = s_uLastBasePlaneUpdateVBlankTime;
@@ -8449,7 +8527,7 @@ index 16e1feb09907..7c0295f79ed6 100644
  
 -		mangoapp_update( frametime, uint64_t(~0ull), uint64_t(~0ull) );
 +		mangoapp_send_update( frametime, uint64_t(~0ull), uint64_t(~0ull),
-+			frameGenerationEnabled
++			outputChanged
 +				? outputFrametime
 +				: uint64_t(~0ull),
 +			frameGenerationEnabled );
@@ -8462,12 +8540,168 @@ index 16e1feb09907..7c0295f79ed6 100644
              wlserver_unlock();
          }
  	}
-+	else if ( frameGenerationEnabled )
++	else if ( outputChanged )
 +	{
 +		mangoapp_send_update( uint64_t(~0ull), uint64_t(~0ull), uint64_t(~0ull),
 +			outputFrametime, true );
 +	}
++	else if ( frameGenerationChanged )
++	{
++		mangoapp_send_update( uint64_t(~0ull), uint64_t(~0ull), uint64_t(~0ull),
++			uint64_t(~0ull), frameGenerationEnabled );
++	}
  }
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index c443a1d91a4a..d3db25504bf5 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -2950,9 +2950,10 @@ bool acquire_next_image( void )
+ 
+ 
+ static std::atomic<uint64_t> g_currentPresentWaitId = {0u};
++static std::atomic<uint64_t> g_currentPresentFrameGenerationOutputId = {0u};
+ static std::mutex present_wait_lock;
+ 
+-extern void mangoapp_output_update( uint64_t vblanktime );
++extern void mangoapp_output_update( uint64_t vblanktime, uint64_t frameGenerationOutputId );
+ static void present_wait_thread_func( void )
+ {
+ 	uint64_t present_wait_id = 0;
+@@ -2972,7 +2973,8 @@ static void present_wait_thread_func( void )
+ 				g_device.vk.WaitForPresentKHR( g_device.device(), g_output.swapChain, present_wait_id, 1'000'000'000lu );
+ 				uint64_t vblanktime = get_time_in_nanos();
+ 				GetVBlankTimer().MarkVBlank( vblanktime, true );
+-				mangoapp_output_update( vblanktime );
++				mangoapp_output_update( vblanktime,
++					g_currentPresentFrameGenerationOutputId.load() );
+ 			}
+ 		}
+ 	}
+@@ -3010,7 +3012,7 @@ void vulkan_update_swapchain_hdr_metadata( VulkanOutput_t *pOutput )
+ 	g_device.vk.SetHdrMetadataEXT(g_device.device(), 1, &g_output.swapChain, &metadata);
+ }
+ 
+-void vulkan_present_to_window( void )
++void vulkan_present_to_window( uint64_t frameGenerationOutputId )
+ {
+ 	static uint64_t s_lastPresentId = 0;
+ 
+@@ -3050,6 +3052,7 @@ void vulkan_present_to_window( void )
+ 
+ 	if ( g_device.vk.QueuePresentKHR( g_device.queue(), &presentInfo ) == VK_SUCCESS )
+ 	{
++		g_currentPresentFrameGenerationOutputId = frameGenerationOutputId;
+ 		g_currentPresentWaitId = presentId;
+ 		g_currentPresentWaitId.notify_all();
+ 	}
+@@ -3276,6 +3279,7 @@ bool vulkan_remake_swapchain( void )
+ {
+ 	std::unique_lock lock(present_wait_lock);
+ 	g_currentPresentWaitId = 0;
++	g_currentPresentFrameGenerationOutputId = 0;
+ 	g_currentPresentWaitId.notify_all();
+ 
+ 	VulkanOutput_t *pOutput = &g_output;
+@@ -4419,6 +4423,7 @@ namespace
+ 		bool generated = false;
+ 		bool useFSR = false;
+ 		std::shared_ptr<gamescope::CAcquireTimelinePoint> acquirePoint;
++		uint64_t outputId = 0;
+ 	};
+ 
+ 	static bool FrameGenerationSupportedFormat( VkFormat format )
+@@ -4443,6 +4448,8 @@ namespace
+ 			m_pipelinePrimed = false;
+ 			m_lastSourceId = 0;
+ 			m_lastSourceValid = false;
++			m_currentRealSourceId = 0;
++			m_currentRealOutputId = 0;
+ 			m_hasHistory = false;
+ 			m_lastPresentedGenerated = false;
+ 			m_width = 0;
+@@ -4544,6 +4551,7 @@ namespace
+ 
+ 			frameInfo->allowVRR = false;
+ 			frameInfo->frameGenerationActive = true;
++			frameInfo->frameGenerationOutputId = m_currentRealOutputId;
+ 
+ 			if ( m_lastSourceValid && sourceId == m_lastSourceId )
+ 			{
+@@ -4552,6 +4560,13 @@ namespace
+ 				return;
+ 			}
+ 
++			if ( sourceId != m_currentRealSourceId )
++			{
++				m_currentRealSourceId = sourceId;
++				m_currentRealOutputId = ++m_nextOutputId;
++			}
++			frameInfo->frameGenerationOutputId = m_currentRealOutputId;
++
+ 			if ( !CanAcceptSourceFrame() )
+ 			{
+ 				m_telemetry.deadlineDroppedFrames += std::count_if(
+@@ -4601,7 +4616,8 @@ namespace
+ 				vulkan_frame_generation_notify_submit( sequence );
+ 				m_hasHistory = true;
+ 				m_previousReal = {
+-					realLayer, false, frameInfo->useFSRLayer0, nullptr };
++					realLayer, false, frameInfo->useFSRLayer0, nullptr,
++					m_currentRealOutputId };
+ 				gamescope::SetFrameGenerationStatus( gamescope::FrameGenerationStatus::WarmingUp );
+ 				return;
+ 			}
+@@ -4621,8 +4637,10 @@ namespace
+ 			generated.generated = true;
+ 			generated.layer = realLayer;
+ 			generated.useFSR = false;
++			generated.outputId = ++m_nextOutputId;
+ 			FrameGenerationQueuedFrame real = {
+-				realLayer, false, frameInfo->useFSRLayer0, nullptr };
++				realLayer, false, frameInfo->useFSRLayer0, nullptr,
++				m_currentRealOutputId };
+ 
+ 			const bool abDuplicate = vulkan_frame_generation_ab_enabled();
+ 			std::optional<uint64_t> sequence;
+@@ -4945,6 +4963,7 @@ namespace
+ 			frameInfo->useNISLayer0 = false;
+ 			frameInfo->allowVRR = false;
+ 			frameInfo->frameGenerationActive = true;
++			frameInfo->frameGenerationOutputId = queued.outputId;
+ 			m_lastPresentedGenerated = queued.generated;
+ 			m_telemetry.presentedGeneratedFrames += queued.generated ? 1u : 0u;
+ 		}
+@@ -4959,6 +4978,9 @@ namespace
+ 		gamescope::FrameGenerationConfig m_config;
+ 		gamescope::IBackendConnector *m_connector = nullptr;
+ 		uint64_t m_lastSourceId = 0;
++		uint64_t m_currentRealSourceId = 0;
++		uint64_t m_currentRealOutputId = 0;
++		uint64_t m_nextOutputId = 0;
+ 		uint32_t m_appId = 0;
+ 		uint32_t m_width = 0;
+ 		uint32_t m_height = 0;
+diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
+index 82a5c08f2363..ee0b4936d66a 100644
+--- a/src/rendervulkan.hpp
++++ b/src/rendervulkan.hpp
+@@ -291,6 +291,7 @@ struct FrameInfo_t
+ 
+ 	bool allowVRR;
+ 	bool frameGenerationActive = false;
++	uint64_t frameGenerationOutputId = 0;
+ 	bool applyOutputColorMgmt; // drm only
+ 	EOTF outputEncodingEOTF;
+ 
+@@ -452,7 +453,7 @@ gamescope::Rc<CVulkanTexture> vulkan_get_last_output_image( bool partial, bool d
+ gamescope::Rc<CVulkanTexture> vulkan_acquire_screenshot_texture(uint32_t width, uint32_t height, bool exportable, uint32_t drmFormat, EStreamColorspace colorspace = k_EStreamColorspace_Unknown);
+ gamescope::Rc<CVulkanTexture> vulkan_acquire_capture_texture(uint32_t width, uint32_t height, bool exportable, uint32_t drmFormat, EStreamColorspace colorspace = k_EStreamColorspace_Unknown);
+ 
+-void vulkan_present_to_window( void );
++void vulkan_present_to_window( uint64_t frameGenerationOutputId );
+ 
+ void vulkan_garbage_collect( void );
+ bool vulkan_remake_swapchain( void );
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
 index 519cd8f7c010..3b7d2b3d7585 100644
 --- a/src/steamcompmgr.cpp
