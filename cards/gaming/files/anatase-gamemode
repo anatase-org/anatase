@@ -226,9 +226,13 @@ if ! read -r -t 30 response_x_display response_wl_display <> "$socket"; then
     exit 1
 fi
 
+# Use gamemode display for dbus activation
+# mangohud+preflight+steam use normal one
+export DISPLAY=":$((${response_x_display#:} + 1))"
+dbus-update-activation-environment --systemd DISPLAY
+
 export DISPLAY="$response_x_display"
 export GAMESCOPE_WAYLAND_DISPLAY="$response_wl_display"
-dbus-update-activation-environment --systemd DISPLAY
 
 while true; do
     mangoapp
