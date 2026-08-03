@@ -5669,9 +5669,9 @@ Subject: steamcompmgr: pace pre-FSR x2 frame generation with direct scanout
  src/rendervulkan.cpp                          | 509 +++++++++++++++++-
  src/rendervulkan.hpp                          |  42 +-
  .../cs_ffx_frameinterpolation_midpoint.comp   |  26 +-
- src/steamcompmgr.cpp                          | 187 +++++--
+ src/steamcompmgr.cpp                          | 190 +++++--
  tests/test_frame_generation_config.cpp        |  34 ++
- 13 files changed, 968 insertions(+), 55 deletions(-)
+ 13 files changed, 971 insertions(+), 55 deletions(-)
  create mode 100644 src/frame_generation_pacing.hpp
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
@@ -6920,7 +6920,7 @@ index 7eec13953835..efc1dee0e170 100644
      float blend = 0.5;
      if (!previousValid && currentValid)
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index b50505cc2551..510569ddde11 100644
+index b50505cc2551..e65f61a4895d 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -2486,7 +2486,7 @@ gamescope::ConVar<bool> cv_paint_cursor_plane{ "paint_cursor_plane", true };
@@ -6941,8 +6941,16 @@ index b50505cc2551..510569ddde11 100644
  	{
  		currentFrameRate = 300 * 1000.0f / (currentTime - lastSampledFrameTime);
  		lastSampledFrameTime = currentTime;
-@@ -2756,6 +2756,26 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms)
+@@ -2756,11 +2756,34 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms)
  		frameInfo.useNISLayer0 = false;
+ 	}
+ 
++	// Capture FSR activity before frame generation replaces the raw base layer
++	// with its queued midpoint/real scanout buffers. Those buffers have already
++	// had FSR applied and therefore no longer carry useFSRLayer0 themselves.
+ 	g_bFSRActive = frameInfo.useFSRLayer0;
+ 	if ( const auto& heldCommit = g_HeldCommits[HELD_COMMIT_BASE]; heldCommit && heldCommit->upscaledTexture ) {
+ 		g_bFSRActive = ( heldCommit->upscaledTexture->eFilter == GamescopeUpscaleFilter::FSR );
  	}
  
 +	const gamescope::FrameGenerationConfig frameGeneration = gamescope::GetFrameGenerationConfig();
@@ -6965,10 +6973,10 @@ index b50505cc2551..510569ddde11 100644
 +	if ( frameGenerationPrepareOnly )
 +		return;
 +
- 	g_bFSRActive = frameInfo.useFSRLayer0;
- 	if ( const auto& heldCommit = g_HeldCommits[HELD_COMMIT_BASE]; heldCommit && heldCommit->upscaledTexture ) {
- 		g_bFSRActive = ( heldCommit->upscaledTexture->eFilter == GamescopeUpscaleFilter::FSR );
-@@ -5649,18 +5669,44 @@ steamcompmgr_flush_frame_done( steamcompmgr_win_t *w )
+ 	g_bFirstFrame = false;
+ 
+ 	update_app_target_refresh_cycle();
+@@ -5649,18 +5672,44 @@ steamcompmgr_flush_frame_done( steamcompmgr_win_t *w )
  
  static std::optional<uint64_t> s_oLowestFPSLimitScheduleVRR;
  
@@ -7017,7 +7025,7 @@ index b50505cc2551..510569ddde11 100644
  		{
  			uint64_t schedule = w->last_commit_first_latch_time + g_SteamCompMgrLimitedAppRefreshCycle;
  
-@@ -5678,27 +5724,34 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
+@@ -5678,27 +5727,34 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
  	}
  	else
  	{
@@ -7063,7 +7071,7 @@ index b50505cc2551..510569ddde11 100644
  	{
  		w->unlockedForFrameCallback = true;
  	}
-@@ -6810,22 +6863,19 @@ void handle_done_commits_xwayland( xwayland_ctx_t *ctx, bool vblank, uint64_t vb
+@@ -6810,22 +6866,19 @@ void handle_done_commits_xwayland( xwayland_ctx_t *ctx, bool vblank, uint64_t vb
  	// very fast loop yes
  	for ( auto& entry : ctx->doneCommits.listCommitsDone )
  	{
@@ -7095,7 +7103,7 @@ index b50505cc2551..510569ddde11 100644
  
  		if (entry.fifo && (!entry_vblank || fifo_win_seqs.count(entry.winSeq) > 0))
  		{
-@@ -6879,12 +6929,25 @@ void handle_done_commits_xdg( bool vblank, uint64_t vblank_idx )
+@@ -6879,12 +6932,25 @@ void handle_done_commits_xdg( bool vblank, uint64_t vblank_idx )
  
  	uint64_t now = get_time_in_nanos();
  
@@ -7124,7 +7132,7 @@ index b50505cc2551..510569ddde11 100644
  		{
  			commits_before_their_time.push_back( entry );
  			continue;
-@@ -6931,7 +6994,11 @@ void handle_presented_for_window( steamcompmgr_win_t* w )
+@@ -6931,7 +6997,11 @@ void handle_presented_for_window( steamcompmgr_win_t* w )
  		: g_SteamCompMgrAppRefreshCycle;
  
  	commit_t *lastCommit = get_window_last_done_commit_peek(w);
@@ -7137,7 +7145,7 @@ index b50505cc2551..510569ddde11 100644
  	{
  		if ( !cv_mangoapp_use_output_timing )
  		{
-@@ -8382,6 +8449,16 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8382,6 +8452,16 @@ steamcompmgr_main(int argc, char **argv)
  
  		g_SteamCompMgrWaiter.PollEvents();
  
@@ -7154,7 +7162,7 @@ index b50505cc2551..510569ddde11 100644
  		static uint64_t s_lastFrameGenerationStateSerial = 0;
  		const uint64_t frameGenerationStateSerial = gamescope::GetFrameGenerationStateSerial();
  		if ( frameGenerationStateSerial != s_lastFrameGenerationStateSerial )
-@@ -8435,7 +8512,8 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8435,7 +8515,8 @@ steamcompmgr_main(int argc, char **argv)
  		}
  
  		// We can always vblank if VRR.
@@ -7164,7 +7172,7 @@ index b50505cc2551..510569ddde11 100644
  		if ( bVRR )
  			vblank = true;
  
-@@ -8780,6 +8858,15 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8780,6 +8861,15 @@ steamcompmgr_main(int argc, char **argv)
  					g_SteamCompMgrLimitedAppRefreshCycle = g_SteamCompMgrAppRefreshCycle * nVblankDivisor;
  				}
  			}
@@ -7180,7 +7188,7 @@ index b50505cc2551..510569ddde11 100644
  		}
  
  		// Handle presentation-time stuff
-@@ -8954,7 +9041,8 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8954,7 +9044,8 @@ steamcompmgr_main(int argc, char **argv)
  			// for composition to finish before submitting.
  			// If we want to do async + composite, we should set up syncfile stuff and have DRM wait on it.
  			const bool bSurfaceWantsAsync = (g_HeldCommits[HELD_COMMIT_BASE] != nullptr && g_HeldCommits[HELD_COMMIT_BASE]->async);
@@ -7190,7 +7198,7 @@ index b50505cc2551..510569ddde11 100644
  
  			enum class FlipType
  			{
-@@ -9045,15 +9133,38 @@ steamcompmgr_main(int argc, char **argv)
+@@ -9045,15 +9136,38 @@ steamcompmgr_main(int argc, char **argv)
  				bShouldPaint = false;
  			}
  
@@ -7395,7 +7403,7 @@ index 000000000000..04c5c3523989
 +kill -0 "$gamescope_pid"
 +echo "headless frame-generation smoke session stayed alive"
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 510569ddde11..97c3f96380c3 100644
+index e65f61a4895d..bac08eb1e76a 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -86,6 +86,7 @@
@@ -7437,7 +7445,7 @@ index 510569ddde11..97c3f96380c3 100644
  
  		if ( window_is_steam( w ) )
  		{
-@@ -5728,12 +5753,8 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
+@@ -5731,12 +5756,8 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
  		{
  			if ( frameGenerationActive )
  			{
@@ -7452,7 +7460,7 @@ index 510569ddde11..97c3f96380c3 100644
  			}
  			else
  			{
-@@ -9148,11 +9169,8 @@ steamcompmgr_main(int argc, char **argv)
+@@ -9151,11 +9172,8 @@ steamcompmgr_main(int argc, char **argv)
  				const uint64_t outputFPS = g_nSteamCompMgrTargetFPS > 0
  					? std::min<uint64_t>( g_nSteamCompMgrTargetFPS, refreshHz )
  					: refreshHz;
@@ -8230,7 +8238,7 @@ index ae9f8b7bc555..82a5c08f2363 100644
  void vulkan_frame_generation_reset();
  
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 97c3f96380c3..519cd8f7c010 100644
+index bac08eb1e76a..f075ad6a605b 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -1052,6 +1052,19 @@ window_is_steam( steamcompmgr_win_t *w )
@@ -8253,7 +8261,7 @@ index 97c3f96380c3..519cd8f7c010 100644
  static bool
  window_is_vr_scene_app( steamcompmgr_win_t *w )
  {
-@@ -2782,8 +2795,9 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -2790,8 +2803,9 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  	}
  
  	const gamescope::FrameGenerationConfig frameGeneration = gamescope::GetFrameGenerationConfig();
@@ -8265,7 +8273,7 @@ index 97c3f96380c3..519cd8f7c010 100644
  		g_HeldCommits[HELD_COMMIT_BASE] &&
  		g_HeldCommits[HELD_COMMIT_BASE]->commitID == g_uCurrentBasePlaneCommitID;
  	if ( frameGenerationEligible )
-@@ -5696,7 +5710,7 @@ static std::optional<uint64_t> s_oLowestFPSLimitScheduleVRR;
+@@ -5699,7 +5713,7 @@ static std::optional<uint64_t> s_oLowestFPSLimitScheduleVRR;
  
  static bool steamcompmgr_can_latch_frame_generation_between_vblanks()
  {
@@ -8274,7 +8282,7 @@ index 97c3f96380c3..519cd8f7c010 100644
  }
  
  static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vblank_idx,
-@@ -5709,7 +5723,8 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
+@@ -5712,7 +5726,8 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
  		? std::min( g_nSteamCompMgrTargetFPS, nRefreshHz ) : nRefreshHz;
  	const global_focus_t *currentFocus = GetCurrentFocus();
  	const bool frameGenerationActive = gamescope::GetFrameGenerationConfig().enabled &&
@@ -8284,7 +8292,7 @@ index 97c3f96380c3..519cd8f7c010 100644
  	const bool shouldLimit = frameGenerationActive ||
  		( g_nSteamCompMgrTargetFPS && ( bShouldLimitFPS || b_bForceFrameLimit ) );
  
-@@ -5717,9 +5732,14 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
+@@ -5720,9 +5735,14 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
  	{
  		const bool blocked = frameCallback
  			? !vulkan_frame_generation_can_request_source_frame()
@@ -8300,7 +8308,7 @@ index 97c3f96380c3..519cd8f7c010 100644
  		const uint64_t schedule = w->last_commit_first_latch_time +
  			g_SteamCompMgrLimitedAppRefreshCycle;
  		static constexpr uint64_t kFrameGenerationScheduleFudge = 200'000;
-@@ -7264,7 +7284,13 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
+@@ -7267,7 +7287,13 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
  									( pCurrentFocus->focusWindow && pCurrentFocus->focusWindow->isSteamStreamingClient && w->isSteamStreamingClientVideo ) )
  									&& !bMangoappSocketDisable;
  
@@ -8315,7 +8323,7 @@ index 97c3f96380c3..519cd8f7c010 100644
  		bool bPreemptiveUpscale = bValidPreemptiveScale && newCommit->ShouldPreemptivelyUpscale();
  
  		bool bKnownReady = false;
-@@ -8533,7 +8559,7 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8536,7 +8562,7 @@ steamcompmgr_main(int argc, char **argv)
  		}
  
  		// We can always vblank if VRR.
@@ -8324,7 +8332,7 @@ index 97c3f96380c3..519cd8f7c010 100644
  			GetBackend()->GetCurrentConnector() && GetBackend()->GetCurrentConnector()->IsVRRActive();
  		if ( bVRR )
  			vblank = true;
-@@ -8879,7 +8905,7 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8882,7 +8908,7 @@ steamcompmgr_main(int argc, char **argv)
  					g_SteamCompMgrLimitedAppRefreshCycle = g_SteamCompMgrAppRefreshCycle * nVblankDivisor;
  				}
  			}
@@ -8333,7 +8341,7 @@ index 97c3f96380c3..519cd8f7c010 100644
  			{
  				const int nRealRefreshHz = gamescope::ConvertmHzToHz( nRealRefreshmHz );
  				const int nTotalFPS = g_nSteamCompMgrTargetFPS
-@@ -9062,7 +9088,8 @@ steamcompmgr_main(int argc, char **argv)
+@@ -9065,7 +9091,8 @@ steamcompmgr_main(int argc, char **argv)
  			// for composition to finish before submitting.
  			// If we want to do async + composite, we should set up syncfile stuff and have DRM wait on it.
  			const bool bSurfaceWantsAsync = (g_HeldCommits[HELD_COMMIT_BASE] != nullptr && g_HeldCommits[HELD_COMMIT_BASE]->async);
@@ -8703,7 +8711,7 @@ index 82a5c08f2363..ee0b4936d66a 100644
  void vulkan_garbage_collect( void );
  bool vulkan_remake_swapchain( void );
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 519cd8f7c010..3b7d2b3d7585 100644
+index f075ad6a605b..bda1c0a5b505 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -1058,7 +1058,7 @@ steamcompmgr_window_allows_frame_generation( steamcompmgr_win_t *w )
@@ -8727,3 +8735,371 @@ index 6734c15aceab..edc7a9811b45 100644
  struct wlr_surface *steamcompmgr_get_server_input_surface( size_t idx );
  wlserver_vk_swapchain_feedback* steamcompmgr_get_base_layer_swapchain_feedback();
  
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 3 Aug 2026 20:45:02 +0200
+Subject: rendervulkan: accelerate optical flow SAD
+
+---
+ src/frame_generation_vulkan.cpp               |  22 ++-
+ src/meson.build                               |  15 ++
+ src/rendervulkan.cpp                          |  18 ++
+ src/rendervulkan.hpp                          |   2 +
+ ..._opticalflow_compute_optical_flow_dot.comp | 173 ++++++++++++++++++
+ 5 files changed, 226 insertions(+), 4 deletions(-)
+ create mode 100644 src/shaders/cs_ffx_opticalflow_compute_optical_flow_dot.comp
+
+diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
+index aee2ae3c630a..8396224feaf1 100644
+--- a/src/frame_generation_vulkan.cpp
++++ b/src/frame_generation_vulkan.cpp
+@@ -10,6 +10,7 @@
+ #include <vector>
+ 
+ #include "cs_ffx_opticalflow_prepare_luma_scaled.h"
++#include "cs_ffx_opticalflow_compute_optical_flow_dot.h"
+ #include "cs_ffx_frameinterpolation_gui_mask.h"
+ #include "cs_ffx_frameinterpolation_midpoint.h"
+ #include "cs_ffx_frameinterpolation_vector_field.h"
+@@ -36,6 +37,9 @@ gamescope::ConVar<bool> cv_frame_generation_gui_correction(
+ gamescope::ConVar<bool> cv_frame_generation_debug_gui(
+ 	"frame_generation_debug_gui", false,
+ 	"Visualize the screen-space GUI correction mask." );
++gamescope::ConVar<bool> cv_frame_generation_dot_product_of(
++	"frame_generation_dot_product_of", true,
++	"Use accelerated integer dot products for FidelityFX optical-flow SAD when supported." );
+ 
+ namespace
+ {
+@@ -405,9 +409,9 @@ namespace
+ 			return g_device.vk.ResetDescriptorPool( g_device.device(), descriptorPool, 0 ) == VK_SUCCESS;
+ 		}
+ 
+-		std::array<Pass *, 13> AllPasses()
++		std::array<Pass *, 14> AllPasses()
+ 		{
+-			return { &prepare, &prepareScaled, &pyramid, &histogram, &divergence, &search, &filter, &scale,
++			return { &prepare, &prepareScaled, &pyramid, &histogram, &divergence, &search, &searchDot, &filter, &scale,
+ 				&vectorField, &guiMaskPass, &midpointPass, &inpaintingPyramidPass, &inpaintingPass };
+ 		}
+ 
+@@ -418,6 +422,7 @@ namespace
+ 		Pass histogram;
+ 		Pass divergence;
+ 		Pass search;
++		Pass searchDot;
+ 		Pass filter;
+ 		Pass scale;
+ 		Pass vectorField;
+@@ -569,7 +574,7 @@ namespace
+ 			const auto Binding = []( uint32_t binding, D type ) {
+ 				return VkDescriptorSetLayoutBinding{ binding, type, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr };
+ 			};
+-			return CreatePass( prepare, ffx_opticalflow_prepare_luma_pass, sizeof( ffx_opticalflow_prepare_luma_pass ),
++			const bool created = CreatePass( prepare, ffx_opticalflow_prepare_luma_pass, sizeof( ffx_opticalflow_prepare_luma_pass ),
+ 				{ D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, D::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, D::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER } ) &&
+ 				CreatePass( prepareScaled, cs_ffx_opticalflow_prepare_luma_scaled, sizeof( cs_ffx_opticalflow_prepare_luma_scaled ),
+ 					{ D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, D::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, D::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER } ) &&
+@@ -630,6 +635,13 @@ namespace
+ 					Binding( 7, D::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ), Binding( 8, D::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ),
+ 					Binding( 1000, D::VK_DESCRIPTOR_TYPE_SAMPLER ),
+ 				} );
++			if ( !created || !g_device.supportsIntegerDotProduct() )
++				return created;
++			return CreatePass( searchDot, cs_ffx_opticalflow_compute_optical_flow_dot,
++				sizeof( cs_ffx_opticalflow_compute_optical_flow_dot ),
++				{ D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
++				  D::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, D::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
++				  D::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER } );
+ 		}
+ 	};
+ 
+@@ -761,7 +773,9 @@ namespace
+ 				const uint32_t lumaHeight = std::max( resources->lumaExtent.height >> level, 1u );
+ 				const uint32_t searchX = ( ( ( lumaWidth + 3 ) / 4 ) * 16 + 63 ) / 64;
+ 				const uint32_t searchY = ( lumaHeight + 15 ) / 16;
+-				if ( !Dispatch( cmdBuffer->rawBuffer(), resources->search,
++				Pass &searchPass = g_device.supportsIntegerDotProduct() &&
++					cv_frame_generation_dot_product_of ? resources->searchDot : resources->search;
++				if ( !Dispatch( cmdBuffer->rawBuffer(), searchPass,
+ 					{ Sampled( resources->luma[current][level] ), Sampled( resources->luma[previous][level] ),
+ 					  Storage( resources->flow[a][level] ), Storage( resources->scdOutput ), levelConstants }, searchX, searchY ) )
+ 					return false;
+diff --git a/src/meson.build b/src/meson.build
+index 2a3ff708cbf2..eb793c3429db 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -178,6 +178,21 @@ ffx_spirv_shaders += custom_target(
+   depfile: ffx_scaled_luma_shader_name + '.h.d',
+ )
+ 
++ffx_dot_search_shader_name = 'cs_ffx_opticalflow_compute_optical_flow_dot'
++ffx_spirv_shaders += custom_target(
++  ffx_dot_search_shader_name + '.h',
++  output: ffx_dot_search_shader_name + '.h',
++  command: [
++    glsl_compiler,
++    '-V', '--target-env', 'vulkan1.1', '-S', 'comp',
++    '-DFFX_GPU=1', '-DFFX_GLSL=1', '-I' + ffx_gpu_path,
++    meson.current_source_dir() / 'shaders' / (ffx_dot_search_shader_name + '.comp'),
++    '--vn', ffx_dot_search_shader_name, '-o', '@OUTPUT@',
++    '--depfile', '@DEPFILE@', '--quiet',
++  ],
++  depfile: ffx_dot_search_shader_name + '.h.d',
++)
++
+ ffx_vector_field_shader_name = 'cs_ffx_frameinterpolation_vector_field'
+ ffx_spirv_shaders += custom_target(
+   ffx_vector_field_shader_name + '.h',
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index d3db25504bf5..9dfb628e40f7 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -532,8 +532,12 @@ bool CVulkanDevice::createDevice()
+ 	}
+ 
+ 	{
++		VkPhysicalDeviceVulkan13Features vulkan13Features = {
++			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
++		};
+ 		VkPhysicalDeviceVulkan12Features vulkan12Features = {
+ 			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
++			.pNext = &vulkan13Features,
+ 		};
+ 		VkPhysicalDeviceFeatures2 features2 = {
+ 			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+@@ -542,6 +546,18 @@ bool CVulkanDevice::createDevice()
+ 		vk.GetPhysicalDeviceFeatures2( physDev(), &features2 );
+ 
+ 		m_bSupportsFp16 = vulkan12Features.shaderFloat16 && features2.features.shaderInt16;
++		VkPhysicalDeviceShaderIntegerDotProductProperties dotProductProperties = {
++			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_INTEGER_DOT_PRODUCT_PROPERTIES,
++		};
++		VkPhysicalDeviceProperties2 properties2 = {
++			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
++			.pNext = &dotProductProperties,
++		};
++		vk.GetPhysicalDeviceProperties2( physDev(), &properties2 );
++		m_bSupportsIntegerDotProduct = vulkan12Features.shaderInt8 &&
++			vulkan13Features.shaderIntegerDotProduct &&
++			properties2.properties.apiVersion >= VK_API_VERSION_1_3 &&
++			dotProductProperties.integerDotProduct8BitUnsignedAccelerated;
+ 		m_bSupportsStorageImageReadWithoutFormat = features2.features.shaderStorageImageReadWithoutFormat;
+ 		m_bSupportsStorageImageWriteWithoutFormat = features2.features.shaderStorageImageWriteWithoutFormat;
+ 	}
+@@ -618,6 +634,7 @@ bool CVulkanDevice::createDevice()
+ 		.pNext = &maintenance5,
+ #endif
+ 		.dynamicRendering = VK_TRUE,
++		.shaderIntegerDotProduct = m_bSupportsIntegerDotProduct,
+ 	};
+ 
+ 	VkPhysicalDevicePresentWaitFeaturesKHR presentWaitFeatures = {
+@@ -653,6 +670,7 @@ bool CVulkanDevice::createDevice()
+ 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+ 		.pNext = std::exchange(features2.pNext, &vulkan12Features),
+ 		.shaderFloat16 = m_bSupportsFp16,
++		.shaderInt8 = m_bSupportsIntegerDotProduct,
+ 		.scalarBlockLayout = VK_TRUE,
+ 		.timelineSemaphore = VK_TRUE,
+ 	};
+diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
+index ee0b4936d66a..bf4be555f273 100644
+--- a/src/rendervulkan.hpp
++++ b/src/rendervulkan.hpp
+@@ -861,6 +861,7 @@ public:
+ 	inline bool hasDrmPrimaryDevId() {return m_bHasDrmPrimaryDevId;}
+ 	inline dev_t primaryDevId() {return m_drmPrimaryDevId;}
+ 	inline bool supportsFp16() {return m_bSupportsFp16;}
++	inline bool supportsIntegerDotProduct() { return m_bSupportsIntegerDotProduct; }
+ 	inline bool supportsStorageImageReadWithoutFormat() { return m_bSupportsStorageImageReadWithoutFormat; }
+ 	inline bool supportsStorageImageWriteWithoutFormat() { return m_bSupportsStorageImageWriteWithoutFormat; }
+ 	inline uint32_t vendorID() {return m_uVendorID;}
+@@ -925,6 +926,7 @@ protected:
+ 	dev_t m_drmPrimaryDevId = 0;
+ 
+ 	bool m_bSupportsFp16 = false;
++	bool m_bSupportsIntegerDotProduct = false;
+ 	bool m_bSupportsStorageImageReadWithoutFormat = false;
+ 	bool m_bSupportsStorageImageWriteWithoutFormat = false;
+ 	uint32_t m_uVendorID = 0;
+diff --git a/src/shaders/cs_ffx_opticalflow_compute_optical_flow_dot.comp b/src/shaders/cs_ffx_opticalflow_compute_optical_flow_dot.comp
+new file mode 100644
+index 000000000000..b993ebed61e8
+--- /dev/null
++++ b/src/shaders/cs_ffx_opticalflow_compute_optical_flow_dot.comp
+@@ -0,0 +1,173 @@
++// This file is part of the FidelityFX SDK integration in Gamescope.
++//
++// Copyright (C) 2024 Advanced Micro Devices, Inc.
++// Copyright (C) 2026 Gamescope contributors
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++//
++// Local adaptation of FidelityFX Optical Flow 1.1.4. Uses Vulkan integer dot
++// products to reduce packed-luma SAD cost while retaining the official search
++// geometry and reduction logic.
++
++#version 450
++
++#extension GL_GOOGLE_include_directive : require
++#extension GL_EXT_samplerless_texture_functions : require
++#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
++#extension GL_EXT_integer_dot_product : require
++
++#define FFX_WAVE 1
++#extension GL_KHR_shader_subgroup_basic : require
++
++#define FFX_OPTICALFLOW_BIND_SRV_OPTICAL_FLOW_INPUT                0
++#define FFX_OPTICALFLOW_BIND_SRV_OPTICAL_FLOW_PREVIOUS_INPUT       1
++
++#define FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW                      2
++#define FFX_OPTICALFLOW_BIND_UAV_OPTICAL_FLOW_SCD_OUTPUT           3
++
++#define FFX_OPTICALFLOW_BIND_CB_COMMON                             4
++
++#include "opticalflow/ffx_opticalflow_callbacks_glsl.h"
++#include "opticalflow/ffx_opticalflow_common.h"
++
++u8vec4 UnpackLumaBytes(FfxUInt32 value)
++{
++    return u8vec4(
++        uint8_t(value),
++        uint8_t(value >> 8),
++        uint8_t(value >> 16),
++        uint8_t(value >> 24));
++}
++
++FfxUInt32 DotSadBytes(u8vec4 a, u8vec4 b)
++{
++    const u8vec4 difference = max(a, b) - min(a, b);
++    return dotEXT(difference, u8vec4(uint8_t(1)));
++}
++
++FfxUInt32 DotSad(FfxUInt32 a, FfxUInt32 b)
++{
++    return DotSadBytes(UnpackLumaBytes(a), UnpackLumaBytes(b));
++}
++
++FfxUInt32x4 DotQSad(FfxUInt32 a0, FfxUInt32 a1, FfxUInt32 b)
++{
++    const u8vec4 lo = UnpackLumaBytes(a0);
++    const u8vec4 hi = UnpackLumaBytes(a1);
++    const u8vec4 reference = UnpackLumaBytes(b);
++    return FfxUInt32x4(
++        DotSadBytes(lo, reference),
++        DotSadBytes(u8vec4(lo.y, lo.z, lo.w, hi.x), reference),
++        DotSadBytes(u8vec4(lo.z, lo.w, hi.x, hi.y), reference),
++        DotSadBytes(u8vec4(lo.w, hi.x, hi.y, hi.z), reference));
++}
++
++// Substitute only the byte-SAD implementation. Everything else, including
++// the 16x16 search and seven-level coarse-to-fine refinement, stays official.
++#define Sad DotSad
++#define QSad DotQSad
++
++#define FFX_OPTICALFLOW_BLOCK_SIZE 8
++#define FFX_OPTICALFLOW_THREAD_GROUP_WIDTH 64
++#define FFX_OPTICALFLOW_THREAD_GROUP_HEIGHT 1
++#define FFX_OPTICALFLOW_THREAD_GROUP_DEPTH 1
++#define ComputeOpticalFlowAdvanced FidelityFxComputeOpticalFlowAdvanced
++#include "opticalflow/ffx_opticalflow_compute_optical_flow_v5.h"
++#undef ComputeOpticalFlowAdvanced
++
++// The official shader evaluates the complete search before its level-zero
++// local fallback selects a zero vector. An exact same-position 8x8 match has
++// the minimum possible SAD, so it can select zero before loading or searching
++// the 16x16 candidate region without changing the result.
++void ComputeOpticalFlowAdvanced(FfxInt32x2 iGlobalId, FfxInt32x2 iLocalId,
++    FfxInt32x2 iGroupId, FfxInt32 iLocalIndex)
++{
++    FfxInt32x2 iSearchId;
++    FfxInt32x2 iPxPos;
++    FfxInt32 iLaneToBlockId;
++    MapThreads(iGroupId, iLocalIndex, iSearchId, iPxPos, iLaneToBlockId);
++
++    FfxInt32x2 currentOFPos = iPxPos >> 3u;
++    if (IsSceneChanged())
++    {
++        if ((iSearchId.y & 0x7) == 0 && (iSearchId.x & 0x1) == 0)
++            StoreOpticalFlow(currentOFPos, FfxInt32x2(0, 0));
++        return;
++    }
++
++    const FfxBoolean usePrediction =
++        OpticalFlowPyramidLevel() != OpticalFlowPyramidLevelCount() - 1;
++    const FfxUInt32 packedLuma = LoadFirstImagePackedLuma(iPxPos);
++    const FfxUInt32 previousPackedLuma = LoadSecondImagePackedLuma(iPxPos);
++    // Only level zero consumes the same-position SAD magnitude for the local
++    // fallback. Coarser levels use it solely to prove an exact block match, so
++    // a packed equality test avoids needless byte-SAD arithmetic there.
++    const FfxUInt32 localSad = OpticalFlowPyramidLevel() == 0u
++        ? DotSad(packedLuma, previousPackedLuma)
++        : FfxUInt32(packedLuma != previousPackedLuma);
++    const FfxInt32x2 ofGroupOffset = iGroupId << 1u;
++    const FfxInt32x2 pixelGroupOffset = iGroupId << 4u;
++
++    FfxInt32x2 blockId;
++    for (blockId.y = 0; blockId.y < BlockCount; ++blockId.y)
++    {
++        for (blockId.x = 0; blockId.x < BlockCount; ++blockId.x)
++        {
++            const FfxInt32 block = blockId.x + blockId.y * 2;
++            const FfxUInt32 localBlockSad =
++                BlockSad64(localSad, iLocalIndex, iLaneToBlockId, block);
++            if (localBlockSad == 0u)
++            {
++                if (iLocalIndex == 0)
++                    StoreOpticalFlow(ofGroupOffset + blockId, FfxInt32x2(0, 0));
++                continue;
++            }
++
++            FfxInt32x2 currentVector = LoadRwOpticalFlow(ofGroupOffset + blockId);
++            if (!usePrediction)
++                currentVector = FfxInt32x2(0, 0);
++
++            if (iLaneToBlockId == block)
++                pixels[iSearchId.y & 0x7][iSearchId.x & 0x1] = packedLuma;
++
++            LoadSearchBuffer(iLocalIndex, pixelGroupOffset + blockId * 8 + currentVector);
++            const FfxUInt32x4 qsad = CalculateQSads2(iSearchId);
++            PrepareSadMap(iSearchId, qsad);
++            const FfxUInt32 minSad = SadMapMinReduction256(iSearchId, iLocalIndex);
++            FfxInt32x2 newVector = currentVector + DecodeSearchCoord(minSad);
++            if (OpticalFlowPyramidLevel() == 0 && localBlockSad <= (minSad >> 16u))
++                newVector = FfxInt32x2(0, 0);
++            if (iLocalIndex == 0)
++                StoreOpticalFlow(ofGroupOffset + blockId, newVector);
++        }
++    }
++}
++
++layout(local_size_x = FFX_OPTICALFLOW_THREAD_GROUP_WIDTH,
++       local_size_y = FFX_OPTICALFLOW_THREAD_GROUP_HEIGHT,
++       local_size_z = FFX_OPTICALFLOW_THREAD_GROUP_DEPTH) in;
++
++void main()
++{
++    ComputeOpticalFlowAdvanced(
++        FfxInt32x2(gl_GlobalInvocationID.xy),
++        FfxInt32x2(gl_LocalInvocationID.xy),
++        FfxInt32x2(gl_WorkGroupID.xy),
++        FfxInt32(gl_LocalInvocationIndex));
++}
