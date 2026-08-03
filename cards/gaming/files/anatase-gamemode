@@ -73,7 +73,7 @@ gamescope_args=(
     --generate-drm-mode fixed
     # Xwayland 0 hosts the Steam UI; Steam launches games on Xwayland 1 when
     # STEAM_MULTIPLE_XWAYLANDS is enabled.
-    --xwayland-count 1
+    --xwayland-count 2
     --default-touch-mode 4
     --hide-cursor-delay 3000
     --max-scale 2
@@ -130,7 +130,7 @@ export STEAM_ENABLE_DYNAMIC_BACKLIGHT=1
 export STEAM_ENABLE_VOLUME_HANDLER=1
 export SRT_URLOPEN_PREFER_STEAM=1
 export STEAM_DISABLE_AUDIO_DEVICE_SWITCHING=1
-# export STEAM_MULTIPLE_XWAYLANDS=1
+export STEAM_MULTIPLE_XWAYLANDS=1
 export STEAM_GAMESCOPE_DYNAMIC_FPSLIMITER=1
 export STEAM_GAMESCOPE_HAS_TEARING_SUPPORT=1
 export STEAM_GAMESCOPE_NIS_SUPPORTED=1
@@ -252,6 +252,7 @@ install -d -m0700 "$steam_tmp"
 /usr/libexec/anatase-preflight || exit $?
 
 flatpak run \
+        --socket=x11-passthrough \
         --filesystem="xdg-run/$response_wl_display:ro" \
         --filesystem="xdg-run/${tmpdir##*/}:rw" \
         --filesystem="xdg-run/$steam_tmp_name:create" \
