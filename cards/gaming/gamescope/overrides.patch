@@ -3224,15 +3224,15 @@ Subject: protocol: expose fixed x2 frame generation controls
 ---
  meson.build                            |  4 ++
  protocol/gamescope-control.xml         | 11 +++-
- src/frame_generation_config.cpp        | 71 ++++++++++++++++++++++++++
- src/frame_generation_config.hpp        | 31 +++++++++++
+ src/frame_generation_config.cpp        | 74 ++++++++++++++++++++++++++
+ src/frame_generation_config.hpp        | 33 ++++++++++++
  src/meson.build                        |  1 +
  src/steamcompmgr.cpp                   | 27 ++++++++++
  src/wlserver.cpp                       | 12 ++++-
  src/xwayland_ctx.hpp                   |  3 ++
  tests/meson.build                      | 27 ++++++++++
- tests/test_frame_generation_config.cpp | 34 ++++++++++++
- 10 files changed, 219 insertions(+), 2 deletions(-)
+ tests/test_frame_generation_config.cpp | 42 +++++++++++++++
+ 10 files changed, 232 insertions(+), 2 deletions(-)
  create mode 100644 src/frame_generation_config.cpp
  create mode 100644 src/frame_generation_config.hpp
  create mode 100644 tests/meson.build
@@ -3290,10 +3290,10 @@ index 42fc9666e22c..92abb297df55 100644
  </protocol>
 diff --git a/src/frame_generation_config.cpp b/src/frame_generation_config.cpp
 new file mode 100644
-index 000000000000..9e7293f46314
+index 000000000000..5b1671d2553e
 --- /dev/null
 +++ b/src/frame_generation_config.cpp
-@@ -0,0 +1,71 @@
+@@ -0,0 +1,74 @@
 +#include "frame_generation_config.hpp"
 +
 +#include <algorithm>
@@ -3329,7 +3329,10 @@ index 000000000000..9e7293f46314
 +	void SetFrameGenerationFlowScale( uint32_t percent )
 +	{
 +		std::lock_guard lock{ s_frameGenerationMutex };
-+		const uint32_t newPercent = std::clamp( percent, 30u, 100u );
++		const uint32_t newPercent = std::clamp(
++			percent,
++			kFrameGenerationMinFlowScalePercent,
++			kFrameGenerationMaxFlowScalePercent );
 +		if ( newPercent == s_frameGenerationConfig.flowScalePercent )
 +			return;
 +
@@ -3367,10 +3370,10 @@ index 000000000000..9e7293f46314
 +}
 diff --git a/src/frame_generation_config.hpp b/src/frame_generation_config.hpp
 new file mode 100644
-index 000000000000..5190d95e1481
+index 000000000000..52df51f3db09
 --- /dev/null
 +++ b/src/frame_generation_config.hpp
-@@ -0,0 +1,31 @@
+@@ -0,0 +1,33 @@
 +#pragma once
 +
 +#include <cstdint>
@@ -3382,11 +3385,13 @@ index 000000000000..5190d95e1481
 +		Disabled = 0,
 +		WarmingUp,
 +		Active,
-+		InvalidConfig,
 +		UnsupportedFormat,
 +		UnsupportedGPU,
 +		DeadlineMiss,
 +	};
++
++	inline constexpr uint32_t kFrameGenerationMinFlowScalePercent = 10;
++	inline constexpr uint32_t kFrameGenerationMaxFlowScalePercent = 100;
 +
 +	struct FrameGenerationConfig
 +	{
@@ -3573,10 +3578,10 @@ index 000000000000..99fa5f345769
 +endif
 diff --git a/tests/test_frame_generation_config.cpp b/tests/test_frame_generation_config.cpp
 new file mode 100644
-index 000000000000..8e960911954f
+index 000000000000..448c4bf03da1
 --- /dev/null
 +++ b/tests/test_frame_generation_config.cpp
-@@ -0,0 +1,34 @@
+@@ -0,0 +1,42 @@
 +#include "frame_generation_config.hpp"
 +
 +#include <cassert>
@@ -3584,6 +3589,12 @@ index 000000000000..8e960911954f
 +int main()
 +{
 +	using namespace gamescope;
++	static_assert( static_cast<uint32_t>( FrameGenerationStatus::Disabled ) == 0 );
++	static_assert( static_cast<uint32_t>( FrameGenerationStatus::WarmingUp ) == 1 );
++	static_assert( static_cast<uint32_t>( FrameGenerationStatus::Active ) == 2 );
++	static_assert( static_cast<uint32_t>( FrameGenerationStatus::UnsupportedFormat ) == 3 );
++	static_assert( static_cast<uint32_t>( FrameGenerationStatus::UnsupportedGPU ) == 4 );
++	static_assert( static_cast<uint32_t>( FrameGenerationStatus::DeadlineMiss ) == 5 );
 +
 +	SetFrameGenerationEnabled( 0 );
 +	SetFrameGenerationFlowScale( 100 );
@@ -3603,7 +3614,9 @@ index 000000000000..8e960911954f
 +	assert( GetFrameGenerationStateSerial() > enabledSerial );
 +
 +	SetFrameGenerationFlowScale( 0 );
-+	assert( GetFrameGenerationConfig().flowScalePercent == 30 );
++	assert( GetFrameGenerationConfig().flowScalePercent == 10 );
++	SetFrameGenerationFlowScale( 10 );
++	assert( GetFrameGenerationConfig().flowScalePercent == 10 );
 +	SetFrameGenerationFlowScale( 101 );
 +	assert( GetFrameGenerationConfig().flowScalePercent == 100 );
 +
@@ -3873,23 +3886,23 @@ Date: Mon, 3 Aug 2026 14:48:35 +0200
 Subject: rendervulkan: integrate FidelityFX Optical Flow v5
 
 ---
- src/frame_generation_vulkan.cpp               | 717 ++++++++++++++++++
+ src/frame_generation_vulkan.cpp               | 724 ++++++++++++++++++
  src/frame_generation_vulkan.hpp               |  20 +
  src/meson.build                               |  16 +
  src/rendervulkan.cpp                          |   9 +
  src/rendervulkan.hpp                          |   7 +-
  ...s_ffx_opticalflow_prepare_luma_scaled.comp |  78 ++
- 6 files changed, 845 insertions(+), 2 deletions(-)
+ 6 files changed, 852 insertions(+), 2 deletions(-)
  create mode 100644 src/frame_generation_vulkan.cpp
  create mode 100644 src/frame_generation_vulkan.hpp
  create mode 100644 src/shaders/cs_ffx_opticalflow_prepare_luma_scaled.comp
 
 diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
 new file mode 100644
-index 000000000000..7233314b9c0c
+index 000000000000..c5d4abb9e5c3
 --- /dev/null
 +++ b/src/frame_generation_vulkan.cpp
-@@ -0,0 +1,717 @@
+@@ -0,0 +1,724 @@
 +#include "frame_generation_vulkan.hpp"
 +
 +#include <algorithm>
@@ -3901,6 +3914,7 @@ index 000000000000..7233314b9c0c
 +#include <utility>
 +#include <vector>
 +
++#include "frame_generation_config.hpp"
 +#include "cs_ffx_opticalflow_prepare_luma_scaled.h"
 +#include "ffx_opticalflow_compute_luminance_pyramid_pass.h"
 +#include "ffx_opticalflow_compute_optical_flow_advanced_pass_v5.h"
@@ -4079,7 +4093,10 @@ index 000000000000..7233314b9c0c
 +		bool Create( uint32_t sourceWidth, uint32_t sourceHeight, uint32_t scalePercent )
 +		{
 +			sourceExtent = { sourceWidth, sourceHeight };
-+			flowScalePercent = std::clamp( scalePercent, 30u, 100u );
++			flowScalePercent = std::clamp(
++				scalePercent,
++				gamescope::kFrameGenerationMinFlowScalePercent,
++				gamescope::kFrameGenerationMaxFlowScalePercent );
 +			lumaExtent = {
 +				std::max( 1u, uint32_t( ( uint64_t( sourceWidth ) * flowScalePercent + 99 ) / 100 ) ),
 +				std::max( 1u, uint32_t( ( uint64_t( sourceHeight ) * flowScalePercent + 99 ) / 100 ) ),
@@ -4280,7 +4297,10 @@ index 000000000000..7233314b9c0c
 +			if ( !cmdBuffer || !source || source->isYcbcr() )
 +				return false;
 +			CollectRetired();
-+			const uint32_t clampedScale = std::clamp( scalePercent, 30u, 100u );
++			const uint32_t clampedScale = std::clamp(
++				scalePercent,
++				gamescope::kFrameGenerationMinFlowScalePercent,
++				gamescope::kFrameGenerationMaxFlowScalePercent );
 +			if ( !resources || resources->sourceExtent.width != source->width() ||
 +				 resources->sourceExtent.height != source->height() || resources->flowScalePercent != clampedScale )
 +			{
@@ -4831,12 +4851,12 @@ Subject: rendervulkan: add optical-flow-only FidelityFX interpolation
  create mode 100644 src/shaders/cs_ffx_frameinterpolation_vector_field.comp
 
 diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
-index 7233314b9c0c..44e84b426829 100644
+index c5d4abb9e5c3..df6073d1623d 100644
 --- a/src/frame_generation_vulkan.cpp
 +++ b/src/frame_generation_vulkan.cpp
-@@ -10,6 +10,10 @@
- #include <vector>
+@@ -11,6 +11,10 @@
  
+ #include "frame_generation_config.hpp"
  #include "cs_ffx_opticalflow_prepare_luma_scaled.h"
 +#include "cs_ffx_frameinterpolation_midpoint.h"
 +#include "cs_ffx_frameinterpolation_vector_field.h"
@@ -4845,7 +4865,7 @@ index 7233314b9c0c..44e84b426829 100644
  #include "ffx_opticalflow_compute_luminance_pyramid_pass.h"
  #include "ffx_opticalflow_compute_optical_flow_advanced_pass_v5.h"
  #include "ffx_opticalflow_compute_scd_divergence_pass.h"
-@@ -17,6 +21,14 @@
+@@ -18,6 +22,14 @@
  #include "ffx_opticalflow_generate_scd_histogram_pass.h"
  #include "ffx_opticalflow_prepare_luma_pass.h"
  #include "ffx_opticalflow_scale_optical_flow_advanced_pass_v5.h"
@@ -4860,7 +4880,7 @@ index 7233314b9c0c..44e84b426829 100644
  
  namespace
  {
-@@ -43,6 +55,45 @@ namespace
+@@ -44,6 +56,45 @@ namespace
  		uint32_t padding[3];
  	};
  
@@ -4906,7 +4926,7 @@ index 7233314b9c0c..44e84b426829 100644
  	class RawImage
  	{
  	public:
-@@ -61,6 +112,7 @@ namespace
+@@ -62,6 +113,7 @@ namespace
  			image = std::exchange( other.image, VK_NULL_HANDLE );
  			memory = std::exchange( other.memory, VK_NULL_HANDLE );
  			view = std::exchange( other.view, VK_NULL_HANDLE );
@@ -4914,7 +4934,7 @@ index 7233314b9c0c..44e84b426829 100644
  			format = other.format;
  			width = other.width;
  			height = other.height;
-@@ -68,18 +120,19 @@ namespace
+@@ -69,18 +121,19 @@ namespace
  		}
  		~RawImage() { Destroy(); }
  
@@ -4936,7 +4956,7 @@ index 7233314b9c0c..44e84b426829 100644
  				.arrayLayers = 1,
  				.samples = VK_SAMPLE_COUNT_1_BIT,
  				.tiling = VK_IMAGE_TILING_OPTIMAL,
-@@ -114,16 +167,31 @@ namespace
+@@ -115,16 +168,31 @@ namespace
  				.subresourceRange = {
  					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
  					.baseMipLevel = 0,
@@ -4970,7 +4990,7 @@ index 7233314b9c0c..44e84b426829 100644
  			if ( view )
  				g_device.vk.DestroyImageView( g_device.device(), view, nullptr );
  			if ( image )
-@@ -138,9 +206,54 @@ namespace
+@@ -139,9 +207,54 @@ namespace
  		VkImage image = VK_NULL_HANDLE;
  		VkDeviceMemory memory = VK_NULL_HANDLE;
  		VkImageView view = VK_NULL_HANDLE;
@@ -5025,7 +5045,7 @@ index 7233314b9c0c..44e84b426829 100644
  	};
  
  	struct Pass
-@@ -149,6 +262,7 @@ namespace
+@@ -150,6 +263,7 @@ namespace
  		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
  		VkShaderModule shaderModule = VK_NULL_HANDLE;
  		VkPipeline pipeline = VK_NULL_HANDLE;
@@ -5033,7 +5053,7 @@ index 7233314b9c0c..44e84b426829 100644
  
  		void Destroy()
  		{
-@@ -171,6 +285,7 @@ namespace
+@@ -172,6 +286,7 @@ namespace
  		VkBuffer buffer = VK_NULL_HANDLE;
  		VkDeviceSize offset = 0;
  		VkDeviceSize range = 0;
@@ -5041,7 +5061,7 @@ index 7233314b9c0c..44e84b426829 100644
  	};
  
  	class OpticalFlowResources
-@@ -182,6 +297,8 @@ namespace
+@@ -183,6 +298,8 @@ namespace
  				pass->Destroy();
  			if ( descriptorPool )
  				g_device.vk.DestroyDescriptorPool( g_device.device(), descriptorPool, nullptr );
@@ -5050,7 +5070,7 @@ index 7233314b9c0c..44e84b426829 100644
  		}
  
  		bool Create( uint32_t sourceWidth, uint32_t sourceHeight, uint32_t scalePercent )
-@@ -221,11 +338,41 @@ namespace
+@@ -225,11 +342,41 @@ namespace
  				flowHeight = std::max( ( flowHeight + 1 ) / 2, 1u );
  			}
  
@@ -5097,7 +5117,7 @@ index 7233314b9c0c..44e84b426829 100644
  		}
  
  		bool ResetDescriptors()
-@@ -233,9 +380,10 @@ namespace
+@@ -237,9 +384,10 @@ namespace
  			return g_device.vk.ResetDescriptorPool( g_device.device(), descriptorPool, 0 ) == VK_SUCCESS;
  		}
  
@@ -5110,7 +5130,7 @@ index 7233314b9c0c..44e84b426829 100644
  		}
  
  		VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
-@@ -247,6 +395,10 @@ namespace
+@@ -251,6 +399,10 @@ namespace
  		Pass search;
  		Pass filter;
  		Pass scale;
@@ -5121,7 +5141,7 @@ index 7233314b9c0c..44e84b426829 100644
  		std::array<std::array<RawImage, kPyramidLevels>, 2> luma;
  		std::array<std::array<RawImage, kPyramidLevels>, 2> flow;
  		std::array<VkExtent2D, kPyramidLevels> flowExtent = {};
-@@ -255,6 +407,12 @@ namespace
+@@ -259,6 +411,12 @@ namespace
  		RawImage scdPreviousHistogram;
  		RawImage scdTemp;
  		RawImage scdOutput;
@@ -5134,7 +5154,7 @@ index 7233314b9c0c..44e84b426829 100644
  		VkExtent2D sourceExtent = {};
  		VkExtent2D lumaExtent = {};
  		uint32_t flowScalePercent = 100;
-@@ -264,7 +422,8 @@ namespace
+@@ -268,7 +426,8 @@ namespace
  	private:
  		bool CheckCapabilities()
  		{
@@ -5144,7 +5164,7 @@ index 7233314b9c0c..44e84b426829 100644
  			{
  				VkFormatProperties properties = {};
  				g_device.vk.GetPhysicalDeviceFormatProperties( g_device.physDev(), format, &properties );
-@@ -281,17 +440,21 @@ namespace
+@@ -285,17 +444,21 @@ namespace
  				.pNext = &subgroup,
  			};
  			g_device.vk.GetPhysicalDeviceProperties2( g_device.physDev(), &properties );
@@ -5168,7 +5188,7 @@ index 7233314b9c0c..44e84b426829 100644
  			}};
  			const VkDescriptorPoolCreateInfo info = {
  				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-@@ -302,23 +465,14 @@ namespace
+@@ -306,23 +469,14 @@ namespace
  			return g_device.vk.CreateDescriptorPool( g_device.device(), &info, nullptr, &descriptorPool ) == VK_SUCCESS;
  		}
  
@@ -5197,7 +5217,7 @@ index 7233314b9c0c..44e84b426829 100644
  			};
  			if ( g_device.vk.CreateDescriptorSetLayout( g_device.device(), &descriptorInfo, nullptr, &pass.descriptorLayout ) != VK_SUCCESS )
  				return false;
-@@ -353,9 +507,35 @@ namespace
+@@ -357,9 +511,35 @@ namespace
  			return g_device.vk.CreateComputePipelines( g_device.device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pass.pipeline ) == VK_SUCCESS;
  		}
  
@@ -5233,7 +5253,7 @@ index 7233314b9c0c..44e84b426829 100644
  			return CreatePass( prepare, ffx_opticalflow_prepare_luma_pass, sizeof( ffx_opticalflow_prepare_luma_pass ),
  				{ D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, D::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, D::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER } ) &&
  				CreatePass( prepareScaled, cs_ffx_opticalflow_prepare_luma_scaled, sizeof( cs_ffx_opticalflow_prepare_luma_scaled ),
-@@ -376,7 +556,38 @@ namespace
+@@ -380,7 +560,38 @@ namespace
  					{ D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, D::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, D::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER } ) &&
  				CreatePass( scale, ffx_opticalflow_scale_optical_flow_advanced_pass_v5, sizeof( ffx_opticalflow_scale_optical_flow_advanced_pass_v5 ),
  					{ D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
@@ -5273,7 +5293,7 @@ index 7233314b9c0c..44e84b426829 100644
  		}
  	};
  
-@@ -442,7 +653,7 @@ namespace
+@@ -449,7 +660,7 @@ namespace
  			const auto common = Upload( constants );
  			if ( !Dispatch( cmdBuffer->rawBuffer(), clampedScale == 100 ? resources->prepare : resources->prepareScaled,
  				{
@@ -5282,7 +5302,7 @@ index 7233314b9c0c..44e84b426829 100644
  				}, ( resources->lumaExtent.width + 31 ) / 32, ( resources->lumaExtent.height + 31 ) / 32 ) )
  				return false;
  			Barrier( cmdBuffer->rawBuffer() );
-@@ -521,6 +732,103 @@ namespace
+@@ -528,6 +739,103 @@ namespace
  			return true;
  		}
  
@@ -5386,7 +5406,7 @@ index 7233314b9c0c..44e84b426829 100644
  		void NotifySubmit( uint64_t sequence )
  		{
  			if ( recordedResources )
-@@ -569,10 +877,26 @@ namespace
+@@ -576,10 +884,26 @@ namespace
  		{
  			return { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, image.view };
  		}
@@ -5413,7 +5433,7 @@ index 7233314b9c0c..44e84b426829 100644
  			VkDescriptorSet set = VK_NULL_HANDLE;
  			const VkDescriptorSetAllocateInfo allocateInfo = {
  				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-@@ -589,15 +913,15 @@ namespace
+@@ -596,15 +920,15 @@ namespace
  			for ( uint32_t i = 0; i < descriptors.size(); ++i )
  			{
  				const Descriptor &descriptor = descriptors[i];
@@ -5432,7 +5452,7 @@ index 7233314b9c0c..44e84b426829 100644
  					.pBufferInfo = descriptor.buffer ? &bufferInfos[i] : nullptr,
  				};
  			}
-@@ -632,6 +956,9 @@ namespace
+@@ -639,6 +963,9 @@ namespace
  			result.push_back( &resources->scdPreviousHistogram );
  			result.push_back( &resources->scdTemp );
  			result.push_back( &resources->scdOutput );
@@ -5442,7 +5462,7 @@ index 7233314b9c0c..44e84b426829 100644
  			return result;
  		}
  
-@@ -651,7 +978,7 @@ namespace
+@@ -658,7 +985,7 @@ namespace
  					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
  					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
  					.image = image->image,
@@ -5451,7 +5471,7 @@ index 7233314b9c0c..44e84b426829 100644
  				} );
  			}
  			g_device.vk.CmdPipelineBarrier( commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-@@ -662,9 +989,11 @@ namespace
+@@ -669,9 +996,11 @@ namespace
  		void ClearAll( VkCommandBuffer commandBuffer )
  		{
  			const VkClearColorValue zero = {};
@@ -5464,7 +5484,7 @@ index 7233314b9c0c..44e84b426829 100644
  			Barrier( commandBuffer );
  		}
  
-@@ -701,6 +1030,16 @@ bool vulkan_frame_generation_record_optical_flow(
+@@ -708,6 +1037,16 @@ bool vulkan_frame_generation_record_optical_flow(
  	return GetOpticalFlowContext().Record( cmdBuffer, std::move( source ), flowScalePercent, reset );
  }
  
@@ -5481,7 +5501,7 @@ index 7233314b9c0c..44e84b426829 100644
  void vulkan_frame_generation_notify_submit( uint64_t sequence )
  {
  	GetOpticalFlowContext().NotifySubmit( sequence );
-@@ -715,3 +1054,8 @@ void vulkan_frame_generation_reset_optical_flow()
+@@ -722,3 +1061,8 @@ void vulkan_frame_generation_reset_optical_flow()
  {
  	GetOpticalFlowContext().Reset();
  }
@@ -5663,15 +5683,15 @@ Subject: steamcompmgr: pace pre-FSR x2 frame generation with direct scanout
  src/Timeline.h                                |   1 +
  src/frame_generation_config.cpp               |   8 +
  src/frame_generation_config.hpp               |   1 +
- src/frame_generation_pacing.hpp               |  38 ++
+ src/frame_generation_pacing.hpp               |  56 ++
  src/frame_generation_vulkan.cpp               | 118 +++-
  src/frame_generation_vulkan.hpp               |   9 +-
- src/rendervulkan.cpp                          | 509 +++++++++++++++++-
+ src/rendervulkan.cpp                          | 507 +++++++++++++++++-
  src/rendervulkan.hpp                          |  42 +-
  .../cs_ffx_frameinterpolation_midpoint.comp   |  26 +-
- src/steamcompmgr.cpp                          | 190 +++++--
- tests/test_frame_generation_config.cpp        |  34 ++
- 13 files changed, 971 insertions(+), 55 deletions(-)
+ src/steamcompmgr.cpp                          | 284 ++++++++--
+ tests/test_frame_generation_config.cpp        |  49 ++
+ 13 files changed, 1097 insertions(+), 54 deletions(-)
  create mode 100644 src/frame_generation_pacing.hpp
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
@@ -5801,7 +5821,7 @@ index 54611a0d3142..ba499d6da0a5 100644
  
          std::shared_ptr<CTimeline> m_pTimeline;
 diff --git a/src/frame_generation_config.cpp b/src/frame_generation_config.cpp
-index 9e7293f46314..89b44a2ba0e8 100644
+index 5b1671d2553e..dac88cc03150 100644
 --- a/src/frame_generation_config.cpp
 +++ b/src/frame_generation_config.cpp
 @@ -9,6 +9,7 @@ namespace gamescope
@@ -5820,7 +5840,7 @@ index 9e7293f46314..89b44a2ba0e8 100644
  		s_frameGenerationStateSerial.fetch_add( 1, std::memory_order_release );
  	}
  
-@@ -39,6 +41,7 @@ namespace gamescope
+@@ -42,6 +44,7 @@ namespace gamescope
  
  		s_frameGenerationConfig.flowScalePercent = newPercent;
  		UpdateStatusForConfig();
@@ -5828,7 +5848,7 @@ index 9e7293f46314..89b44a2ba0e8 100644
  		s_frameGenerationStateSerial.fetch_add( 1, std::memory_order_release );
  	}
  
-@@ -64,6 +67,11 @@ namespace gamescope
+@@ -67,6 +70,11 @@ namespace gamescope
  		return s_frameGenerationStatus;
  	}
  
@@ -5841,10 +5861,10 @@ index 9e7293f46314..89b44a2ba0e8 100644
  	{
  		return s_frameGenerationStateSerial.load( std::memory_order_acquire );
 diff --git a/src/frame_generation_config.hpp b/src/frame_generation_config.hpp
-index 5190d95e1481..087ff4fe2984 100644
+index 52df51f3db09..c418259165ee 100644
 --- a/src/frame_generation_config.hpp
 +++ b/src/frame_generation_config.hpp
-@@ -27,5 +27,6 @@ namespace gamescope
+@@ -29,5 +29,6 @@ namespace gamescope
  	FrameGenerationConfig GetFrameGenerationConfig();
  	void SetFrameGenerationStatus( FrameGenerationStatus status );
  	FrameGenerationStatus GetFrameGenerationStatus();
@@ -5853,10 +5873,10 @@ index 5190d95e1481..087ff4fe2984 100644
  }
 diff --git a/src/frame_generation_pacing.hpp b/src/frame_generation_pacing.hpp
 new file mode 100644
-index 000000000000..fa20e0e6cea6
+index 000000000000..471ad9c90606
 --- /dev/null
 +++ b/src/frame_generation_pacing.hpp
-@@ -0,0 +1,38 @@
+@@ -0,0 +1,56 @@
 +#pragma once
 +
 +#include <cstdint>
@@ -5894,12 +5914,30 @@ index 000000000000..fa20e0e6cea6
 +		return queuedFrames == 0u ||
 +			( queuedFrames == 1u && !frontFrameGenerated );
 +	}
++
++	constexpr bool FrameGenerationOutputDeadlineMissed(
++		uint64_t now, uint64_t deadline, uint64_t interval )
++	{
++		return deadline != 0u && interval != 0u && now >= deadline &&
++			now - deadline >= interval;
++	}
++
++	constexpr uint64_t FrameGenerationNextOutputDeadline(
++		uint64_t previousDeadline, uint64_t now, uint64_t interval )
++	{
++		if ( interval == 0u )
++			return 0u;
++		if ( previousDeadline != 0u && now >= previousDeadline &&
++			now - previousDeadline < interval )
++			return previousDeadline + interval;
++		return now + interval;
++	}
 +}
 diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
-index 44e84b426829..7bb784e12823 100644
+index df6073d1623d..2a8dd72b331b 100644
 --- a/src/frame_generation_vulkan.cpp
 +++ b/src/frame_generation_vulkan.cpp
-@@ -299,6 +299,8 @@ namespace
+@@ -300,6 +300,8 @@ namespace
  				g_device.vk.DestroyDescriptorPool( g_device.device(), descriptorPool, nullptr );
  			if ( linearSampler )
  				g_device.vk.DestroySampler( g_device.device(), linearSampler, nullptr );
@@ -5908,7 +5946,7 @@ index 44e84b426829..7bb784e12823 100644
  		}
  
  		bool Create( uint32_t sourceWidth, uint32_t sourceHeight, uint32_t scalePercent )
-@@ -312,6 +314,15 @@ namespace
+@@ -316,6 +318,15 @@ namespace
  
  			if ( !CheckCapabilities() || !CreatePool() || !CreatePasses() )
  				return false;
@@ -5924,7 +5962,7 @@ index 44e84b426829..7bb784e12823 100644
  
  			for ( uint32_t ping = 0; ping < 2; ++ping )
  			{
-@@ -352,8 +363,9 @@ namespace
+@@ -356,8 +367,9 @@ namespace
  			const uint32_t pyramidMips = std::min( 13u,
  				uint32_t( std::floor( std::log2( std::max( pyramidWidth, pyramidHeight ) ) ) ) + 1u );
  			if ( !inpaintingPyramid.Create( pyramidWidth, pyramidHeight, VK_FORMAT_R16G16B16A16_SFLOAT, pyramidMips ) ||
@@ -5935,7 +5973,7 @@ index 44e84b426829..7bb784e12823 100644
  
  			CVulkanTexture::createFlags midpointFlags;
  			midpointFlags.bSampled = true;
-@@ -411,6 +423,7 @@ namespace
+@@ -415,6 +427,7 @@ namespace
  		RawImage vectorFieldY;
  		RawImage inpaintingPyramid;
  		RawBuffer counters;
@@ -5943,7 +5981,7 @@ index 44e84b426829..7bb784e12823 100644
  		gamescope::OwningRc<CVulkanTexture> midpoint;
  		VkSampler linearSampler = VK_NULL_HANDLE;
  		VkExtent2D sourceExtent = {};
-@@ -418,6 +431,11 @@ namespace
+@@ -422,6 +435,11 @@ namespace
  		uint32_t flowScalePercent = 100;
  		bool initializedLayouts = false;
  		uint64_t sequence = 0;
@@ -5955,7 +5993,7 @@ index 44e84b426829..7bb784e12823 100644
  
  	private:
  		bool CheckCapabilities()
-@@ -567,7 +585,8 @@ namespace
+@@ -571,7 +589,8 @@ namespace
  					Binding( 0, D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ), Binding( 1, D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ),
  					Binding( 2, D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ), Binding( 3, D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ),
  					Binding( 4, D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ), Binding( 5, D::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ),
@@ -5965,7 +6003,7 @@ index 44e84b426829..7bb784e12823 100644
  				} ) &&
  				CreatePassBindings( inpaintingPyramidPass, ffx_frameinterpolation_compute_inpainting_pyramid_pass,
  					sizeof( ffx_frameinterpolation_compute_inpainting_pyramid_pass ), {
-@@ -594,7 +613,11 @@ namespace
+@@ -598,7 +617,11 @@ namespace
  	class OpticalFlowContext
  	{
  	public:
@@ -5978,7 +6016,7 @@ index 44e84b426829..7bb784e12823 100644
  		{
  			if ( !cmdBuffer || !source || source->isYcbcr() )
  				return false;
-@@ -605,6 +628,7 @@ namespace
+@@ -612,6 +635,7 @@ namespace
  			{
  				if ( resources && !g_device.isComplete( resources->sequence ) )
  					return false;
@@ -5986,7 +6024,7 @@ index 44e84b426829..7bb784e12823 100644
  				resources.reset();
  				resources = std::make_shared<OpticalFlowResources>();
  				if ( !resources->Create( source->width(), source->height(), clampedScale ) )
-@@ -616,8 +640,18 @@ namespace
+@@ -623,8 +647,18 @@ namespace
  				reset = true;
  			}
  
@@ -6006,7 +6044,7 @@ index 44e84b426829..7bb784e12823 100644
  
  			cmdBuffer->bindTexture( 0, source );
  			cmdBuffer->prepareSrcImage( source.get() );
-@@ -640,12 +674,14 @@ namespace
+@@ -647,12 +681,14 @@ namespace
  
  			const uint32_t current = resourceFrameIndex & 1u;
  			const uint32_t previous = current ^ 1u;
@@ -6022,7 +6060,7 @@ index 44e84b426829..7bb784e12823 100644
  				.minMaxLuminance = { 0.0f, 1000.0f },
  				.sourceResolution = { int32_t( source->width() ), int32_t( source->height() ) },
  			};
-@@ -687,6 +723,7 @@ namespace
+@@ -694,6 +730,7 @@ namespace
  				  Storage( resources->scdOutput ), common }, 9, 3 ) )
  				return false;
  			Barrier( cmdBuffer->rawBuffer() );
@@ -6030,7 +6068,7 @@ index 44e84b426829..7bb784e12823 100644
  
  			for ( int32_t level = int32_t( kPyramidLevels ) - 1; level >= 0; --level )
  			{
-@@ -725,6 +762,7 @@ namespace
+@@ -732,6 +769,7 @@ namespace
  					Barrier( cmdBuffer->rawBuffer() );
  				}
  			}
@@ -6038,7 +6076,7 @@ index 44e84b426829..7bb784e12823 100644
  
  			resourceFrameIndex = ( resourceFrameIndex + 1 ) & 1u;
  			firstExecution = false;
-@@ -775,6 +813,7 @@ namespace
+@@ -782,6 +820,7 @@ namespace
  			constants.interpolationRectSize[0] = constants.displaySize[0];
  			constants.interpolationRectSize[1] = constants.displaySize[1];
  			constants.dispatchFlags = cv_frame_generation_debug_flow ? 0x80000000u : 0u;
@@ -6046,7 +6084,7 @@ index 44e84b426829..7bb784e12823 100644
  			constants.minMaxLuminance[1] = 1000.0f;
  			const Descriptor fiConstants = Upload( constants );
  
-@@ -785,11 +824,12 @@ namespace
+@@ -792,11 +831,12 @@ namespace
  			}, ( resources->flowExtent[0].width + 7 ) / 8, ( resources->flowExtent[0].height + 7 ) / 8 ) )
  				return nullptr;
  			Barrier( cmdBuffer->rawBuffer() );
@@ -6060,7 +6098,7 @@ index 44e84b426829..7bb784e12823 100644
  			}, ( resources->sourceExtent.width + 7 ) / 8, ( resources->sourceExtent.height + 7 ) / 8 ) )
  				return nullptr;
  			Barrier( cmdBuffer->rawBuffer() );
-@@ -824,11 +864,22 @@ namespace
+@@ -831,11 +871,22 @@ namespace
  				Sampler( resources->linearSampler ),
  			}, ( resources->sourceExtent.width + 7 ) / 8, ( resources->sourceExtent.height + 7 ) / 8 ) )
  				return nullptr;
@@ -6083,7 +6121,7 @@ index 44e84b426829..7bb784e12823 100644
  		void NotifySubmit( uint64_t sequence )
  		{
  			if ( recordedResources )
-@@ -849,6 +900,38 @@ namespace
+@@ -856,6 +907,38 @@ namespace
  		}
  
  	private:
@@ -6122,7 +6160,7 @@ index 44e84b426829..7bb784e12823 100644
  		Descriptor UploadBytes( const void *data, size_t size )
  		{
  			VkPhysicalDeviceProperties properties = {};
-@@ -1010,6 +1093,9 @@ namespace
+@@ -1017,6 +1100,9 @@ namespace
  		uint32_t resourceFrameIndex = 0;
  		uint32_t frameIndex = 0;
  		bool firstExecution = true;
@@ -6132,7 +6170,7 @@ index 44e84b426829..7bb784e12823 100644
  	};
  
  	OpticalFlowContext &GetOpticalFlowContext()
-@@ -1024,10 +1110,12 @@ namespace
+@@ -1031,10 +1117,12 @@ namespace
  bool vulkan_frame_generation_record_optical_flow(
  	CVulkanCmdBuffer *cmdBuffer,
  	gamescope::Rc<CVulkanTexture> source,
@@ -6146,7 +6184,7 @@ index 44e84b426829..7bb784e12823 100644
  }
  
  gamescope::Rc<CVulkanTexture> vulkan_frame_generation_record_interpolation(
-@@ -1059,3 +1147,19 @@ bool vulkan_frame_generation_ab_enabled()
+@@ -1066,3 +1154,19 @@ bool vulkan_frame_generation_ab_enabled()
  {
  	return cv_frame_generation_ab;
  }
@@ -6196,7 +6234,7 @@ index 95de4f5a2b9c..bc20bf5a3d2b 100644
 +FrameGenerationGpuTimings vulkan_frame_generation_get_gpu_timings();
 +uint64_t vulkan_frame_generation_get_scene_cut_copy_count();
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index f9be6ad24229..2dea80420d11 100644
+index f9be6ad24229..45132cd92c7c 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -9,6 +9,7 @@
@@ -6263,7 +6301,7 @@ index f9be6ad24229..2dea80420d11 100644
  	if ( pPipewireTexture != nullptr )
  	{
  
-@@ -4399,6 +4411,495 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
+@@ -4399,6 +4411,493 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
  	return sequence;
  }
  
@@ -6389,7 +6427,6 @@ index f9be6ad24229..2dea80420d11 100644
 +				m_offset = realLayer.offset;
 +			}
 +
-+			frameInfo->allowVRR = false;
 +			frameInfo->frameGenerationActive = true;
 +
 +			if ( m_lastSourceValid && sourceId == m_lastSourceId )
@@ -6677,7 +6714,6 @@ index f9be6ad24229..2dea80420d11 100644
 +			frameInfo->layers[0].acquirePoint = std::move( queued.acquirePoint );
 +			frameInfo->useFSRLayer0 = queued.useFSR;
 +			frameInfo->useNISLayer0 = false;
-+			frameInfo->allowVRR = false;
 +			frameInfo->frameGenerationActive = true;
 +			m_lastPresentedGenerated = queued.generated;
 +			m_telemetry.presentedGeneratedFrames += queued.generated ? 1u : 0u;
@@ -6920,10 +6956,18 @@ index 7eec13953835..efc1dee0e170 100644
      float blend = 0.5;
      if (!previousValid && currentValid)
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index b50505cc2551..e65f61a4895d 100644
+index b50505cc2551..cbff3df1fa11 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -2486,7 +2486,7 @@ gamescope::ConVar<bool> cv_paint_cursor_plane{ "paint_cursor_plane", true };
+@@ -86,6 +86,7 @@
+ #include "steamcompmgr.hpp"
+ #include "vblankmanager.hpp"
+ #include "frame_generation_config.hpp"
++#include "frame_generation_pacing.hpp"
+ #include "log.hpp"
+ #include "Utils/Defer.h"
+ #include "win32_styles.h"
+@@ -2486,7 +2487,7 @@ gamescope::ConVar<bool> cv_paint_cursor_plane{ "paint_cursor_plane", true };
  gamescope::ConVar<bool> cv_paint_mura_plane{ "paint_mura_plane", true };
  
  static void
@@ -6932,7 +6976,7 @@ index b50505cc2551..e65f61a4895d 100644
  {
  	if ( !pFocus )
  		return;
-@@ -2521,7 +2521,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms)
+@@ -2521,7 +2522,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms)
  	override = pFocus->overrideWindow;
  	input = pFocus->inputFocusWindow;
  
@@ -6941,7 +6985,7 @@ index b50505cc2551..e65f61a4895d 100644
  	{
  		currentFrameRate = 300 * 1000.0f / (currentTime - lastSampledFrameTime);
  		lastSampledFrameTime = currentTime;
-@@ -2756,11 +2756,34 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms)
+@@ -2756,11 +2757,34 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms)
  		frameInfo.useNISLayer0 = false;
  	}
  
@@ -6976,7 +7020,7 @@ index b50505cc2551..e65f61a4895d 100644
  	g_bFirstFrame = false;
  
  	update_app_target_refresh_cycle();
-@@ -5649,18 +5672,44 @@ steamcompmgr_flush_frame_done( steamcompmgr_win_t *w )
+@@ -5649,18 +5673,56 @@ steamcompmgr_flush_frame_done( steamcompmgr_win_t *w )
  
  static std::optional<uint64_t> s_oLowestFPSLimitScheduleVRR;
  
@@ -7011,7 +7055,19 @@ index b50505cc2551..e65f61a4895d 100644
 +		const uint64_t schedule = w->last_commit_first_latch_time +
 +			g_SteamCompMgrLimitedAppRefreshCycle;
 +		static constexpr uint64_t kFrameGenerationScheduleFudge = 200'000;
-+		return now + kFrameGenerationScheduleFudge >= schedule;
++		if ( now + kFrameGenerationScheduleFudge < schedule )
++		{
++			if ( frameCallback )
++			{
++				if ( !s_oLowestFPSLimitScheduleVRR )
++					s_oLowestFPSLimitScheduleVRR = schedule;
++				else
++					s_oLowestFPSLimitScheduleVRR = std::min(
++						*s_oLowestFPSLimitScheduleVRR, schedule );
++			}
++			return false;
++		}
++		return true;
 +	}
  
  	if ( GetBackend()->GetCurrentConnector() && GetBackend()->GetCurrentConnector()->IsVRRActive() )
@@ -7025,7 +7081,7 @@ index b50505cc2551..e65f61a4895d 100644
  		{
  			uint64_t schedule = w->last_commit_first_latch_time + g_SteamCompMgrLimitedAppRefreshCycle;
  
-@@ -5678,27 +5727,34 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
+@@ -5678,27 +5740,34 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
  	}
  	else
  	{
@@ -7071,7 +7127,7 @@ index b50505cc2551..e65f61a4895d 100644
  	{
  		w->unlockedForFrameCallback = true;
  	}
-@@ -6810,22 +6866,19 @@ void handle_done_commits_xwayland( xwayland_ctx_t *ctx, bool vblank, uint64_t vb
+@@ -6810,22 +6879,19 @@ void handle_done_commits_xwayland( xwayland_ctx_t *ctx, bool vblank, uint64_t vb
  	// very fast loop yes
  	for ( auto& entry : ctx->doneCommits.listCommitsDone )
  	{
@@ -7103,7 +7159,7 @@ index b50505cc2551..e65f61a4895d 100644
  
  		if (entry.fifo && (!entry_vblank || fifo_win_seqs.count(entry.winSeq) > 0))
  		{
-@@ -6879,12 +6932,25 @@ void handle_done_commits_xdg( bool vblank, uint64_t vblank_idx )
+@@ -6879,12 +6945,25 @@ void handle_done_commits_xdg( bool vblank, uint64_t vblank_idx )
  
  	uint64_t now = get_time_in_nanos();
  
@@ -7132,7 +7188,7 @@ index b50505cc2551..e65f61a4895d 100644
  		{
  			commits_before_their_time.push_back( entry );
  			continue;
-@@ -6931,7 +6997,11 @@ void handle_presented_for_window( steamcompmgr_win_t* w )
+@@ -6931,7 +7010,11 @@ void handle_presented_for_window( steamcompmgr_win_t* w )
  		: g_SteamCompMgrAppRefreshCycle;
  
  	commit_t *lastCommit = get_window_last_done_commit_peek(w);
@@ -7145,7 +7201,56 @@ index b50505cc2551..e65f61a4895d 100644
  	{
  		if ( !cv_mangoapp_use_output_timing )
  		{
-@@ -8382,6 +8452,16 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8162,6 +8245,40 @@ static gamescope::CTimerFunction g_FPSLimitVRRTimer{ []
+ 	g_FPSLimitVRRTimer.DisarmTimer();
+ }};
+ 
++static bool s_bFrameGenerationOutputTimerDue = false;
++static uint64_t s_uFrameGenerationOutputDeadline = 0;
++static uint64_t s_uFrameGenerationOutputInterval = 0;
++static gamescope::CTimerFunction g_FrameGenerationOutputTimer{ []
++{
++	s_bFrameGenerationOutputTimerDue = true;
++	g_FrameGenerationOutputTimer.DisarmTimer();
++}};
++
++static void reset_frame_generation_output_timer()
++{
++	g_FrameGenerationOutputTimer.DisarmTimer();
++	s_bFrameGenerationOutputTimerDue = false;
++	s_uFrameGenerationOutputDeadline = 0;
++	s_uFrameGenerationOutputInterval = 0;
++}
++
++static void schedule_frame_generation_output_timer( uint64_t now, uint64_t interval )
++{
++	if ( interval == 0 )
++	{
++		reset_frame_generation_output_timer();
++		return;
++	}
++
++	if ( s_uFrameGenerationOutputInterval != interval )
++		s_uFrameGenerationOutputDeadline = 0;
++	s_uFrameGenerationOutputInterval = interval;
++	s_uFrameGenerationOutputDeadline = gamescope::FrameGenerationNextOutputDeadline(
++		s_uFrameGenerationOutputDeadline, now, interval );
++	s_bFrameGenerationOutputTimerDue = false;
++	g_FrameGenerationOutputTimer.ArmTimer( s_uFrameGenerationOutputDeadline );
++}
++
+ void
+ steamcompmgr_main(int argc, char **argv)
+ {
+@@ -8316,6 +8433,7 @@ steamcompmgr_main(int argc, char **argv)
+ 
+ 	g_SteamCompMgrWaiter.AddWaitable( &GetVBlankTimer() );
+ 	g_SteamCompMgrWaiter.AddWaitable( &g_FPSLimitVRRTimer );
++	g_SteamCompMgrWaiter.AddWaitable( &g_FrameGenerationOutputTimer );
+ 	GetVBlankTimer().ArmNextVBlank( true );
+ 
+ 	{
+@@ -8382,6 +8500,17 @@ steamcompmgr_main(int argc, char **argv)
  
  		g_SteamCompMgrWaiter.PollEvents();
  
@@ -7156,23 +7261,24 @@ index b50505cc2551..e65f61a4895d 100644
 +		{
 +			s_lastFrameGenerationConfigSerial = frameGenerationConfigSerial;
 +			vulkan_frame_generation_reset();
++			reset_frame_generation_output_timer();
 +			hasRepaint = true;
 +		}
 +
  		static uint64_t s_lastFrameGenerationStateSerial = 0;
  		const uint64_t frameGenerationStateSerial = gamescope::GetFrameGenerationStateSerial();
  		if ( frameGenerationStateSerial != s_lastFrameGenerationStateSerial )
-@@ -8435,7 +8515,8 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8435,7 +8564,8 @@ steamcompmgr_main(int argc, char **argv)
  		}
  
  		// We can always vblank if VRR.
 -		const bool bVRR = GetBackend()->GetCurrentConnector() && GetBackend()->GetCurrentConnector()->IsVRRActive();
-+		const bool bVRR = !gamescope::GetFrameGenerationConfig().enabled &&
-+			GetBackend()->GetCurrentConnector() && GetBackend()->GetCurrentConnector()->IsVRRActive();
++		const bool bVRR = GetBackend()->GetCurrentConnector() &&
++			GetBackend()->GetCurrentConnector()->IsVRRActive();
  		if ( bVRR )
  			vblank = true;
  
-@@ -8780,6 +8861,15 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8780,6 +8910,15 @@ steamcompmgr_main(int argc, char **argv)
  					g_SteamCompMgrLimitedAppRefreshCycle = g_SteamCompMgrAppRefreshCycle * nVblankDivisor;
  				}
  			}
@@ -7188,42 +7294,85 @@ index b50505cc2551..e65f61a4895d 100644
  		}
  
  		// Handle presentation-time stuff
-@@ -8954,7 +9044,8 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8954,6 +9093,7 @@ steamcompmgr_main(int argc, char **argv)
  			// for composition to finish before submitting.
  			// If we want to do async + composite, we should set up syncfile stuff and have DRM wait on it.
  			const bool bSurfaceWantsAsync = (g_HeldCommits[HELD_COMMIT_BASE] != nullptr && g_HeldCommits[HELD_COMMIT_BASE]->async);
--			const bool bTearing = cv_tearing_enabled && GetBackend()->SupportsTearing() && bSurfaceWantsAsync;
 +			const bool bFrameGeneration = gamescope::GetFrameGenerationConfig().enabled;
-+			const bool bTearing = !bFrameGeneration && cv_tearing_enabled && GetBackend()->SupportsTearing() && bSurfaceWantsAsync;
+ 			const bool bTearing = cv_tearing_enabled && GetBackend()->SupportsTearing() && bSurfaceWantsAsync;
  
  			enum class FlipType
- 			{
-@@ -9045,15 +9136,38 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8983,6 +9123,39 @@ steamcompmgr_main(int argc, char **argv)
+ 			else
+ 				eFlipType = FlipType::Normal;
+ 
++			const uint64_t frameGenerationRefreshHz = gamescope::ConvertmHzToHz(
++				g_nNestedRefresh ? g_nNestedRefresh : g_nOutputRefresh );
++			const uint64_t frameGenerationOutputFPS = g_nSteamCompMgrTargetFPS > 0
++				? std::min<uint64_t>( g_nSteamCompMgrTargetFPS, frameGenerationRefreshHz )
++				: frameGenerationRefreshHz;
++			const uint64_t frameGenerationOutputInterval = frameGenerationOutputFPS > 0
++				? gamescope::mHzToRefreshCycle(
++					gamescope::ConvertHztomHz( uint32_t( frameGenerationOutputFPS ) ) )
++				: 0;
++			const bool frameGenerationFreeRunning = bFrameGeneration &&
++				( bVRR || eFlipType == FlipType::Async );
++			const bool frameGenerationPending =
++				vulkan_frame_generation_has_pending_frame();
++			const uint64_t frameGenerationNow = get_time_in_nanos();
++
++			if ( frameGenerationFreeRunning )
++			{
++				if ( frameGenerationPending &&
++					( s_uFrameGenerationOutputDeadline == 0 ||
++					  s_uFrameGenerationOutputInterval != frameGenerationOutputInterval ) )
++				{
++					schedule_frame_generation_output_timer(
++						frameGenerationNow, frameGenerationOutputInterval );
++				}
++			}
++			else if ( s_uFrameGenerationOutputDeadline != 0 )
++			{
++				reset_frame_generation_output_timer();
++			}
++
++			const bool frameGenerationTimerOutputDue = frameGenerationFreeRunning &&
++				frameGenerationPending && s_bFrameGenerationOutputTimerDue;
++
+ 			bool bShouldPaint = false;
+ 
+ 			//if ( GetBackend()->IsVisible() )
+@@ -9045,15 +9218,52 @@ steamcompmgr_main(int argc, char **argv)
  				bShouldPaint = false;
  			}
  
-+			const bool frameGenerationPrepareOnly = bFrameGeneration &&
-+				!vblank && hasRepaint;
++			if ( frameGenerationPending )
++			{
++				if ( frameGenerationFreeRunning )
++					bShouldPaint = frameGenerationTimerOutputDue;
++				else if ( vblank )
++					bShouldPaint = gamescope::FrameGenerationOutputSlotDue(
++						vblank_idx, frameGenerationOutputFPS, frameGenerationRefreshHz );
++				else
++					bShouldPaint = false;
++
++				if ( bVRR && GetBackend()->GetCurrentConnector() &&
++					 GetBackend()->GetCurrentConnector()->PresentationFeedback().CurrentPresentsInFlight() != 0 )
++				{
++					bShouldPaint = false;
++				}
++			}
++
++			const bool frameGenerationPrepareOnly = bFrameGeneration && hasRepaint &&
++				( frameGenerationFreeRunning
++					? frameGenerationPending && !frameGenerationTimerOutputDue
++					: !vblank );
 +			if ( frameGenerationPrepareOnly )
 +				bShouldPaint = true;
 +
  			if ( g_bDPMS != g_bDPMS_set && vblank )
  				bShouldPaint = true;
  
-+			if ( vblank && vulkan_frame_generation_has_pending_frame() )
-+			{
-+				const uint64_t refreshHz = gamescope::ConvertmHzToHz(
-+					g_nNestedRefresh ? g_nNestedRefresh : g_nOutputRefresh );
-+				const uint64_t outputFPS = g_nSteamCompMgrTargetFPS > 0
-+					? std::min<uint64_t>( g_nSteamCompMgrTargetFPS, refreshHz )
-+					: refreshHz;
-+				const uint64_t slot = vblank_idx * outputFPS / refreshHz;
-+				const uint64_t previousSlot = vblank_idx > 0
-+					? ( vblank_idx - 1 ) * outputFPS / refreshHz
-+					: uint64_t( -1 );
-+				bShouldPaint = slot != previousSlot;
-+			}
-+
  			if ( bShouldPaint )
  			{
 -				paint_all( pPaintFocus, eFlipType == FlipType::Async, g_bDPMS );
@@ -7236,12 +7385,21 @@ index b50505cc2551..e65f61a4895d 100644
 +				{
 +					g_bDPMS_set = g_bDPMS;
 +					bPainted = true;
++
++					if ( frameGenerationFreeRunning )
++					{
++						if ( vulkan_frame_generation_has_pending_frame() )
++							schedule_frame_generation_output_timer(
++								frameGenerationNow, frameGenerationOutputInterval );
++						else
++							reset_frame_generation_output_timer();
++					}
 +				}
  			}
  		}
  
 diff --git a/tests/test_frame_generation_config.cpp b/tests/test_frame_generation_config.cpp
-index 8e960911954f..14599d473a8e 100644
+index 448c4bf03da1..601cdea58d83 100644
 --- a/tests/test_frame_generation_config.cpp
 +++ b/tests/test_frame_generation_config.cpp
 @@ -1,4 +1,5 @@
@@ -7250,7 +7408,7 @@ index 8e960911954f..14599d473a8e 100644
  
  #include <cassert>
  
-@@ -14,13 +15,18 @@ int main()
+@@ -20,13 +21,18 @@ int main()
  	SetFrameGenerationEnabled( 1 );
  	assert( GetFrameGenerationConfig().enabled );
  	assert( GetFrameGenerationStatus() == FrameGenerationStatus::WarmingUp );
@@ -7269,7 +7427,7 @@ index 8e960911954f..14599d473a8e 100644
  	assert( GetFrameGenerationStateSerial() > enabledSerial );
  
  	SetFrameGenerationFlowScale( 0 );
-@@ -30,5 +36,33 @@ int main()
+@@ -38,5 +44,48 @@ int main()
  
  	SetFrameGenerationEnabled( 0 );
  	assert( GetFrameGenerationStatus() == FrameGenerationStatus::Disabled );
@@ -7301,70 +7459,35 @@ index 8e960911954f..14599d473a8e 100644
 +	assert( !FrameGenerationCanRequestSourceFrame( 2, true ) );
 +	assert( !FrameGenerationCanRequestSourceFrame( 1, true ) );
 +	assert( FrameGenerationCanRequestSourceFrame( 1, false ) );
++
++	constexpr uint64_t outputInterval = 8'333'333;
++	const uint64_t firstDeadline = FrameGenerationNextOutputDeadline(
++		0, 100'000'000, outputInterval );
++	assert( firstDeadline == 108'333'333 );
++	assert( !FrameGenerationOutputDeadlineMissed(
++		firstDeadline + outputInterval - 1, firstDeadline, outputInterval ) );
++	assert( FrameGenerationOutputDeadlineMissed(
++		firstDeadline + outputInterval, firstDeadline, outputInterval ) );
++	assert( FrameGenerationNextOutputDeadline(
++		firstDeadline, firstDeadline + 100'000, outputInterval ) ==
++		firstDeadline + outputInterval );
++	assert( FrameGenerationNextOutputDeadline(
++		firstDeadline, firstDeadline + outputInterval, outputInterval ) ==
++		firstDeadline + outputInterval * 2u );
  	return 0;
  }
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
 Date: Mon, 3 Aug 2026 15:46:59 +0200
-Subject: framegen: add tests, telemetry and documentation
+Subject: framegen: add tests and telemetry
 
 ---
- README.md                          | 38 ++++++++++++++++++++++++++++
- scripts/framegen-headless-smoke.sh | 31 +++++++++++++++++++++++
- src/steamcompmgr.cpp               | 40 ++++++++++++++++++++++--------
- 3 files changed, 98 insertions(+), 11 deletions(-)
+ scripts/framegen-headless-smoke.sh | 31 +++++++++++++++++++++++++++++
+ src/steamcompmgr.cpp               | 32 ++++++++++++++++++++++++------
+ 2 files changed, 57 insertions(+), 6 deletions(-)
  create mode 100755 scripts/framegen-headless-smoke.sh
 
-diff --git a/README.md b/README.md
-index 5df4a2589084..b7deb4893516 100644
---- a/README.md
-+++ b/README.md
-@@ -71,6 +71,44 @@ See `gamescope --help` for a full list of options.
- * `-b`: create a border-less window.
- * `-f`: create a full-screen window.
- 
-+## FidelityFX frame generation
-+
-+Gamescope can generate one temporal midpoint between consecutive game frames
-+using FidelityFX Optical Flow v5 and an optical-flow-only adaptation of
-+FidelityFX Frame Interpolation. The mode is fixed at x2 and adds one source
-+frame of latency. It consumes the raw game image before Gamescope's optional
-+FSR1 spatial upscale, so a generated midpoint is upscaled exactly once while a
-+real frame reuses its preemptive FSR result.
-+
-+The `gamescope_control` version 7 request is
-+`set_frame_generation(enabled)`. X11 controllers can set the root-window
-+CARDINAL properties `GAMESCOPE_FRAME_GENERATION_ENABLED` and
-+`GAMESCOPE_FRAME_GENERATION_FLOW_SCALE`; flow scale is clamped to 30--100 and
-+defaults to native-resolution 100. `GAMESCOPE_FRAME_GENERATION_FEEDBACK`
-+reports disabled, warming up, active, invalid configuration, unsupported
-+format/GPU, or deadline fallback.
-+
-+The existing FPS limit is the total output rate. At a 120 FPS limit the game
-+is paced at 60 FPS and Gamescope presents `midpoint, current real` at 120 Hz.
-+VRR and tearing are disabled while active. Frame generation does not force
-+composition: on DRM, its flippable base buffers use the normal KMS plane path,
-+while cursor and overlay planes remain fresh. Unsupported RGB formats, YUV,
-+ambiguous base layers, or unavailable direct scanout fall back to real frames.
-+
-+Developer diagnostics are available through:
-+
-+```sh
-+gamescopectl frame_generation_ab 1
-+gamescopectl frame_generation_debug_flow 1
-+```
-+
-+The stats pipe reports the OF preparation/pyramid, search/filter, FI vector,
-+interpolation/inpainting, generated FSR, and total GPU times, along with frame
-+counts, scene-cut copies, flow scale, and source/output cadence. SDR remains in
-+its direct UNORM/10-bit representation. HDR inputs use the FP16 interpolation
-+working image; physical HDR presentation still depends on backend/display
-+support.
-+
- ## Reshade support
- 
- Gamescope supports a subset of Reshade effects/shaders using the `--reshade-effect [path]` and `--reshade-technique-idx [idx]` command line parameters.
 diff --git a/scripts/framegen-headless-smoke.sh b/scripts/framegen-headless-smoke.sh
 new file mode 100755
 index 000000000000..04c5c3523989
@@ -7403,18 +7526,10 @@ index 000000000000..04c5c3523989
 +kill -0 "$gamescope_pid"
 +echo "headless frame-generation smoke session stayed alive"
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index e65f61a4895d..bac08eb1e76a 100644
+index cbff3df1fa11..b613a44706bd 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -86,6 +86,7 @@
- #include "steamcompmgr.hpp"
- #include "vblankmanager.hpp"
- #include "frame_generation_config.hpp"
-+#include "frame_generation_pacing.hpp"
- #include "log.hpp"
- #include "Utils/Defer.h"
- #include "win32_styles.h"
-@@ -2528,6 +2529,30 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -2529,6 +2529,30 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  		frameCounter = 0;
  
  		stats_printf( "fps=%f\n", currentFrameRate );
@@ -7445,7 +7560,7 @@ index e65f61a4895d..bac08eb1e76a 100644
  
  		if ( window_is_steam( w ) )
  		{
-@@ -5731,12 +5756,8 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
+@@ -5744,12 +5768,8 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
  		{
  			if ( frameGenerationActive )
  			{
@@ -7460,20 +7575,6 @@ index e65f61a4895d..bac08eb1e76a 100644
  			}
  			else
  			{
-@@ -9151,11 +9172,8 @@ steamcompmgr_main(int argc, char **argv)
- 				const uint64_t outputFPS = g_nSteamCompMgrTargetFPS > 0
- 					? std::min<uint64_t>( g_nSteamCompMgrTargetFPS, refreshHz )
- 					: refreshHz;
--				const uint64_t slot = vblank_idx * outputFPS / refreshHz;
--				const uint64_t previousSlot = vblank_idx > 0
--					? ( vblank_idx - 1 ) * outputFPS / refreshHz
--					: uint64_t( -1 );
--				bShouldPaint = slot != previousSlot;
-+				bShouldPaint = gamescope::FrameGenerationOutputSlotDue(
-+					vblank_idx, outputFPS, refreshHz );
- 			}
- 
- 			if ( bShouldPaint )
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
@@ -7481,49 +7582,26 @@ Date: Mon, 3 Aug 2026 16:33:08 +0200
 Subject: rendervulkan: correct screen-space GUI during frame generation
 
 ---
- README.md                                     |   9 ++
  src/frame_generation_vulkan.cpp               |  82 ++++++++++-
  src/meson.build                               |  15 ++
  .../cs_ffx_frameinterpolation_gui_mask.comp   | 129 ++++++++++++++++++
  .../cs_ffx_frameinterpolation_midpoint.comp   |  54 +++++++-
- 5 files changed, 280 insertions(+), 9 deletions(-)
+ 4 files changed, 271 insertions(+), 9 deletions(-)
  create mode 100644 src/shaders/cs_ffx_frameinterpolation_gui_mask.comp
 
-diff --git a/README.md b/README.md
-index b7deb4893516..297cf4e22a15 100644
---- a/README.md
-+++ b/README.md
-@@ -100,8 +100,17 @@ Developer diagnostics are available through:
- ```sh
- gamescopectl frame_generation_ab 1
- gamescopectl frame_generation_debug_flow 1
-+gamescopectl frame_generation_gui_correction 0
-+gamescopectl frame_generation_debug_gui 1
- ```
- 
-+GUI correction is enabled by default. It preserves temporally stable,
-+screen-space edges from the current real frame instead of warping them with
-+scene motion; the debug view overlays the accumulated correction mask in
-+magenta on generated frames. GUI classification follows the configured optical
-+flow scale, reuses OF's prepared luma images, and runs at native resolution
-+when the scale is 100.
-+
- The stats pipe reports the OF preparation/pyramid, search/filter, FI vector,
- interpolation/inpainting, generated FSR, and total GPU times, along with frame
- counts, scene-cut copies, flow scale, and source/output cadence. SDR remains in
 diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
-index 7bb784e12823..aee2ae3c630a 100644
+index 2a8dd72b331b..f221b447fda7 100644
 --- a/src/frame_generation_vulkan.cpp
 +++ b/src/frame_generation_vulkan.cpp
-@@ -10,6 +10,7 @@
- #include <vector>
+@@ -11,6 +11,7 @@
  
+ #include "frame_generation_config.hpp"
  #include "cs_ffx_opticalflow_prepare_luma_scaled.h"
 +#include "cs_ffx_frameinterpolation_gui_mask.h"
  #include "cs_ffx_frameinterpolation_midpoint.h"
  #include "cs_ffx_frameinterpolation_vector_field.h"
  #include "ffx_frameinterpolation_compute_inpainting_pyramid_pass.h"
-@@ -29,9 +30,19 @@ gamescope::ConVar<bool> cv_frame_generation_ab(
+@@ -30,9 +31,19 @@ gamescope::ConVar<bool> cv_frame_generation_ab(
  gamescope::ConVar<bool> cv_frame_generation_debug_flow(
  	"frame_generation_debug_flow", false,
  	"Visualize FidelityFX optical-flow vectors and field confidence." );
@@ -7543,7 +7621,7 @@ index 7bb784e12823..aee2ae3c630a 100644
  	constexpr uint32_t kPyramidLevels = 7;
  	constexpr uint32_t kHistogramWidth = 256 * 3 * 3;
  
-@@ -355,7 +366,9 @@ namespace
+@@ -359,7 +370,9 @@ namespace
  			if ( !scdPreviousHistogram.Create( kHistogramWidth, 1, VK_FORMAT_R32_SFLOAT ) ||
  				 !scdTemp.Create( 3, 1, VK_FORMAT_R32_UINT ) || !scdOutput.Create( 3, 1, VK_FORMAT_R32_UINT ) ||
  				 !vectorFieldX.Create( flowExtent[0].width, flowExtent[0].height, VK_FORMAT_R32_UINT ) ||
@@ -7554,7 +7632,7 @@ index 7bb784e12823..aee2ae3c630a 100644
  				return false;
  
  			const uint32_t pyramidWidth = std::max( sourceWidth / 2, 1u );
-@@ -392,10 +405,10 @@ namespace
+@@ -396,10 +409,10 @@ namespace
  			return g_device.vk.ResetDescriptorPool( g_device.device(), descriptorPool, 0 ) == VK_SUCCESS;
  		}
  
@@ -7567,7 +7645,7 @@ index 7bb784e12823..aee2ae3c630a 100644
  		}
  
  		VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
-@@ -408,6 +421,7 @@ namespace
+@@ -412,6 +425,7 @@ namespace
  		Pass filter;
  		Pass scale;
  		Pass vectorField;
@@ -7575,7 +7653,7 @@ index 7bb784e12823..aee2ae3c630a 100644
  		Pass midpointPass;
  		Pass inpaintingPyramidPass;
  		Pass inpaintingPass;
-@@ -421,6 +435,7 @@ namespace
+@@ -425,6 +439,7 @@ namespace
  		RawImage scdOutput;
  		RawImage vectorFieldX;
  		RawImage vectorFieldY;
@@ -7583,7 +7661,7 @@ index 7bb784e12823..aee2ae3c630a 100644
  		RawImage inpaintingPyramid;
  		RawBuffer counters;
  		RawBuffer telemetryCounters;
-@@ -440,7 +455,7 @@ namespace
+@@ -444,7 +459,7 @@ namespace
  	private:
  		bool CheckCapabilities()
  		{
@@ -7592,7 +7670,7 @@ index 7bb784e12823..aee2ae3c630a 100644
  				VK_FORMAT_R32_SFLOAT, VK_FORMAT_R16G16B16A16_SFLOAT } )
  			{
  				VkFormatProperties properties = {};
-@@ -581,11 +596,19 @@ namespace
+@@ -585,11 +600,19 @@ namespace
  					Binding( 4, D::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ), Binding( 5, D::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ),
  					Binding( 1000, D::VK_DESCRIPTOR_TYPE_SAMPLER ),
  				} ) &&
@@ -7612,7 +7690,7 @@ index 7bb784e12823..aee2ae3c630a 100644
  					Binding( 1000, D::VK_DESCRIPTOR_TYPE_SAMPLER ),
  				} ) &&
  				CreatePassBindings( inpaintingPyramidPass, ffx_frameinterpolation_compute_inpainting_pyramid_pass,
-@@ -666,6 +689,8 @@ namespace
+@@ -673,6 +696,8 @@ namespace
  			{
  				ClearAll( cmdBuffer->rawBuffer() );
  				frameIndex = 0;
@@ -7621,7 +7699,7 @@ index 7bb784e12823..aee2ae3c630a 100644
  			}
  			else
  			{
-@@ -812,7 +837,10 @@ namespace
+@@ -819,7 +844,10 @@ namespace
  			constants.maxRenderSize[1] = constants.displaySize[1];
  			constants.interpolationRectSize[0] = constants.displaySize[0];
  			constants.interpolationRectSize[1] = constants.displaySize[1];
@@ -7633,7 +7711,7 @@ index 7bb784e12823..aee2ae3c630a 100644
  			constants.backBufferTransferFunction = transferFunction;
  			constants.minMaxLuminance[1] = 1000.0f;
  			const Descriptor fiConstants = Upload( constants );
-@@ -826,10 +854,48 @@ namespace
+@@ -833,10 +861,48 @@ namespace
  			Barrier( cmdBuffer->rawBuffer() );
  			WriteTimestamp( cmdBuffer->rawBuffer(), 3 );
  
@@ -7683,7 +7761,7 @@ index 7bb784e12823..aee2ae3c630a 100644
  			}, ( resources->sourceExtent.width + 7 ) / 8, ( resources->sourceExtent.height + 7 ) / 8 ) )
  				return nullptr;
  			Barrier( cmdBuffer->rawBuffer() );
-@@ -1041,6 +1107,8 @@ namespace
+@@ -1048,6 +1114,8 @@ namespace
  			result.push_back( &resources->scdOutput );
  			result.push_back( &resources->vectorFieldX );
  			result.push_back( &resources->vectorFieldY );
@@ -7692,7 +7770,7 @@ index 7bb784e12823..aee2ae3c630a 100644
  			result.push_back( &resources->inpaintingPyramid );
  			return result;
  		}
-@@ -1092,6 +1160,8 @@ namespace
+@@ -1099,6 +1167,8 @@ namespace
  		std::vector<std::shared_ptr<OpticalFlowResources>> retired;
  		uint32_t resourceFrameIndex = 0;
  		uint32_t frameIndex = 0;
@@ -7957,15 +8035,15 @@ Date: Mon, 3 Aug 2026 18:15:30 +0200
 Subject: framegen: fix FSR pacing and flicker
 
 ---
- src/frame_generation_pacing.hpp        |   8 ++
- src/rendervulkan.cpp                   | 139 ++++++++++++++++++++++++-
- src/rendervulkan.hpp                   |   1 +
- src/steamcompmgr.cpp                   |  45 ++++++--
- tests/test_frame_generation_config.cpp |  12 ++-
- 5 files changed, 188 insertions(+), 17 deletions(-)
+ src/frame_generation_pacing.hpp        |  15 +++
+ src/rendervulkan.cpp                   | 160 ++++++++++++++++++++++++-
+ src/rendervulkan.hpp                   |   3 +
+ src/steamcompmgr.cpp                   |  53 ++++++--
+ tests/test_frame_generation_config.cpp |  18 ++-
+ 5 files changed, 232 insertions(+), 17 deletions(-)
 
 diff --git a/src/frame_generation_pacing.hpp b/src/frame_generation_pacing.hpp
-index fa20e0e6cea6..00d9360771eb 100644
+index 471ad9c90606..b85ae7201531 100644
 --- a/src/frame_generation_pacing.hpp
 +++ b/src/frame_generation_pacing.hpp
 @@ -31,6 +31,14 @@ namespace gamescope
@@ -7983,8 +8061,22 @@ index fa20e0e6cea6..00d9360771eb 100644
  	{
  		return queuedFrames == 0u ||
  			( queuedFrames == 1u && !frontFrameGenerated );
+@@ -43,6 +51,13 @@ namespace gamescope
+ 			now - deadline >= interval;
+ 	}
+ 
++	constexpr bool FrameGenerationShouldDropStaleGenerated(
++		bool frontFrameGenerated, uint64_t now, uint64_t deadline, uint64_t interval )
++	{
++		return frontFrameGenerated &&
++			FrameGenerationOutputDeadlineMissed( now, deadline, interval );
++	}
++
+ 	constexpr uint64_t FrameGenerationNextOutputDeadline(
+ 		uint64_t previousDeadline, uint64_t now, uint64_t interval )
+ 	{
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index 2dea80420d11..c443a1d91a4a 100644
+index 45132cd92c7c..e2806f70f3a4 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -4439,6 +4439,8 @@ namespace
@@ -7996,7 +8088,7 @@ index 2dea80420d11..c443a1d91a4a 100644
  			m_lastSourceId = 0;
  			m_lastSourceValid = false;
  			m_hasHistory = false;
-@@ -4471,6 +4473,13 @@ namespace
+@@ -4471,6 +4473,27 @@ namespace
  				!m_queue.empty() && m_queue.front().generated );
  		}
  
@@ -8007,10 +8099,24 @@ index 2dea80420d11..c443a1d91a4a 100644
 +				!m_queue.empty() && m_queue.front().generated );
 +		}
 +
++		bool DropStaleGeneratedFrame(
++			uint64_t now, uint64_t deadline, uint64_t interval )
++		{
++			if ( m_queue.empty() ||
++				!gamescope::FrameGenerationShouldDropStaleGenerated(
++					m_queue.front().generated, now, deadline, interval ) )
++				return false;
++
++			m_queue.pop_front();
++			m_telemetry.deadlineDroppedFrames++;
++			gamescope::SetFrameGenerationStatus( gamescope::FrameGenerationStatus::DeadlineMiss );
++			return true;
++		}
++
  		bool LastPresentedGenerated() const
  		{
  			return m_lastPresentedGenerated;
-@@ -4543,18 +4552,29 @@ namespace
+@@ -4542,18 +4565,29 @@ namespace
  				return;
  			}
  
@@ -8041,7 +8147,7 @@ index 2dea80420d11..c443a1d91a4a 100644
  			if ( !m_history && !AllocateHistory( rawSource ) )
  			{
  				gamescope::SetFrameGenerationStatus( gamescope::FrameGenerationStatus::UnsupportedGPU );
-@@ -4580,6 +4600,8 @@ namespace
+@@ -4579,6 +4613,8 @@ namespace
  				const uint64_t sequence = g_device.submit( std::move( cmdBuffer ) );
  				vulkan_frame_generation_notify_submit( sequence );
  				m_hasHistory = true;
@@ -8050,7 +8156,7 @@ index 2dea80420d11..c443a1d91a4a 100644
  				gamescope::SetFrameGenerationStatus( gamescope::FrameGenerationStatus::WarmingUp );
  				return;
  			}
-@@ -4599,6 +4621,8 @@ namespace
+@@ -4598,6 +4634,8 @@ namespace
  			generated.generated = true;
  			generated.layer = realLayer;
  			generated.useFSR = false;
@@ -8059,7 +8165,7 @@ index 2dea80420d11..c443a1d91a4a 100644
  
  			const bool abDuplicate = vulkan_frame_generation_ab_enabled();
  			std::optional<uint64_t> sequence;
-@@ -4642,6 +4666,29 @@ namespace
+@@ -4641,6 +4679,29 @@ namespace
  				gamescope::Rc<CVulkanTexture> fsrIntermediate;
  				if ( fsrEnabled )
  				{
@@ -8089,7 +8195,7 @@ index 2dea80420d11..c443a1d91a4a 100644
  					const uint32_t contentWidth = generatedFrame.layers[0].integerWidth();
  					const uint32_t contentHeight = generatedFrame.layers[0].integerHeight();
  					fsrIntermediate = AcquireFsrIntermediate(
-@@ -4691,7 +4738,9 @@ namespace
+@@ -4690,7 +4751,9 @@ namespace
  				}
  
  				generated.layer.tex = scanout;
@@ -8100,7 +8206,7 @@ index 2dea80420d11..c443a1d91a4a 100644
  					generated.layer.colorspace = generatedFrame.outputEncodingEOTF == EOTF_PQ
  						? GAMESCOPE_APP_TEXTURE_COLORSPACE_HDR10_PQ
  						: GAMESCOPE_APP_TEXTURE_COLORSPACE_SCRGB;
-@@ -4701,11 +4750,76 @@ namespace
+@@ -4700,11 +4763,76 @@ namespace
  					generated.layer.offset = { 0.0f, 0.0f };
  					generated.layer.blackBorder = false;
  				}
@@ -8178,7 +8284,7 @@ index 2dea80420d11..c443a1d91a4a 100644
  			m_telemetry.generatedFrames++;
  			gamescope::SetFrameGenerationStatus( gamescope::FrameGenerationStatus::Active );
  
-@@ -4731,7 +4845,8 @@ namespace
+@@ -4730,7 +4858,8 @@ namespace
  		}
  
  		gamescope::Rc<CVulkanTexture> AcquireScanout(
@@ -8188,7 +8294,7 @@ index 2dea80420d11..c443a1d91a4a 100644
  		{
  			CollectRetiredScanouts();
  			if ( drmFormat == DRM_FORMAT_INVALID )
-@@ -4744,7 +4859,14 @@ namespace
+@@ -4743,7 +4872,14 @@ namespace
  
  			for ( auto &image : m_scanoutImages )
  			{
@@ -8204,7 +8310,7 @@ index 2dea80420d11..c443a1d91a4a 100644
  					return image;
  			}
  			if ( m_scanoutImages.size() >= 4 )
-@@ -4849,6 +4971,8 @@ namespace
+@@ -4847,6 +4983,8 @@ namespace
  		bool m_lastSourceValid = false;
  		bool m_fsrEnabled = false;
  		bool m_lastPresentedGenerated = false;
@@ -8213,7 +8319,7 @@ index 2dea80420d11..c443a1d91a4a 100644
  		FrameGenerationTelemetry m_telemetry;
  	};
  
-@@ -4885,6 +5009,11 @@ bool vulkan_frame_generation_can_request_source_frame()
+@@ -4883,6 +5021,18 @@ bool vulkan_frame_generation_can_request_source_frame()
  	return s_frameGenerationPacingContext.CanRequestSourceFrame();
  }
  
@@ -8222,23 +8328,32 @@ index 2dea80420d11..c443a1d91a4a 100644
 +	return s_frameGenerationPacingContext.CanAcceptSourceFrame();
 +}
 +
++bool vulkan_frame_generation_drop_stale_generated_frame(
++	uint64_t now, uint64_t deadline, uint64_t interval )
++{
++	return s_frameGenerationPacingContext.DropStaleGeneratedFrame(
++		now, deadline, interval );
++}
++
  bool vulkan_frame_generation_last_presented_generated()
  {
  	return s_frameGenerationPacingContext.LastPresentedGenerated();
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index ae9f8b7bc555..82a5c08f2363 100644
+index ae9f8b7bc555..adc70cab300a 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
-@@ -421,6 +421,7 @@ void vulkan_frame_generation_apply( FrameInfo_t *frameInfo,
+@@ -421,6 +421,9 @@ void vulkan_frame_generation_apply( FrameInfo_t *frameInfo,
  bool vulkan_frame_generation_has_pending_frame();
  bool vulkan_frame_generation_is_draining();
  bool vulkan_frame_generation_can_request_source_frame();
 +bool vulkan_frame_generation_can_accept_source_frame();
++bool vulkan_frame_generation_drop_stale_generated_frame(
++	uint64_t now, uint64_t deadline, uint64_t interval );
  bool vulkan_frame_generation_last_presented_generated();
  void vulkan_frame_generation_reset();
  
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index bac08eb1e76a..f075ad6a605b 100644
+index b613a44706bd..96087cfdf28e 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -1052,6 +1052,19 @@ window_is_steam( steamcompmgr_win_t *w )
@@ -8308,7 +8423,7 @@ index bac08eb1e76a..f075ad6a605b 100644
  		const uint64_t schedule = w->last_commit_first_latch_time +
  			g_SteamCompMgrLimitedAppRefreshCycle;
  		static constexpr uint64_t kFrameGenerationScheduleFudge = 200'000;
-@@ -7267,7 +7287,13 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
+@@ -7279,7 +7299,13 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
  									( pCurrentFocus->focusWindow && pCurrentFocus->focusWindow->isSteamStreamingClient && w->isSteamStreamingClientVideo ) )
  									&& !bMangoappSocketDisable;
  
@@ -8323,16 +8438,7 @@ index bac08eb1e76a..f075ad6a605b 100644
  		bool bPreemptiveUpscale = bValidPreemptiveScale && newCommit->ShouldPreemptivelyUpscale();
  
  		bool bKnownReady = false;
-@@ -8536,7 +8562,7 @@ steamcompmgr_main(int argc, char **argv)
- 		}
- 
- 		// We can always vblank if VRR.
--		const bool bVRR = !gamescope::GetFrameGenerationConfig().enabled &&
-+		const bool bVRR = !steamcompmgr_frame_generation_enabled_for_focus() &&
- 			GetBackend()->GetCurrentConnector() && GetBackend()->GetCurrentConnector()->IsVRRActive();
- 		if ( bVRR )
- 			vblank = true;
-@@ -8882,7 +8908,7 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8930,7 +8956,7 @@ steamcompmgr_main(int argc, char **argv)
  					g_SteamCompMgrLimitedAppRefreshCycle = g_SteamCompMgrAppRefreshCycle * nVblankDivisor;
  				}
  			}
@@ -8341,21 +8447,45 @@ index bac08eb1e76a..f075ad6a605b 100644
  			{
  				const int nRealRefreshHz = gamescope::ConvertmHzToHz( nRealRefreshmHz );
  				const int nTotalFPS = g_nSteamCompMgrTargetFPS
-@@ -9065,7 +9091,8 @@ steamcompmgr_main(int argc, char **argv)
+@@ -9113,7 +9139,8 @@ steamcompmgr_main(int argc, char **argv)
  			// for composition to finish before submitting.
  			// If we want to do async + composite, we should set up syncfile stuff and have DRM wait on it.
  			const bool bSurfaceWantsAsync = (g_HeldCommits[HELD_COMMIT_BASE] != nullptr && g_HeldCommits[HELD_COMMIT_BASE]->async);
 -			const bool bFrameGeneration = gamescope::GetFrameGenerationConfig().enabled;
 +			const bool bFrameGeneration = gamescope::GetFrameGenerationConfig().enabled &&
 +				steamcompmgr_window_allows_frame_generation( pPaintFocus->focusWindow );
- 			const bool bTearing = !bFrameGeneration && cv_tearing_enabled && GetBackend()->SupportsTearing() && bSurfaceWantsAsync;
+ 			const bool bTearing = cv_tearing_enabled && GetBackend()->SupportsTearing() && bSurfaceWantsAsync;
  
  			enum class FlipType
+@@ -9154,7 +9181,7 @@ steamcompmgr_main(int argc, char **argv)
+ 				: 0;
+ 			const bool frameGenerationFreeRunning = bFrameGeneration &&
+ 				( bVRR || eFlipType == FlipType::Async );
+-			const bool frameGenerationPending =
++			bool frameGenerationPending =
+ 				vulkan_frame_generation_has_pending_frame();
+ 			const uint64_t frameGenerationNow = get_time_in_nanos();
+ 
+@@ -9176,6 +9203,14 @@ steamcompmgr_main(int argc, char **argv)
+ 			const bool frameGenerationTimerOutputDue = frameGenerationFreeRunning &&
+ 				frameGenerationPending && s_bFrameGenerationOutputTimerDue;
+ 
++			if ( frameGenerationTimerOutputDue &&
++				vulkan_frame_generation_drop_stale_generated_frame(
++					frameGenerationNow, s_uFrameGenerationOutputDeadline,
++					frameGenerationOutputInterval ) )
++			{
++				frameGenerationPending = vulkan_frame_generation_has_pending_frame();
++			}
++
+ 			bool bShouldPaint = false;
+ 
+ 			//if ( GetBackend()->IsVisible() )
 diff --git a/tests/test_frame_generation_config.cpp b/tests/test_frame_generation_config.cpp
-index 14599d473a8e..da9ba9af0ad2 100644
+index 601cdea58d83..3073d912c3c5 100644
 --- a/tests/test_frame_generation_config.cpp
 +++ b/tests/test_frame_generation_config.cpp
-@@ -58,11 +58,17 @@ int main()
+@@ -66,12 +66,18 @@ int main()
  	assert( sourceSlots == 45 );
  	assert( outputSlots == 90 );
  
@@ -8374,6 +8504,19 @@ index 14599d473a8e..da9ba9af0ad2 100644
 +	assert( FrameGenerationCanAcceptSourceFrame( 1, false ) );
 +	assert( !FrameGenerationCanAcceptSourceFrame( 1, true ) );
 +	assert( !FrameGenerationCanAcceptSourceFrame( 2, true ) );
+ 
+ 	constexpr uint64_t outputInterval = 8'333'333;
+ 	const uint64_t firstDeadline = FrameGenerationNextOutputDeadline(
+@@ -87,5 +93,11 @@ int main()
+ 	assert( FrameGenerationNextOutputDeadline(
+ 		firstDeadline, firstDeadline + outputInterval, outputInterval ) ==
+ 		firstDeadline + outputInterval * 2u );
++	assert( !FrameGenerationShouldDropStaleGenerated(
++		false, firstDeadline + outputInterval, firstDeadline, outputInterval ) );
++	assert( !FrameGenerationShouldDropStaleGenerated(
++		true, firstDeadline + outputInterval - 1, firstDeadline, outputInterval ) );
++	assert( FrameGenerationShouldDropStaleGenerated(
++		true, firstDeadline + outputInterval, firstDeadline, outputInterval ) );
  	return 0;
  }
 
@@ -8560,7 +8703,7 @@ index 16e1feb09907..166d24cd674e 100644
 +	}
  }
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index c443a1d91a4a..d3db25504bf5 100644
+index e2806f70f3a4..c9766024a8bd 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -2950,9 +2950,10 @@ bool acquire_next_image( void )
@@ -8627,15 +8770,15 @@ index c443a1d91a4a..d3db25504bf5 100644
  			m_hasHistory = false;
  			m_lastPresentedGenerated = false;
  			m_width = 0;
-@@ -4544,6 +4551,7 @@ namespace
+@@ -4557,6 +4564,7 @@ namespace
+ 			}
  
- 			frameInfo->allowVRR = false;
  			frameInfo->frameGenerationActive = true;
 +			frameInfo->frameGenerationOutputId = m_currentRealOutputId;
  
  			if ( m_lastSourceValid && sourceId == m_lastSourceId )
  			{
-@@ -4552,6 +4560,13 @@ namespace
+@@ -4565,6 +4573,13 @@ namespace
  				return;
  			}
  
@@ -8649,7 +8792,7 @@ index c443a1d91a4a..d3db25504bf5 100644
  			if ( !CanAcceptSourceFrame() )
  			{
  				m_telemetry.deadlineDroppedFrames += std::count_if(
-@@ -4601,7 +4616,8 @@ namespace
+@@ -4614,7 +4629,8 @@ namespace
  				vulkan_frame_generation_notify_submit( sequence );
  				m_hasHistory = true;
  				m_previousReal = {
@@ -8659,7 +8802,7 @@ index c443a1d91a4a..d3db25504bf5 100644
  				gamescope::SetFrameGenerationStatus( gamescope::FrameGenerationStatus::WarmingUp );
  				return;
  			}
-@@ -4621,8 +4637,10 @@ namespace
+@@ -4634,8 +4650,10 @@ namespace
  			generated.generated = true;
  			generated.layer = realLayer;
  			generated.useFSR = false;
@@ -8671,15 +8814,15 @@ index c443a1d91a4a..d3db25504bf5 100644
  
  			const bool abDuplicate = vulkan_frame_generation_ab_enabled();
  			std::optional<uint64_t> sequence;
-@@ -4945,6 +4963,7 @@ namespace
+@@ -4957,6 +4975,7 @@ namespace
+ 			frameInfo->useFSRLayer0 = queued.useFSR;
  			frameInfo->useNISLayer0 = false;
- 			frameInfo->allowVRR = false;
  			frameInfo->frameGenerationActive = true;
 +			frameInfo->frameGenerationOutputId = queued.outputId;
  			m_lastPresentedGenerated = queued.generated;
  			m_telemetry.presentedGeneratedFrames += queued.generated ? 1u : 0u;
  		}
-@@ -4959,6 +4978,9 @@ namespace
+@@ -4971,6 +4990,9 @@ namespace
  		gamescope::FrameGenerationConfig m_config;
  		gamescope::IBackendConnector *m_connector = nullptr;
  		uint64_t m_lastSourceId = 0;
@@ -8690,7 +8833,7 @@ index c443a1d91a4a..d3db25504bf5 100644
  		uint32_t m_width = 0;
  		uint32_t m_height = 0;
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index 82a5c08f2363..ee0b4936d66a 100644
+index adc70cab300a..37a4abcf92be 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -291,6 +291,7 @@ struct FrameInfo_t
@@ -8701,7 +8844,7 @@ index 82a5c08f2363..ee0b4936d66a 100644
  	bool applyOutputColorMgmt; // drm only
  	EOTF outputEncodingEOTF;
  
-@@ -452,7 +453,7 @@ gamescope::Rc<CVulkanTexture> vulkan_get_last_output_image( bool partial, bool d
+@@ -454,7 +455,7 @@ gamescope::Rc<CVulkanTexture> vulkan_get_last_output_image( bool partial, bool d
  gamescope::Rc<CVulkanTexture> vulkan_acquire_screenshot_texture(uint32_t width, uint32_t height, bool exportable, uint32_t drmFormat, EStreamColorspace colorspace = k_EStreamColorspace_Unknown);
  gamescope::Rc<CVulkanTexture> vulkan_acquire_capture_texture(uint32_t width, uint32_t height, bool exportable, uint32_t drmFormat, EStreamColorspace colorspace = k_EStreamColorspace_Unknown);
  
@@ -8711,7 +8854,7 @@ index 82a5c08f2363..ee0b4936d66a 100644
  void vulkan_garbage_collect( void );
  bool vulkan_remake_swapchain( void );
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index f075ad6a605b..bda1c0a5b505 100644
+index 96087cfdf28e..b2fe39ecfc56 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -1058,7 +1058,7 @@ steamcompmgr_window_allows_frame_generation( steamcompmgr_win_t *w )
@@ -8751,18 +8894,18 @@ Subject: rendervulkan: accelerate optical flow SAD
  create mode 100644 src/shaders/cs_ffx_opticalflow_compute_optical_flow_dot.comp
 
 diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
-index aee2ae3c630a..8396224feaf1 100644
+index f221b447fda7..f3b7c2ff1b46 100644
 --- a/src/frame_generation_vulkan.cpp
 +++ b/src/frame_generation_vulkan.cpp
-@@ -10,6 +10,7 @@
- #include <vector>
+@@ -11,6 +11,7 @@
  
+ #include "frame_generation_config.hpp"
  #include "cs_ffx_opticalflow_prepare_luma_scaled.h"
 +#include "cs_ffx_opticalflow_compute_optical_flow_dot.h"
  #include "cs_ffx_frameinterpolation_gui_mask.h"
  #include "cs_ffx_frameinterpolation_midpoint.h"
  #include "cs_ffx_frameinterpolation_vector_field.h"
-@@ -36,6 +37,9 @@ gamescope::ConVar<bool> cv_frame_generation_gui_correction(
+@@ -37,6 +38,9 @@ gamescope::ConVar<bool> cv_frame_generation_gui_correction(
  gamescope::ConVar<bool> cv_frame_generation_debug_gui(
  	"frame_generation_debug_gui", false,
  	"Visualize the screen-space GUI correction mask." );
@@ -8772,7 +8915,7 @@ index aee2ae3c630a..8396224feaf1 100644
  
  namespace
  {
-@@ -405,9 +409,9 @@ namespace
+@@ -409,9 +413,9 @@ namespace
  			return g_device.vk.ResetDescriptorPool( g_device.device(), descriptorPool, 0 ) == VK_SUCCESS;
  		}
  
@@ -8784,7 +8927,7 @@ index aee2ae3c630a..8396224feaf1 100644
  				&vectorField, &guiMaskPass, &midpointPass, &inpaintingPyramidPass, &inpaintingPass };
  		}
  
-@@ -418,6 +422,7 @@ namespace
+@@ -422,6 +426,7 @@ namespace
  		Pass histogram;
  		Pass divergence;
  		Pass search;
@@ -8792,7 +8935,7 @@ index aee2ae3c630a..8396224feaf1 100644
  		Pass filter;
  		Pass scale;
  		Pass vectorField;
-@@ -569,7 +574,7 @@ namespace
+@@ -573,7 +578,7 @@ namespace
  			const auto Binding = []( uint32_t binding, D type ) {
  				return VkDescriptorSetLayoutBinding{ binding, type, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr };
  			};
@@ -8801,7 +8944,7 @@ index aee2ae3c630a..8396224feaf1 100644
  				{ D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, D::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, D::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER } ) &&
  				CreatePass( prepareScaled, cs_ffx_opticalflow_prepare_luma_scaled, sizeof( cs_ffx_opticalflow_prepare_luma_scaled ),
  					{ D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, D::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, D::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER } ) &&
-@@ -630,6 +635,13 @@ namespace
+@@ -634,6 +639,13 @@ namespace
  					Binding( 7, D::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ), Binding( 8, D::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ),
  					Binding( 1000, D::VK_DESCRIPTOR_TYPE_SAMPLER ),
  				} );
@@ -8815,7 +8958,7 @@ index aee2ae3c630a..8396224feaf1 100644
  		}
  	};
  
-@@ -761,7 +773,9 @@ namespace
+@@ -768,7 +780,9 @@ namespace
  				const uint32_t lumaHeight = std::max( resources->lumaExtent.height >> level, 1u );
  				const uint32_t searchX = ( ( ( lumaWidth + 3 ) / 4 ) * 16 + 63 ) / 64;
  				const uint32_t searchY = ( lumaHeight + 15 ) / 16;
@@ -8853,7 +8996,7 @@ index 2a3ff708cbf2..eb793c3429db 100644
  ffx_spirv_shaders += custom_target(
    ffx_vector_field_shader_name + '.h',
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index d3db25504bf5..9dfb628e40f7 100644
+index c9766024a8bd..7e3ac3c85557 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -532,8 +532,12 @@ bool CVulkanDevice::createDevice()
@@ -8905,10 +9048,10 @@ index d3db25504bf5..9dfb628e40f7 100644
  		.timelineSemaphore = VK_TRUE,
  	};
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index ee0b4936d66a..bf4be555f273 100644
+index 37a4abcf92be..30fb951ce5d0 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
-@@ -861,6 +861,7 @@ public:
+@@ -863,6 +863,7 @@ public:
  	inline bool hasDrmPrimaryDevId() {return m_bHasDrmPrimaryDevId;}
  	inline dev_t primaryDevId() {return m_drmPrimaryDevId;}
  	inline bool supportsFp16() {return m_bSupportsFp16;}
@@ -8916,7 +9059,7 @@ index ee0b4936d66a..bf4be555f273 100644
  	inline bool supportsStorageImageReadWithoutFormat() { return m_bSupportsStorageImageReadWithoutFormat; }
  	inline bool supportsStorageImageWriteWithoutFormat() { return m_bSupportsStorageImageWriteWithoutFormat; }
  	inline uint32_t vendorID() {return m_uVendorID;}
-@@ -925,6 +926,7 @@ protected:
+@@ -927,6 +928,7 @@ protected:
  	dev_t m_drmPrimaryDevId = 0;
  
  	bool m_bSupportsFp16 = false;
