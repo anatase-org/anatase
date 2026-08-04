@@ -660,3 +660,53 @@ index 2196953ac791..2f05905df733 100644
     }
     unsigned height = io.DisplaySize.y;
     auto now = Clock::now();
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Matthew Schwartz <matthew.schwartz@linux.dev>
+Date: Sun, 7 Jun 2026 12:03:58 -0700
+Subject: overlay: restore horizontal "FPS" label in gamescope
+
+330c42a removed the horizontal block from engine_name() because its
+en[hide_fps_superscript] = true side effect leaked into the fps_metrics
+component. However, this regressed the horizontal overlay's FPS label
+back to showing GAMESCOPE instead.
+
+Return the FPS label in horizontal mode directly instead of going
+through the shared flag, and suppress the now-redundant superscript
+locally in HudElements::fps().
+---
+ src/hud_elements.cpp | 6 +++++-
+ src/overlay.h        | 3 +++
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/src/hud_elements.cpp b/src/hud_elements.cpp
+index 2c7c5820e019..dea0a4685359 100644
+--- a/src/hud_elements.cpp
++++ b/src/hud_elements.cpp
+@@ -887,7 +887,11 @@ void HudElements::fps(){
+         }
+         render_fps_value(load_color, true);
+         ImGui::SameLine(0, 1.0f);
+-        if(!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hide_fps_superscript]){
++        // horizontal mode already shows "FPS" as the engine label
++        bool horizontal_fps_label = HUDElements.params->fps_text.empty() &&
++                                    HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] &&
++                                    !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_engine_short_names];
++        if(!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hide_fps_superscript] && !horizontal_fps_label){
+             ImGui::PushFont(HUDElements.sw_stats->font_small);
+             HUDElements.TextColored(HUDElements.colors.text, "FPS");
+             ImGui::PopFont();
+diff --git a/src/overlay.h b/src/overlay.h
+index a5993aa56511..7c8e6d5a98ea 100644
+--- a/src/overlay.h
++++ b/src/overlay.h
+@@ -117,6 +117,9 @@ inline const char* engine_name(const swapchain_stats& sw_stats) {
+       return "FPS";
+    }
+ 
++   if (en[OVERLAY_PARAM_ENABLED_horizontal] && !en[OVERLAY_PARAM_ENABLED_engine_short_names])
++      return "FPS";
++
+    if (en[OVERLAY_PARAM_ENABLED_dx_api]) {
+       if (engine == EngineTypes::VKD3D)
+          return "DX12";
