@@ -162,6 +162,23 @@ jobs:
           venv/bin/ludos registry oci index anatase \
             "${tags[@]}" "${sources[@]}"
 
+      - name: Archive image manifest
+        env:
+          VERSION: ${{ steps.image.outputs.version }}
+          LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
+          LUDOS_S3_KEY: ${{ secrets.LUDOS_S3_KEY }}
+          LUDOS_S3_SECRET: ${{ secrets.LUDOS_S3_SECRET }}
+          LUDOS_GPG_CERT: ${{ secrets.LUDOS_GPG_CERT }}
+          LUDOS_GPG_KEY: ${{ secrets.LUDOS_GPG_KEY }}
+        run: |
+          skopeo --override-arch amd64 inspect --no-tags \
+            "docker://i.anatase.org/anatase:$LUDOS_CHANNEL" \
+            > final-manifest.json
+          venv/bin/ludos registry file upload \
+            final-manifest.json \
+            "releases/anatase/$LUDOS_CHANNEL/$VERSION.json" \
+            --sign
+
       - name: Create GitHub prerelease
         env:
           GH_TOKEN: ${{ github.token }}

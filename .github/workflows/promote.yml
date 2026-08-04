@@ -115,6 +115,19 @@ jobs:
           fi
           venv/bin/ludos ci promote "${args[@]}"
 
+      - name: Archive Stable image manifest
+        if: ${{ inputs.images }}
+        env:
+          VERSION: ${{ steps.image.outputs.version }}
+        run: |
+          skopeo --override-arch amd64 inspect --no-tags \
+            docker://i.anatase.org/anatase:stable \
+            > final-manifest.json
+          venv/bin/ludos registry file upload \
+            final-manifest.json \
+            "releases/anatase/stable/$VERSION.json" \
+            --sign
+
       - name: Create GitHub release
         if: ${{ inputs.images }}
         env:
