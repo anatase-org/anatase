@@ -44,6 +44,8 @@ register_runtime() {
     local mountpoint=$deploy_dir/files
     local overrides=$target/overrides
     local runtime_overrides="$state_dir/overrides/$runtime_ref"
+    local backing_root="$state_dir/roots/$runtime_ref"
+    local runtime_usr=/usr
 
     [ "$runtime_ref" != "$ref" ] || return 1
     [ -d "$target" ] || return 0
@@ -51,19 +53,50 @@ register_runtime() {
     [ -s "$target/deploy" ] || return 0
 
     if mountpoint -q "$mountpoint"; then
-        umount "$mountpoint"
+        umount "$mountpoint" || return 1
     fi
-    rm -rf "$deploy_dir" "$runtime_overrides"
+    if mountpoint -q "$backing_root"; then
+        umount "$backing_root" || return 1
+    fi
+    rm -rf "$deploy_dir" "$runtime_overrides" "$backing_root"
     install -dm0755 "$mountpoint"
     ln -snf "$target/metadata" "$deploy_dir/metadata"
     ln -snf "$target/deploy" "$deploy_dir/deploy"
 
+    # A non-recursive bind of / excludes child mounts. If an OSTree unlock
+    # overlay is mounted on /usr, this exposes the original composefs /usr
+    # from the root mount instead of stacking on the unlock overlay.
+    if [ "$(findmnt -nro TARGET --target /usr)" = /usr ]; then
+        install -dm0755 "$backing_root"
+        if ! mount --bind / "$backing_root"; then
+            return 1
+        fi
+        runtime_usr="$backing_root/usr"
+        if [ ! -d "$runtime_usr" ]; then
+            printf 'ERROR: root filesystem /usr does not exist: %s\n' \
+                "$runtime_usr" >&2
+            umount "$backing_root"
+            return 1
+        fi
+    fi
+
     if [ -d "$overrides" ]; then
         install -dm0755 "$runtime_overrides"
         cp -a "$overrides"/. "$runtime_overrides"/
-        mount -t overlay overlay -o "lowerdir=$runtime_overrides:/usr" "$mountpoint"
+        if ! mount -t overlay overlay \
+            -o "lowerdir=$runtime_overrides:$runtime_usr" "$mountpoint"; then
+            if mountpoint -q "$backing_root"; then
+                umount "$backing_root"
+            fi
+            return 1
+        fi
     else
-        mount --bind /usr "$mountpoint"
+        if ! mount --bind "$runtime_usr" "$mountpoint"; then
+            if mountpoint -q "$backing_root"; then
+                umount "$backing_root"
+            fi
+            return 1
+        fi
     fi
 
     [ -e "$mountpoint" ] || return 0
@@ -84,6 +117,7 @@ unregister_runtime() {
     local deploy_link="$deploy_base/$anatase_runtime_commit"
     local mountpoint="$deploy_dir/files"
     local runtime_overrides="$state_dir/overrides/$runtime_ref"
+    local backing_root="$state_dir/roots/$runtime_ref"
 
     [ "$runtime_ref" != "$ref" ] || return 1
 
@@ -101,7 +135,10 @@ unregister_runtime() {
     if mountpoint -q "$mountpoint"; then
         umount "$mountpoint"
     fi
-    rm -rf "$deploy_dir" "$runtime_overrides"
+    if mountpoint -q "$backing_root"; then
+        umount "$backing_root"
+    fi
+    rm -rf "$deploy_dir" "$runtime_overrides" "$backing_root"
     rmdir -p "$(dirname "$deploy_dir")" --ignore-fail-on-non-empty
     rmdir -p "$(dirname "$runtime_overrides")" --ignore-fail-on-non-empty
 }
@@ -124,6 +161,15 @@ cleanup_managed_links() {
                 mountpoint="$target/files"
                 if mountpoint -q "$mountpoint"; then
                     umount "$mountpoint"
+                fi
+
+                if [[ "$target" == "$state_dir/runtime/"* ]]; then
+                    runtime_ref="${target#"$state_dir/runtime/"}"
+                    backing_root="$state_dir/roots/$runtime_ref"
+                    if mountpoint -q "$backing_root"; then
+                        umount "$backing_root"
+                    fi
+                    rm -rf "$backing_root"
                 fi
 
                 active="$(dirname "$link")/active"
