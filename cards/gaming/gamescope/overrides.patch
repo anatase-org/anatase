@@ -9246,3 +9246,32 @@ index 000000000000..b993ebed61e8
 +        FfxInt32x2(gl_WorkGroupID.xy),
 +        FfxInt32(gl_LocalInvocationIndex));
 +}
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Tue, 4 Aug 2026 14:34:53 +0200
+Subject: BufferMemo: allow retained textures during buffer teardown
+
+---
+ src/BufferMemo.cpp | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/src/BufferMemo.cpp b/src/BufferMemo.cpp
+index bd892c484ab5..97f182167548 100644
+--- a/src/BufferMemo.cpp
++++ b/src/BufferMemo.cpp
+@@ -31,7 +31,13 @@ namespace gamescope
+ 
+     void CBufferMemo::OnBufferDestroyed( void *pUserData )
+     {
+-        assert( m_pVulkanTexture->GetRefCount() == 0 );
++        // A consumer may still be using the imported texture after the client
++        // destroys its wl_buffer. Frame generation does this while draining
++        // queued real frames during application teardown.
++        //
++        // Unmemoizing only releases our private cache reference. Public
++        // references keep the texture, its imported DMA-BUF memory, and its
++        // backend framebuffer alive until the consumer is finished.
+         m_pMemoizer->UnmemoizeBuffer( m_pBuffer );
+     }
+ 
