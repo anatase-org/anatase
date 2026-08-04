@@ -177,6 +177,7 @@ jobs:
           venv/bin/ludos registry file upload \
             final-manifest.json \
             "releases/anatase/$LUDOS_CHANNEL/$VERSION.json" \
+            "$VERSION.json" \
             --sign
 
       - name: Create GitHub prerelease
