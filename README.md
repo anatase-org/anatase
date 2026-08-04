@@ -17,12 +17,13 @@
 # Anatase
 Anatase is a second generation immutable image. Rewritten from scratch, it distills three years of learnings from Bazzite to form an image that is more secure, more maintainable, and more stable, while fixing compliance / security issues.
 
-From a user perspective, perhaps at first glance these do not mean much. So, let's boil it down to two axes.
+From a user perspective, perhaps at first glance these do not mean much. So, let's boil it down to three axes.
 
  - **Smaller, more stable, and universal**. There is only one image to cover all handhelds, desktops, laptops, HTPCs, Nvidia devices*. The ISO is 2x smaller, the image is 2x smaller, and they both install / update much faster without functionality loss**. The ISO preinstalls a small set of (removable) applications, so you can open your PDFs and watch Youtube out of the box.
- - **Compliance, Security, Provenance**. Examples: Steam is not pre-installed (but if you install it, Anatase's gamemode has parity with SteamOS and can offer other launchers in the future), everything is signed using HSM cloud keys (the kernel; which meets Microsoft Secure boot requirements, Flatpaks, and Updates), and the Anatase image as installed only relies on its infrastructure for updates (no GHCR, COPR, Flathub; although included).
+ - **Compliance, Security, Provenance**. Packages are either sourced from Fedora or built in this repository, ensuring fixes can be built in less than an hour, and no random changes are applied (important for both security and bugs).
+ - **New Features**: All this allows for new exciting features, such as Spaces, a way to run multiple distributions at the same time, and universal **2X frame generation** in Gamemode for all games.
 
-The end result is an OS that _feels boring_. You install it and move on with your day. There are games to play, reels to doomscroll, and homework to do. The **optimized drivers are installed already**. Your **PDFs open**, **Spotify works**, **Zoom does not make your laptop prepare for take-off**, **all your controllers work**, and your handheld **power** and **controller settings** are all here, both on **Desktop** and **Gamemode**. 
+The end result is an OS built to get out of your way. There are games to play, reels to doomscroll, and homework to do. Install it and browse, game, while installing your favorite apps. Your **PDFs open**, **Spotify works**, **tested recent drivers/kernel are installed for games and AI workloads**, and your new fancy handheld **has controller and TDP support**.
 
 *And a placeholder for a second future ARM one.
 
@@ -66,14 +67,14 @@ These steps will become unnecessary once Anatase gets secureboot keys. Want that
 > **Do not tick "Login again immediately after logging off" or you will get stuck in Gamemode**
 
 ### Plasma Desktop
-Anatase ships with KDE Plasma as its main desktop session. It is performant, _feels_ like Windows, and is progressing rapidly with a core team of competent developers. In addition, the applications in the KDE ecosystem make strong defaults. Anatase preinstalls Ark (Archive Manager), Filelight (Disk Usage Analyzer), Kate (Text Editor), and Okular (Document Viewer), and all of those happen to come from KDE. It is not a coincidence.
+Anatase uses KDE Plasma as for its desktop. It is performant, _feels_ like Windows, and is progressing rapidly with a core team of competent developers. Anatase preinstalls Ark (Archive Manager), Filelight (Disk Usage Analyzer), Kate (Text Editor), and Okular (Document Viewer), which come from KDE, so you can do basic tasks out of the box.
 
 ![Anatase Plasma desktop](docs/kde1.png)
 
 ![Anatase Plasma application launcher](docs/kde2.png)
 
 ### Plasma Mobile
-Anatase is also the first desktop distribution to deliver Plasma Mobile as a secondary session for tablet-like devices, such as handhelds and two-in-ones (Asus Z13). While Plasma Mobile is still in its early days, it already feels great to use, and for its 20MB install size, it delivers a punch and is great for use in e.g., flights.
+Anatase also offers Plasma Mobile for tablet-like devices, such as handhelds and two-in-ones (Asus Z13). While Plasma Mobile is still in its early days, it already feels great to use, and for its 20MB install size, it delivers a punch and is great for use in e.g., flights.
 
 Also shown, the Anatase Browser. A Chromium based browser with **working GPU acceleration**, **support for Spotify & 720p Netflix**, and **a built-in adblocker** that works great and updates with the system**. _Yes, having working GPU acceleration is a big deal in Linux._
 
@@ -84,19 +85,22 @@ Also shown, the Anatase Browser. A Chromium based browser with **working GPU acc
 **Adblocker is based on UBOLite, a completely offline adblocker, and can be rebuilt on demand if the filter lists become outdated without delays from Chrome Store approval and delivered as a signed Flatpak.
 
 ### Gamemode
-Anatase also ships a Gamemode session that brings in elements from SteamOS as an optional addon to the core desktop experience. Compared to gaming in Plasma Desktop:
+Anatase also has a Gamemode that brings in elements from SteamOS as an optional addon. Compared to gaming in Plasma Desktop:
 
  * Gamemode is intuitive to touch
  * It uses less RAM than a Desktop session
  * Brings the game closer to the GPU, with advanced controls for VRR, Framerate, and HDR. 
- * New in Anatase: Frame Generation (2X). After enabled, games are rendered at half of your target FPS and the other half is generated. Works in all games and with all anticheat!
+ * New in Anatase: **Frame Generation (2X)**. After enabled, games are rendered at half of your target FPS and the other half is generated. Works in all games and with all anticheat!
+ * Compared to SteamOS and Bazzite, it gets out of your way. There are proper lock and login screens so you can use this for your desktop or have multiple users, while also being able to set it to autolaunch on boot.
 
 ![Anatase Gamemode performance controls](docs/gamemode.png)
 
 ### Access the Linux world with Spaces
 You have your Linux preferences, you like specific distributions and their packages, or maybe you want to experiment and see what's the best one: Arch, Fedora, or Ubuntu? In Anatase, you do not have to choose. By typing `arch`, `fedora`, `ubuntu`, or `kali` in your terminal, it transforms to that distribution and gives you access to all its packages, both terminal and desktop ones.
 
-Everything is supported: Docker, VMs, browsers, Visual Studio code, hacking tools, partition managers, package managers, even snap. They integrate seamlessly with your desktop, supporting conveniences such as screen sharing, systemd services, and even your sudo password. Applications appear in your task bar as you install them. A permission system ensures you share only what you need, and SELinux enforcement ensures your SSH and GPG keys remain safe.
+Everything is supported: Docker, VMs, browsers, Visual Studio code, hacking tools, partition managers, package managers, Tailscale, even snap. They integrate seamlessly with your desktop, supporting conveniences such as screen sharing, systemd services, and even your sudo password. Applications **appear in your task bar** as you install them.
+
+A permission system ensures you share only what you need: only your Downloads folder is shared by default, security devices such as USB Crypto wallets are blocked, and SELinux enforcement ensures your SSH and GPG keys remain safe. As attacks on Linux become more common, this provides a security boundary* to keep your system safe while accessing repositories such as the AUR.
 
 Below, you can see an Anatase system running the Shelly AUR package manager from Arch, Visual Studio Code in Fedora, nmap in Kali Linux, and Docker in Ubuntu, all at the same time! Even better, there is no performance overhead. Develop your way, just the way you are used to.
 
