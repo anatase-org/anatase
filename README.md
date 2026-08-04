@@ -15,6 +15,8 @@
 </p>
 
 # Anatase
+[![Discord for Support](https://img.shields.io/discord/1451243296688181342?logo=discord)](https://discord.com/invite/YugFCCVw)
+
 Anatase is a second generation immutable image. Rewritten from scratch, it distills three years of learnings from Bazzite to form an image that is more secure, more maintainable, and more stable, while fixing compliance / security issues.
 
 From a user perspective, perhaps at first glance these do not mean much. So, let's boil it down to three axes.
