@@ -38,7 +38,6 @@ env:
 
 concurrency:
   group: build
-  cancel-in-progress: true
 
 jobs:
   x86:
