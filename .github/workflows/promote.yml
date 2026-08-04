@@ -138,5 +138,5 @@ jobs:
         run: |
           gh release create "stable-$VERSION" \
             --target "$REVISION" \
-            --title "Anatase Stable $VERSION" \
+            --title "$VERSION: Stable Release" \
             --notes-file changelog.md

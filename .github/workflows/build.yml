@@ -186,8 +186,12 @@ jobs:
           VERSION: ${{ steps.image.outputs.version }}
         run: |
           channel_title="${LUDOS_CHANNEL^}"
-          gh release create "$VERSION" \
+          release_tag="$VERSION"
+          if [[ "$LUDOS_CHANNEL" == "testing" ]]; then
+            release_tag="testing-$VERSION"
+          fi
+          gh release create "$release_tag" \
             --target "$GITHUB_SHA" \
-            --title "Anatase $channel_title $VERSION" \
+            --title "$VERSION: $channel_title Release" \
             --notes-file changelog.md \
             --prerelease
