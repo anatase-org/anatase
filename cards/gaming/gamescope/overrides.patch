@@ -596,45 +596,24 @@ From: Joshua Tam <297250+joshuatam@users.noreply.github.com>
 Date: Fri, 6 Dec 2024 16:51:02 +0800
 Subject: feat(intel): add rotation shader for rotating output
 
+Co-developed-by: Antheas Kapenekakis <git@antheas.dev>
 ---
- src/Backends/DRMBackend.cpp  |  35 +++++++++-
- src/main.cpp                 |   7 ++
- src/main.hpp                 |   2 +
+ src/Backends/DRMBackend.cpp  |  42 +++++++++---
+ src/main.cpp                 |   2 +
+ src/main.hpp                 |   1 +
  src/meson.build              |   1 +
  src/rendervulkan.cpp         | 126 ++++++++++++++++++++++++++++++-----
  src/rendervulkan.hpp         |   6 +-
  src/shaders/cs_rotation.comp |  53 +++++++++++++++
  src/wlserver.cpp             |   5 ++
- 8 files changed, 216 insertions(+), 19 deletions(-)
+ 8 files changed, 209 insertions(+), 27 deletions(-)
  create mode 100644 src/shaders/cs_rotation.comp
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index ac795b89fc3e..13f2d3353630 100644
+index ac795b89fc3e..4be93345d45f 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
-@@ -1660,6 +1660,10 @@ static void update_drm_effective_orientations( struct drm_t *drm, const drmModeM
- 		if ( pDRMInternalConnector != drm->pConnector )
- 			pInternalMode = find_mode( pDRMInternalConnector->GetModeConnector(), 0, 0, 0 );
- 
-+		if ( g_bUseRotationShader ) {
-+			g_bEnableDRMRotationShader = true;
-+		}
-+
- 		pDRMInternalConnector->UpdateEffectiveOrientation( pInternalMode );
- 	}
- 
-@@ -1671,6 +1675,10 @@ static void update_drm_effective_orientations( struct drm_t *drm, const drmModeM
- 		if ( pDRMExternalConnector != drm->pConnector )
- 			pExternalMode = find_mode( pDRMExternalConnector->GetModeConnector(), 0, 0, 0 );
- 
-+		if ( g_bUseRotationShader ) {
-+			g_bEnableDRMRotationShader = false;
-+		}
-+
- 		pDRMExternalConnector->UpdateEffectiveOrientation( pExternalMode );
- 	}
- }
-@@ -1886,7 +1894,7 @@ LiftoffStateCacheEntry FrameInfoToLiftoffStateCacheEntry( struct drm_t *drm, con
+@@ -1886,7 +1886,7 @@ LiftoffStateCacheEntry FrameInfoToLiftoffStateCacheEntry( struct drm_t *drm, con
  		uint64_t crtcW = srcWidth / frameInfo->layers[ i ].scale.x;
  		uint64_t crtcH = srcHeight / frameInfo->layers[ i ].scale.y;
  
@@ -643,25 +622,66 @@ index ac795b89fc3e..13f2d3353630 100644
  		{
  			int64_t imageH = frameInfo->layers[ i ].tex->contentHeight() / frameInfo->layers[ i ].scale.y;
  
-@@ -2195,6 +2203,17 @@ namespace gamescope
+@@ -2195,9 +2195,19 @@ namespace gamescope
  
  	void CDRMConnector::UpdateEffectiveOrientation( const drmModeModeInfo *pMode )
  	{
-+		if (g_bEnableDRMRotationShader)
++		auto setEffectiveOrientation = [this]( GamescopePanelOrientation eOrientation )
 +		{
-+			drm_log.infof("Using rotation shader");
-+			if (g_DesiredInternalOrientation == GAMESCOPE_PANEL_ORIENTATION_270) {
-+				m_ChosenOrientation = GAMESCOPE_PANEL_ORIENTATION_180;
-+			} else {
-+				m_ChosenOrientation = GAMESCOPE_PANEL_ORIENTATION_0;
-+			}
-+			return;
-+		}
-+        
++			g_bEnableDRMRotationShader = g_device.vendorID() == 0x8086 // Intel
++				&& this == g_DRM.pConnector
++				&& ( eOrientation == GAMESCOPE_PANEL_ORIENTATION_90 || eOrientation == GAMESCOPE_PANEL_ORIENTATION_270 );
++			m_ChosenOrientation = g_bEnableDRMRotationShader
++				? ( eOrientation == GAMESCOPE_PANEL_ORIENTATION_270 ? GAMESCOPE_PANEL_ORIENTATION_180 : GAMESCOPE_PANEL_ORIENTATION_0 )
++				: eOrientation;
++		};
++
  		if ( this->GetScreenType() == GAMESCOPE_SCREEN_TYPE_INTERNAL && g_DesiredInternalOrientation != GAMESCOPE_PANEL_ORIENTATION_AUTO )
  		{
- 			m_ChosenOrientation = g_DesiredInternalOrientation;
-@@ -3259,6 +3278,13 @@ bool drm_set_mode( struct drm_t *drm, const drmModeModeInfo *mode )
+-			m_ChosenOrientation = g_DesiredInternalOrientation;
++			setEffectiveOrientation( g_DesiredInternalOrientation );
+ 		}
+ 		else
+ 		{
+@@ -2206,16 +2216,16 @@ namespace gamescope
+ 				switch ( this->GetProperties().panel_orientation->GetCurrentValue() )
+ 				{
+ 					case DRM_MODE_PANEL_ORIENTATION_NORMAL:
+-						m_ChosenOrientation = GAMESCOPE_PANEL_ORIENTATION_0;
++						setEffectiveOrientation( GAMESCOPE_PANEL_ORIENTATION_0 );
+ 						return;
+ 					case DRM_MODE_PANEL_ORIENTATION_BOTTOM_UP:
+-						m_ChosenOrientation = GAMESCOPE_PANEL_ORIENTATION_180;
++						setEffectiveOrientation( GAMESCOPE_PANEL_ORIENTATION_180 );
+ 						return;
+ 					case DRM_MODE_PANEL_ORIENTATION_LEFT_UP:
+-						m_ChosenOrientation = GAMESCOPE_PANEL_ORIENTATION_90;
++						setEffectiveOrientation( GAMESCOPE_PANEL_ORIENTATION_90 );
+ 						return;
+ 					case DRM_MODE_PANEL_ORIENTATION_RIGHT_UP:
+-						m_ChosenOrientation = GAMESCOPE_PANEL_ORIENTATION_270;
++						setEffectiveOrientation( GAMESCOPE_PANEL_ORIENTATION_270 );
+ 						return;
+ 					default:
+ 						break;
+@@ -2225,13 +2235,13 @@ namespace gamescope
+ 			if ( this->GetScreenType() == gamescope::GAMESCOPE_SCREEN_TYPE_INTERNAL && pMode )
+ 			{
+ 				// Auto-detect portait mode for internal displays
+-				m_ChosenOrientation = pMode->hdisplay < pMode->vdisplay
++				setEffectiveOrientation( pMode->hdisplay < pMode->vdisplay
+ 					? GAMESCOPE_PANEL_ORIENTATION_270
+-					: GAMESCOPE_PANEL_ORIENTATION_0;
++					: GAMESCOPE_PANEL_ORIENTATION_0 );
+ 			}
+ 			else
+ 			{
+-				m_ChosenOrientation = GAMESCOPE_PANEL_ORIENTATION_0;
++				setEffectiveOrientation( GAMESCOPE_PANEL_ORIENTATION_0 );
+ 			}
+ 		}
+ 	}
+@@ -3259,6 +3269,13 @@ bool drm_set_mode( struct drm_t *drm, const drmModeModeInfo *mode )
  		g_bRotated = false;
  		g_nOutputWidth = mode->hdisplay;
  		g_nOutputHeight = mode->vdisplay;
@@ -675,7 +695,7 @@ index ac795b89fc3e..13f2d3353630 100644
  		break;
  	case GAMESCOPE_PANEL_ORIENTATION_90:
  	case GAMESCOPE_PANEL_ORIENTATION_270:
-@@ -3523,6 +3549,11 @@ namespace gamescope
+@@ -3523,6 +3540,11 @@ namespace gamescope
  
  			bNeedsFullComposite |= !!(g_uCompositeDebug & CompositeDebugFlag::Heatmap);
  
@@ -687,7 +707,7 @@ index ac795b89fc3e..13f2d3353630 100644
  			bool bDoComposite = true;
  			if ( !bNeedsFullComposite && !bWantsPartialComposite )
  			{
-@@ -3618,7 +3649,7 @@ namespace gamescope
+@@ -3618,7 +3640,7 @@ namespace gamescope
  			if ( bDefer && !!( g_uCompositeDebug & CompositeDebugFlag::Markers ) )
  				g_uCompositeDebug |= CompositeDebugFlag::Markers_Partial;
  
@@ -697,53 +717,26 @@ index ac795b89fc3e..13f2d3353630 100644
  			m_bWasCompositing = true;
  
 diff --git a/src/main.cpp b/src/main.cpp
-index 3a8250680615..bc5c3cf45085 100644
+index 3a8250680615..93a40dd44088 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
-@@ -134,6 +134,7 @@ const struct option *gamescope_options = (struct option[]){
- 	{ "composite-debug", no_argument, nullptr, 0 },
- 	{ "disable-xres", no_argument, nullptr, 'x' },
- 	{ "fade-out-duration", required_argument, nullptr, 0 },
-+	{ "use-rotation-shader", required_argument, nullptr, 0 },
- 	{ "force-orientation", required_argument, nullptr, 0 },
- 	{ "force-windows-fullscreen", no_argument, nullptr, 0 },
- 	{ "custom-refresh-rates", required_argument, nullptr, 0 },
-@@ -200,6 +201,7 @@ const char usage[] =
- 	"  -e, --steam                    enable Steam integration\n"
- 	"  --xwayland-count               create N xwayland servers\n"
- 	"  --prefer-vk-device             prefer Vulkan device for compositing (ex: 1002:7300)\n"
-+	"  --use-rotation-shader		  use rotation shader for rotating the screen\n"
- 	"  --force-orientation            rotate the internal display (left, right, normal, upsidedown)\n"
- 	"  --force-windows-fullscreen     force windows inside of gamescope to be the size of the nested display (fullscreen)\n"
- 	"  --cursor-scale-height          if specified, sets a base output height to linearly scale the cursor against.\n"
-@@ -365,6 +367,9 @@ static gamescope::GamescopeModeGeneration parse_gamescope_mode_generation( const
+@@ -365,6 +365,8 @@ static gamescope::GamescopeModeGeneration parse_gamescope_mode_generation( const
  	}
  }
  
-+bool g_bUseRotationShader = false;
 +bool g_bEnableDRMRotationShader = false;
 +
  GamescopePanelOrientation g_DesiredInternalOrientation = GAMESCOPE_PANEL_ORIENTATION_AUTO;
  static GamescopePanelOrientation force_orientation(const char *str)
  {
-@@ -822,6 +827,8 @@ int main(int argc, char **argv)
- 					g_eGamescopeModeGeneration = parse_gamescope_mode_generation( optarg );
- 				} else if (strcmp(opt_name, "force-orientation") == 0) {
- 					g_DesiredInternalOrientation = force_orientation( optarg );
-+                } else if (strcmp(opt_name, "use-rotation-shader") == 0) {
-+					g_bUseRotationShader = true;
- 				} else if (strcmp(opt_name, "custom-refresh-rates") == 0) {
- 					g_customRefreshRates = parse_custom_refresh_rates( optarg );
- 				} else if (strcmp(opt_name, "sharpness") == 0 ||
 diff --git a/src/main.hpp b/src/main.hpp
-index 390c04a63ecd..e7b857d44b0d 100644
+index 390c04a63ecd..bde82c7c4e70 100644
 --- a/src/main.hpp
 +++ b/src/main.hpp
-@@ -22,6 +22,8 @@ extern bool g_bForceRelativeMouse;
+@@ -22,6 +22,7 @@ extern bool g_bForceRelativeMouse;
  extern int g_nOutputRefresh; // mHz
  extern bool g_bOutputHDREnabled;
  extern bool g_bForceInternal;
-+extern bool g_bUseRotationShader;
 +extern bool g_bEnableDRMRotationShader;
  
  extern bool g_bFullscreen;
@@ -1251,7 +1244,7 @@ Subject: feat(display): consider vporch to avoid timing issues
  4 files changed, 11 insertions(+), 5 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 13f2d3353630..7d032b563365 100644
+index 4be93345d45f..34630b3163a6 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -213,6 +213,11 @@ namespace gamescope
@@ -1266,7 +1259,7 @@ index 13f2d3353630..7d032b563365 100644
  	template <typename T>
  	using CAutoDeletePtr = std::unique_ptr<T, void(*)(T*)>;
  
-@@ -3268,6 +3273,9 @@ bool drm_set_mode( struct drm_t *drm, const drmModeModeInfo *mode )
+@@ -3259,6 +3264,9 @@ bool drm_set_mode( struct drm_t *drm, const drmModeModeInfo *mode )
  	g_nOutputRefresh = gamescope::GetModeRefresh( mode );
  	g_nDynamicRefreshHz = 0;
  
@@ -1277,10 +1270,10 @@ index 13f2d3353630..7d032b563365 100644
  
  	switch ( drm->pConnector->GetCurrentOrientation() )
 diff --git a/src/main.cpp b/src/main.cpp
-index bc5c3cf45085..162b3f19f9bb 100644
+index 93a40dd44088..ee221188037c 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
-@@ -301,6 +301,7 @@ int g_nNestedDisplayIndex = 0;
+@@ -299,6 +299,7 @@ int g_nNestedDisplayIndex = 0;
  uint32_t g_nOutputWidth = 0;
  uint32_t g_nOutputHeight = 0;
  int g_nOutputRefresh = 0;
@@ -1289,7 +1282,7 @@ index bc5c3cf45085..162b3f19f9bb 100644
  
  bool g_bFullscreen = false;
 diff --git a/src/main.hpp b/src/main.hpp
-index e7b857d44b0d..e6f8ff133689 100644
+index bde82c7c4e70..b462a14c0ea3 100644
 --- a/src/main.hpp
 +++ b/src/main.hpp
 @@ -20,6 +20,7 @@ extern uint32_t g_nOutputWidth;
@@ -1299,7 +1292,7 @@ index e7b857d44b0d..e6f8ff133689 100644
 +extern long g_nsVsync;       // ns
  extern bool g_bOutputHDREnabled;
  extern bool g_bForceInternal;
- extern bool g_bUseRotationShader;
+ extern bool g_bEnableDRMRotationShader;
 diff --git a/src/vblankmanager.cpp b/src/vblankmanager.cpp
 index f036d000a8e2..e388374c98ba 100644
 --- a/src/vblankmanager.cpp
@@ -1446,10 +1439,10 @@ Subject: feat: add DPMS support through an Atom
  4 files changed, 32 insertions(+), 4 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 7d032b563365..5f870258fe99 100644
+index 34630b3163a6..b1df90b3ec38 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
-@@ -2890,6 +2890,9 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
+@@ -2881,6 +2881,9 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
  			drm->needs_modeset = true;
  	}
  
@@ -1459,7 +1452,7 @@ index 7d032b563365..5f870258fe99 100644
  	drm_colorspace uColorimetry = DRM_MODE_COLORIMETRY_DEFAULT;
  
  	const bool bWantsHDR10 = g_bOutputHDREnabled && frameInfo->outputEncodingEOTF == EOTF_PQ;
-@@ -2957,6 +2960,9 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
+@@ -2948,6 +2951,9 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
  			needs_modeset = true;
  	}
  
@@ -1469,7 +1462,7 @@ index 7d032b563365..5f870258fe99 100644
  	if ( !bSleep )
  	{
  		if ( drm->pCRTC != nullptr )
-@@ -3036,7 +3042,13 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
+@@ -3027,7 +3033,13 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
  
  		if ( drm->pCRTC && !bSleep )
  		{
@@ -1484,7 +1477,7 @@ index 7d032b563365..5f870258fe99 100644
  			drm->pCRTC->GetProperties().MODE_ID->SetPendingValue( drm->req, drm->pending.mode_id ? drm->pending.mode_id->GetBlobValue() : 0lu, true );
  
  			// Clear color properties inherited from a previous DRM master (i.e. KDE's
-@@ -3673,6 +3685,7 @@ namespace gamescope
+@@ -3664,6 +3676,7 @@ namespace gamescope
  
  			FrameInfo_t presentCompFrameInfo = {};
  			presentCompFrameInfo.allowVRR = pFrameInfo->allowVRR;
@@ -1669,10 +1662,10 @@ Subject: fix(intel): allow night mode and color adjustment via compositing
  1 file changed, 11 insertions(+)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 5f870258fe99..b6c9dc151587 100644
+index b1df90b3ec38..ac171992f3d4 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
-@@ -3555,6 +3555,17 @@ namespace gamescope
+@@ -3546,6 +3546,17 @@ namespace gamescope
  			bNeedsFullComposite |= pFrameInfo->bFadingOut;
  			bNeedsFullComposite |= !g_reshade_effect.empty();
  
@@ -1707,10 +1700,10 @@ configs and read the HDR metadata from the displays.
  4 files changed, 15 insertions(+), 1 deletion(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index b6c9dc151587..a3fbd3865c06 100644
+index ac171992f3d4..9464b80b6ec7 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
-@@ -2524,7 +2524,13 @@ namespace gamescope
+@@ -2515,7 +2515,13 @@ namespace gamescope
  				 pHDRStaticMetadata && pHDRStaticMetadata->eotfs && pHDRStaticMetadata->eotfs->pq )
  			{
  				m_Mutable.HDR.bExposeHDRSupport = true;
@@ -1738,10 +1731,10 @@ index 607c25d9a0db..958f489ce82a 100644
  namespace gamescope
  {
 diff --git a/src/main.cpp b/src/main.cpp
-index 162b3f19f9bb..c6c2cfe59dcb 100644
+index ee221188037c..1835424f62b3 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
-@@ -144,6 +144,7 @@ const struct option *gamescope_options = (struct option[]){
+@@ -143,6 +143,7 @@ const struct option *gamescope_options = (struct option[]){
  	{ "hdr-enabled", no_argument, nullptr, 0 },
  	{ "hdr-sdr-content-nits", required_argument, nullptr, 0 },
  	{ "hdr-itm-enabled", no_argument, nullptr, 0 },
@@ -1749,7 +1742,7 @@ index 162b3f19f9bb..c6c2cfe59dcb 100644
  	{ "hdr-itm-sdr-nits", required_argument, nullptr, 0 },
  	{ "hdr-itm-target-nits", required_argument, nullptr, 0 },
  	{ "hdr-debug-force-support", no_argument, nullptr, 0 },
-@@ -211,6 +212,7 @@ const char usage[] =
+@@ -209,6 +210,7 @@ const char usage[] =
  	"  --sdr-gamut-wideness           Set the 'wideness' of the gamut for SDR comment. 0 - 1.\n"
  	"  --hdr-sdr-content-nits         set the luminance of SDR content in nits. Default: 400 nits.\n"
  	"  --hdr-itm-enabled              enable SDR->HDR inverse tone mapping. only works for SDR input.\n"
@@ -1757,7 +1750,7 @@ index 162b3f19f9bb..c6c2cfe59dcb 100644
  	"  --hdr-itm-sdr-nits             set the luminance of SDR content in nits used as the input for the inverse tone mapping process.\n"
  	"                                 Default: 100 nits, Max: 1000 nits\n"
  	"  --hdr-itm-target-nits          set the target luminace of the inverse tone mapping process.\n"
-@@ -625,6 +627,7 @@ static bool IsInDebugSession()
+@@ -622,6 +624,7 @@ static bool IsInDebugSession()
  #endif
  
  bool steamMode = false;
@@ -1805,7 +1798,7 @@ there are no edge cases where only subproperties are supported.
  1 file changed, 32 insertions(+), 8 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index a3fbd3865c06..d1a8dc270697 100644
+index 9464b80b6ec7..c859d58f147b 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -567,6 +567,7 @@ extern std::string g_reshade_effect;
@@ -1816,7 +1809,7 @@ index a3fbd3865c06..d1a8dc270697 100644
  bool drm_set_connector( struct drm_t *drm, gamescope::CDRMConnector *conn );
  
  struct drm_color_ctm2 {
-@@ -2753,13 +2754,15 @@ drm_prepare_liftoff( struct drm_t *drm, const struct FrameInfo_t *frameInfo, boo
+@@ -2744,13 +2745,15 @@ drm_prepare_liftoff( struct drm_t *drm, const struct FrameInfo_t *frameInfo, boo
  				}
  			}
  
@@ -1835,7 +1828,7 @@ index a3fbd3865c06..d1a8dc270697 100644
  				if (!cv_drm_debug_disable_ctm && frameInfo->layers[i].ctm != nullptr)
  					liftoff_layer_set_property( drm->lo_layers[ i ], "AMD_PLANE_CTM", frameInfo->layers[i].ctm->GetBlobValue() );
  				else
-@@ -2775,13 +2778,16 @@ drm_prepare_liftoff( struct drm_t *drm, const struct FrameInfo_t *frameInfo, boo
+@@ -2766,13 +2769,16 @@ drm_prepare_liftoff( struct drm_t *drm, const struct FrameInfo_t *frameInfo, boo
  			liftoff_layer_unset_property( drm->lo_layers[ i ], "COLOR_RANGE" );
  			liftoff_layer_unset_property( drm->lo_layers[ i ], "pixel blend mode" );
  
@@ -1853,7 +1846,7 @@ index a3fbd3865c06..d1a8dc270697 100644
  				liftoff_layer_set_property( drm->lo_layers[ i ], "AMD_PLANE_CTM", 0 );
  			}
  		}
-@@ -2933,7 +2939,7 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
+@@ -2924,7 +2930,7 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
  
  	bool bSinglePlane = frameInfo->layerCount < 2 && cv_drm_single_plane_optimizations;
  
@@ -1862,7 +1855,7 @@ index a3fbd3865c06..d1a8dc270697 100644
  	{
  		if ( !cv_drm_debug_disable_output_tf && !bSinglePlane )
  		{
-@@ -3445,7 +3451,20 @@ bool drm_supports_color_mgmt(struct drm_t *drm)
+@@ -3436,7 +3442,20 @@ bool drm_supports_color_mgmt(struct drm_t *drm)
  	if ( !drm->pPrimaryPlane )
  		return false;
  
@@ -1884,7 +1877,7 @@ index a3fbd3865c06..d1a8dc270697 100644
  }
  
  std::span<const uint32_t> drm_get_valid_refresh_rates( struct drm_t *drm )
-@@ -3575,12 +3594,12 @@ namespace gamescope
+@@ -3566,12 +3585,12 @@ namespace gamescope
  			if ( g_bOutputHDREnabled )
  			{
  				bNeedsFullComposite |= g_bHDRItmEnable;
@@ -1899,7 +1892,7 @@ index a3fbd3865c06..d1a8dc270697 100644
  					bNeedsFullComposite |= ColorspaceIsHDR( pFrameInfo->layers[0].colorspace );
  			}
  
-@@ -3994,6 +4013,11 @@ namespace gamescope
+@@ -3985,6 +4004,11 @@ namespace gamescope
  			return drm_supports_color_mgmt( &g_DRM );
  		}
  
@@ -2149,7 +2142,7 @@ Subject: fix: prevent crashing if display is not connected
  1 file changed, 3 insertions(+), 4 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index d1a8dc270697..03e00b6bfc61 100644
+index c859d58f147b..56da74651122 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -712,12 +712,11 @@ static uint32_t pick_plane_format( const struct wlr_drm_format_set *formats, uin
@@ -3141,10 +3134,10 @@ Subject: drm: scan out FSR base plane when possible
  1 file changed, 59 insertions(+), 1 deletion(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 03e00b6bfc61..a3358d002ca7 100644
+index 56da74651122..1b1575f7bc54 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
-@@ -3563,6 +3563,65 @@ namespace gamescope
+@@ -3554,6 +3554,65 @@ namespace gamescope
  				}
  			}
  
@@ -3210,7 +3203,7 @@ index 03e00b6bfc61..a3358d002ca7 100644
  			bool bLayer0ScreenSize = close_enough(pFrameInfo->layers[0].scale.x, 1.0f) && close_enough(pFrameInfo->layers[0].scale.y, 1.0f);
  
  			bool bNeedsCompositeFromFilter = (g_upscaleFilter == GamescopeUpscaleFilter::NEAREST || g_upscaleFilter == GamescopeUpscaleFilter::PIXEL) && !bLayer0ScreenSize;
-@@ -4150,4 +4209,3 @@ int HackyDRMPresent( const FrameInfo_t *pFrameInfo, bool bAsync )
+@@ -4141,4 +4200,3 @@ int HackyDRMPresent( const FrameInfo_t *pFrameInfo, bool bAsync )
  {
  	return static_cast<gamescope::CDRMBackend *>( GetBackend() )->Present( pFrameInfo, bAsync );
  }
@@ -5695,7 +5688,7 @@ Subject: steamcompmgr: pace pre-FSR x2 frame generation with direct scanout
  create mode 100644 src/frame_generation_pacing.hpp
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index a3358d002ca7..d898739f431f 100644
+index 1b1575f7bc54..a05b2a62799c 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -140,6 +140,7 @@ struct drm_t {
@@ -5728,7 +5721,7 @@ index a3358d002ca7..d898739f431f 100644
  	{
  		std::unique_lock lock( drm->m_QueuedFbIdsMutex );
  		drm->m_QueuedFbIds.clear();
-@@ -2629,7 +2638,13 @@ drm_prepare_liftoff( struct drm_t *drm, const struct FrameInfo_t *frameInfo, boo
+@@ -2620,7 +2629,13 @@ drm_prepare_liftoff( struct drm_t *drm, const struct FrameInfo_t *frameInfo, boo
  				return -EINVAL;
  			}
  
@@ -5743,7 +5736,7 @@ index a3358d002ca7..d898739f431f 100644
  
  
  			liftoff_layer_set_property( drm->lo_layers[ i ], "FB_ID", pDrmFb->GetFbId());
-@@ -2930,6 +2945,7 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
+@@ -2921,6 +2936,7 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
  	}
  
  	drm->m_FbIdsInRequest.clear();
@@ -5751,7 +5744,7 @@ index a3358d002ca7..d898739f431f 100644
  
  	bool needs_modeset = drm->needs_modeset.exchange(false);
  
-@@ -3123,6 +3139,7 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
+@@ -3114,6 +3130,7 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
  		drm->req = nullptr;
  
  		drm->m_FbIdsInRequest.clear();
@@ -5759,7 +5752,7 @@ index a3358d002ca7..d898739f431f 100644
  
  		if ( needs_modeset )
  			drm->needs_modeset = true;
-@@ -4110,6 +4127,7 @@ namespace gamescope
+@@ -4101,6 +4118,7 @@ namespace gamescope
  			gpuvis_trace_printf( "flip commit %" PRIu64, (uint64_t)GetCurrentConnector()->PresentationFeedback().m_uQueuedPresents );
  
  			ret = drmModeAtomicCommit(drm->fd, drm->req, drm->flags, &m_PresentCtxs[uCurrentPresentCtx] );
@@ -8536,7 +8529,7 @@ Subject: mangoapp: report frame generation output timing
  7 files changed, 98 insertions(+), 18 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index d898739f431f..d79a444879e0 100644
+index a05b2a62799c..e8d8f31f0697 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -562,6 +562,7 @@ extern bool g_bDebugLayers;
@@ -8565,7 +8558,7 @@ index d898739f431f..d79a444879e0 100644
  
  	// Nudge so that steamcompmgr releases commits.
  	nudge_steamcompmgr();
-@@ -4122,6 +4123,8 @@ namespace gamescope
+@@ -4113,6 +4114,8 @@ namespace gamescope
  			uint32_t uCurrentPresentCtx = m_uNextPresentCtx;
  			m_uNextPresentCtx = ( m_uNextPresentCtx + 1 ) % 3;
  			m_PresentCtxs[uCurrentPresentCtx].ulPendingFlipCount = GetCurrentConnector()->PresentationFeedback().m_uQueuedPresents;
