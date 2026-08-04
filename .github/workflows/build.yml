@@ -80,7 +80,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 1
+          fetch-depth: 100
           token: ${{ secrets.ANATASE_READ }}
           persist-credentials: false
           submodules: recursive
@@ -131,14 +131,17 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "include_arm=$include_arm" >> "$GITHUB_OUTPUT"
 
-      - name: Create Git tag
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.image.outputs.version }}
+      - name: Generate changelog
         run: |
-          gh api "repos/${GITHUB_REPOSITORY}/git/refs" \
-            -f ref="refs/tags/${VERSION}" \
-            -f sha="$GITHUB_SHA"
+          skopeo --override-arch amd64 inspect --no-tags \
+            "docker://i.anatase.org/anatase:$LUDOS_CHANNEL" \
+            > previous-channel.json
+          skopeo inspect --no-tags \
+            docker://i.anatase.org/anatase:x86_64 \
+            > current-x86_64.json
+          venv/bin/python .github/changelog.py \
+            previous-channel.json current-x86_64.json \
+            --channel "$LUDOS_CHANNEL" > changelog.md
 
       - name: Publish OCI image index
         env:
@@ -159,3 +162,15 @@ jobs:
           fi
           venv/bin/ludos registry oci index anatase \
             "${tags[@]}" "${sources[@]}"
+
+      - name: Create GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.image.outputs.version }}
+        run: |
+          channel_title="${LUDOS_CHANNEL^}"
+          gh release create "$VERSION" \
+            --target "$GITHUB_SHA" \
+            --title "Anatase $channel_title $VERSION" \
+            --notes-file changelog.md \
+            --prerelease

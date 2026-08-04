@@ -15,7 +15,7 @@ on:
         default: true
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 concurrency:
@@ -37,7 +37,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 1
+          fetch-depth: 100
           token: ${{ secrets.ANATASE_READ }}
           persist-credentials: false
           submodules: recursive
@@ -57,6 +57,34 @@ jobs:
 
       - name: Install ludos
         run: ./ludos/prepare.sh flatpaks
+
+      - name: Generate Stable changelog
+        if: ${{ inputs.images }}
+        id: image
+        run: |
+          skopeo --override-arch amd64 inspect --no-tags \
+            docker://i.anatase.org/anatase:stable \
+            > previous-stable.json
+          skopeo --override-arch amd64 inspect --no-tags \
+            docker://i.anatase.org/anatase:rolling \
+            > current-rolling.json
+
+          version=$(jq -r \
+            '.Labels["org.opencontainers.image.version"] // empty' \
+            current-rolling.json)
+          revision=$(jq -r \
+            '.Labels["org.opencontainers.image.revision"] // empty' \
+            current-rolling.json)
+          if [[ -z "$version" || -z "$revision" ]]; then
+            echo "Rolling image has no version or revision label" >&2
+            exit 1
+          fi
+
+          venv/bin/python .github/changelog.py \
+            previous-stable.json current-rolling.json \
+            --channel stable > changelog.md
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
 
       - name: Promote
         env:
@@ -86,3 +114,15 @@ jobs:
               # --arch aarch64 # lets skip you for now, until builds start
           fi
           venv/bin/ludos ci promote "${args[@]}"
+
+      - name: Create GitHub release
+        if: ${{ inputs.images }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REVISION: ${{ steps.image.outputs.revision }}
+          VERSION: ${{ steps.image.outputs.version }}
+        run: |
+          gh release create "stable-$VERSION" \
+            --target "$REVISION" \
+            --title "Anatase Stable $VERSION" \
+            --notes-file changelog.md
