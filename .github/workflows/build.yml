@@ -20,6 +20,13 @@ on:
       - main
       - master
       - testing
+    paths-ignore:
+      - 'docs/**'
+      - '.github/workflows/**'
+      - '*.md'
+      - 'LICENSE'
+      - 'COPYIRIGHT'
+      - '.gitignore'
 
 permissions:
   contents: write
