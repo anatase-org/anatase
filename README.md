@@ -115,7 +115,6 @@ Finally, you can `claude --dangerously-skip-permissions` and go to the bathroom 
    * acpi_call was used for the Lenovo Legion Gos and Ayaneo/GPD/OneXPlayer handhelds
    * Lenovo Legion Go currently lacks a custom TDP slider (bug) and fan curve support is missing from the kernel
    * Ayaneo/GPD/OneXPlayer handhelds use a new kernel driver and power backend that is currently being fleshed out (has parity with previous backend, custom TDP, fan curves, etc)
- * Add changelogs and release schedule
  * Add CEC support for gamemode only
      * on startup or wake-up, if a TV is connected:
        * if off, turn it on and switch to output
