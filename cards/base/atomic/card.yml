@@ -315,8 +315,8 @@ postprocess: |
     # Installer fixups
     #
 
-    # Mute socket motd
-    rm -rf /etc/motd.d/cockpit
+    # Mute Cockpit's login prompts
+    rm -f /etc/motd.d/cockpit /etc/issue.d/cockpit.issue
 
     #
     # Prepare boot
