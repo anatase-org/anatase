@@ -2,6 +2,12 @@ name: Build Anatase ISO
 
 on:
   workflow_dispatch:
+    inputs:
+      draft:
+        description: Skip ISO Upload
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -70,6 +76,7 @@ jobs:
         run: venv/bin/ludos bootc installer anatase.yml "$SOURCE_REF"
 
       - name: Authenticate to Google Cloud
+        if: ${{ !inputs.draft }}
         id: auth
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
         with:
@@ -79,9 +86,11 @@ jobs:
           token_format: access_token
 
       - name: Set up Google Cloud SDK
+        if: ${{ !inputs.draft }}
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
 
       - name: Upload ISO
+        if: ${{ !inputs.draft }}
         env:
           VERSION: ${{ steps.image.outputs.version }}
           LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
