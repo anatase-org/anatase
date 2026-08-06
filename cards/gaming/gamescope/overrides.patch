@@ -9404,3 +9404,822 @@ index b2fe39ecfc56..2f8513633ef1 100644
  		? g_SteamCompMgrLimitedAppRefreshCycle
  		: g_SteamCompMgrAppRefreshCycle;
  
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Fri, 7 Aug 2026 00:37:23 +0200
+Subject: framegen: trace source starvation and queue pacing
+
+---
+ src/rendervulkan.cpp | 41 +++++++++++++++++++++++++++++++++++++++++
+ src/rendervulkan.hpp | 12 ++++++++++++
+ src/steamcompmgr.cpp | 25 +++++++++++++++++++++++--
+ 3 files changed, 76 insertions(+), 2 deletions(-)
+
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index 7e3ac3c85557..a4a7ecc4b5b8 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -4468,6 +4468,7 @@ namespace
+ 			m_lastSourceValid = false;
+ 			m_currentRealSourceId = 0;
+ 			m_currentRealOutputId = 0;
++			m_lastSourceFrameTime = 0;
+ 			m_hasHistory = false;
+ 			m_lastPresentedGenerated = false;
+ 			m_width = 0;
+@@ -4529,10 +4530,26 @@ namespace
+ 			FrameGenerationTelemetry result = m_telemetry;
+ 			result.gpu = vulkan_frame_generation_get_gpu_timings();
+ 			result.sceneCutCopies = vulkan_frame_generation_get_scene_cut_copy_count();
++			result.queuedFrames = uint32_t( m_queue.size() );
+ 			result.flowScalePercent = m_config.flowScalePercent;
+ 			return result;
+ 		}
+ 
++		void NoteSourceCallback( bool blocked )
++		{
++			if ( blocked )
++				m_telemetry.sourceCallbacksBlocked++;
++			else
++				m_telemetry.sourceCallbacks++;
++		}
++
++		void NoteOutputSlot( bool hasPendingFrame )
++		{
++			m_telemetry.outputSlots++;
++			if ( !hasPendingFrame )
++				m_telemetry.outputSlotsWithoutPending++;
++		}
++
+ 		void Apply( FrameInfo_t *frameInfo, gamescope::Rc<CVulkanTexture> rawSource,
+ 			uint64_t sourceId, uint32_t appId, bool fsrEnabled, bool prepareOnly )
+ 		{
+@@ -4619,7 +4636,10 @@ namespace
+ 			// previous real frame again so the next midpoint still gets one full
+ 			// source interval instead of racing its first output deadline.
+ 			if ( m_pipelinePrimed && m_queue.empty() )
++			{
+ 				m_pipelinePrimed = false;
++				m_telemetry.queueUnderruns++;
++			}
+ 
+ 			if ( !m_history && !AllocateHistory( rawSource ) )
+ 			{
+@@ -4639,6 +4659,14 @@ namespace
+ 
+ 			m_lastSourceId = sourceId;
+ 			m_lastSourceValid = true;
++			m_telemetry.sourceFrames++;
++			const uint64_t sourceFrameTime = get_time_in_nanos();
++			if ( m_lastSourceFrameTime != 0 && sourceFrameTime >= m_lastSourceFrameTime )
++			{
++				m_telemetry.sourceFrameIntervalMilliseconds =
++					double( sourceFrameTime - m_lastSourceFrameTime ) / 1'000'000.0;
++			}
++			m_lastSourceFrameTime = sourceFrameTime;
+ 
+ 			if ( !m_hasHistory )
+ 			{
+@@ -4865,6 +4893,7 @@ namespace
+ 			{
+ 				m_queue.push_back( m_previousReal );
+ 				m_pipelinePrimed = true;
++				m_telemetry.repeatedRealFrames++;
+ 			}
+ 			m_queue.push_back( std::move( generated ) );
+ 			m_previousReal = real;
+@@ -4996,6 +5025,7 @@ namespace
+ 			frameInfo->frameGenerationOutputId = queued.outputId;
+ 			m_lastPresentedGenerated = queued.generated;
+ 			m_telemetry.presentedGeneratedFrames += queued.generated ? 1u : 0u;
++			m_telemetry.presentedRealFrames += queued.generated ? 0u : 1u;
+ 		}
+ 
+ 		gamescope::OwningRc<CVulkanTexture> m_history;
+@@ -5011,6 +5041,7 @@ namespace
+ 		uint64_t m_currentRealSourceId = 0;
+ 		uint64_t m_currentRealOutputId = 0;
+ 		uint64_t m_nextOutputId = 0;
++		uint64_t m_lastSourceFrameTime = 0;
+ 		uint32_t m_appId = 0;
+ 		uint32_t m_width = 0;
+ 		uint32_t m_height = 0;
+@@ -5088,6 +5119,16 @@ FrameGenerationTelemetry vulkan_frame_generation_get_telemetry()
+ 	return s_frameGenerationPacingContext.Telemetry();
+ }
+ 
++void vulkan_frame_generation_note_source_callback( bool blocked )
++{
++	s_frameGenerationPacingContext.NoteSourceCallback( blocked );
++}
++
++void vulkan_frame_generation_note_output_slot( bool hasPendingFrame )
++{
++	s_frameGenerationPacingContext.NoteOutputSlot( hasPendingFrame );
++}
++
+ void vulkan_wait( uint64_t ulSeqNo, bool bReset )
+ {
+ 	return g_device.wait( ulSeqNo, bReset );
+diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
+index 30fb951ce5d0..d7d8b6b0ee17 100644
+--- a/src/rendervulkan.hpp
++++ b/src/rendervulkan.hpp
+@@ -441,15 +441,27 @@ struct FrameGenerationGpuTimings
+ struct FrameGenerationTelemetry
+ {
+ 	FrameGenerationGpuTimings gpu;
++	uint64_t sourceFrames = 0;
++	uint64_t sourceCallbacks = 0;
++	uint64_t sourceCallbacksBlocked = 0;
++	uint64_t outputSlots = 0;
++	uint64_t outputSlotsWithoutPending = 0;
++	uint64_t queueUnderruns = 0;
++	uint64_t repeatedRealFrames = 0;
+ 	uint64_t generatedFrames = 0;
+ 	uint64_t presentedGeneratedFrames = 0;
++	uint64_t presentedRealFrames = 0;
+ 	uint64_t deadlineDroppedFrames = 0;
+ 	uint64_t sceneCutCopies = 0;
++	double sourceFrameIntervalMilliseconds = 0.0;
++	uint32_t queuedFrames = 0;
+ 	uint32_t flowScalePercent = 100;
+ 	uint32_t sourceCadenceHz = 0;
+ 	uint32_t outputCadenceHz = 0;
+ };
+ FrameGenerationTelemetry vulkan_frame_generation_get_telemetry();
++void vulkan_frame_generation_note_source_callback( bool blocked );
++void vulkan_frame_generation_note_output_slot( bool hasPendingFrame );
+ void vulkan_wait( uint64_t ulSeqNo, bool bReset );
+ gamescope::Rc<CVulkanTexture> vulkan_get_last_output_image( bool partial, bool defer );
+ gamescope::Rc<CVulkanTexture> vulkan_acquire_screenshot_texture(uint32_t width, uint32_t height, bool exportable, uint32_t drmFormat, EStreamColorspace colorspace = k_EStreamColorspace_Unknown);
+diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
+index 2f8513633ef1..bc9f5f1c82f4 100644
+--- a/src/steamcompmgr.cpp
++++ b/src/steamcompmgr.cpp
+@@ -2568,10 +2568,20 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 		stats_printf( "framegen_fi_interpolation_gpu_ms=%f\n", frameGenerationTelemetry.gpu.interpolationAndInpaintingMilliseconds );
+ 		stats_printf( "framegen_generated_fsr_gpu_ms=%f\n", frameGenerationTelemetry.gpu.generatedFsrMilliseconds );
+ 		stats_printf( "framegen_total_gpu_ms=%f\n", frameGenerationTelemetry.gpu.totalMilliseconds );
++		stats_printf( "framegen_source_frames=%" PRIu64 "\n", frameGenerationTelemetry.sourceFrames );
++		stats_printf( "framegen_source_callbacks=%" PRIu64 "\n", frameGenerationTelemetry.sourceCallbacks );
++		stats_printf( "framegen_source_callbacks_blocked=%" PRIu64 "\n", frameGenerationTelemetry.sourceCallbacksBlocked );
++		stats_printf( "framegen_output_slots=%" PRIu64 "\n", frameGenerationTelemetry.outputSlots );
++		stats_printf( "framegen_output_slots_without_pending=%" PRIu64 "\n", frameGenerationTelemetry.outputSlotsWithoutPending );
++		stats_printf( "framegen_queue_underruns=%" PRIu64 "\n", frameGenerationTelemetry.queueUnderruns );
++		stats_printf( "framegen_repeated_real=%" PRIu64 "\n", frameGenerationTelemetry.repeatedRealFrames );
+ 		stats_printf( "framegen_generated=%" PRIu64 "\n", frameGenerationTelemetry.generatedFrames );
+ 		stats_printf( "framegen_presented=%" PRIu64 "\n", frameGenerationTelemetry.presentedGeneratedFrames );
++		stats_printf( "framegen_presented_real=%" PRIu64 "\n", frameGenerationTelemetry.presentedRealFrames );
+ 		stats_printf( "framegen_deadline_dropped=%" PRIu64 "\n", frameGenerationTelemetry.deadlineDroppedFrames );
+ 		stats_printf( "framegen_scene_cut_copies=%" PRIu64 "\n", frameGenerationTelemetry.sceneCutCopies );
++		stats_printf( "framegen_source_interval_ms=%f\n", frameGenerationTelemetry.sourceFrameIntervalMilliseconds );
++		stats_printf( "framegen_queue_depth=%u\n", frameGenerationTelemetry.queuedFrames );
+ 		stats_printf( "framegen_flow_scale_percent=%u\n", frameGenerationTelemetry.flowScalePercent );
+ 		stats_printf( "framegen_source_cadence_hz=%u\n", frameGenerationTelemetry.sourceCadenceHz );
+ 		stats_printf( "framegen_output_cadence_hz=%u\n", frameGenerationTelemetry.outputCadenceHz );
+@@ -5754,7 +5764,11 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
+ 			? !vulkan_frame_generation_can_request_source_frame()
+ 			: !vulkan_frame_generation_can_accept_source_frame();
+ 		if ( blocked )
++		{
++			if ( frameCallback )
++				vulkan_frame_generation_note_source_callback( true );
+ 			return false;
++		}
+ 		// Source callbacks own the 60 Hz cadence. Once the midpoint drains and
+ 		// only its following real frame remains, latch the next source immediately
+ 		// so generation gets the complete interval before its output slot.
+@@ -5775,6 +5789,8 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
+ 			}
+ 			return false;
+ 		}
++		if ( frameCallback )
++			vulkan_frame_generation_note_source_callback( false );
+ 		return true;
+ 	}
+ 	if ( frameGenerationOverlayActive )
+@@ -9236,6 +9252,12 @@ steamcompmgr_main(int argc, char **argv)
+ 
+ 			const bool frameGenerationTimerOutputDue = frameGenerationFreeRunning &&
+ 				frameGenerationPending && s_bFrameGenerationOutputTimerDue;
++			const bool frameGenerationVblankOutputDue = bFrameGeneration &&
++				!frameGenerationFreeRunning && vblank &&
++				gamescope::FrameGenerationOutputSlotDue(
++					vblank_idx, frameGenerationOutputFPS, frameGenerationRefreshHz );
++			if ( frameGenerationVblankOutputDue )
++				vulkan_frame_generation_note_output_slot( frameGenerationPending );
+ 
+ 			if ( frameGenerationTimerOutputDue &&
+ 				vulkan_frame_generation_drop_stale_generated_frame(
+@@ -9312,8 +9334,7 @@ steamcompmgr_main(int argc, char **argv)
+ 				if ( frameGenerationFreeRunning )
+ 					bShouldPaint = frameGenerationTimerOutputDue;
+ 				else if ( vblank )
+-					bShouldPaint = gamescope::FrameGenerationOutputSlotDue(
+-						vblank_idx, frameGenerationOutputFPS, frameGenerationRefreshHz );
++					bShouldPaint = frameGenerationVblankOutputDue;
+ 				else
+ 					bShouldPaint = false;
+ 
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Fri, 7 Aug 2026 00:49:16 +0200
+Subject: framegen: report per-pass GPU timings
+
+---
+ src/frame_generation_vulkan.cpp | 79 ++++++++++++++++++++++++++-------
+ src/rendervulkan.hpp            | 11 +++++
+ src/steamcompmgr.cpp            | 11 +++++
+ 3 files changed, 86 insertions(+), 15 deletions(-)
+
+diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
+index f3b7c2ff1b46..d29f7c44e223 100644
+--- a/src/frame_generation_vulkan.cpp
++++ b/src/frame_generation_vulkan.cpp
+@@ -50,6 +50,18 @@ namespace
+ 
+ 	constexpr uint32_t kPyramidLevels = 7;
+ 	constexpr uint32_t kHistogramWidth = 256 * 3 * 3;
++	constexpr uint32_t kTimingQueryStart = 0;
++	constexpr uint32_t kTimingQueryPrepare = 1;
++	constexpr uint32_t kTimingQueryPyramid = 2;
++	constexpr uint32_t kTimingQuerySceneChange = 3;
++	constexpr uint32_t kTimingQueryOpticalFlowEnd = 23;
++	constexpr uint32_t kTimingQueryVectorField = 24;
++	constexpr uint32_t kTimingQueryGuiMask = 25;
++	constexpr uint32_t kTimingQueryMidpoint = 26;
++	constexpr uint32_t kTimingQueryInpaintingPyramid = 27;
++	constexpr uint32_t kTimingQueryInpainting = 28;
++	constexpr uint32_t kTimingQueryOutput = 29;
++	constexpr uint32_t kTimingQueryCount = 30;
+ 
+ 	struct alignas( 16 ) OpticalFlowConstants
+ 	{
+@@ -336,7 +348,7 @@ namespace
+ 			const VkQueryPoolCreateInfo queryInfo = {
+ 				.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
+ 				.queryType = VK_QUERY_TYPE_TIMESTAMP,
+-				.queryCount = 6,
++				.queryCount = kTimingQueryCount,
+ 			};
+ 			g_device.vk.CreateQueryPool( g_device.device(), &queryInfo, nullptr, &timingQueryPool );
+ 			VkPhysicalDeviceProperties properties = {};
+@@ -689,9 +701,9 @@ namespace
+ 				return false;
+ 			if ( resources->timingQueryPool )
+ 			{
+-				g_device.vk.CmdResetQueryPool( cmdBuffer->rawBuffer(), resources->timingQueryPool, 0, 6 );
++				g_device.vk.CmdResetQueryPool( cmdBuffer->rawBuffer(), resources->timingQueryPool, 0, kTimingQueryCount );
+ 				g_device.vk.CmdWriteTimestamp( cmdBuffer->rawBuffer(), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+-					resources->timingQueryPool, 0 );
++					resources->timingQueryPool, kTimingQueryStart );
+ 				resources->timingPending = false;
+ 			}
+ 
+@@ -737,6 +749,7 @@ namespace
+ 				}, ( resources->lumaExtent.width + 31 ) / 32, ( resources->lumaExtent.height + 31 ) / 32 ) )
+ 				return false;
+ 			Barrier( cmdBuffer->rawBuffer() );
++			WriteTimestamp( cmdBuffer->rawBuffer(), kTimingQueryPrepare );
+ 
+ 			const uint32_t pyramidX = ( resources->lumaExtent.width + 63 ) / 64;
+ 			const uint32_t pyramidY = ( resources->lumaExtent.height + 63 ) / 64;
+@@ -755,6 +768,7 @@ namespace
+ 			if ( !Dispatch( cmdBuffer->rawBuffer(), resources->pyramid, pyramidBindings, pyramidX, pyramidY ) )
+ 				return false;
+ 			Barrier( cmdBuffer->rawBuffer() );
++			WriteTimestamp( cmdBuffer->rawBuffer(), kTimingQueryPyramid );
+ 
+ 			const uint32_t strataWidth = std::max( ( resources->lumaExtent.width / 4 ) / 3, 1u );
+ 			if ( !Dispatch( cmdBuffer->rawBuffer(), resources->histogram,
+@@ -767,8 +781,9 @@ namespace
+ 				  Storage( resources->scdOutput ), common }, 9, 3 ) )
+ 				return false;
+ 			Barrier( cmdBuffer->rawBuffer() );
+-			WriteTimestamp( cmdBuffer->rawBuffer(), 1 );
++			WriteTimestamp( cmdBuffer->rawBuffer(), kTimingQuerySceneChange );
+ 
++			uint32_t opticalFlowTimingQuery = kTimingQuerySceneChange + 1u;
+ 			for ( int32_t level = int32_t( kPyramidLevels ) - 1; level >= 0; --level )
+ 			{
+ 				constants.opticalFlowPyramidLevel = uint32_t( level );
+@@ -787,6 +802,7 @@ namespace
+ 					  Storage( resources->flow[a][level] ), Storage( resources->scdOutput ), levelConstants }, searchX, searchY ) )
+ 					return false;
+ 				Barrier( cmdBuffer->rawBuffer() );
++				WriteTimestamp( cmdBuffer->rawBuffer(), opticalFlowTimingQuery++ );
+ 
+ 				RawImage &filterOutput = level == 0 ? resources->outputFlow : resources->flow[b][level];
+ 				if ( !Dispatch( cmdBuffer->rawBuffer(), resources->filter,
+@@ -795,6 +811,7 @@ namespace
+ 					( resources->flowExtent[level].height + 3 ) / 4 ) )
+ 					return false;
+ 				Barrier( cmdBuffer->rawBuffer() );
++				WriteTimestamp( cmdBuffer->rawBuffer(), opticalFlowTimingQuery++ );
+ 
+ 				if ( level > 0 )
+ 				{
+@@ -806,9 +823,10 @@ namespace
+ 						( resources->flowExtent[level - 1].height + 3 ) / 4 ) )
+ 						return false;
+ 					Barrier( cmdBuffer->rawBuffer() );
++					WriteTimestamp( cmdBuffer->rawBuffer(), opticalFlowTimingQuery++ );
+ 				}
+ 			}
+-			WriteTimestamp( cmdBuffer->rawBuffer(), 2 );
++			assert( opticalFlowTimingQuery == kTimingQueryOpticalFlowEnd + 1u );
+ 
+ 			resourceFrameIndex = ( resourceFrameIndex + 1 ) & 1u;
+ 			firstExecution = false;
+@@ -873,7 +891,7 @@ namespace
+ 			}, ( resources->flowExtent[0].width + 7 ) / 8, ( resources->flowExtent[0].height + 7 ) / 8 ) )
+ 				return nullptr;
+ 			Barrier( cmdBuffer->rawBuffer() );
+-			WriteTimestamp( cmdBuffer->rawBuffer(), 3 );
++			WriteTimestamp( cmdBuffer->rawBuffer(), kTimingQueryVectorField );
+ 
+ 			const bool guiMaskEnabled = cv_frame_generation_gui_correction || cv_frame_generation_debug_gui;
+ 			if ( guiMaskEnabled )
+@@ -910,6 +928,7 @@ namespace
+ 			{
+ 				guiMaskValid = false;
+ 			}
++			WriteTimestamp( cmdBuffer->rawBuffer(), kTimingQueryGuiMask );
+ 
+ 			if ( !Dispatch( cmdBuffer->rawBuffer(), resources->midpointPass, {
+ 				Sampled( resources->vectorFieldX ), Sampled( resources->vectorFieldY ), Sampled( previous->srgbView() ),
+@@ -920,6 +939,7 @@ namespace
+ 			}, ( resources->sourceExtent.width + 7 ) / 8, ( resources->sourceExtent.height + 7 ) / 8 ) )
+ 				return nullptr;
+ 			Barrier( cmdBuffer->rawBuffer() );
++			WriteTimestamp( cmdBuffer->rawBuffer(), kTimingQueryMidpoint );
+ 
+ 			memset( resources->counters.mapped, 0, size_t( resources->counters.size ) );
+ 			const uint32_t spdX = ( resources->sourceExtent.width + 63 ) / 64;
+@@ -944,6 +964,7 @@ namespace
+ 				inpaintingPyramidBindings, spdX, spdY ) )
+ 				return nullptr;
+ 			Barrier( cmdBuffer->rawBuffer() );
++			WriteTimestamp( cmdBuffer->rawBuffer(), kTimingQueryInpaintingPyramid );
+ 
+ 			if ( !Dispatch( cmdBuffer->rawBuffer(), resources->inpaintingPass, {
+ 				Sampled( resources->scdOutput ), Sampled( resources->inpaintingPyramid ), Sampled( current->srgbView() ),
+@@ -951,7 +972,7 @@ namespace
+ 				Sampler( resources->linearSampler ),
+ 			}, ( resources->sourceExtent.width + 7 ) / 8, ( resources->sourceExtent.height + 7 ) / 8 ) )
+ 				return nullptr;
+-			WriteTimestamp( cmdBuffer->rawBuffer(), 4 );
++			WriteTimestamp( cmdBuffer->rawBuffer(), kTimingQueryInpainting );
+ 
+ 			cmdBuffer->markDirty( resources->midpoint.get() );
+ 			return resources->midpoint;
+@@ -962,7 +983,7 @@ namespace
+ 			if ( !cmdBuffer || !recordedResources || !recordedResources->timingQueryPool )
+ 				return;
+ 			g_device.vk.CmdWriteTimestamp( cmdBuffer->rawBuffer(), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+-				recordedResources->timingQueryPool, 5 );
++				recordedResources->timingQueryPool, kTimingQueryOutput );
+ 			recordedResources->timingUsedFsr = usedFsr;
+ 			recordedResources->timingPending = true;
+ 		}
+@@ -998,19 +1019,47 @@ namespace
+ 		{
+ 			if ( !resources || !resources->timingPending || !resources->timingQueryPool )
+ 				return;
+-			std::array<uint64_t, 6> values = {};
++			std::array<uint64_t, kTimingQueryCount> values = {};
+ 			if ( g_device.vk.GetQueryPoolResults( g_device.device(), resources->timingQueryPool,
+ 					0, values.size(), sizeof( values ), values.data(), sizeof( uint64_t ),
+ 					VK_QUERY_RESULT_64_BIT ) != VK_SUCCESS )
+ 				return;
+ 			const double milliseconds = double( resources->timestampPeriod ) / 1'000'000.0;
+-			timings.preparationAndPyramidMilliseconds = double( values[1] - values[0] ) * milliseconds;
+-			timings.searchAndFilterMilliseconds = double( values[2] - values[1] ) * milliseconds;
+-			timings.vectorFieldMilliseconds = double( values[3] - values[2] ) * milliseconds;
+-			timings.interpolationAndInpaintingMilliseconds = double( values[4] - values[3] ) * milliseconds;
++			const auto Duration = [&]( uint32_t begin, uint32_t end ) {
++				return double( values[end] - values[begin] ) * milliseconds;
++			};
++			timings.prepareLumaMilliseconds = Duration( kTimingQueryStart, kTimingQueryPrepare );
++			timings.luminancePyramidMilliseconds = Duration( kTimingQueryPrepare, kTimingQueryPyramid );
++			timings.sceneChangeMilliseconds = Duration( kTimingQueryPyramid, kTimingQuerySceneChange );
++			uint32_t timingQuery = kTimingQuerySceneChange;
++			timings.opticalFlowSearchMilliseconds = 0.0;
++			timings.opticalFlowFilterMilliseconds = 0.0;
++			timings.opticalFlowScaleMilliseconds = 0.0;
++			for ( int32_t level = int32_t( kPyramidLevels ) - 1; level >= 0; --level )
++			{
++				timings.opticalFlowSearchMilliseconds += Duration( timingQuery, timingQuery + 1u );
++				timingQuery++;
++				timings.opticalFlowFilterMilliseconds += Duration( timingQuery, timingQuery + 1u );
++				timingQuery++;
++				if ( level > 0 )
++				{
++					timings.opticalFlowScaleMilliseconds += Duration( timingQuery, timingQuery + 1u );
++					timingQuery++;
++				}
++			}
++			assert( timingQuery == kTimingQueryOpticalFlowEnd );
++			timings.guiMaskMilliseconds = Duration( kTimingQueryVectorField, kTimingQueryGuiMask );
++			timings.midpointMilliseconds = Duration( kTimingQueryGuiMask, kTimingQueryMidpoint );
++			timings.inpaintingPyramidMilliseconds = Duration( kTimingQueryMidpoint, kTimingQueryInpaintingPyramid );
++			timings.inpaintingMilliseconds = Duration( kTimingQueryInpaintingPyramid, kTimingQueryInpainting );
++			timings.outputCompositeMilliseconds = Duration( kTimingQueryInpainting, kTimingQueryOutput );
++			timings.preparationAndPyramidMilliseconds = Duration( kTimingQueryStart, kTimingQuerySceneChange );
++			timings.searchAndFilterMilliseconds = Duration( kTimingQuerySceneChange, kTimingQueryOpticalFlowEnd );
++			timings.vectorFieldMilliseconds = Duration( kTimingQueryOpticalFlowEnd, kTimingQueryVectorField );
++			timings.interpolationAndInpaintingMilliseconds = Duration( kTimingQueryVectorField, kTimingQueryInpainting );
+ 			timings.generatedFsrMilliseconds = resources->timingUsedFsr
+-				? double( values[5] - values[4] ) * milliseconds : 0.0;
+-			timings.totalMilliseconds = double( values[5] - values[0] ) * milliseconds;
++				? timings.outputCompositeMilliseconds : 0.0;
++			timings.totalMilliseconds = Duration( kTimingQueryStart, kTimingQueryOutput );
+ 			resources->timingPending = false;
+ 			const uint32_t resourceSceneCutCopies =
+ 				*static_cast<const uint32_t *>( resources->telemetryCounters.mapped );
+diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
+index d7d8b6b0ee17..c0ece3055b2a 100644
+--- a/src/rendervulkan.hpp
++++ b/src/rendervulkan.hpp
+@@ -430,6 +430,17 @@ void vulkan_frame_generation_reset();
+ 
+ struct FrameGenerationGpuTimings
+ {
++	double prepareLumaMilliseconds = 0.0;
++	double luminancePyramidMilliseconds = 0.0;
++	double sceneChangeMilliseconds = 0.0;
++	double opticalFlowSearchMilliseconds = 0.0;
++	double opticalFlowFilterMilliseconds = 0.0;
++	double opticalFlowScaleMilliseconds = 0.0;
++	double guiMaskMilliseconds = 0.0;
++	double midpointMilliseconds = 0.0;
++	double inpaintingPyramidMilliseconds = 0.0;
++	double inpaintingMilliseconds = 0.0;
++	double outputCompositeMilliseconds = 0.0;
+ 	double preparationAndPyramidMilliseconds = 0.0;
+ 	double searchAndFilterMilliseconds = 0.0;
+ 	double vectorFieldMilliseconds = 0.0;
+diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
+index bc9f5f1c82f4..48e9fbfcc863 100644
+--- a/src/steamcompmgr.cpp
++++ b/src/steamcompmgr.cpp
+@@ -2568,6 +2568,17 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 		stats_printf( "framegen_fi_interpolation_gpu_ms=%f\n", frameGenerationTelemetry.gpu.interpolationAndInpaintingMilliseconds );
+ 		stats_printf( "framegen_generated_fsr_gpu_ms=%f\n", frameGenerationTelemetry.gpu.generatedFsrMilliseconds );
+ 		stats_printf( "framegen_total_gpu_ms=%f\n", frameGenerationTelemetry.gpu.totalMilliseconds );
++		stats_printf( "framegen_prepare_luma_gpu_ms=%f\n", frameGenerationTelemetry.gpu.prepareLumaMilliseconds );
++		stats_printf( "framegen_luma_pyramid_gpu_ms=%f\n", frameGenerationTelemetry.gpu.luminancePyramidMilliseconds );
++		stats_printf( "framegen_scene_change_gpu_ms=%f\n", frameGenerationTelemetry.gpu.sceneChangeMilliseconds );
++		stats_printf( "framegen_of_search_gpu_ms=%f\n", frameGenerationTelemetry.gpu.opticalFlowSearchMilliseconds );
++		stats_printf( "framegen_of_filter_gpu_ms=%f\n", frameGenerationTelemetry.gpu.opticalFlowFilterMilliseconds );
++		stats_printf( "framegen_of_scale_gpu_ms=%f\n", frameGenerationTelemetry.gpu.opticalFlowScaleMilliseconds );
++		stats_printf( "framegen_gui_mask_gpu_ms=%f\n", frameGenerationTelemetry.gpu.guiMaskMilliseconds );
++		stats_printf( "framegen_midpoint_gpu_ms=%f\n", frameGenerationTelemetry.gpu.midpointMilliseconds );
++		stats_printf( "framegen_inpainting_pyramid_gpu_ms=%f\n", frameGenerationTelemetry.gpu.inpaintingPyramidMilliseconds );
++		stats_printf( "framegen_inpainting_gpu_ms=%f\n", frameGenerationTelemetry.gpu.inpaintingMilliseconds );
++		stats_printf( "framegen_output_composite_gpu_ms=%f\n", frameGenerationTelemetry.gpu.outputCompositeMilliseconds );
+ 		stats_printf( "framegen_source_frames=%" PRIu64 "\n", frameGenerationTelemetry.sourceFrames );
+ 		stats_printf( "framegen_source_callbacks=%" PRIu64 "\n", frameGenerationTelemetry.sourceCallbacks );
+ 		stats_printf( "framegen_source_callbacks_blocked=%" PRIu64 "\n", frameGenerationTelemetry.sourceCallbacksBlocked );
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Fri, 7 Aug 2026 00:52:22 +0200
+Subject: framegen: lower default optical flow scale to 75 percent
+
+---
+ src/frame_generation_config.hpp        | 2 +-
+ src/rendervulkan.hpp                   | 2 +-
+ src/steamcompmgr.cpp                   | 2 +-
+ tests/test_frame_generation_config.cpp | 6 +++---
+ 4 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/src/frame_generation_config.hpp b/src/frame_generation_config.hpp
+index c418259165ee..403b4bbcddeb 100644
+--- a/src/frame_generation_config.hpp
++++ b/src/frame_generation_config.hpp
+@@ -20,7 +20,7 @@ namespace gamescope
+ 	struct FrameGenerationConfig
+ 	{
+ 		bool enabled = false;
+-		uint32_t flowScalePercent = 100;
++		uint32_t flowScalePercent = 75;
+ 		bool operator==( const FrameGenerationConfig &other ) const = default;
+ 	};
+ 
+diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
+index c0ece3055b2a..dd2b718516eb 100644
+--- a/src/rendervulkan.hpp
++++ b/src/rendervulkan.hpp
+@@ -466,7 +466,7 @@ struct FrameGenerationTelemetry
+ 	uint64_t sceneCutCopies = 0;
+ 	double sourceFrameIntervalMilliseconds = 0.0;
+ 	uint32_t queuedFrames = 0;
+-	uint32_t flowScalePercent = 100;
++	uint32_t flowScalePercent = 75;
+ 	uint32_t sourceCadenceHz = 0;
+ 	uint32_t outputCadenceHz = 0;
+ };
+diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
+index 48e9fbfcc863..49a0c3bb6090 100644
+--- a/src/steamcompmgr.cpp
++++ b/src/steamcompmgr.cpp
+@@ -6221,7 +6221,7 @@ handle_property_notify(xwayland_ctx_t *ctx, XPropertyEvent *ev)
+ 	if ( ev->atom == ctx->atoms.gamescopeFrameGenerationFlowScale )
+ 	{
+ 		gamescope::SetFrameGenerationFlowScale(
+-			get_prop( ctx, ctx->root, ctx->atoms.gamescopeFrameGenerationFlowScale, 100 ) );
++			get_prop( ctx, ctx->root, ctx->atoms.gamescopeFrameGenerationFlowScale, 75 ) );
+ 		hasRepaint = true;
+ 	}
+ 	if ( ev->atom == ctx->atoms.gamescopeXWaylandModeControl )
+diff --git a/tests/test_frame_generation_config.cpp b/tests/test_frame_generation_config.cpp
+index 3073d912c3c5..cbf317528e3f 100644
+--- a/tests/test_frame_generation_config.cpp
++++ b/tests/test_frame_generation_config.cpp
+@@ -14,7 +14,7 @@ int main()
+ 	static_assert( static_cast<uint32_t>( FrameGenerationStatus::DeadlineMiss ) == 5 );
+ 
+ 	SetFrameGenerationEnabled( 0 );
+-	SetFrameGenerationFlowScale( 100 );
++	SetFrameGenerationFlowScale( 75 );
+ 	assert( GetFrameGenerationConfig() == FrameGenerationConfig{} );
+ 	assert( GetFrameGenerationStatus() == FrameGenerationStatus::Disabled );
+ 
+@@ -29,8 +29,8 @@ int main()
+ 	SetFrameGenerationStatus( FrameGenerationStatus::Active );
+ 	assert( GetFrameGenerationConfigSerial() == enabledConfigSerial );
+ 
+-	SetFrameGenerationFlowScale( 75 );
+-	assert( GetFrameGenerationConfig().flowScalePercent == 75 );
++	SetFrameGenerationFlowScale( 60 );
++	assert( GetFrameGenerationConfig().flowScalePercent == 60 );
+ 	assert( GetFrameGenerationStatus() == FrameGenerationStatus::WarmingUp );
+ 	assert( GetFrameGenerationConfigSerial() > enabledConfigSerial );
+ 	assert( GetFrameGenerationStateSerial() > enabledSerial );
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Fri, 7 Aug 2026 00:54:45 +0200
+Subject: framegen: reduce GUI mask sampling in midpoint pass
+
+---
+ .../cs_ffx_frameinterpolation_midpoint.comp   | 19 +++++--------------
+ 1 file changed, 5 insertions(+), 14 deletions(-)
+
+diff --git a/src/shaders/cs_ffx_frameinterpolation_midpoint.comp b/src/shaders/cs_ffx_frameinterpolation_midpoint.comp
+index 91c9bd7df90a..2d1eee618521 100644
+--- a/src/shaders/cs_ffx_frameinterpolation_midpoint.comp
++++ b/src/shaders/cs_ffx_frameinterpolation_midpoint.comp
+@@ -80,20 +80,11 @@ vec3 toWorkingColor(vec3 rawColor)
+ 
+ float sampleGuiMask(vec2 uv)
+ {
+-    const vec2 texel = 1.0 / vec2(textureSize(r_current_gui_mask, 0));
+-    float mask = 0.0;
+-    for (int y = -1; y <= 1; y += 2)
+-    {
+-        for (int x = -1; x <= 1; x += 2)
+-        {
+-            const vec4 gatheredMask = textureGather(
+-                sampler2D(r_current_gui_mask, s_LinearClamp),
+-                clamp(uv + vec2(x, y) * texel, vec2(0.0), vec2(1.0)));
+-            mask = max(mask, max(max(gatheredMask.x, gatheredMask.y),
+-                max(gatheredMask.z, gatheredMask.w)));
+-        }
+-    }
+-    return mask;
++	const vec4 gatheredMask = textureGather(
++		sampler2D(r_current_gui_mask, s_LinearClamp),
++		clamp(uv, vec2(0.0), vec2(1.0)));
++	return max(max(gatheredMask.x, gatheredMask.y),
++		max(gatheredMask.z, gatheredMask.w));
+ }
+ 
+ void main()
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Fri, 7 Aug 2026 01:06:47 +0200
+Subject: framegen: write SDR interpolation directly to scanout
+
+---
+ src/frame_generation_vulkan.cpp | 39 +++++++++++++++++++++++----------
+ src/frame_generation_vulkan.hpp | 11 ++++++----
+ src/rendervulkan.cpp            | 35 ++++++++++++++++++++++++-----
+ 3 files changed, 64 insertions(+), 21 deletions(-)
+
+diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
+index d29f7c44e223..4a6696249bdb 100644
+--- a/src/frame_generation_vulkan.cpp
++++ b/src/frame_generation_vulkan.cpp
+@@ -41,6 +41,9 @@ gamescope::ConVar<bool> cv_frame_generation_debug_gui(
+ gamescope::ConVar<bool> cv_frame_generation_dot_product_of(
+ 	"frame_generation_dot_product_of", true,
+ 	"Use accelerated integer dot products for FidelityFX optical-flow SAD when supported." );
++gamescope::ConVar<bool> cv_frame_generation_direct_output(
++	"frame_generation_direct_output", true,
++	"Write SDR frame-generation inpainting directly into its scanout image." );
+ 
+ namespace
+ {
+@@ -835,20 +838,27 @@ namespace
+ 		}
+ 
+ 		gamescope::Rc<CVulkanTexture> RecordInterpolation( CVulkanCmdBuffer *cmdBuffer,
+-			gamescope::Rc<CVulkanTexture> previous, gamescope::Rc<CVulkanTexture> current, bool reset )
++			gamescope::Rc<CVulkanTexture> previous, gamescope::Rc<CVulkanTexture> current, bool reset,
++			gamescope::Rc<CVulkanTexture> finalOutput )
+ 		{
+ 			if ( !cmdBuffer || !resources || recordedResources != resources || !previous || !current ||
+ 				 previous->isYcbcr() || current->isYcbcr() ||
+ 				 previous->width() != resources->sourceExtent.width || previous->height() != resources->sourceExtent.height ||
+-				 current->width() != resources->sourceExtent.width || current->height() != resources->sourceExtent.height )
++				 current->width() != resources->sourceExtent.width || current->height() != resources->sourceExtent.height ||
++				 ( finalOutput && ( finalOutput->isYcbcr() ||
++					 finalOutput->width() != resources->sourceExtent.width ||
++					 finalOutput->height() != resources->sourceExtent.height ) ) )
+ 				return nullptr;
+ 
+ 			cmdBuffer->bindTexture( 1, previous );
+ 			cmdBuffer->bindTexture( 2, current );
+ 			cmdBuffer->prepareSrcImage( previous.get() );
+ 			cmdBuffer->prepareSrcImage( current.get() );
+-			cmdBuffer->bindTarget( resources->midpoint );
+-			cmdBuffer->prepareDestImage( resources->midpoint.get() );
++			gamescope::Rc<CVulkanTexture> interpolationOutput = finalOutput;
++			if ( !interpolationOutput )
++				interpolationOutput = resources->midpoint;
++			cmdBuffer->bindTarget( interpolationOutput );
++			cmdBuffer->prepareDestImage( interpolationOutput.get() );
+ 			cmdBuffer->insertBarrier();
+ 
+ 			const VkClearColorValue zero = {};
+@@ -932,7 +942,7 @@ namespace
+ 
+ 			if ( !Dispatch( cmdBuffer->rawBuffer(), resources->midpointPass, {
+ 				Sampled( resources->vectorFieldX ), Sampled( resources->vectorFieldY ), Sampled( previous->srgbView() ),
+-				Sampled( current->srgbView() ), Sampled( resources->scdOutput ), StorageView( resources->midpoint->srgbView() ),
++				Sampled( current->srgbView() ), Sampled( resources->scdOutput ), StorageView( interpolationOutput->srgbView() ),
+ 				fiConstants, StorageBuffer( resources->telemetryCounters ),
+ 				Sampled( resources->guiMask[guiMaskIndex] ),
+ 				Sampler( resources->linearSampler ),
+@@ -952,7 +962,7 @@ namespace
+ 			};
+ 			const Descriptor fiSpdConstants = Upload( spdConstants );
+ 			std::vector<Descriptor> inpaintingPyramidBindings = {
+-				Sampled( resources->midpoint->srgbView() ), StorageBuffer( resources->counters ),
++				Sampled( interpolationOutput->srgbView() ), StorageBuffer( resources->counters ),
+ 			};
+ 			for ( uint32_t level = 0; level < 13; ++level )
+ 				inpaintingPyramidBindings.push_back( StorageView( resources->inpaintingPyramid.mipViews[
+@@ -968,14 +978,14 @@ namespace
+ 
+ 			if ( !Dispatch( cmdBuffer->rawBuffer(), resources->inpaintingPass, {
+ 				Sampled( resources->scdOutput ), Sampled( resources->inpaintingPyramid ), Sampled( current->srgbView() ),
+-				Sampled( current->srgbView() ), StorageView( resources->midpoint->srgbView() ), fiConstants,
++				Sampled( current->srgbView() ), StorageView( interpolationOutput->srgbView() ), fiConstants,
+ 				Sampler( resources->linearSampler ),
+ 			}, ( resources->sourceExtent.width + 7 ) / 8, ( resources->sourceExtent.height + 7 ) / 8 ) )
+ 				return nullptr;
+ 			WriteTimestamp( cmdBuffer->rawBuffer(), kTimingQueryInpainting );
+ 
+-			cmdBuffer->markDirty( resources->midpoint.get() );
+-			return resources->midpoint;
++			cmdBuffer->markDirty( interpolationOutput.get() );
++			return interpolationOutput;
+ 		}
+ 
+ 		void RecordOutputTimestamp( CVulkanCmdBuffer *cmdBuffer, bool usedFsr )
+@@ -1262,10 +1272,12 @@ gamescope::Rc<CVulkanTexture> vulkan_frame_generation_record_interpolation(
+ 	CVulkanCmdBuffer *cmdBuffer,
+ 	gamescope::Rc<CVulkanTexture> previous,
+ 	gamescope::Rc<CVulkanTexture> current,
+-	bool reset )
++	bool reset,
++	gamescope::Rc<CVulkanTexture> finalOutput )
+ {
+ 	return GetOpticalFlowContext().RecordInterpolation(
+-		cmdBuffer, std::move( previous ), std::move( current ), reset );
++		cmdBuffer, std::move( previous ), std::move( current ), reset,
++		std::move( finalOutput ) );
+ }
+ 
+ void vulkan_frame_generation_notify_submit( uint64_t sequence )
+@@ -1288,6 +1300,11 @@ bool vulkan_frame_generation_ab_enabled()
+ 	return cv_frame_generation_ab;
+ }
+ 
++bool vulkan_frame_generation_direct_output_enabled()
++{
++	return cv_frame_generation_direct_output;
++}
++
+ void vulkan_frame_generation_record_output_timestamp(
+ 	CVulkanCmdBuffer *cmdBuffer, bool usedFsr )
+ {
+diff --git a/src/frame_generation_vulkan.hpp b/src/frame_generation_vulkan.hpp
+index bc20bf5a3d2b..dcb8f4aee8ae 100644
+--- a/src/frame_generation_vulkan.hpp
++++ b/src/frame_generation_vulkan.hpp
+@@ -15,14 +15,16 @@ bool vulkan_frame_generation_record_optical_flow(
+ 	bool reset );
+ 
+ // Run the optical-flow-only FI vector field, midpoint, SPD inpainting pyramid,
+-// and final inpainting after a successful optical-flow record. The returned
+-// FP16 texture remains in raw pre-FSR dimensions. SDR remains in its source
+-// encoding; HDR is converted to linear scRGB for interpolation and inpainting.
++// and final inpainting after a successful optical-flow record. The output
++// remains in raw pre-FSR dimensions. SDR remains in its source encoding; HDR
++// is converted to linear scRGB for interpolation and inpainting. When supplied,
++// finalOutput is used for the complete midpoint/inpainting chain and returned.
+ gamescope::Rc<CVulkanTexture> vulkan_frame_generation_record_interpolation(
+ 	CVulkanCmdBuffer *cmdBuffer,
+ 	gamescope::Rc<CVulkanTexture> previous,
+ 	gamescope::Rc<CVulkanTexture> current,
+-	bool reset );
++	bool reset,
++	gamescope::Rc<CVulkanTexture> finalOutput = nullptr );
+ 
+ // Associate the most recently recorded work with Gamescope's submission
+ // timeline so descriptor and image resources are never reused while in flight.
+@@ -30,6 +32,7 @@ void vulkan_frame_generation_notify_submit( uint64_t sequence );
+ bool vulkan_frame_generation_work_complete();
+ void vulkan_frame_generation_reset_optical_flow();
+ bool vulkan_frame_generation_ab_enabled();
++bool vulkan_frame_generation_direct_output_enabled();
+ 
+ void vulkan_frame_generation_record_output_timestamp(
+ 	CVulkanCmdBuffer *cmdBuffer, bool usedFsr );
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index a4a7ecc4b5b8..175114d253ee 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -4681,9 +4681,25 @@ namespace
+ 				return;
+ 			}
+ 
++			const bool abDuplicate = vulkan_frame_generation_ab_enabled();
++			const bool directOutput =
++				!abDuplicate && !fsrEnabled && !ColorspaceIsHDR( realLayer.colorspace ) &&
++				vulkan_frame_generation_direct_output_enabled();
++			gamescope::Rc<CVulkanTexture> scanout;
++			if ( directOutput )
++			{
++				scanout = AcquireScanout(
++					rawSource->width(), rawSource->height(), rawSource->drmFormat() );
++				if ( !scanout )
++				{
++					gamescope::SetFrameGenerationStatus( gamescope::FrameGenerationStatus::UnsupportedGPU );
++					return;
++				}
++			}
++
+ 			gamescope::Rc<CVulkanTexture> midpoint =
+ 				vulkan_frame_generation_record_interpolation(
+-					cmdBuffer.get(), m_history, rawSource, false );
++					cmdBuffer.get(), m_history, rawSource, false, scanout );
+ 			if ( !midpoint )
+ 			{
+ 				gamescope::SetFrameGenerationStatus( gamescope::FrameGenerationStatus::UnsupportedGPU );
+@@ -4701,7 +4717,6 @@ namespace
+ 				realLayer, false, frameInfo->useFSRLayer0, nullptr,
+ 				m_currentRealOutputId };
+ 
+-			const bool abDuplicate = vulkan_frame_generation_ab_enabled();
+ 			std::optional<uint64_t> sequence;
+ 			if ( abDuplicate )
+ 			{
+@@ -4717,8 +4732,8 @@ namespace
+ 					? ( realLayer.tex->drmFormat() != DRM_FORMAT_INVALID
+ 						? realLayer.tex->drmFormat() : g_output.uOutputFormat )
+ 					: rawSource->drmFormat();
+-				gamescope::Rc<CVulkanTexture> scanout = AcquireScanout(
+-					outputWidth, outputHeight, outputFormat );
++				if ( !scanout )
++					scanout = AcquireScanout( outputWidth, outputHeight, outputFormat );
+ 				if ( !scanout )
+ 				{
+ 					gamescope::SetFrameGenerationStatus( gamescope::FrameGenerationStatus::UnsupportedGPU );
+@@ -4806,8 +4821,16 @@ namespace
+ 				generated.acquirePoint = std::make_shared<gamescope::CAcquireTimelinePoint>(
+ 					m_completionTimeline, completionPoint );
+ 
+-				sequence = vulkan_composite( &generatedFrame, nullptr, false, scanout,
+-					false, std::move( cmdBuffer ), false, fsrIntermediate );
++				if ( directOutput )
++				{
++					vulkan_frame_generation_record_output_timestamp( cmdBuffer.get(), false );
++					sequence = g_device.submit( std::move( cmdBuffer ) );
++				}
++				else
++				{
++					sequence = vulkan_composite( &generatedFrame, nullptr, false, scanout,
++						false, std::move( cmdBuffer ), false, fsrIntermediate );
++				}
+ 				if ( !sequence )
+ 				{
+ 					gamescope::SetFrameGenerationStatus( gamescope::FrameGenerationStatus::UnsupportedGPU );
