@@ -297,4 +297,9 @@ steam_pid=$!
 # session cgroup.
 wait -n "$gamescope_pid" "$steam_pid"
 status=$?
+
+# Make sure steam and its child processes are killed, as pressure vessel
+# uses flatpak-portal to launch them under a separate cgroup
+flatpak kill org.anatase.Steam || true
+
 exit "$status"
