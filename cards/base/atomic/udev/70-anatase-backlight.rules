@@ -1,0 +1,2 @@
+# Allow the active Steam session to adjust display brightness directly.
+ACTION=="add", SUBSYSTEM=="backlight", TEST=="brightness", RUN+="/usr/bin/chmod 0666 /sys%p/brightness"

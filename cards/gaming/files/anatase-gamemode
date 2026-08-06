@@ -263,11 +263,25 @@ steam_tmp_name=steam-tmp
 steam_tmp="$XDG_RUNTIME_DIR/$steam_tmp_name"
 install -d -m0700 "$steam_tmp"
 
+# Flatpak provides a read-only sysfs view and ignores filesystem overrides for
+# it. Bind each writable brightness attribute at its canonical /sys/devices
+# path instead.
+backlight_bind_args=()
+for brightness_path in /sys/class/backlight/*/brightness; do
+    [[ -e $brightness_path ]] || continue
+    if exec {brightness_fd}<>"$brightness_path"; then
+        backlight_bind_args+=(--bind-fd="$brightness_fd")
+    else
+        echo >&2 "Failed to open backlight brightness control: $brightness_path"
+    fi
+done
+
 # First sanity checks
 /usr/libexec/anatase-preflight || exit $?
 
 flatpak run \
         --socket=x11-passthrough \
+        "${backlight_bind_args[@]}" \
         --filesystem="xdg-run/$response_wl_display:ro" \
         --filesystem="xdg-run/${tmpdir##*/}:rw" \
         --filesystem="xdg-run/$steam_tmp_name:create" \

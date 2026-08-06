@@ -95,9 +95,13 @@ files:
   - flatpak/flathub.flatpakrepo
   - dracut_cleanup_shadow.sh
   - systemd-remount-fs.conf
+  - udev/70-anatase-backlight.rules
 
 postprocess: |
     set -eux
+
+    install -Dm0644 /files/udev/70-anatase-backlight.rules \
+        /usr/lib/udev/rules.d/70-anatase-backlight.rules
 
     install -dm0755 /usr/lib/ostree
     cat > /usr/lib/ostree/prepare-root.conf <<'EOF'
@@ -112,6 +116,8 @@ postprocess: |
     cat > /usr/lib/dracut/dracut.conf.d/20-atomic-bootc.conf <<'EOF'
     # Include the bootc/ostree root setup path in the generated initramfs.
     add_dracutmodules+=" ostree bootc "
+    # Backlight devices may be created before switching to the real root.
+    install_items+=" /usr/lib/udev/rules.d/70-anatase-backlight.rules "
     EOF
 
     cat > /usr/lib/dracut/dracut.conf.d/20-installer.conf <<'EOF'
