@@ -119,10 +119,6 @@ Finally, you can `claude --dangerously-skip-permissions` and go to the bathroom 
 
 ## Roadmap
  * Fix remaining bugs through user reports to achieve a stable release
- * Port remaining handheld power controls to reach parity with old Bazzite kernel
-   * The Anatase kernel is secure-boot compatible. This meant dropping /dev/mem access when secure boot is enabled (ryzenadj) and acpi_call
-   * acpi_call was used for the Lenovo Legion Gos and Ayaneo/GPD/OneXPlayer handhelds
-   * Ayaneo/GPD/OneXPlayer handhelds use a new kernel driver and power backend that is currently being fleshed out (has parity with previous backend, custom TDP, fan curves, etc)
  * Add CEC support for gamemode only
      * on startup or wake-up, if a TV is connected:
        * if off, turn it on and switch to output
