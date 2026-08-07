@@ -168,7 +168,7 @@ def changelog(
     sections = [
         (
             f"From previous {f'`{channel.lower()}` ' if channel else ''}version "
-            f"`{previous_version}` there are the following changes:"
+            f"`{previous_version}` there are the following changes. Only one package name is shown for each version."
         ),
         major_packages(previous_packages, current_packages),
         commits(previous, current),
