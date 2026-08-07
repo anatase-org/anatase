@@ -23,12 +23,14 @@ fi
 channel_title="${channel^}"
 timestamp="$(date --utc +'%Y-%m-%dT%H:%M:%SZ')"
 description="[View the full changelog and release details on GitHub]($release_url)"
+role_id="${DISCORD_ROLE_ID:-}"
 
 if ! payload="$(jq -nc \
     --arg title "Anatase $version — $channel_title Release" \
     --arg release_url "$release_url" \
     --arg description "$description" \
     --arg timestamp "$timestamp" \
+    --arg role_id "$role_id" \
     '{
       allowed_mentions: {parse: []},
       embeds: [{
@@ -38,7 +40,13 @@ if ! payload="$(jq -nc \
         color: 16309515,
         timestamp: $timestamp
       }]
-    }'
+    }
+    | if $role_id != "" then
+        .content = "<@&\($role_id)>"
+        | .allowed_mentions.roles = [$role_id]
+      else
+        .
+      end'
   )"; then
   warn "Discord release notification skipped: could not generate the webhook payload"
   exit 0

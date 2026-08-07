@@ -200,7 +200,9 @@ jobs:
           echo "url=$release_url" >> "$GITHUB_OUTPUT"
 
       - name: Announce prerelease on Discord
+        if: ${{ env.LUDOS_CHANNEL != 'testing' }}
         env:
+          DISCORD_ROLE_ID: ${{ secrets.DISCORD_ROLE_ROLLING }}
           DISCORD_THREAD_ID: ${{ secrets.DISCORD_ROLLING_THREAD }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           RELEASE_URL: ${{ steps.release.outputs.url }}

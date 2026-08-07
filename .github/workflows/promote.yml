@@ -147,6 +147,7 @@ jobs:
       - name: Announce release on Discord
         if: ${{ inputs.images }}
         env:
+          DISCORD_ROLE_ID: ${{ secrets.DISCORD_ROLE_STABLE }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           RELEASE_URL: ${{ steps.release.outputs.url }}
           VERSION: ${{ steps.image.outputs.version }}
