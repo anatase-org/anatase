@@ -10401,3 +10401,30 @@ index 7be906206cd2..dfc7e63c43b7 100644
  	};
  
  	extern CScreenshotManager g_ScreenshotMgr;
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Fri, 7 Aug 2026 19:21:04 +0200
+Subject: framegen: unblock Steam focus transitions
+
+---
+ src/steamcompmgr.cpp | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
+index d68982ec42cf..2a5083877470 100644
+--- a/src/steamcompmgr.cpp
++++ b/src/steamcompmgr.cpp
+@@ -9257,7 +9257,11 @@ steamcompmgr_main(int argc, char **argv)
+ 				: 0;
+ 			const bool frameGenerationFreeRunning = bFrameGeneration &&
+ 				( bVRR || eFlipType == FlipType::Async );
+-			bool frameGenerationPending =
++			// A queued frame belongs to the frame-generating focus.  Do not let it
++			// suppress painting after focus has moved to an ineligible window (most
++			// notably Steam while transitioning to Settings or Media).  That paint
++			// will reset the stale frame-generation queue in paint_all().
++			bool frameGenerationPending = bFrameGeneration &&
+ 				vulkan_frame_generation_has_pending_frame();
+ 			const uint64_t frameGenerationNow = get_time_in_nanos();
+ 
