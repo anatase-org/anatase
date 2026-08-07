@@ -5,8 +5,8 @@ Subject: [NA] add dev script
 
 ---
  0001-cstdint.patch |  37 ++++++++++++++++
- sync.sh            | 105 +++++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 142 insertions(+)
+ sync.sh            | 107 +++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 144 insertions(+)
  create mode 100644 0001-cstdint.patch
  create mode 100755 sync.sh
 
@@ -55,10 +55,10 @@ index 000000000000..5b4351521b45
 +
 diff --git a/sync.sh b/sync.sh
 new file mode 100755
-index 000000000000..9ccc6c91ff80
+index 000000000000..6c46ede463cc
 --- /dev/null
 +++ b/sync.sh
-@@ -0,0 +1,105 @@
+@@ -0,0 +1,107 @@
 +#!/bin/sh
 +
 +usage() {
@@ -136,9 +136,11 @@ index 000000000000..9ccc6c91ff80
 +        sudo mount --bind /run/plasmalogin.conf /etc/plasmalogin.conf
 +    fi
 +    sudo mv ~/gamescope /usr/bin/gamescope
-+    sudo systemctl restart plasmalogin
++    # games like hl2 will stay open in subsandboxes if we do not kill the flatpak
++    flatpak kill org.anatase.Steam
 +    # make sure its dead so it releases the gpu
 +    pkill gamescope
++    sudo systemctl restart plasmalogin
 +
 +    if [ -n "$appid" ]; then
 +        attempts=0
@@ -10223,3 +10225,179 @@ index a4a7ecc4b5b8..175114d253ee 100644
  				if ( !sequence )
  				{
  					gamescope::SetFrameGenerationStatus( gamescope::FrameGenerationStatus::UnsupportedGPU );
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Fri, 7 Aug 2026 14:04:18 +0200
+Subject: framegen: fix screenshot teardown crash
+
+---
+ src/steamcompmgr.cpp        | 49 ++++++++++++++++++++++++-------------
+ src/steamcompmgr_shared.hpp | 12 ++++++++-
+ 2 files changed, 43 insertions(+), 18 deletions(-)
+
+diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
+index 49a0c3bb6090..d68982ec42cf 100644
+--- a/src/steamcompmgr.cpp
++++ b/src/steamcompmgr.cpp
+@@ -2837,6 +2837,14 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 		g_bFSRActive = ( heldCommit->upscaledTexture->eFilter == GamescopeUpscaleFilter::FSR );
+ 	}
+ 
++	// Screenshots of the composition should use the real application layer, not
++	// a queued frame-generation scanout.  Apart from being the expected image to
++	// archive, this keeps screenshot command buffers from retaining framegen's
++	// scanout pool across focus changes (for example when opening Steam).
++	std::optional<FrameInfo_t> frameInfoWithoutFrameGeneration;
++	if ( gamescope::CScreenshotManager::Get().HasPendingScreenshot() )
++		frameInfoWithoutFrameGeneration = frameInfo;
++
+ 	const gamescope::FrameGenerationConfig frameGeneration = gamescope::GetFrameGenerationConfig();
+ 	const bool frameGenerationEligible = frameGeneration.enabled &&
+ 		steamcompmgr_window_allows_frame_generation( w ) &&
+@@ -2930,11 +2938,17 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 		return;
+ 	}
+ 
+-	std::optional<gamescope::GamescopeScreenshotInfo> oScreenshotInfo =
+-		gamescope::CScreenshotManager::Get().ProcessPendingScreenshot();
++	std::optional<gamescope::GamescopeScreenshotInfo> oScreenshotInfo;
++	if ( frameInfoWithoutFrameGeneration )
++		oScreenshotInfo = gamescope::CScreenshotManager::Get().ProcessPendingScreenshot();
+ 
+ 	if ( oScreenshotInfo )
+ 	{
++		FrameInfo_t screenshotFrameInfo =
++			oScreenshotInfo->eScreenshotType == GAMESCOPE_CONTROL_SCREENSHOT_TYPE_SCREEN_BUFFER
++				? frameInfo
++				: *frameInfoWithoutFrameGeneration;
++
+ 		std::filesystem::path path = std::filesystem::path{ oScreenshotInfo->szScreenshotPath };
+ 
+ 		uint32_t drmCaptureFormat = DRM_FORMAT_INVALID;
+@@ -2953,8 +2967,8 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 		if ( pScreenshotTexture )
+ 		{
+ 			bool bHDRScreenshot = path.extension() == ".avif" &&
+-								  frameInfo.layerCount > 0 &&
+-								  ColorspaceIsHDR( frameInfo.layers[0].colorspace ) &&
++								  screenshotFrameInfo.layerCount > 0 &&
++								  ColorspaceIsHDR( screenshotFrameInfo.layers[0].colorspace ) &&
+ 								  oScreenshotInfo->eScreenshotType != GAMESCOPE_CONTROL_SCREENSHOT_TYPE_SCREEN_BUFFER;
+ 
+ 			if ( drmCaptureFormat == DRM_FORMAT_NV12 || oScreenshotInfo->eScreenshotType != GAMESCOPE_CONTROL_SCREENSHOT_TYPE_SCREEN_BUFFER )
+@@ -2963,18 +2977,18 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 				for ( uint32_t nInputEOTF = 0; nInputEOTF < EOTF_Count; nInputEOTF++ )
+ 				{
+ 					auto& luts = bHDRScreenshot ? g_ScreenshotColorMgmtLutsHDR : g_ScreenshotColorMgmtLuts;
+-					frameInfo.lut3D[nInputEOTF] = luts[nInputEOTF].vk_lut3d;
+-					frameInfo.shaperLut[nInputEOTF] = luts[nInputEOTF].vk_lut1d;
++					screenshotFrameInfo.lut3D[nInputEOTF] = luts[nInputEOTF].vk_lut3d;
++					screenshotFrameInfo.shaperLut[nInputEOTF] = luts[nInputEOTF].vk_lut1d;
+ 				}
+ 
+ 				if ( oScreenshotInfo->eScreenshotType == GAMESCOPE_CONTROL_SCREENSHOT_TYPE_BASE_PLANE_ONLY )
+ 				{
+ 					// Remove everything but base planes from the screenshot.
+-					for (int i = 0; i < frameInfo.layerCount; i++)
++					for (int i = 0; i < screenshotFrameInfo.layerCount; i++)
+ 					{
+-						if (frameInfo.layers[i].zpos >= (int)g_zposExternalOverlay)
++						if (screenshotFrameInfo.layers[i].zpos >= (int)g_zposExternalOverlay)
+ 						{
+-							frameInfo.layerCount = i;
++							screenshotFrameInfo.layerCount = i;
+ 							break;
+ 						}
+ 					}
+@@ -2984,11 +2998,11 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 					if ( is_mura_correction_enabled() )
+ 					{
+ 						// Remove the last layer which is for mura...
+-						for (int i = 0; i < frameInfo.layerCount; i++)
++						for (int i = 0; i < screenshotFrameInfo.layerCount; i++)
+ 						{
+-							if (frameInfo.layers[i].zpos >= (int)g_zposMuraCorrection)
++							if (screenshotFrameInfo.layers[i].zpos >= (int)g_zposMuraCorrection)
+ 							{
+-								frameInfo.layerCount = i;
++								screenshotFrameInfo.layerCount = i;
+ 								break;
+ 							}
+ 						}
+@@ -2996,10 +3010,10 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 				}
+ 
+ 				// Re-enable output color management (blending) if it was disabled by mura.
+-				frameInfo.applyOutputColorMgmt = true;
++				screenshotFrameInfo.applyOutputColorMgmt = true;
+ 			}
+ 
+-			frameInfo.outputEncodingEOTF = bHDRScreenshot ? EOTF_PQ : EOTF_Gamma22;
++			screenshotFrameInfo.outputEncodingEOTF = bHDRScreenshot ? EOTF_PQ : EOTF_Gamma22;
+ 
+ 			uint32_t uCompositeDebugBackup = g_uCompositeDebug;
+ 
+@@ -3010,12 +3024,12 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 
+ 			std::optional<uint64_t> oScreenshotSeq;
+ 			if ( drmCaptureFormat == DRM_FORMAT_NV12 )
+-				oScreenshotSeq = vulkan_composite( &frameInfo, pScreenshotTexture, false, nullptr );
++				oScreenshotSeq = vulkan_composite( &screenshotFrameInfo, pScreenshotTexture, false, nullptr );
+ 			else if ( oScreenshotInfo->eScreenshotType == GAMESCOPE_CONTROL_SCREENSHOT_TYPE_FULL_COMPOSITION ||
+ 					  oScreenshotInfo->eScreenshotType == GAMESCOPE_CONTROL_SCREENSHOT_TYPE_SCREEN_BUFFER )
+-				oScreenshotSeq = vulkan_composite( &frameInfo, nullptr, false, pScreenshotTexture );
++				oScreenshotSeq = vulkan_composite( &screenshotFrameInfo, nullptr, false, pScreenshotTexture );
+ 			else
+-				oScreenshotSeq = vulkan_screenshot( &frameInfo, pScreenshotTexture, nullptr );
++				oScreenshotSeq = vulkan_screenshot( &screenshotFrameInfo, pScreenshotTexture, nullptr );
+ 
+ 			if ( oScreenshotInfo->eScreenshotType != GAMESCOPE_CONTROL_SCREENSHOT_TYPE_SCREEN_BUFFER )
+ 			{
+@@ -6714,6 +6728,7 @@ static void
+ steamcompmgr_exit(void)
+ {
+ 	g_ImageWaiter.Shutdown();
++	vulkan_frame_generation_reset();
+ 
+ 	// Clean up any commits.
+ 	{
+diff --git a/src/steamcompmgr_shared.hpp b/src/steamcompmgr_shared.hpp
+index 7be906206cd2..dfc7e63c43b7 100644
+--- a/src/steamcompmgr_shared.hpp
++++ b/src/steamcompmgr_shared.hpp
+@@ -281,6 +281,7 @@ namespace gamescope
+ 		{
+ 			std::unique_lock lock{ m_ScreenshotInfoMutex };
+ 			m_ScreenshotInfo = std::move( info );
++			m_bScreenshotPending.store( true, std::memory_order_release );
+ 			hasRepaint = true;
+ 		}
+ 
+@@ -297,16 +298,25 @@ namespace gamescope
+ 			} );
+ 		}
+ 
++		bool HasPendingScreenshot() const
++		{
++			return m_bScreenshotPending.load( std::memory_order_acquire );
++		}
++
+ 		std::optional<GamescopeScreenshotInfo> ProcessPendingScreenshot()
+ 		{
+ 			std::unique_lock lock{ m_ScreenshotInfoMutex };
+-			return std::exchange( m_ScreenshotInfo, std::nullopt );
++			std::optional<GamescopeScreenshotInfo> result =
++				std::exchange( m_ScreenshotInfo, std::nullopt );
++			m_bScreenshotPending.store( false, std::memory_order_release );
++			return result;
+ 		}
+ 
+ 		static CScreenshotManager &Get();
+ 	private:
+ 		std::mutex m_ScreenshotInfoMutex;
+ 		std::optional<GamescopeScreenshotInfo> m_ScreenshotInfo;
++		std::atomic<bool> m_bScreenshotPending = false;
+ 	};
+ 
+ 	extern CScreenshotManager g_ScreenshotMgr;
