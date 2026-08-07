@@ -181,6 +181,7 @@ jobs:
             --sign
 
       - name: Create GitHub prerelease
+        id: release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.image.outputs.version }}
@@ -195,3 +196,15 @@ jobs:
             --title "$VERSION: $channel_title Release" \
             --notes-file changelog.md \
             --prerelease
+          release_url=$(gh release view "$release_tag" --json url --jq '.url')
+          echo "url=$release_url" >> "$GITHUB_OUTPUT"
+
+      - name: Announce prerelease on Discord
+        env:
+          DISCORD_THREAD_ID: ${{ secrets.DISCORD_ROLLING_THREAD }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RELEASE_URL: ${{ steps.release.outputs.url }}
+          VERSION: ${{ steps.image.outputs.version }}
+        run: |
+          .github/discord-notify.sh \
+            "$LUDOS_CHANNEL" "$VERSION" "$RELEASE_URL"
