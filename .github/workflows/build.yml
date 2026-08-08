@@ -66,6 +66,7 @@ jobs:
       # - arm
     if: >-
       ${{
+        (!cancelled()) &&
         github.event_name != 'schedule' &&
         needs.x86.result == 'success' &&
         needs.x86.outputs.images != '[]'
