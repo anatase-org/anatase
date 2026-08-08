@@ -22,7 +22,8 @@ systemctl --user import-environment \
 
 service=anatase-gamemode.service
 cleanup() {
-    trap - EXIT HUP INT TERM
+    trap - EXIT
+    trap '' HUP INT TERM
 
     systemctl --user stop "$service" 2>/dev/null || true
     flatpak kill org.anatase.Steam || true
