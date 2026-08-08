@@ -137,9 +137,7 @@ jobs:
                   id: .key,
                   name: $name,
                   large: (
-                    $name == "base-scx" or
-                    $name == "browser" or
-                    $name == "okular"
+                    $name == "browser"
                   )
                 }
               ]' cache/ci/build.json)"
