@@ -44,6 +44,19 @@ packages:
   - python3-xlib
 
 specs:
+  - spec: vpower/vpower.spec
+    files:
+      - overrides.patch
+      - vpower.spec
+      - vpower.tmpfiles
+    packages:
+      - vpower
+    patch:
+      type: git
+      url: https://github.com/evlaV/vpower.git
+      ref: ${spec:Version}
+      file: overrides.patch
+
   - spec: gamescope/gamescope.spec
     files:
       - 0001-cstdint.patch

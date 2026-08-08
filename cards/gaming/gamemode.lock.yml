@@ -11,3 +11,5 @@ steamos-manager:
   patch-sha: 244e21225379af4037aeeabdc6efd5b71984e7dd
 xdg-desktop-portal-gamescope:
   patch-sha: 412a4bff892bdb5726a549d03b11e6ce2f8e8152
+vpower:
+  patch-sha: a7e64ada0bd5c29647f156b39b02f2a670fdf493

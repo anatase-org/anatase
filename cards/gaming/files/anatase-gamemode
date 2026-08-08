@@ -226,6 +226,11 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 143' HUP INT TERM
 
+# Publish Steam's battery metrics for the lifetime of this Gamemode session.
+if [[ -x /usr/lib/vpower ]]; then
+    /usr/lib/vpower &
+fi
+
 # Gamescope publishes the Xwayland and Wayland display names to its startup
 # socket. Steam must be launched separately with the environment Gamescope
 # reports, rather than as Gamescope's primary child.
@@ -285,6 +290,7 @@ flatpak run \
         --filesystem="xdg-run/$response_wl_display:ro" \
         --filesystem="xdg-run/${tmpdir##*/}:rw" \
         --filesystem="xdg-run/$steam_tmp_name:create" \
+        --filesystem=/run/vpower:ro \
         --env="TMPDIR=$steam_tmp" \
         org.anatase.Steam \
         -steamos3 \

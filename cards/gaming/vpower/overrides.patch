@@ -1,0 +1,283 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sat, 8 Aug 2026 13:22:55 +0200
+Subject: remove shutdown ability
+
+---
+ Cargo.lock  | 66 -----------------------------------------------------
+ Cargo.toml  |  2 --
+ main.rs     | 59 +++++------------------------------------------
+ vpower.toml |  2 --
+ 4 files changed, 6 insertions(+), 123 deletions(-)
+ delete mode 100644 vpower.toml
+
+diff --git a/Cargo.lock b/Cargo.lock
+index 036d2ea2a089..27ce6b1107cf 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -14,76 +14,10 @@ version = "0.2.172"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "d750af042f7ef4f724306de029d18836c26c1765a54a6a3f094cbd23a7267ffa"
+ 
+-[[package]]
+-name = "proc-macro2"
+-version = "1.0.95"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "02b3e5e68a3a1a02aad3ec490a98007cbc13c37cbe84a3cd7b8e406d76e7f778"
+-dependencies = [
+- "unicode-ident",
+-]
+-
+-[[package]]
+-name = "quote"
+-version = "1.0.40"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "1885c039570dc00dcb4ff087a89e185fd56bae234ddc7f056a945bf36467248d"
+-dependencies = [
+- "proc-macro2",
+-]
+-
+-[[package]]
+-name = "serde"
+-version = "1.0.219"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "5f0e2c6ed6606019b4e29e69dbaba95b11854410e5347d525002456dbbb786b6"
+-dependencies = [
+- "serde_derive",
+-]
+-
+-[[package]]
+-name = "serde_derive"
+-version = "1.0.219"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "5b0276cf7f2c73365f7157c8123c21cd9a50fbbd844757af28ca1f5925fc2a00"
+-dependencies = [
+- "proc-macro2",
+- "quote",
+- "syn",
+-]
+-
+-[[package]]
+-name = "syn"
+-version = "2.0.101"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "8ce2b7fc941b3a24138a0a7cf8e858bfc6a992e7978a068a5c760deb0ed43caf"
+-dependencies = [
+- "proc-macro2",
+- "quote",
+- "unicode-ident",
+-]
+-
+-[[package]]
+-name = "toml"
+-version = "0.5.8"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "a31142970826733df8241ef35dc040ef98c679ab14d7c3e54d827099b3acecaa"
+-dependencies = [
+- "serde",
+-]
+-
+-[[package]]
+-name = "unicode-ident"
+-version = "1.0.18"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "5a5f39404a5da50712a4c1eecf25e90dd62b613502b7e925fd4e4d19b5c96512"
+-
+ [[package]]
+ name = "vpower"
+ version = "1.6.2"
+ dependencies = [
+  "lazy_static",
+  "libc",
+- "serde",
+- "toml",
+ ]
+diff --git a/Cargo.toml b/Cargo.toml
+index aa52ea16d402..e6476408e84a 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -9,6 +9,4 @@ path = "main.rs"
+ 
+ [dependencies]
+ libc = "0.2"
+-serde = { version = "1.0", features = ["derive"] }
+-toml = "0.5"
+ lazy_static = "1.5.0"
+diff --git a/main.rs b/main.rs
+index eb9f1b559b3f..5bfe2705af7e 100644
+--- a/main.rs
++++ b/main.rs
+@@ -1,12 +1,10 @@
+ mod sensors;
+ 
+ use self::sensors::Sensors;
+-use serde::Deserialize;
+ use std::cmp::Ordering;
+ use std::fs;
+ use std::io;
+ use std::path::{Path, PathBuf};
+-use std::process::Command;
+ use std::str::FromStr;
+ use std::thread;
+ use std::time::Duration;
+@@ -14,12 +12,6 @@ use std::sync::Mutex;
+ use std::collections::HashSet;
+ use lazy_static::lazy_static;
+ 
+-#[derive(Deserialize)]
+-struct Config {
+-    request_shutdown_battery_percent: Option<f64>,
+-    force_shutdown_timeout_secs: Option<f64>,
+-}
+-
+ lazy_static! {
+     static ref failed: Mutex<HashSet<String>> = Default::default();
+ }
+@@ -183,29 +175,6 @@ fn main() {
+         println!("DBG: Debug mode enabled");
+     }
+ 
+-    // Read /etc/vpower.toml
+-    let config_path = "/etc/vpower.toml";
+-    let mut request_shutdown_battery_percent = 0.49999998;
+-    let mut force_shutdown_timeout_secs = 10.0;
+-    match fs::read(config_path) {
+-        Err(err) => eprintln!("Error: read {config_path}: {err}"),
+-
+-        Ok(bytes) => match toml::from_slice::<Config>(&bytes) {
+-            Err(err) => eprintln!("Error: read {config_path}: {err}"),
+-
+-            Ok(config) => {
+-                if let Some(value) = config.request_shutdown_battery_percent {
+-                    request_shutdown_battery_percent = value;
+-                }
+-                if let Some(value) = config.force_shutdown_timeout_secs {
+-                    force_shutdown_timeout_secs = value;
+-                }
+-            }
+-        },
+-    }
+-    println!("Info: Config: request_shutdown_battery_percent: {request_shutdown_battery_percent}");
+-    println!("Info: Config: force_shutdown_timeout_secs: {force_shutdown_timeout_secs}");
+-
+     // Mains/AC
+     let mut path_ac = PathBuf::from("");
+     let power_supply_paths = fs::read_dir("/sys/class/power_supply/").unwrap();
+@@ -475,10 +444,9 @@ fn main() {
+         let voltage_now = read_battery_f64(&path_bat, "voltage_now");
+ 
+         // Derive battery variables.
+-        let charge_shutdown = charge_full.map(|charge_full| {
+-            let rsbp = request_shutdown_battery_percent;
+-            charge_full * (rsbp / 100.0)
+-        });
++        // Keep Steam's projected battery-life metric without retaining the
++        // configurable shutdown action. Reserve the final 5% in the estimate.
++        let charge_shutdown = charge_full.map(|charge_full| charge_full * 0.05);
+ 
+         let power_now = match (voltage_now, current_now, power_now_from_file) {
+             (Some(voltage_now), Some(current_now), _) => Some(voltage_now * current_now),
+@@ -738,7 +706,8 @@ fn main() {
+             _ => None,
+         };
+ 
+-        // Calcuate secs_until_shutdown_request.
++        // Steam uses this value for projected battery life. It is only an
++        // estimate; vpower does not perform a shutdown when it reaches zero.
+         let vars = (charge_now, charge_shutdown, voltage_min_design, power_now);
+         let secs_until_shutdown_request = match vars {
+             (
+@@ -753,7 +722,7 @@ fn main() {
+                     Some(hours * 3600.0)
+                 } else {
+                     match ac_status {
+-                        // Avoid shutdown request while connected.
++                        // Avoid reporting an empty battery while connected.
+                         Some("Connected") => Some(1.0),
+                         _ => Some(0.0),
+                     }
+@@ -774,22 +743,6 @@ fn main() {
+         let val = secs_until_shutdown_request;
+         write_f64(dir_path, "secs_until_shutdown_request", val);
+ 
+-        // Force shutdown after timeout.
+-        if secs_until_shutdown_request.map_or(false, |x| x == 0.0) {
+-            println!("Reached {request_shutdown_battery_percent}% battery.");
+-            println!("Forcing shutdown in {force_shutdown_timeout_secs} seconds.");
+-            thread::sleep(Duration::from_secs_f64(force_shutdown_timeout_secs));
+-
+-            println!("Shutting down now.");
+-            match Command::new("poweroff").status() {
+-                Err(err) => panic!("poweroff: {err}"),
+-                Ok(status) => match status.success() {
+-                    false => panic!("poweroff: {status}"),
+-                    true => return,
+-                },
+-            }
+-        }
+-
+ 	// Print if battery_percent (as int) changes, if >= 10% every 5%,
+ 	// otherwise every 1%
+ 	let prev_battery_percent_int = prev_battery_percent.unwrap_or(-1.0).round() as i32;
+diff --git a/vpower.toml b/vpower.toml
+deleted file mode 100644
+index 692749d8368b..000000000000
+--- a/vpower.toml
++++ /dev/null
+@@ -1,2 +0,0 @@
+-request_shutdown_battery_percent = 0.49999998
+-force_shutdown_timeout_secs = 10
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sat, 8 Aug 2026 13:49:30 +0200
+Subject: detect nonstandard system battery names
+
+---
+ main.rs | 29 +++++++++++++++++++----------
+ 1 file changed, 19 insertions(+), 10 deletions(-)
+
+diff --git a/main.rs b/main.rs
+index 5bfe2705af7e..fa73f85e58de 100644
+--- a/main.rs
++++ b/main.rs
+@@ -196,20 +196,29 @@ fn main() {
+ 	println!("Warning: Could not find device for AC/Mains, some functionality might be missing or not accurate.");
+     }
+ 
+-    // Try to find reasonable BATn to use (stop at the first),
+-    // otherwise it's a system without battery -- bail-out
++    // Find the first system battery. Battery power supplies are not required to
++    // use BATn names; for example, some devices expose their battery as BATT.
+     let mut path_bat = PathBuf::from("");
+-    for i in 0..9 {
+-	let path_string_test_base = format!("/sys/class/power_supply/BAT{i}");
+-	let path_string_test = format!("{path_string_test_base}/type");
+-	let path_bat_test = Path::new(&path_string_test);
+-	if ! path_bat_test.exists() {
++    let power_supply_paths = fs::read_dir("/sys/class/power_supply/").unwrap();
++    for ps in power_supply_paths {
++	let path_string_test_base = ps.unwrap().path();
++	let path_bat_test = path_string_test_base.join("type");
++	if !path_bat_test.exists() {
+ 	    continue;
+ 	}
+ 
+-	let path_bat_test_type: String = fs::read_to_string(path_bat_test).expect("Cannot read path");
+-	if path_bat_test_type.contains("Battery") {
+-	    path_bat = PathBuf::from(path_string_test_base);
++	let path_bat_test_type = fs::read_to_string(path_bat_test).expect("Cannot read path");
++	if path_bat_test_type.trim() == "Battery" {
++	    // Ignore peripheral batteries when the kernel identifies their scope.
++	    let path_scope = path_string_test_base.join("scope");
++	    let is_device_battery = fs::read_to_string(path_scope)
++		.map(|scope| scope.trim() == "Device")
++		.unwrap_or(false);
++	    if is_device_battery {
++		continue;
++	    }
++
++	    path_bat = path_string_test_base;
+ 	    println!("Info: Init: Found battery: '{}'", path_bat.display());
+ 	    break;
+ 	}
