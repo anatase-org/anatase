@@ -14,8 +14,9 @@ if [[ ${ANATASE_GAMEMODE_IN_SCOPE:-0} != 1 ]]; then
     cleanup_scope() {
         trap - EXIT HUP INT TERM
 
-        systemctl --user kill --kill-whom=all "$scope" 2>/dev/null || true
+        systemctl --user kill --kill-whom=main "$scope" 2>/dev/null || true
         [[ -z $scope_runner ]] || wait "$scope_runner" 2>/dev/null || true
+        systemctl --user kill --kill-whom=all "$scope" 2>/dev/null || true
         systemctl --user stop "$scope" 2>/dev/null || true
     }
     trap cleanup_scope EXIT
@@ -211,7 +212,13 @@ gamescope_pid=
 steam_pid=
 cleanup() {
     trap - EXIT HUP INT TERM
-    
+
+    if [[ -n $steam_pid ]] && kill -0 "$steam_pid" 2>/dev/null; then
+        flatpak run org.anatase.Steam -shutdown || true
+        timeout 60s tail --pid="$steam_pid" -f /dev/null || true
+    fi
+    flatpak kill org.anatase.Steam || true
+
     # Teardown services that use the overrides
     systemctl --user stop \
         flatpak-portal.service \
@@ -309,9 +316,5 @@ steam_pid=$!
 # session cgroup.
 wait -n "$gamescope_pid" "$steam_pid"
 status=$?
-
-# Make sure steam and its child processes are killed, as pressure vessel
-# uses flatpak-portal to launch them under a separate cgroup
-flatpak kill org.anatase.Steam || true
 
 exit "$status"
