@@ -45,7 +45,9 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 143' HUP INT TERM
 
-systemctl --user --wait start "$service"
+# A signal interrupts Bash's wait builtin, allowing the cleanup trap to run.
+systemctl --user --wait start "$service" &
+wait "$!"
 status=$?
 # Plasma Login reserves status 1 for authentication failures. Map a failed
 # session payload to its HELPER_SESSION_ERROR status so it starts the greeter.
