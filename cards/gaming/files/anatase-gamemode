@@ -5,30 +5,46 @@ if (( $# != 0 )); then
     exit 2
 fi
 
-# Run the session in its own cgroup so teardown also catches subprocesses that
-# outlive their immediate parent. Keep this wrapper outside the scope so it can
-# cull the scope after the session payload exits.
+# Run the session as a user service so it does not inherit the login session's
+# controlling terminal. Keep this wrapper outside the service so it can request
+# an ordered stop when the login session ends.
 if [[ ${ANATASE_GAMEMODE_IN_SCOPE:-0} != 1 ]]; then
-    scope="anatase-gamemode-$$.scope"
-    scope_runner=
-    cleanup_scope() {
+    # D-Bus activated portal services and the session service inherit their
+    # environment from the user manager.
+    export XDG_SESSION_TYPE=x11
+    export DESKTOP_SESSION=gamemode
+    export XDG_CURRENT_DESKTOP=gamescope
+    export XDG_SESSION_DESKTOP=gamemode
+    export XDG_DESKTOP_PORTAL_DIR=/usr/share/xdg-desktop-portal/gamescope-portals
+    systemctl --user import-environment \
+        DESKTOP_SESSION \
+        XDG_CURRENT_DESKTOP \
+        XDG_SESSION_DESKTOP \
+        XDG_SESSION_ID \
+        XDG_SESSION_TYPE \
+        XDG_DESKTOP_PORTAL_DIR
+
+    service="anatase-gamemode-$$.service"
+    service_runner=
+    cleanup_service() {
         trap - EXIT HUP INT TERM
 
-        systemctl --user kill --kill-whom=main "$scope" 2>/dev/null || true
-        [[ -z $scope_runner ]] || wait "$scope_runner" 2>/dev/null || true
-        systemctl --user kill --kill-whom=all "$scope" 2>/dev/null || true
-        systemctl --user stop "$scope" 2>/dev/null || true
+        systemctl --user stop "$service" 2>/dev/null || true
+        [[ -z $service_runner ]] || wait "$service_runner" 2>/dev/null || true
     }
-    trap cleanup_scope EXIT
+    trap cleanup_service EXIT
     trap 'exit 143' HUP INT TERM
 
-    systemd-run --user --scope --quiet \
-        --unit="$scope" \
+    systemd-run --user --quiet --wait --collect --service-type=exec \
+        --unit="$service" \
+        --property=KillMode=mixed \
+        --property=Slice=session.slice \
+        --property='After=flatpak-portal.service flatpak-session-helper.service xdg-desktop-portal.service' \
         --setenv=ANATASE_GAMEMODE_IN_SCOPE=1 \
         -- "$0" &
-    scope_runner=$!
+    service_runner=$!
 
-    wait "$scope_runner"
+    wait "$service_runner"
     status=$?
     # Plasma Login reserves status 1 for authentication failures. Map a failed
     # session payload to its HELPER_SESSION_ERROR status so it starts the greeter.
@@ -89,24 +105,6 @@ gamescope_args=(
     -T "$stats"
     -O '*',eDP-1
 )
-
-# Gamescope's clients use Xwayland even though the login session is Wayland.
-export XDG_SESSION_TYPE=x11
-
-export DESKTOP_SESSION=gamemode
-export XDG_CURRENT_DESKTOP=gamescope
-export XDG_SESSION_DESKTOP=gamemode
-export XDG_DESKTOP_PORTAL_DIR=/usr/share/xdg-desktop-portal/gamescope-portals
-
-# D-Bus activated portal services are user services, so publish the Gamemode
-# identity and private backend directory to the user manager.
-systemctl --user import-environment \
-    DESKTOP_SESSION \
-    XDG_CURRENT_DESKTOP \
-    XDG_SESSION_DESKTOP \
-    XDG_SESSION_ID \
-    XDG_SESSION_TYPE \
-    XDG_DESKTOP_PORTAL_DIR
 
 # Steam activates SteamOS Manager while its web UI is starting, then waits for
 # the daemon to finish probing the system. Start it now so that initialization
@@ -213,10 +211,7 @@ steam_pid=
 cleanup() {
     trap - EXIT HUP INT TERM
 
-    if [[ -n $steam_pid ]] && kill -0 "$steam_pid" 2>/dev/null; then
-        flatpak run org.anatase.Steam -shutdown || true
-        timeout 60s tail --pid="$steam_pid" -f /dev/null || true
-    fi
+    # Teardown and cleanup subportals as well
     flatpak kill org.anatase.Steam || true
 
     # Teardown services that use the overrides
