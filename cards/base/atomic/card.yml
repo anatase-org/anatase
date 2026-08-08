@@ -271,7 +271,6 @@ postprocess: |
     [Service]
     Type=oneshot
     RemainAfterExit=yes
-    ExecStart=/usr/bin/flatpak --system update --appstream
     ExecStart=/usr/bin/appstreamcli refresh --force
     Nice=19
     IOWeight=10
