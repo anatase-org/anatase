@@ -38,6 +38,7 @@ env:
 
 concurrency:
   group: build
+  queue: single
 
 jobs:
   x86:
@@ -65,7 +66,6 @@ jobs:
       # - arm
     if: >-
       ${{
-        always() &&
         github.event_name != 'schedule' &&
         needs.x86.result == 'success' &&
         needs.x86.outputs.images != '[]'

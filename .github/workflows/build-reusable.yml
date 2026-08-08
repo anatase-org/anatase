@@ -265,7 +265,6 @@ jobs:
       - packages
     if: >-
       ${{
-        always() &&
         inputs.release_outputs &&
         needs.build.result == 'success' &&
         (needs.packages.result == 'success' || needs.packages.result == 'skipped') &&
@@ -376,7 +375,6 @@ jobs:
       - packages
     if: >-
       ${{
-        always() &&
         inputs.release_outputs &&
         needs.build.result == 'success' &&
         (needs.packages.result == 'success' || needs.packages.result == 'skipped') &&
