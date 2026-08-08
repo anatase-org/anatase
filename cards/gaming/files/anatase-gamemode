@@ -107,6 +107,11 @@ systemctl --user import-environment \
     XDG_SESSION_TYPE \
     XDG_DESKTOP_PORTAL_DIR
 
+# Steam activates SteamOS Manager while its web UI is starting, then waits for
+# the daemon to finish probing the system. Start it now so that initialization
+# overlaps Gamescope and Steam startup instead of delaying the first UI window.
+systemctl --user start --no-block steamos-manager.service || true
+
 #
 # Prepare Steam
 #
