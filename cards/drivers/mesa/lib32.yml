@@ -10,8 +10,8 @@ build-deps:
   # Crates that need dynamic resolving
   - rust-paste+default-devel
   - rust-rustc-hash+default-devel
-  - rust-syn+clone-impls-devel
-  - rust-syn+default-devel
+  - rust-syn2+clone-impls-devel
+  - rust-syn2+default-devel
 
 packages:
   x86_64:
