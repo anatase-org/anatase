@@ -286,7 +286,8 @@ for brightness_path in /sys/class/backlight/*/brightness; do
     fi
 done
 
-# First sanity checks
+# Keep the preflight blank screen visible while Steam starts on configured
+# systems. Installation and recovery flows remain synchronous.
 /usr/libexec/anatase-preflight || exit $?
 
 flatpak run \

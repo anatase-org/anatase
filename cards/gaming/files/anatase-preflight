@@ -7,6 +7,71 @@ import re
 import subprocess
 import sys
 
+APP_ID = "org.anatase.Steam"
+
+
+def steam_installed(run=subprocess.run):
+    for scope in ("--system", "--user"):
+        result = run(
+            ["flatpak", "info", scope, APP_ID],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        if result.returncode == 0:
+            return True
+    return False
+
+
+def steam_data_directories(home=None, xdg_data_home=None):
+    home = Path(home or os.path.expanduser("~"))
+    configured_data = xdg_data_home
+    if configured_data is None:
+        configured_data = os.environ.get("XDG_DATA_HOME")
+    user_data = Path(configured_data) if configured_data else home / ".local/share"
+    return (
+        user_data / "Steam",
+        home / ".var/app" / APP_ID / "data/Steam",
+    )
+
+
+def steam_primed(data_directories=None):
+    roots = data_directories or steam_data_directories()
+    for root in roots:
+        pattern = str(Path(root) / "package/steam_client_*_ubuntu12.installed")
+        for marker_name in glob.glob(pattern):
+            marker = Path(marker_name)
+            try:
+                if marker.is_file() and marker.stat().st_size > 0:
+                    return True
+            except OSError:
+                continue
+    return False
+
+
+def background_blank_if_ready(
+    installed=steam_installed,
+    primed=steam_primed,
+    fork=os.fork,
+):
+    if not installed() or not primed():
+        return False
+
+    try:
+        return fork() > 0
+    except OSError as error:
+        print(
+            f"Could not background the preflight blank screen: {error}",
+            file=sys.stderr,
+        )
+        return False
+
+
+# Once Steam is ready, let the blank preflight window initialize alongside it.
+# Keep first-install preparation synchronous so its status remains visible.
+if __name__ == "__main__" and background_blank_if_ready():
+    raise SystemExit(0)
+
 import cairo
 from evdev import InputDevice, ecodes, list_devices
 import gi
@@ -23,7 +88,6 @@ def _(text):
     return text
 
 
-APP_ID = "org.anatase.Steam"
 QR_PATH = "/usr/share/anatase/gamemode/steam-subscriber-agreement-qr.png"
 CONTROLLER_DB_PATH = "/usr/share/sdl/gamecontrollerdb.txt"
 USER_EXIT = 10
@@ -333,45 +397,6 @@ progressbar progress {{
     background-color: #ffffff;
 }}
 """
-
-
-def steam_installed(run=subprocess.run):
-    for scope in ("--system", "--user"):
-        result = run(
-            ["flatpak", "info", scope, APP_ID],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        )
-        if result.returncode == 0:
-            return True
-    return False
-
-
-def steam_data_directories(home=None, xdg_data_home=None):
-    home = Path(home or os.path.expanduser("~"))
-    configured_data = xdg_data_home
-    if configured_data is None:
-        configured_data = os.environ.get("XDG_DATA_HOME")
-    user_data = Path(configured_data) if configured_data else home / ".local/share"
-    return (
-        user_data / "Steam",
-        home / ".var/app" / APP_ID / "data/Steam",
-    )
-
-
-def steam_primed(data_directories=None):
-    roots = data_directories or steam_data_directories()
-    for root in roots:
-        pattern = str(Path(root) / "package/steam_client_*_ubuntu12.installed")
-        for marker_name in glob.glob(pattern):
-            marker = Path(marker_name)
-            try:
-                if marker.is_file() and marker.stat().st_size > 0:
-                    return True
-            except OSError:
-                continue
-    return False
 
 
 class Preflight(Gtk.Application):
