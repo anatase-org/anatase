@@ -5,5 +5,6 @@ After=flatpak-portal.service flatpak-session-helper.service xdg-desktop-portal.s
 [Service]
 Type=exec
 ExecStart=/usr/libexec/anatase-gamemode
+SuccessExitStatus=143
 KillMode=mixed
 Slice=session.slice
