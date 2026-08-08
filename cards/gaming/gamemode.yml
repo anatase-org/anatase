@@ -147,7 +147,10 @@ specs:
 
 files:
   - files/anatase-gamemode
+  - files/anatase-gamemode-session
   - files/anatase-gamemode-udiskie.yml
+  - files/anatase-gamemode.service
+  - files/anatase-flatpak-scope.conf
   - files/anatase-preflight
   - files/gamemode.desktop
   - files/gamescope-portals.conf
@@ -157,9 +160,15 @@ postprocess: |
   set -eux
 
   install -Dm0755 /files/files/anatase-gamemode \
-      /usr/bin/anatase-gamemode
+      /usr/libexec/anatase-gamemode
+  install -Dm0755 /files/files/anatase-gamemode-session \
+      /usr/bin/anatase-gamemode-session
   install -Dm0644 /files/files/anatase-gamemode-udiskie.yml \
       /usr/share/anatase/gamemode/anatase-gamemode-udiskie.yml
+  install -Dm0644 /files/files/anatase-gamemode.service \
+      /usr/lib/systemd/user/anatase-gamemode.service
+  install -Dm0644 /files/files/anatase-flatpak-scope.conf \
+      /usr/lib/systemd/user/app-flatpak-.scope.d/10-anatase-gamemode.conf
   install -Dm0755 /files/files/anatase-preflight \
       /usr/libexec/anatase-preflight
   install -Dm0644 /files/files/gamemode.desktop \
@@ -201,8 +210,8 @@ postprocess: |
       -e '/^PartOf=graphical-session.target$/d' \
       /usr/lib/systemd/user/xdg-desktop-portal-holo.service
 
-  bash -n /usr/bin/anatase-gamemode
-  grep -Fx 'Exec=/usr/libexec/plasma-dbus-run-session-if-needed /usr/bin/anatase-gamemode' \
+  bash -n /usr/libexec/anatase-gamemode /usr/bin/anatase-gamemode-session
+  grep -Fx 'Exec=/usr/bin/anatase-gamemode-session' \
       /usr/share/wayland-sessions/gamemode.desktop
   grep -Fx 'DesktopNames=gamescope' \
       /usr/share/wayland-sessions/gamemode.desktop

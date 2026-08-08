@@ -1,0 +1,53 @@
+#!/bin/bash
+
+if (( $# != 0 )); then
+    echo "Usage: ${0##*/}" >&2
+    exit 2
+fi
+
+# D-Bus activated portal services and the session service inherit their
+# environment from the user manager.
+export XDG_SESSION_TYPE=x11
+export DESKTOP_SESSION=gamemode
+export XDG_CURRENT_DESKTOP=gamescope
+export XDG_SESSION_DESKTOP=gamemode
+export XDG_DESKTOP_PORTAL_DIR=/usr/share/xdg-desktop-portal/gamescope-portals
+systemctl --user import-environment \
+    DESKTOP_SESSION \
+    XDG_CURRENT_DESKTOP \
+    XDG_SESSION_DESKTOP \
+    XDG_SESSION_ID \
+    XDG_SESSION_TYPE \
+    XDG_DESKTOP_PORTAL_DIR
+
+service=anatase-gamemode.service
+cleanup() {
+    trap - EXIT HUP INT TERM
+
+    systemctl --user stop "$service" 2>/dev/null || true
+    flatpak kill org.anatase.Steam || true
+
+    # Teardown services that use the overrides after Gamemode has stopped.
+    systemctl --user stop \
+        flatpak-portal.service \
+        flatpak-session-helper.service \
+        xdg-desktop-portal.service || true
+
+    systemctl --user unset-environment \
+        DESKTOP_SESSION \
+        DISPLAY \
+        XDG_CURRENT_DESKTOP \
+        XDG_DESKTOP_PORTAL_DIR \
+        XDG_SESSION_DESKTOP \
+        XDG_SESSION_ID \
+        XDG_SESSION_TYPE || true
+}
+trap cleanup EXIT
+trap 'exit 143' HUP INT TERM
+
+systemctl --user --wait start "$service"
+status=$?
+# Plasma Login reserves status 1 for authentication failures. Map a failed
+# session payload to its HELPER_SESSION_ERROR status so it starts the greeter.
+(( status == 0 )) || status=2
+exit "$status"

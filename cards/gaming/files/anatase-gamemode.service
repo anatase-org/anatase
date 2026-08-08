@@ -1,0 +1,9 @@
+[Unit]
+Description=Anatase Gamemode Session
+After=flatpak-portal.service flatpak-session-helper.service xdg-desktop-portal.service
+
+[Service]
+Type=exec
+ExecStart=/usr/libexec/anatase-gamemode
+KillMode=mixed
+Slice=session.slice

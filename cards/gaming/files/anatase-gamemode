@@ -5,53 +5,6 @@ if (( $# != 0 )); then
     exit 2
 fi
 
-# Run the session as a user service so it does not inherit the login session's
-# controlling terminal. Keep this wrapper outside the service so it can request
-# an ordered stop when the login session ends.
-if [[ ${ANATASE_GAMEMODE_IN_SCOPE:-0} != 1 ]]; then
-    # D-Bus activated portal services and the session service inherit their
-    # environment from the user manager.
-    export XDG_SESSION_TYPE=x11
-    export DESKTOP_SESSION=gamemode
-    export XDG_CURRENT_DESKTOP=gamescope
-    export XDG_SESSION_DESKTOP=gamemode
-    export XDG_DESKTOP_PORTAL_DIR=/usr/share/xdg-desktop-portal/gamescope-portals
-    systemctl --user import-environment \
-        DESKTOP_SESSION \
-        XDG_CURRENT_DESKTOP \
-        XDG_SESSION_DESKTOP \
-        XDG_SESSION_ID \
-        XDG_SESSION_TYPE \
-        XDG_DESKTOP_PORTAL_DIR
-
-    service="anatase-gamemode-$$.service"
-    service_runner=
-    cleanup_service() {
-        trap - EXIT HUP INT TERM
-
-        systemctl --user stop "$service" 2>/dev/null || true
-        [[ -z $service_runner ]] || wait "$service_runner" 2>/dev/null || true
-    }
-    trap cleanup_service EXIT
-    trap 'exit 143' HUP INT TERM
-
-    systemd-run --user --quiet --wait --collect --service-type=exec \
-        --unit="$service" \
-        --property=KillMode=mixed \
-        --property=Slice=session.slice \
-        --property='After=flatpak-portal.service flatpak-session-helper.service xdg-desktop-portal.service' \
-        --setenv=ANATASE_GAMEMODE_IN_SCOPE=1 \
-        -- "$0" &
-    service_runner=$!
-
-    wait "$service_runner"
-    status=$?
-    # Plasma Login reserves status 1 for authentication failures. Map a failed
-    # session payload to its HELPER_SESSION_ERROR status so it starts the greeter.
-    (( status == 0 )) || status=2
-    exit "$status"
-fi
-
 #
 # Prepare Gamescope
 #
@@ -211,24 +164,24 @@ steam_pid=
 cleanup() {
     trap - EXIT HUP INT TERM
 
-    # Teardown and cleanup subportals as well
-    flatpak kill org.anatase.Steam || true
-
-    # Teardown services that use the overrides
-    systemctl --user stop \
-        flatpak-portal.service \
-        flatpak-session-helper.service \
-        xdg-desktop-portal.service
-
-    # Unset the environment variables
-    systemctl --user unset-environment \
-        DESKTOP_SESSION \
-        DISPLAY \
-        XDG_CURRENT_DESKTOP \
-        XDG_DESKTOP_PORTAL_DIR \
-        XDG_SESSION_DESKTOP \
-        XDG_SESSION_ID \
-        XDG_SESSION_TYPE || true
+    if [[ -n $steam_pid ]] && kill -0 "$steam_pid" 2>/dev/null; then
+        timeout 30s flatpak enter "$steam_pid" /bin/sh -c '
+            pid=
+            for comm in /proc/[0-9]*/comm; do
+                read -r name < "$comm" || continue
+                [ "$name" = steam ] || continue
+                pid=${comm#/proc/}
+                pid=${pid%/comm}
+                break
+            done
+            [ -n "$pid" ] || exit 0
+            kill -TERM "$pid"
+            while [ -r "/proc/$pid/stat" ] && read -r _ _ state _ < "/proc/$pid/stat"; do
+                [ "$state" != Z ] || break
+                sleep 0.1
+            done
+        ' || true
+    fi
 }
 trap cleanup EXIT
 trap 'exit 143' HUP INT TERM

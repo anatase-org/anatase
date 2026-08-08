@@ -1,7 +1,6 @@
 [Desktop Entry]
 Name=Gamemode
 Comment=Gamemode session powered by Gamescope
-Exec=/usr/libexec/plasma-dbus-run-session-if-needed /usr/bin/anatase-gamemode
-TryExec=/usr/bin/anatase-gamemode
+Exec=/usr/bin/anatase-gamemode-session
 Type=Application
 DesktopNames=gamescope
