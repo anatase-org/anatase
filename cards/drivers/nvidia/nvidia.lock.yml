@@ -1,12 +1,12 @@
 nvidia-driver:
-  upstream-sha: f769f889081c6ca317e8e33f4cd2e3797fbe336f
+  upstream-sha: 10f598bd9616d7302ef222b981876a8571187b08
 nvidia-driver-selinux:
   upstream-sha: 4bba0e06d8b86bb1fc2066c285c1d9b5a2408561
 nvidia-kmod-common:
-  upstream-sha: 36cd322cd6eaa95d9edb82a76c09f76917e51d8b
+  upstream-sha: eb22f1f4aa139655a428f2dece73f2a2d43664db
 nvidia-modprobe:
-  upstream-sha: bf453313b1b26792c98fd400518c40509afae249
+  upstream-sha: 6a54593f1bca2b1a55f4c57dbaf12d156ef9ef61
 nvidia-persistenced:
-  upstream-sha: 5eb5560e0d135ca029686ed1940b447df987dcde
+  upstream-sha: cf4888e464a48d783ae945cb6b9a654348c2c53c
 nvidia-settings:
-  upstream-sha: a9b2b54481a4ff70fc453c4691a2a4c4b54f4fea
+  upstream-sha: d7baa7df1c93af4cad305175fa85693b6018ad23

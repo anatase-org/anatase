@@ -1,5 +1,5 @@
 Name:           nvidia-settings
-Version:        610.43.03
+Version:        610.57.04
 Release:        1%{?dist}
 Summary:        Configure the NVIDIA graphics driver
 Epoch:          3
@@ -134,6 +134,9 @@ appstream-util validate-relax --nonet %{buildroot}/%{_metainfodir}/%{name}.appda
 %{_libdir}/libXNVCtrl.so
 
 %changelog
+* Fri Aug 07 2026 Simone Caronni <negativo17@gmail.com> - 3:610.57.04-1
+- Update to 610.57.04.
+
 * Wed Jul 08 2026 Simone Caronni <negativo17@gmail.com> - 3:610.43.03-1
 - Update to 610.43.03.
 

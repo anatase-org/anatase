@@ -182,7 +182,7 @@ index 7a8f4a298494..cc0920d3b6b8 100644
  #: src/qml/LandingComponent.qml:140
  #, kde-format
 diff --git a/po/de/org.kde.plasmasetup.po b/po/de/org.kde.plasmasetup.po
-index b0e895a0d006..6c8a2fd1547d 100644
+index f3411c41f5e8..d3a35fb599b9 100644
 --- a/po/de/org.kde.plasmasetup.po
 +++ b/po/de/org.kde.plasmasetup.po
 @@ -353,8 +353,8 @@ msgstr "Willkommen bei<br/><b>Plasma Mobile</b>"
@@ -422,10 +422,10 @@ index b984e5f6fc19..7197d599e000 100644
  #: src/qml/LandingComponent.qml:140
  #, kde-format
 diff --git a/po/nb/org.kde.plasmasetup.po b/po/nb/org.kde.plasmasetup.po
-index 103d20d82156..e3892dfa33f2 100644
+index c47220393db8..69ecc0bcd049 100644
 --- a/po/nb/org.kde.plasmasetup.po
 +++ b/po/nb/org.kde.plasmasetup.po
-@@ -348,8 +348,8 @@ msgstr "Velkommen til<br/><b>Plasma Mobile</b>"
+@@ -349,8 +349,8 @@ msgstr "Velkommen til<br/><b>Plasma Mobile</b>"
  
  #: src/qml/LandingComponent.qml:126
  #, kde-format
@@ -452,10 +452,10 @@ index 6b9c7224dcf0..c15c72f108bd 100644
  #: src/qml/LandingComponent.qml:140
  #, kde-format
 diff --git a/po/nn/org.kde.plasmasetup.po b/po/nn/org.kde.plasmasetup.po
-index 4d5440f6f63a..bc66f874ab20 100644
+index 4d14d07ce45f..5988c9e04a50 100644
 --- a/po/nn/org.kde.plasmasetup.po
 +++ b/po/nn/org.kde.plasmasetup.po
-@@ -347,8 +347,8 @@ msgstr "Velkommen til<br/><b>Plasma Mobile</b>"
+@@ -348,8 +348,8 @@ msgstr "Velkommen til<br/><b>Plasma Mobile</b>"
  
  #: src/qml/LandingComponent.qml:126
  #, kde-format

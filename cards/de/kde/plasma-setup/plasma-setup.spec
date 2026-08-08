@@ -8,7 +8,7 @@
 %global _hardened_build 1
  
 Name:           plasma-setup
-Version:        6.7.3
+Version:        6.7.4
 Release:        1%{?dist}
 Summary:        Initial setup for systems using KDE Plasma
 License:        (GPL-2.0-or-later or GPL-3.0-or-later) and GPL-2.0-or-later and GPL-3.0-or-later and (LGPL-2.0-or-later or LGPL-3.0-or-later) and (LGPL-2.1-or-later or LGPL-3.0-or-later) and LGPL-2.1-or-later and BSD-2-Clause and CC0-1.0
@@ -134,6 +134,18 @@ exit 0
  
  
 %changelog
+* Tue Aug 04 2026 Steve Cossette <farchord@gmail.com> - 6.7.4-1
+- 6.7.4
+
+* Tue Jul 28 2026 Adam Williamson <awilliam@redhat.com> - 6.7.3-4
+- Revert MR #109 backport (it causes a regression)
+
+* Wed Jul 22 2026 Adam Williamson <awilliam@redhat.com> - 6.7.3-3
+- Backport MR #109 to fix language search
+
+* Thu Jul 16 2026 Fedora Release Engineering <releng@fedoraproject.org> - 6.7.3-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_45_Mass_Rebuild
+
 * Tue Jul 14 2026 Steve Cossette <farchord@gmail.com> - 6.7.3-1
 - 6.7.3
 

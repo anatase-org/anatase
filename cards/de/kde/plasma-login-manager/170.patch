@@ -43,8 +43,8 @@ The signal-disposition half of eb3be406 (ignoreVtSwitches) is unchanged:
 it addresses the separate exec-window problem and does not affect
 teardown ordering.
 ---
- src/common/VirtualTerminal.cpp | 113 +++++++++++++++++++++++++++------
- 1 file changed, 92 insertions(+), 21 deletions(-)
+ src/common/VirtualTerminal.cpp | 105 +++++++++++++++++++++++++++------
+ 1 file changed, 92 insertions(+), 13 deletions(-)
 
 diff --git a/src/common/VirtualTerminal.cpp b/src/common/VirtualTerminal.cpp
 index 8522128c..9d593f57 100644
@@ -66,22 +66,7 @@ index 8522128c..9d593f57 100644
  QString path(int vt)
  {
      return QStringLiteral("/dev/tty%1").arg(vt);
-@@ -110,14 +119,6 @@ static void fixVtMode(int fd, bool vt_auto)
-         ok = false;
-     }
- 
--    // The previous VT_PROCESS owner (logind for Wayland greeters)
--    // can clear its VT mode mid-switch, leaving VT_WAITACTIVE hung.
--    // Take over so the relsig handshake completes locally.
--    if (getmodeReply.mode == VT_PROCESS) {
--        ok = handleVtSwitches(fd);
--        modeFixed = true;
--    }
--
-     if (getmodeReply.mode != VT_AUTO) {
-         goto out;
-     }
-@@ -199,6 +200,49 @@ int setUpNewVt()
+@@ -180,6 +189,49 @@ int setUpNewVt()
      return vt;
  }
  
@@ -131,7 +116,7 @@ index 8522128c..9d593f57 100644
  void jumpToVt(int vt, bool vt_auto)
  {
      qDebug() << "Jumping to VT" << vt;
-@@ -241,23 +285,50 @@ void jumpToVt(int vt, bool vt_auto)
+@@ -222,23 +274,50 @@ void jumpToVt(int vt, bool vt_auto)
          handleVtSwitches(fd);
      }
  
@@ -197,4 +182,3 @@ index 8522128c..9d593f57 100644
          close(vtFd);
 -- 
 GitLab
-

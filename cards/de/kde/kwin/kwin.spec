@@ -1,5 +1,5 @@
 Name:    kwin
-Version: 6.7.3
+Version: 6.7.4
 Release: 1%{?dist}
 Summary: KDE Window manager
 
@@ -284,6 +284,12 @@ ln -sr %{buildroot}%{_kf6_bindir}/kwin_wayland %{buildroot}%{_bindir}/kwin
 
 
 %changelog
+* Tue Aug 04 2026 Steve Cossette <farchord@gmail.com> - 6.7.4-1
+- 6.7.4
+
+* Thu Jul 16 2026 Fedora Release Engineering <releng@fedoraproject.org> - 6.7.3-2
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_45_Mass_Rebuild
+
 * Tue Jul 14 2026 Steve Cossette <farchord@gmail.com> - 6.7.3-1
 - 6.7.3
 

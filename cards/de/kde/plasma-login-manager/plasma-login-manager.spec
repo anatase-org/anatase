@@ -2,8 +2,8 @@
 %bcond x11 %[%{undefined rhel}]
 
 Name:           plasma-login-manager
-Version:        6.7.3
-Release:        4%{?dist}
+Version:        6.7.4
+Release:        1%{?dist}
 License:        BSD-3-Clause and CC0-1.0 and (GPL-2.0-only or GPL-3.0-only) and GPL-2.0-or-later and LGPL-2.0-or-later and LGPL-2.1-or-later
 Summary:        QML based login manager from KDE
 
@@ -218,6 +218,9 @@ desktop-file-validate %{buildroot}/%{_datadir}/applications/kcm_plasmalogin.desk
 
 
 %changelog
+* Tue Aug 04 2026 Steve Cossette <farchord@gmail.com> - 6.7.4-1
+- 6.7.4
+
 * Fri Jul 17 2026 Steve Cossette <farchord@gmail.com> - 6.7.3-4
 - Fixing the previous fix
 
