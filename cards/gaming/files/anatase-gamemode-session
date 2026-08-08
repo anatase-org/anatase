@@ -21,35 +21,37 @@ systemctl --user import-environment \
     XDG_DESKTOP_PORTAL_DIR
 
 service=anatase-gamemode.service
-cleanup() {
-    trap - EXIT
-    trap '' HUP INT TERM
+terminating=
+trap 'terminating=1' HUP INT TERM
 
-    systemctl --user stop "$service" 2>/dev/null || true
-    flatpak kill org.anatase.Steam || true
-
-    # Teardown services that use the overrides after Gamemode has stopped.
-    systemctl --user stop \
-        flatpak-portal.service \
-        flatpak-session-helper.service \
-        xdg-desktop-portal.service || true
-
-    systemctl --user unset-environment \
-        DESKTOP_SESSION \
-        DISPLAY \
-        XDG_CURRENT_DESKTOP \
-        XDG_DESKTOP_PORTAL_DIR \
-        XDG_SESSION_DESKTOP \
-        XDG_SESSION_ID \
-        XDG_SESSION_TYPE || true
-}
-trap cleanup EXIT
-trap 'exit 143' HUP INT TERM
-
-# A signal interrupts Bash's wait builtin, allowing the cleanup trap to run.
+# A signal interrupts Bash's wait builtin. Run cleanup from the mainline so the
+# session remains alive until the service has stopped.
 systemctl --user --wait start "$service" &
 wait "$!"
 status=$?
+
+systemctl --user stop "$service" 2>/dev/null || true
+flatpak kill org.anatase.Steam || true
+
+# Teardown services that use the overrides after Gamemode has stopped.
+systemctl --user stop \
+    flatpak-portal.service \
+    flatpak-session-helper.service \
+    xdg-desktop-portal.service || true
+
+systemctl --user unset-environment \
+    DESKTOP_SESSION \
+    DISPLAY \
+    XDG_CURRENT_DESKTOP \
+    XDG_DESKTOP_PORTAL_DIR \
+    XDG_SESSION_DESKTOP \
+    XDG_SESSION_ID \
+    XDG_SESSION_TYPE || true
+
+if [[ -n $terminating ]]; then
+    exit 143
+fi
+
 # Plasma Login reserves status 1 for authentication failures. Map a failed
 # session payload to its HELPER_SESSION_ERROR status so it starts the greeter.
 (( status == 0 )) || status=2
