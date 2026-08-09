@@ -43,3 +43,62 @@ index f2171ad30601..d8a99efbb611 100644
  };
  }
  
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sun, 9 Aug 2026 02:53:47 +0200
+Subject: use our theme, not breeze light
+
+---
+ src/frontend/startkde/lookandfeelsettings.kcfg | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/frontend/startkde/lookandfeelsettings.kcfg b/src/frontend/startkde/lookandfeelsettings.kcfg
+index ad9d359fdb1b..445fddcfeb7a 100644
+--- a/src/frontend/startkde/lookandfeelsettings.kcfg
++++ b/src/frontend/startkde/lookandfeelsettings.kcfg
+@@ -7,15 +7,15 @@
+   <group name="KDE">
+     <entry name="lookAndFeelPackage" key="LookAndFeelPackage" type="String">
+       <label>Global look and feel</label>
+-      <default>org.kde.breeze.desktop</default>
++      <default>org.anatase.anatase.desktop</default>
+     </entry>
+     <entry name="defaultLightLookAndFeel" key="DefaultLightLookAndFeel" type="String">
+       <label>Global Look and Feel package, alternate</label>
+-      <default>org.kde.breeze.desktop</default>
++      <default>org.anatase.anataselight.desktop</default>
+     </entry>
+     <entry name="defaultDarkLookAndFeel" key="DefaultDarkLookAndFeel" type="String">
+       <label>Global Look and Feel package, alternate</label>
+-      <default>org.kde.breezedark.desktop</default>
++      <default>org.anatase.anatase.desktop</default>
+     </entry>
+     <entry name="automaticLookAndFeel" key="AutomaticLookAndFeel" type="Bool">
+       <label>Switch between dark and light global themes depending on time of day</label>
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sun, 9 Aug 2026 02:54:01 +0200
+Subject: catch sighup so plasmalogin does not crash
+
+---
+ src/helper/HelperApp.cpp | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/helper/HelperApp.cpp b/src/helper/HelperApp.cpp
+index 61553d39e07c..acaacb9ac37d 100644
+--- a/src/helper/HelperApp.cpp
++++ b/src/helper/HelperApp.cpp
+@@ -44,9 +44,10 @@ HelperApp::HelperApp(int &argc, char **argv)
+ {
+     qInstallMessageHandler(HelperMessageHandler);
+     auto sig = KSignalHandler::self();
++    sig->watchSignal(SIGHUP);
+     sig->watchSignal(SIGTERM);
+     QObject::connect(sig, &KSignalHandler::signalReceived, m_session, [](int s) {
+-        if (s == SIGTERM) {
++        if (s == SIGHUP || s == SIGTERM) {
+             QCoreApplication::instance()->exit(-1);
+         }
+     });
