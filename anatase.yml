@@ -72,12 +72,12 @@ runtime:
   image: https://flatpaks.anatase.org/icons/128x128/org.anatase.Platform.png
 
 flatpaks:
-  # - flatpaks/ark
-  # - flatpaks/filelight
-  # - flatpaks/gwenview
-  # - flatpaks/kate
-  # - flatpaks/kcalc
-  # - flatpaks/okular
+  - flatpaks/ark
+  - flatpaks/filelight
+  - flatpaks/gwenview
+  - flatpaks/kate
+  - flatpaks/kcalc
+  - flatpaks/okular
   - flatpaks/steam
   - flatpaks/browser
   - flatpaks/adblocker
