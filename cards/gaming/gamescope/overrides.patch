@@ -4,9 +4,9 @@ Date: Fri, 22 Nov 2024 01:37:48 +0100
 Subject: [NA] add dev script
 
 ---
- 0001-cstdint.patch |  37 ++++++++++++++++
- sync.sh            | 107 +++++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 144 insertions(+)
+ 0001-cstdint.patch |  37 ++++++++++++
+ sync.sh            | 141 +++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 178 insertions(+)
  create mode 100644 0001-cstdint.patch
  create mode 100755 sync.sh
 
@@ -55,18 +55,19 @@ index 000000000000..5b4351521b45
 +
 diff --git a/sync.sh b/sync.sh
 new file mode 100755
-index 000000000000..6c46ede463cc
+index 000000000000..a4105f51102b
 --- /dev/null
 +++ b/sync.sh
-@@ -0,0 +1,107 @@
+@@ -0,0 +1,141 @@
 +#!/bin/sh
 +
 +usage() {
-+    echo "Usage: $0 [--appid ID] <host>"
++    echo "Usage: $0 [--user USER] [--appid ID] <host>"
 +}
 +
 +HOST=
 +APPID=
++SESSION_USER=
 +
 +while [ "$#" -gt 0 ]; do
 +    case "$1" in
@@ -77,6 +78,15 @@ index 000000000000..6c46ede463cc
 +                exit 1
 +            fi
 +            APPID=$2
++            shift 2
++            ;;
++        --user)
++            if [ "$#" -lt 2 ]; then
++                echo "--user requires a user name" >&2
++                usage >&2
++                exit 1
++            fi
++            SESSION_USER=$2
 +            shift 2
 +            ;;
 +        -h|--help)
@@ -121,25 +131,49 @@ index 000000000000..6c46ede463cc
 +ninja -C build/
 +scp build/src/gamescope "${HOST}:gamescope"
 +
-+ssh "$HOST" /bin/bash -s -- "$APPID" <<'EOF'
-+    appid=$1
-+    steam_pipe="$HOME/.steam/steam.pipe"
++ssh "$HOST" /bin/bash -s -- "$SESSION_USER" "$APPID" <<'EOF'
++    requested_user=$1
++    appid=$2
++
++    login_config_mounted=
++    if mountpoint -q /etc/plasmalogin.conf; then
++        login_config_mounted=1
++    fi
++
++    if [ -n "$requested_user" ]; then
++        session_user=$requested_user
++    elif [ -n "$login_config_mounted" ]; then
++        session_user=$(sed -n 's/^User=//p' /etc/plasmalogin.conf | head -n 1)
++    fi
++    if [ -z "$session_user" ]; then
++        session_user=$(id -un)
++    fi
++
++    passwd_entry=$(getent passwd "$session_user") || {
++        echo "Unknown remote user: $session_user" >&2
++        exit 1
++    }
++    session_home=$(printf '%s\n' "$passwd_entry" | cut -d: -f6)
++    steam_pipe="$session_home/.steam/steam.pipe"
 +    old_steam_pids=
 +    if [ -n "$appid" ]; then
 +        old_steam_pids=$(lsof -t "$steam_pipe" 2>/dev/null || true)
 +    fi
 +
 +    sudo rpm-ostree usroverlay || true
-+    if ! mountpoint -q /etc/plasmalogin.conf; then
-+        sudo cp --preserve=context /etc/plasmalogin.conf /run/plasmalogin.conf
-+        sudo sed -i '/^\[Autologin\]$/a Relogin=true' /run/plasmalogin.conf
++    if [ -n "$requested_user" ] || [ -z "$login_config_mounted" ]; then
++        printf '%s\n' \
++            '[Autologin]' \
++            'Relogin=true' \
++            "User=$session_user" \
++            'Session=gamemode.desktop' |
++            sudo tee /run/plasmalogin.conf >/dev/null
++        sudo chcon --reference=/etc/plasmalogin.conf /run/plasmalogin.conf
++    fi
++    if [ -z "$login_config_mounted" ]; then
 +        sudo mount --bind /run/plasmalogin.conf /etc/plasmalogin.conf
 +    fi
 +    sudo mv ~/gamescope /usr/bin/gamescope
-+    # games like hl2 will stay open in subsandboxes if we do not kill the flatpak
-+    flatpak kill org.anatase.Steam
-+    # make sure its dead so it releases the gpu
-+    pkill gamescope
 +    sudo systemctl restart plasmalogin
 +
 +    if [ -n "$appid" ]; then
@@ -10428,3 +10462,224 @@ index d68982ec42cf..2a5083877470 100644
  				vulkan_frame_generation_has_pending_frame();
  			const uint64_t frameGenerationNow = get_time_in_nanos();
  
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 10 Aug 2026 17:49:06 +0200
+Subject: fix running gamescope in a vm with the venus driver
+
+---
+ src/rendervulkan.cpp | 30 +++++++++++++++++++++++++++---
+ src/rendervulkan.hpp |  2 ++
+ src/steamcompmgr.cpp | 32 +++++++++++++++++++++++++-------
+ 3 files changed, 54 insertions(+), 10 deletions(-)
+
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index 175114d253ee..bfd9e83b7f44 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -429,11 +429,28 @@ bool CVulkanDevice::selectPhysDev(VkSurfaceKHR surface)
+ 		return false;
+ 	}
+ 
+-	VkPhysicalDeviceProperties props;
+-	vk.GetPhysicalDeviceProperties( m_physDev, &props );
++	VkPhysicalDeviceDriverProperties driverProps = {
++		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES,
++	};
++	VkPhysicalDeviceProperties2 props2 = {
++		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
++		.pNext = &driverProps,
++	};
++	vk.GetPhysicalDeviceProperties2( m_physDev, &props2 );
++	const VkPhysicalDeviceProperties &props = props2.properties;
+ 	m_uVendorID = props.vendorID;
+ 	vk_log.infof( "selecting physical device '%s': queue family %x (general queue family %x)", props.deviceName, m_queueFamily, m_generalQueueFamily );
+ 
++	// Venus currently aborts when importing DMA-BUFs from the guest's virtio-gpu
++	// device. Don't advertise the zero-copy client path there, so Wayland and
++	// Xwayland clients use wl_shm and Gamescope's existing upload path instead.
++	// Keep DMA-BUFs enabled for native drivers, where this is a critical fast path.
++	if ( driverProps.driverID == VK_DRIVER_ID_MESA_VENUS )
++	{
++		m_bSupportsClientDmabufs = false;
++		vk_log.infof( "Venus driver detected, disabling client DMA-BUF imports" );
++	}
++
+ 	return true;
+ }
+ 
+@@ -5210,6 +5227,9 @@ static const struct wlr_drm_format_set *renderer_get_texture_formats( struct wlr
+ {
+ 	if (buffer_caps & WLR_BUFFER_CAP_DMABUF)
+ 	{
++		if ( !g_device.supportsClientDmabufs() )
++			return nullptr;
++
+ 		return &sampledDRMFormats;
+ 	}
+ 	else if (buffer_caps & WLR_BUFFER_CAP_DATA_PTR)
+@@ -5340,7 +5360,11 @@ gamescope::OwningRc<CVulkanTexture> vulkan_create_texture_from_wlr_buffer( struc
+ 	CVulkanTexture::createFlags texCreateFlags;
+ 	texCreateFlags.bSampled = true;
+ 	texCreateFlags.bTransferDst = true;
+-	texCreateFlags.bFlippable = true;
++	// When client DMA-BUFs are unavailable (currently Venus), this texture is
++	// an upload-only fallback. Exporting every upload for direct scanout is both
++	// unnecessary and rejected by virtio KMS; composition uses the internal
++	// Vulkan image directly. Native drivers retain the flippable fast path.
++	texCreateFlags.bFlippable = g_device.supportsClientDmabufs();
+ 	if ( pTex->BInit( width, height, 1u, drmFormat, texCreateFlags, nullptr, 0, 0, nullptr, pBackendFb ) == false )
+ 		return nullptr;
+ 
+diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
+index dd2b718516eb..4d7ffab49a68 100644
+--- a/src/rendervulkan.hpp
++++ b/src/rendervulkan.hpp
+@@ -883,6 +883,7 @@ public:
+ 	inline VkPipelineLayout pipelineLayout() {return m_pipelineLayout;}
+ 	inline int drmRenderFd() {return m_drmRendererFd;}
+ 	inline bool supportsModifiers() {return m_bSupportsModifiers;}
++	inline bool supportsClientDmabufs() {return m_bSupportsClientDmabufs;}
+ 	inline bool hasDrmPrimaryDevId() {return m_bHasDrmPrimaryDevId;}
+ 	inline dev_t primaryDevId() {return m_drmPrimaryDevId;}
+ 	inline bool supportsFp16() {return m_bSupportsFp16;}
+@@ -957,6 +958,7 @@ protected:
+ 	uint32_t m_uVendorID = 0;
+ 	bool m_bHasDrmPrimaryDevId = false;
+ 	bool m_bSupportsModifiers = false;
++	bool m_bSupportsClientDmabufs = true;
+ 	bool m_bInitialized = false;
+ 
+ 
+diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
+index 2a5083877470..77189616de29 100644
+--- a/src/steamcompmgr.cpp
++++ b/src/steamcompmgr.cpp
+@@ -1439,16 +1439,26 @@ import_commit (
+ 		commit->fifo = false;
+ 	}
+ 
+-	if ( gamescope::OwningRc<CVulkanTexture> pTexture = s_BufferMemos.LookupVulkanTexture( buf ) )
++	struct wlr_dmabuf_attributes dmabuf = {0};
++	const bool bDmabuf = wlr_buffer_get_dmabuf( buf, &dmabuf );
++
++	// DMA-BUF textures refer to the client's live backing storage, so they can
++	// be reused for every commit of the same wlr_buffer. Data-pointer buffers
++	// are copied into a Vulkan image below; clients can refill and recommit the
++	// same buffer after release, so reusing that snapshot would show stale
++	// contents as the client cycles through its buffer pool.
++	if ( bDmabuf )
+ 	{
+-		// Going from OwningRc -> Rc now.
+-		commit->vulkanTex = pTexture;
+-		return commit;
++		if ( gamescope::OwningRc<CVulkanTexture> pTexture = s_BufferMemos.LookupVulkanTexture( buf ) )
++		{
++			// Going from OwningRc -> Rc now.
++			commit->vulkanTex = pTexture;
++			return commit;
++		}
+ 	}
+ 
+-	struct wlr_dmabuf_attributes dmabuf = {0};
+ 	gamescope::OwningRc<gamescope::IBackendFb> pBackendFb;
+-	if ( wlr_buffer_get_dmabuf( buf, &dmabuf ) )
++	if ( bDmabuf )
+ 	{
+ 		pBackendFb = GetBackend()->ImportDmabufToBackend( &dmabuf );
+ 	}
+@@ -1456,7 +1466,8 @@ import_commit (
+ 	gamescope::OwningRc<CVulkanTexture> pOwnedTexture = vulkan_create_texture_from_wlr_buffer( buf, std::move( pBackendFb ) );
+ 	commit->vulkanTex = pOwnedTexture;
+ 
+-	s_BufferMemos.MemoizeBuffer( buf, std::move( pOwnedTexture ) );
++	if ( bDmabuf )
++		s_BufferMemos.MemoizeBuffer( buf, std::move( pOwnedTexture ) );
+ 
+ 	return commit;
+ }
+@@ -7490,6 +7501,13 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
+ 			{
+ 				fence = dup( dmabuf.fd[0] );
+ 			}
++			else if ( !g_device.supportsClientDmabufs() )
++			{
++				// The data-pointer fallback waits for its upload before returning
++				// and is not exported on drivers where client DMA-BUF imports are
++				// disabled, so there is no external fence to wait for.
++				bKnownReady = true;
++			}
+ 			else
+ 			{
+ 				fence = newCommit->vulkanTex->memoryFence();
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 10 Aug 2026 17:53:23 +0200
+Subject: add motion_absolute mouse handling (used in VMs)
+
+---
+ src/wlserver.cpp | 22 ++++++++++++++++++++++
+ src/wlserver.hpp |  1 +
+ 2 files changed, 23 insertions(+)
+
+diff --git a/src/wlserver.cpp b/src/wlserver.cpp
+index e6f43501119d..088fa8e9e9af 100644
+--- a/src/wlserver.cpp
++++ b/src/wlserver.cpp
+@@ -111,6 +111,7 @@ wlserver_wl_surface_info *get_wl_surface_info(struct wlr_surface *wlr_surf);
+ static void wlserver_update_cursor_constraint();
+ static void handle_pointer_constraint(struct wl_listener *listener, void *data);
+ static void wlserver_constrain_cursor( struct wlr_pointer_constraint_v1 *pNewConstraint );
++static void apply_touchscreen_orientation(GamescopePanelOrientation orientation, double *x, double *y );
+ struct wlr_surface *wlserver_surface_to_main_surface( struct wlr_surface *pSurface );
+ bool wlserver_process_hotkeys( wlr_keyboard *keyboard, uint32_t key, bool press );
+ 
+@@ -379,6 +380,25 @@ static void wlserver_handle_pointer_motion(struct wl_listener *listener, void *d
+ 	wlserver_mousemotion(event->unaccel_dx, event->unaccel_dy, event->time_msec);
+ }
+ 
++static void wlserver_handle_pointer_motion_absolute(struct wl_listener *listener, void *data)
++{
++	struct wlr_pointer_motion_absolute_event *event = (struct wlr_pointer_motion_absolute_event *) data;
++
++	double x = event->x;
++	double y = event->y;
++	if ( gamescope::IBackendConnector *connector = GetBackend()->GetCurrentConnector() )
++		apply_touchscreen_orientation( connector->GetCurrentOrientation(), &x, &y );
++
++	x *= g_nOutputWidth;
++	y *= g_nOutputHeight;
++	x += focusedWindowOffsetX;
++	y += focusedWindowOffsetY;
++	x *= focusedWindowScaleX;
++	y *= focusedWindowScaleY;
++
++	wlserver_mousewarp( x, y, event->time_msec, false );
++}
++
+ void wlserver_open_steam_menu( bool qam )
+ {
+ 	gamescope_xwayland_server_t *server = wlserver_get_xwayland_server( 0 );
+@@ -530,6 +550,8 @@ static void wlserver_new_input(struct wl_listener *listener, void *data)
+ 
+ 			pointer->motion.notify = wlserver_handle_pointer_motion;
+ 			wl_signal_add( &pointer->wlr->events.motion, &pointer->motion );
++			pointer->motion_absolute.notify = wlserver_handle_pointer_motion_absolute;
++			wl_signal_add( &pointer->wlr->events.motion_absolute, &pointer->motion_absolute );
+ 			pointer->button.notify = wlserver_handle_pointer_button;
+ 			wl_signal_add( &pointer->wlr->events.button, &pointer->button );
+ 			pointer->axis.notify = wlserver_handle_pointer_axis;
+diff --git a/src/wlserver.hpp b/src/wlserver.hpp
+index 2eebb67c9486..accaae61c2dd 100644
+--- a/src/wlserver.hpp
++++ b/src/wlserver.hpp
+@@ -208,6 +208,7 @@ struct wlserver_pointer {
+ 	struct wlr_pointer *wlr;
+ 	
+ 	struct wl_listener motion;
++	struct wl_listener motion_absolute;
+ 	struct wl_listener button;
+ 	struct wl_listener axis;
+ 	struct wl_listener frame;
