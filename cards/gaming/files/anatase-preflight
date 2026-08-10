@@ -376,8 +376,46 @@ button {{
     min-width: {px(130)};
     min-height: {px(40)};
     padding: {px(8)} {px(22)};
+    background-color: #333330;
+    background-image: none;
+    color: #f4f4ec;
+    border: {px(1)} solid #45453f;
+    border-radius: {px(4)};
+    box-shadow: none;
+    outline: none;
     font-size: {px(22)};
     font-weight: 600;
+}}
+
+button label {{
+    color: #f4f4ec;
+}}
+
+button:hover,
+button:focus,
+button:focus-visible {{
+    background-color: #333330;
+    background-image: none;
+    color: #f4f4ec;
+    border-color: #bea628;
+    outline: none;
+}}
+
+button:hover label,
+button:focus label,
+button:focus-visible label {{
+    color: #f4f4ec;
+}}
+
+button:active {{
+    background-color: #9e8a30;
+    background-image: none;
+    color: #1a1912;
+    border-color: #9e8a30;
+}}
+
+button:active label {{
+    color: #1a1912;
 }}
 
 progressbar {{
