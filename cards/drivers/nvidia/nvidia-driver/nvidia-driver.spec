@@ -258,9 +258,8 @@ install -p -m 0644 nvidia-application-profiles-%{version}-rc \
 # OptiX
 install -p -m 0644 nvoptix.bin %{buildroot}%{_datadir}/nvidia/
 
-# Systemd units and script for power management
+# Systemd unit for nvidia-powerd
 install -p -m 0644 -D %{SOURCE7} %{buildroot}%{_unitdir}/nvidia-powerd.service
-cp -frv systemd/system/systemd-* %{buildroot}%{_unitdir}/
 install -p -m 0644 -D nvidia-dbus.conf %{buildroot}%{_datadir}/dbus-1/system.d/nvidia-dbus.conf
 install -p -m 0644 -D dlsnetparams.csv %{buildroot}%{_datadir}/nvidia/nvidia-powerd/dlsnetparams.csv
 install -p -m 0644 -D %{SOURCE8} %{buildroot}%{_systemd_util_dir}/system-preset/70-nvidia-driver.preset
@@ -318,14 +317,6 @@ appstream-util validate --nonet %{buildroot}%{_metainfodir}/com.nvidia.driver.me
 %{_metainfodir}/com.nvidia.driver.metainfo.xml
 %{_datadir}/nvidia/nvidia-application-profiles*
 %{_datadir}/pixmaps/com.nvidia.driver.png
-%dir %{_unitdir}/systemd-suspend.service.d
-%{_unitdir}/systemd-suspend.service.d/nvidia-suspend-nofreeze.conf
-%dir %{_unitdir}/systemd-hibernate.service.d
-%{_unitdir}/systemd-hibernate.service.d/nvidia-suspend-nofreeze.conf
-%dir %{_unitdir}/systemd-suspend-then-hibernate.service.d
-%{_unitdir}/systemd-suspend-then-hibernate.service.d/nvidia-suspend-nofreeze.conf
-%dir %{_unitdir}/systemd-hybrid-sleep.service.d
-%{_unitdir}/systemd-hybrid-sleep.service.d/nvidia-suspend-nofreeze.conf
 %if 0%{?fedora} < 42 || 0%{?rhel}
 %{_sysconfdir}/dnf/plugins/needs-restarting.d/%{name}.conf
 %endif
