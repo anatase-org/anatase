@@ -3,9 +3,13 @@
 spawn=(flatpak-spawn --host --watch-bus "--directory=$HOME")
 if [[ -n ${SteamAppId:-} ]]; then
     spawn+=("--env=SteamAppId=$SteamAppId")
+    spawn+=("--env=STEAM_COMPAT_APP_ID=$SteamAppId")
 fi
 if [[ -n ${SteamGameId:-} ]]; then
     spawn+=("--env=SteamGameId=$SteamGameId")
+fi
+if [[ -n ${STEAM_MULTIPLE_XWAYLANDS:-} ]]; then
+    spawn+=("--env=STEAM_MULTIPLE_XWAYLANDS=$STEAM_MULTIPLE_XWAYLANDS")
 fi
 
 case "${1##*/}" in

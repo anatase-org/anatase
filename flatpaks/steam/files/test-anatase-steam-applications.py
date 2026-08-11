@@ -277,6 +277,7 @@ class HostLaunchTests(unittest.TestCase):
                 "XDG_RUNTIME_DIR": str(base / "run"),
                 "SteamAppId": "1234",
                 "SteamGameId": "5678",
+                "STEAM_MULTIPLE_XWAYLANDS": "1",
             }
             completed = subprocess.run(
                 [
@@ -298,7 +299,9 @@ class HostLaunchTests(unittest.TestCase):
                     "<--watch-bus>",
                     f"<--directory={base}/home>",
                     "<--env=SteamAppId=1234>",
+                    "<--env=STEAM_COMPAT_APP_ID=1234>",
                     "<--env=SteamGameId=5678>",
+                    "<--env=STEAM_MULTIPLE_XWAYLANDS=1>",
                     f"<{base}/run/anatase-steam/bin/reaper>",
                     "<SteamLaunch>",
                     "<AppId=1234>",
@@ -344,6 +347,7 @@ class HostLaunchTests(unittest.TestCase):
                     "<--watch-bus>",
                     f"<--directory={base}/home>",
                     "<--env=SteamAppId=1234>",
+                    "<--env=STEAM_COMPAT_APP_ID=1234>",
                     "<--env=SteamGameId=5678>",
                     "</usr/bin/spaces>",
                     "<enter>",
