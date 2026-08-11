@@ -86,6 +86,7 @@ files:
   - files/anatase-steam
   - files/anatase-steam-applications.py
   - files/hrun
+  - files/flatpak
   - files/anatase-steam-reaper.c
   - files/test-anatase-steam-applications.py
   - files/dbus-send
@@ -149,6 +150,7 @@ postprocess: |-
   install -Dm0755 files/anatase-steam-applications.py \
       app/libexec/anatase-steam-applications
   install -Dm0755 files/hrun app/bin/hrun
+  install -Dm0755 files/flatpak app/bin/flatpak
   cc -O2 -Wall -Wextra -Werror \
       files/anatase-steam-reaper.c \
       -o app/libexec/anatase-steam-reaper
@@ -164,6 +166,7 @@ postprocess: |-
 
   bash -n app/bin/anatase-steam
   bash -n app/bin/hrun
+  bash -n app/bin/flatpak
   bash -n app/bin/dbus-send
   bash -n app/bin/steamos-session-select
   ANATASE_STEAM_APPLICATIONS=files/anatase-steam-applications.py \
