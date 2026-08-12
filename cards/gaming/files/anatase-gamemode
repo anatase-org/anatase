@@ -186,11 +186,6 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 143' HUP INT TERM
 
-# Publish Steam's battery metrics for the lifetime of this Gamemode session.
-if [[ -x /usr/lib/vpower ]]; then
-    /usr/lib/vpower &
-fi
-
 # Gamescope publishes the Xwayland and Wayland display names to its startup
 # socket. Steam must be launched separately with the environment Gamescope
 # reports, rather than as Gamescope's primary child.
@@ -210,16 +205,26 @@ dbus-update-activation-environment --systemd DISPLAY
 export DISPLAY="$response_x_display"
 export GAMESCOPE_WAYLAND_DISPLAY="$response_wl_display"
 
+#
+# Parallel services
+#
+
+# Allow udiskie to automount disks
+udiskie -c /usr/share/anatase/gamemode/anatase-gamemode-udiskie.yml \
+    -a -N -T -P &
+
+# Publish Steam's battery metrics for the lifetime of this Gamemode session.
+if [[ -x /usr/lib/vpower ]]; then
+    /usr/lib/vpower &
+fi
+
+# Enable mangohud and fix its path to work in flatpak
 while true; do
     mangoapp
     status=$?
     echo >&2 "MangoApp exited with status $status; restarting"
     sleep 10
 done &
-
-# Allow udiskie to automount disks
-udiskie -c /usr/share/anatase/gamemode/anatase-gamemode-udiskie.yml \
-    -a -N -T -P &
 
 # Steam rewrites MangoApp's config in the Gamescope runtime directory. It also
 # asks Gamescope to write screenshots to a temporary path, then reads the
@@ -240,6 +245,10 @@ for brightness_path in /sys/class/backlight/*/brightness; do
         echo >&2 "Failed to open backlight brightness control: $brightness_path"
     fi
 done
+
+#
+# Launch flatpak
+#
 
 # Keep the preflight blank screen visible while Steam starts on configured
 # systems. Installation and recovery flows remain synchronous.
