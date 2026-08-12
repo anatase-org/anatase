@@ -209,6 +209,13 @@ export GAMESCOPE_WAYLAND_DISPLAY="$response_wl_display"
 # Parallel services
 #
 
+# Run EasyEffects without a window when its Flatpak is installed.
+if flatpak info com.github.wwmm.easyeffects >/dev/null 2>&1; then
+    echo "Launching EasyEffects for DSP control"
+    flatpak run --die-with-parent com.github.wwmm.easyeffects \
+        --service-mode --hide-window &
+fi
+
 # Allow udiskie to automount disks
 udiskie -c /usr/share/anatase/gamemode/anatase-gamemode-udiskie.yml \
     -a -N -T -P &
