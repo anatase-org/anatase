@@ -241,15 +241,24 @@ steam_tmp="$XDG_RUNTIME_DIR/$steam_tmp_name"
 install -d -m0700 "$steam_tmp"
 
 # Flatpak provides a read-only sysfs view and ignores filesystem overrides for
-# it. Bind each writable brightness attribute at its canonical /sys/devices
-# path instead.
-backlight_bind_args=()
+# it. Bind writable sysfs controls at their canonical /sys/devices paths
+# instead.
+sysfs_bind_args=()
 for brightness_path in /sys/class/backlight/*/brightness; do
     [[ -e $brightness_path ]] || continue
     if exec {brightness_fd}<>"$brightness_path"; then
-        backlight_bind_args+=(--bind-fd="$brightness_fd")
+        sysfs_bind_args+=(--bind-fd="$brightness_fd")
     else
         echo >&2 "Failed to open backlight brightness control: $brightness_path"
+    fi
+done
+
+for led_path in /sys/class/leds/valve-leds\[*\]; do
+    [[ -d $led_path ]] || continue
+    if exec {led_fd}<"$led_path"; then
+        sysfs_bind_args+=(--bind-fd="$led_fd")
+    else
+        echo >&2 "Failed to open Fremont LED controls: $led_path"
     fi
 done
 
@@ -263,7 +272,7 @@ done
 
 flatpak run \
         --socket=x11-passthrough \
-        "${backlight_bind_args[@]}" \
+        "${sysfs_bind_args[@]}" \
         --filesystem="xdg-run/$response_wl_display:ro" \
         --filesystem="xdg-run/${tmpdir##*/}:rw" \
         --filesystem="xdg-run/$steam_tmp_name:create" \

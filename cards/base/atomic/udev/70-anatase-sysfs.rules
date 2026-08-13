@@ -1,0 +1,16 @@
+# Allow the active Steam session to adjust display brightness directly.
+ACTION=="add", SUBSYSTEM=="backlight", TEST=="brightness", RUN+="/usr/bin/chmod 0666 /sys%p/brightness"
+
+# Allow Steam to control the Valve Fremont LED strip.
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="valve-leds*", DRIVERS=="valve-leds", RUN+="/usr/bin/chmod 0666 /sys%p/brightness"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="valve-leds*", DRIVERS=="valve-leds", RUN+="/usr/bin/chmod 0666 /sys%p/multi_intensity"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="valve-leds*", DRIVERS=="valve-leds", RUN+="/usr/bin/chmod 0666 /sys%p/enabled"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="valve-leds*", DRIVERS=="valve-leds", RUN+="/usr/bin/chmod 0666 /sys%p/effect"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="valve-leds*", DRIVERS=="valve-leds", RUN+="/usr/bin/chmod 0666 /sys%p/delay"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="valve-leds*", DRIVERS=="valve-leds", RUN+="/usr/bin/chmod 0666 /sys%p/breath_offset"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="valve-leds*", DRIVERS=="valve-leds", RUN+="/usr/bin/chmod 0666 /sys%p/breath_level"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="valve-leds*", DRIVERS=="valve-leds", RUN+="/usr/bin/chmod 0666 /sys%p/patrol_num"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="valve-leds*", DRIVERS=="valve-leds", RUN+="/usr/bin/chmod 0666 /sys%p/color_shift"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="valve-leds*", DRIVERS=="valve-leds", RUN+="/usr/bin/chmod 0666 /sys%p/brightness_scale"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="valve-leds*", DRIVERS=="valve-leds", RUN+="/usr/bin/chmod 0666 /sys%p/brightness_startup"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="valve-leds*", DRIVERS=="valve-leds", RUN+="/usr/bin/chmod 0666 /sys%p/multi_intensity_startup"
