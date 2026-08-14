@@ -281,3 +281,75 @@ index 5bfe2705af7e..fa73f85e58de 100644
  	    println!("Info: Init: Found battery: '{}'", path_bat.display());
  	    break;
  	}
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Fri, 14 Aug 2026 12:20:41 +0200
+Subject: assume max charge level is 80% to not fire false positives
+
+---
+ main.rs | 21 +++++++++++++--------
+ 1 file changed, 13 insertions(+), 8 deletions(-)
+
+diff --git a/main.rs b/main.rs
+index fa73f85e58de..c8d50bc9b80b 100644
+--- a/main.rs
++++ b/main.rs
+@@ -159,6 +159,8 @@ fn format_duration(total_seconds: f64) -> String {
+     format!("{}d {}h {}m {:.2}s", days, hours, minutes, seconds)
+ }
+ 
++const DEFAULT_MAX_CHARGE_LEVEL: f64 = 80.0;
++
+ fn main() {
+     // Print version info
+     let version = env!("CARGO_PKG_VERSION");
+@@ -304,7 +306,7 @@ fn main() {
+ 	    println!("Info: Init: MaxChargeLevel feature: using indirect file '{}'", path_chargetypes_file.display());
+ 	}
+ 	else {
+-	    println!("Warning: Init: MaxChargeLevel feature: Cound not find suitable indirect file (charge_types) either, assuming MaxChargeLevel=100%");
++	    println!("Warning: Init: MaxChargeLevel feature: Cound not find suitable indirect file (charge_types) either, assuming MaxChargeLevel={DEFAULT_MAX_CHARGE_LEVEL}%");
+ 	}
+     }
+ 
+@@ -359,8 +361,9 @@ fn main() {
+         }
+         suspend_last_boottime = suspend_current_boottime;
+ 
+-	// Get max charge battery level, if set
+-	let mut bat_maxchargelevel = 100.0;
++	// Get max charge battery level, defaulting to a conservative limit for
++	// devices that cannot report one.
++	let mut bat_maxchargelevel = DEFAULT_MAX_CHARGE_LEVEL;
+ 	if ! path_maxchargelevel_file.as_os_str().is_empty() {
+ 	    bat_maxchargelevel = match read_battery_maxchargelevel(&path_maxchargelevel_file.display().to_string()) {
+ 		None       => -999.9,
+@@ -370,12 +373,14 @@ fn main() {
+ 	else {
+ 	    // Get max charge battery level indirectly (charge_types='Long Life'
+ 	    // is assumed to limit to 80% (Lenovo Legion Go S models), otherwise
+-	    // assume 100%)
++	    // assume 100% when the selected charge type is readable.)
+ 	    if ! path_chargetypes_file.as_os_str().is_empty() {
+ 		if let Some(content) = read_battery_string(&path_bat, "charge_types") {
+-		    if content.contains("[Long Life]") {
+-			bat_maxchargelevel = 80.0;
+-		    }
++		    bat_maxchargelevel = if content.contains("[Long Life]") {
++			DEFAULT_MAX_CHARGE_LEVEL
++		    } else {
++			100.0
++		    };
+ 		}
+ 	    }
+ 	}
+@@ -387,7 +392,7 @@ fn main() {
+ 		bat_maxchargelevel = last_bat_maxchargelevel;
+ 	    }
+ 	    else {
+-		bat_maxchargelevel = 100.0;
++		bat_maxchargelevel = DEFAULT_MAX_CHARGE_LEVEL;
+ 	    }
+ 	}
+ 
