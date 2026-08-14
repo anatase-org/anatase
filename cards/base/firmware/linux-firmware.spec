@@ -4,7 +4,7 @@
 %define _binaries_in_noarch_packages_terminate_build 0
 
 Name:		linux-firmware
-Version:	20260622.an01
+Version:	20260810.an01
 Release:	1%{?dist}
 Summary:	Firmware files used by the Linux kernel
 License:	GPL-1.0-or-later AND GPL-2.0-or-later AND MIT AND LicenseRef-Callaway-Redistributable-no-modification-permitted
@@ -17,6 +17,7 @@ BuildRequires:	make
 BuildRequires:	git-core
 BuildRequires:	python3
 %if %{undefined rhel}
+BuildRequires:	parallel
 # Not required but de-dupes FW so reduces size
 BuildRequires:	rdfind
 %endif
@@ -285,12 +286,11 @@ Terratec H5 DRX-K, ITEtech IT9135 Ax and Bx, and av7110.
 %build
 
 %install
-mkdir -p %{buildroot}/%{_firmwarepath}
-mkdir -p %{buildroot}/%{_firmwarepath}/updates
+install -dm 0755 %{buildroot}/%{_firmwarepath}/updates
 
-make DESTDIR=%{buildroot}/ FIRMWAREDIR=%{_firmwarepath} install-xz
+%make_build DESTDIR=%{buildroot}/ FIRMWAREDIR=%{_firmwarepath} install-xz
 %if %{undefined rhel}
-make DESTDIR=%{buildroot}/ FIRMWAREDIR=%{_firmwarepath} dedup
+%make_build DESTDIR=%{buildroot}/ FIRMWAREDIR=%{_firmwarepath} dedup
 %endif
 
 #Cleanup files we don't want to ship
@@ -666,7 +666,9 @@ end
 %files -n qcom-firmware
 %license LICENSES/LICENSE.qcom LICENSES/LICENSE.qcom_yamato LICENSES/NOTICE.qcom
 %dir %{_firmwarepath}/qcom
+%{_firmwarepath}/qcom/eliza/
 %{_firmwarepath}/qcom/glymur/
+%{_firmwarepath}/qcom/hawi/
 %{_firmwarepath}/qcom/kaanapali/
 %{_firmwarepath}/a300_p*
 %{_firmwarepath}/qcom/*.fw*
@@ -727,6 +729,50 @@ end
 %{_firmwarepath}/v4l-cx2*
 
 %changelog
+* Tue Aug 11 2026 Peter Robinson <pbrobinson@fedoraproject.org> - 20260810-1
+- Update to 20260810
+- amdgpu: numerous firmware updates
+- update firmware for MT7922 WiFi device
+- morsemicro: add firmware for mm8108 support
+- ath10k: WCN3990 hw1.0: update board-2.bin
+- Update firmware for an8811hb 2.5G ethernet phy
+- xe: Update GUC to v70.72.1 for BMG, LNL, PTL, NVL-S
+- mediatek MT7922: update bluetooth firmware to 20260724143815
+- airoha: update AN7583 NPU firmwares to version 0.5
+- qcom: Add gpu firmwares for Eliza chipset
+- cirrus: cs35l57: Add firmware for Cirrus Amps for some Samsung laptops
+- rtw89: 8922d: add fw 0.35.113.2
+- qcom: venus-5.4: fix vp9 decoder assertion failure
+- qla2xxx: Add ql2900_fw.bin firmware for 29xx adapters
+- qcom: Update qdsp6sw firmware for shikra platform
+- amdgpu: DMCUB updates for various ASICs
+- intel_vpu: Update NPU firmware
+- qcom: Update DSP firmware for qcs8300 platform
+- tas2783: Add firmware for new soundwire devices
+- rtw88: add firmware v41.0.0 for RTL8723B
+- Update AMD cpu microcode
+- Add firmware file for Intel BlazarIW
+- Update firmware file for Intel BlazarI/BlazarU/Scorpius core
+- amdgpu: DMCUB updates for various ASICs
+- qcom: add ADSP firmware for hawi platform
+- powervr: add firmware for Imagination Technologies BXM-4-64 GPU
+- qcom: Update DSP firmware for sa8775p platform
+- xe: Release GuC firmware for NVL-S
+- cirrus: cs35l56: Update firmware for the ASUS UX5406SA
+- qcom: vpu: add Gen2 firmware binary for Purwa
+- cirrus: cs42l45: Update CS42L45 SDCA codec firmware for Dell laptops
+- QCA: Add Bluetooth firmware for WCN6855 ROM 1.0
+- iwlwifi: add Bz/Sc/Hr/Gf FW for core24.60-33 release
+- iwlwifi: update ty/So/Ma/cc/Qu/QuZ firmwares for core24.60-33 release
+- cirrus: cs35l56: Add firmware for Cirrus Amps for a few Dell laptops
+- ueagle-atm: sadly drop unlicensed files
+- qcom: sync audioreach firmwares from v1.0.4 build
+- QCA: Update Bluetooth QCA6698 firmware to 2.1.2-00072
+- amdgpu: DMCUB updates for various ASICs
+- tas2781: Add firmware for new HP projects
+- rtw89: 8852a: add TX power track R34
+- Update AMD SEV firmware
+
 * Tue Jun 23 2026 Peter Robinson <pbrobinson@fedoraproject.org> - 20260622-1
 - Update to 20260622
 - Update LICENSE locations
