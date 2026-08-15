@@ -270,7 +270,10 @@ done
 # systems. Installation and recovery flows remain synchronous.
 /usr/libexec/anatase-preflight || exit $?
 
-flatpak run \
+# So, using switcherooctl here makes it so we force the iGPU
+# This is soso from a power energy perspective. However, since steam does
+# not provide GPU controls we are kind of stuck here.
+switcherooctl launch flatpak run \
         --socket=x11-passthrough \
         "${sysfs_bind_args[@]}" \
         --filesystem="xdg-run/$response_wl_display:ro" \
