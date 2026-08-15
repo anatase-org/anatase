@@ -276,6 +276,7 @@ flatpak run \
         --filesystem="xdg-run/$response_wl_display:ro" \
         --filesystem="xdg-run/${tmpdir##*/}:rw" \
         --filesystem="xdg-run/$steam_tmp_name:create" \
+        --filesystem="${GAMESCOPE_MODE_SAVE_FILE}:rw" \
         --filesystem=/run/vpower:ro \
         --env="TMPDIR=$steam_tmp" \
         org.anatase.Steam \
