@@ -204,7 +204,21 @@ postprocess: |
     runtime_dir="/usr/lib/anatase/flatpak/runtime/${runtime_id}/${flatpak_arch}/${runtime_branch}"
     runtime_override_dir="${runtime_dir}/overrides"
 
-    install -dm0755 "${runtime_dir}/files" "${runtime_override_dir}/etc"
+    install -dm0755 \
+        "${runtime_dir}/files" \
+        "${runtime_override_dir}/bin" \
+        "${runtime_override_dir}/etc"
+    
+    # Module loading and NVIDIA device-node creation belong to the host.
+    # The helper running inside the flatpak makes nvidia unavailable instead
+    # due to missing /dev/nvidia* nodes
+    {
+        echo '#!/bin/sh'
+        echo 'exit 0'
+    } > "${runtime_override_dir}/bin/nvidia-modprobe"
+    chmod 0755 "${runtime_override_dir}/bin/nvidia-modprobe"
+    
+    # Ld configuration
     cat > "${runtime_override_dir}/etc/ld.so.conf" <<'EOF'
     include /run/flatpak/ld.so.conf.d/app-*.conf
     include /app/etc/ld.so.conf
