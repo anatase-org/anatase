@@ -106,7 +106,7 @@ jobs:
       - name: Prepare CI build manifest
         id: orchestration
         run: |
-          venv/bin/ludos ci prepare --ci anatase.yml \
+          venv/bin/ludos ci prepare --no-flatpaks --ci anatase.yml \
             --prefix "${LUDOS_CHANNEL}-" --tag "${LUDOS_CHANNEL}" \
             --registry i.anatase.org
 
