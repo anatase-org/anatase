@@ -2,10 +2,10 @@
 Description=nvidia-powerd service
 StartLimitIntervalSec=infinity
 StartLimitBurst=5
-ConditionPathExistsGlob=/dev/nvidia*
 
 [Service]
 Type=simple
+ExecCondition=/usr/bin/sh -c 'grep -qs "^pci:v000010DE" /sys/bus/pci/devices/*/modalias'
 # Not all the hardware can use nvidia-powerd:
 ExecStart=-/usr/bin/nvidia-powerd
 Restart=on-failure
