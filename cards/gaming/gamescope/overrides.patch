@@ -10785,3 +10785,67 @@ index 49e24cf9d88e..c80541c6e925 100644
  			bool bPreferredA = a.type & DRM_MODE_TYPE_PREFERRED;
  			bool bPreferredB = b.type & DRM_MODE_TYPE_PREFERRED;
  			if (bPreferredA != bPreferredB)
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sun, 16 Aug 2026 23:24:44 +0200
+Subject: output an empty HDR block to the tv if not provided, do not throw out
+ metadata provided by the game
+
+Upstream gamescope incorrectly outputs HDR when SDR content is playing. This causes compensation by tvs as noted in the comment, which means it submits fake metadata to the tv to prevent that, which is either its capabilities if included or otherwise some dummy values. On a C8K which does not provide this metadata, it hardcodes to the values of the Steam Deck... We do not have this problem, we only output HDR with HDR content. Therefore, allow the tone mapping capabilities of the tv to work
+
+Moreover, parts of the metadata block are optional, and gamescope rejects the whole block if parts are missing. Remove that to consume the block
+---
+ src/Backends/DRMBackend.cpp | 21 +++------------------
+ src/wlserver.cpp            |  5 -----
+ 2 files changed, 3 insertions(+), 23 deletions(-)
+
+diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
+index c80541c6e925..f21a470dba1b 100644
+--- a/src/Backends/DRMBackend.cpp
++++ b/src/Backends/DRMBackend.cpp
+@@ -2571,25 +2571,10 @@ namespace gamescope
+ 			hdr_output_metadata defaultHDRMetadata{};
+ 			hdr_metadata_infoframe *pInfoframe = &defaultHDRMetadata.hdmi_metadata_type1;
+ 
+-			// To be filled in by the app based on the scene, default to desired_content_max_luminance
+-			//
+-			// Using display's max_fall for the default metadata max_cll to avoid displays
+-			// overcompensating with tonemapping for SDR content.
+-			uint16_t uDefaultInfoframeLuminances = m_Mutable.HDR.uMaxFrameAverageLuminance;
+-
+-			pInfoframe->display_primaries[0].x = color_xy_to_u16( m_Mutable.DisplayColorimetry.primaries.r.x );
+-			pInfoframe->display_primaries[0].y = color_xy_to_u16( m_Mutable.DisplayColorimetry.primaries.r.y );
+-			pInfoframe->display_primaries[1].x = color_xy_to_u16( m_Mutable.DisplayColorimetry.primaries.g.x );
+-			pInfoframe->display_primaries[1].y = color_xy_to_u16( m_Mutable.DisplayColorimetry.primaries.g.y );
+-			pInfoframe->display_primaries[2].x = color_xy_to_u16( m_Mutable.DisplayColorimetry.primaries.b.x );
+-			pInfoframe->display_primaries[2].y = color_xy_to_u16( m_Mutable.DisplayColorimetry.primaries.b.y );
+-			pInfoframe->white_point.x = color_xy_to_u16( m_Mutable.DisplayColorimetry.white.x );
+-			pInfoframe->white_point.y = color_xy_to_u16( m_Mutable.DisplayColorimetry.white.y );
+-			pInfoframe->max_display_mastering_luminance = uDefaultInfoframeLuminances;
+-			pInfoframe->min_display_mastering_luminance = m_Mutable.HDR.uMinContentLightLevel;
+-			pInfoframe->max_cll = uDefaultInfoframeLuminances;
+-			pInfoframe->max_fall = uDefaultInfoframeLuminances;
++			// The mastering display and content light levels describe the source, not
++			// this connector. Leave them zero (unknown) until the app supplies them.
+ 			pInfoframe->eotf = HDMI_EOTF_ST2084;
++			pInfoframe->metadata_type = 0;
+ 
+ 			m_Mutable.HDR.pDefaultMetadataBlob = GetBackend()->CreateBackendBlob( defaultHDRMetadata );
+ 		}
+diff --git a/src/wlserver.cpp b/src/wlserver.cpp
+index 088fa8e9e9af..bdbaff5847d5 100644
+--- a/src/wlserver.cpp
++++ b/src/wlserver.cpp
+@@ -989,11 +989,6 @@ static void gamescope_swapchain_set_hdr_metadata( struct wl_client *client, stru
+ 			return;
+ 		}
+ 
+-		// Check validity of this metadata,
+-		// if it's garbage, just toss it...
+-		if (!max_cll || !max_fall || (!white_point_x && !white_point_y))
+-			return;
+-
+ 		hdr_output_metadata metadata = {};
+ 		metadata.metadata_type = 0;
+ 
