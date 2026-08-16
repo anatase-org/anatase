@@ -10754,3 +10754,34 @@ index e8d8f31f0697..49e24cf9d88e 100644
  		GamescopeBroadcastRGBMode_t eBroadcastRGB = drm->pConnector->GetScreenType() == gamescope::GAMESCOPE_SCREEN_TYPE_EXTERNAL
  			? s_ExternalBroadcastRGBMode
  			: GAMESCOPE_BROADCAST_RGB_MODE_AUTOMATIC;
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sun, 16 Aug 2026 16:06:08 +0200
+Subject: add an additional preference for 120hz
+
+tvs may set 60hz as the default output. This is not optimal, especially if they fail FLR on 60hz or support 120hz
+---
+ src/Backends/DRMBackend.cpp | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
+index 49e24cf9d88e..c80541c6e925 100644
+--- a/src/Backends/DRMBackend.cpp
++++ b/src/Backends/DRMBackend.cpp
+@@ -2146,6 +2146,15 @@ namespace gamescope
+ 			if (bGoodRefreshA != bGoodRefreshB)
+ 				return bGoodRefreshA;
+ 
++			// Some tvs may report 60hz as their preferred output even
++			// if they support 120hz. Prefer 120hz modes if available.
++			// Still honor preferred mode, above 120hz things might get
++			// funny, such as 360hz. Leave those for manual override.
++			bGoodRefreshA = a.vrefresh >= 120;
++			bGoodRefreshB = b.vrefresh >= 120;
++			if (bGoodRefreshA != bGoodRefreshB)
++				return bGoodRefreshA;
++
+ 			bool bPreferredA = a.type & DRM_MODE_TYPE_PREFERRED;
+ 			bool bPreferredB = b.type & DRM_MODE_TYPE_PREFERRED;
+ 			if (bPreferredA != bPreferredB)
