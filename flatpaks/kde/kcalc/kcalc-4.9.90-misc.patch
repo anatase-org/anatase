@@ -1,0 +1,32 @@
+diff -ur kcalc-4.9.90/kcalc_core.cpp kcalc-4.9.90-misc/kcalc_core.cpp
+--- kcalc-4.9.90/kcalc_core.cpp	2012-11-14 17:46:47.000000000 +0100
++++ kcalc-4.9.90-misc/kcalc_core.cpp	2012-12-08 20:05:58.000000000 +0100
+@@ -99,7 +99,13 @@
+ }
+ 
+ KNumber ExecMod(const KNumber &left_op, const KNumber &right_op) {
+-    return left_op % right_op;
++    KNumber tmp_result = left_op % right_op;
++
++    if ( right_op < KNumber::Zero )
++       return -(-left_op % -right_op);
++    if ( tmp_result < KNumber::Zero )
++       tmp_result += right_op;
++    return tmp_result;
+ }
+ 
+ KNumber ExecIntDiv(const KNumber &left_op, const KNumber &right_op) {
+@@ -535,8 +541,11 @@
+ 
+ void CalcEngine::Factorial(const KNumber &input)
+ {
+-    if (input == KNumber::PosInfinity) return;
+-    if (input < KNumber::Zero || input.type() == KNumber::TYPE_ERROR) {
++    if (input == KNumber::PosInfinity || input > KNumber(999999)) {
++       last_number_ = KNumber::PosInfinity;
++       return;
++    }
++    if (input < KNumber::Zero || input.type() != KNumber::TYPE_INTEGER) {
+         error_ = true;
+         last_number_ = KNumber::NaN;
+         return;

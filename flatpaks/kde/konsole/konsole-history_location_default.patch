@@ -1,0 +1,26 @@
+diff --git a/src/history/HistoryFile.cpp b/src/history/HistoryFile.cpp
+index abd5a2287..28783c6b8 100644
+--- a/src/history/HistoryFile.cpp
++++ b/src/history/HistoryFile.cpp
+@@ -53,7 +53,7 @@ HistoryFile::HistoryFile()
+         }
+ 
+         KConfigGroup configGroup = appConfig->group(QStringLiteral("FileLocation"));
+-        if (configGroup.readEntry("scrollbackUseCacheLocation", false)) {
++        if (configGroup.readEntry("scrollbackUseCacheLocation", true)) {
+             fileLocation = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+         } else if (configGroup.readEntry("scrollbackUseSpecifiedLocation", false)) {
+             const QUrl specifiedUrl = KonsoleSettings::scrollbackUseSpecifiedLocationDirectory();
+diff --git a/src/settings/konsole.kcfg b/src/settings/konsole.kcfg
+index 00773635f..cc4358905 100644
+--- a/src/settings/konsole.kcfg
++++ b/src/settings/konsole.kcfg
+@@ -187,7 +187,7 @@
+     </entry>
+     <entry name="scrollbackUseCacheLocation" type="Bool">
+       <label>For scrollback files, use user's specific folder location</label>
+-      <default>false</default>
++      <default>true</default>
+     </entry>
+     <entry name="scrollbackUseSpecifiedLocation" type="Bool">
+       <label>For scrollback files, use specified folder location</label>

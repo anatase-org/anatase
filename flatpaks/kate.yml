@@ -1,0 +1,80 @@
+version: 1
+
+flatpak:
+  id: org.anatase.TextEditor
+  command: kate
+  rename: Text Editor (Kate)
+  rename-author: "%s (packaged by Anatase)"
+  rename-desktop-file: org.kde.kate.desktop
+  rename-appdata-file: org.kde.kate.appdata.xml
+  rename-icon: kate
+  finish-args: |-
+    --device=dri
+    --filesystem=host
+    --share=ipc
+    --socket=cups
+    --socket=fallback-x11
+    --socket=wayland
+    --system-talk-name=org.freedesktop.UDisks2
+    --talk-name=org.freedesktop.Flatpak
+    --filesystem=xdg-config/kdeglobals:ro
+    --talk-name=org.kde.kconfig.notify
+    --talk-name=org.kde.KGlobalSettings
+
+build-deps:
+  - rpm-build
+  - rpmdevtools
+  - redhat-rpm-config
+  - flatpak-rpm-macros
+  - ccache
+
+specs:
+  - spec: kde/kate/kate.spec
+    files:
+      - kate.spec
+    packages:
+      - kate
+      - kate-libs
+      - kate-plugins
+    upstream:
+      type: dist-git
+      url: https://src.fedoraproject.org/rpms/kate
+      branch: f$releasever
+  - spec: kde/konsole/konsole.spec
+    files:
+      - konsole-history_location_default.patch
+      - konsole.spec
+      - konsolerc
+    packages:
+      - konsole-part
+    upstream:
+      type: dist-git
+      url: https://src.fedoraproject.org/rpms/konsole
+      branch: f$releasever
+  - spec: kde/markdownpart/markdownpart.spec
+    files:
+      - markdownpart.spec
+    packages:
+      - markdownpart
+    upstream:
+      type: dist-git
+      url: https://src.fedoraproject.org/rpms/markdownpart
+      branch: f$releasever
+  - spec: kde/svgpart/svgpart.spec
+    files:
+      - svgpart.spec
+    packages:
+      - svgpart
+    upstream:
+      type: dist-git
+      url: https://src.fedoraproject.org/rpms/svgpart
+      branch: f$releasever
+  - spec: kde/qtkeychain/qtkeychain.spec
+    files:
+      - qtkeychain.spec
+    packages:
+      - qtkeychain-qt6
+    upstream:
+      type: dist-git
+      url: https://src.fedoraproject.org/rpms/qtkeychain
+      branch: f$releasever

@@ -30,13 +30,29 @@ build-deps:
   - flatpak-rpm-macros
   - ccache
 
+postprocess: |-
+  sed -i -e 's|%i -qwindowtitle %c||' app/share/applications/*
+  for f in app/share/applications/okularApplication_*; do
+      [ -e "$f" ] || continue
+      mv "$f" "${f/okularApplication_/org.kde.okular-}"
+  done
+
 specs:
-  - spec: git+https://src.fedoraproject.org/rpms/okular:okular.spec#branch=f$releasever
+  - spec: kde/okular/okular.spec
+    files:
+      - okular.spec
     packages:
       - okular
       - okular-part
       - okular-libs
-  - spec: git+https://src.fedoraproject.org/rpms/calligra:calligra.spec#branch=f$releasever
+    upstream:
+      type: dist-git
+      url: https://src.fedoraproject.org/rpms/okular
+      branch: f$releasever
+  - spec: kde/calligra/calligra.spec
+    files:
+      - calligra-disable_products.patch
+      - calligra.spec
     packages:
       - calligra-okular-odpgenerator
       - calligra-okular-odtgenerator
@@ -44,10 +60,7 @@ specs:
       - calligra-words-libs
       - calligra-libs
       - calligra-data
-
-postprocess: |-
-  sed -i -e 's|%i -qwindowtitle %c||' app/share/applications/*
-  for f in app/share/applications/okularApplication_*; do
-      [ -e "$f" ] || continue
-      mv "$f" "${f/okularApplication_/org.kde.okular-}"
-  done
+    upstream:
+      type: dist-git
+      url: https://src.fedoraproject.org/rpms/calligra
+      branch: f$releasever

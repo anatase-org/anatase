@@ -26,20 +26,34 @@ build-deps:
   - ccache
 
 specs:
-  - spec: git+https://src.fedoraproject.org/rpms/ark:ark.spec#branch=f$releasever
+  - spec: kde/ark/ark.spec
+    files:
+      - ark.spec
     packages:
       - ark
       - ark-libs
-  - spec: git+https://src.fedoraproject.org/rpms/gwenview:gwenview.spec#branch=f$releasever
+    upstream:
+      type: dist-git
+      url: https://src.fedoraproject.org/rpms/ark
+      branch: f$releasever
+  - spec: kde/gwenview/gwenview.spec
+    files:
+      - gwenview.spec
     packages:
       - gwenview-libs
-  - spec: git+https://src.fedoraproject.org/rpms/markdownpart:markdownpart.spec#branch=f$releasever
+  - spec: kde/markdownpart/markdownpart.spec
+    files:
+      - markdownpart.spec
     packages:
       - markdownpart
-  - spec: git+https://src.fedoraproject.org/rpms/okular:okular.spec#branch=f$releasever
+  - spec: kde/okular/okular.spec
+    files:
+      - okular.spec
     packages:
       - okular-part
       - okular-libs
-  - spec: git+https://src.fedoraproject.org/rpms/svgpart:svgpart.spec#branch=f$releasever
+  - spec: kde/svgpart/svgpart.spec
+    files:
+      - svgpart.spec
     packages:
       - svgpart

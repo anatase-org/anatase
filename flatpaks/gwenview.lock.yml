@@ -1,0 +1,8 @@
+kde/cfitsio:
+  upstream-sha: ba2c29d1979a124e446b190430cdc3f367044e16
+kde/kcolorpicker:
+  upstream-sha: 26b94c6f2246c0d820b2ef9c5266686ed3d26442
+kde/kimageannotator:
+  upstream-sha: d01bef3febfa0e654cd7c71b4dc4bcacabab8bfb
+kde/gwenview:
+  upstream-sha: 1c8d445c718b969b1a232e4c753e883cf8029c6d

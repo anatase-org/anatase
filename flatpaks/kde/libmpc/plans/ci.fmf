@@ -1,0 +1,7 @@
+summary: CI Gating Plan
+discover:
+    how: fmf
+    url: https://gitlab.com/redhat/centos-stream/tests/libmpc.git
+    filter: 'tag: Fedora-CI-gating'
+execute:
+    how: tmt

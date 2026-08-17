@@ -1,0 +1,10 @@
+kde/kate:
+  upstream-sha: 1d9b6be3ca2966ca47f1542d32cf491e0a7ca9b1
+kde/konsole:
+  upstream-sha: 87c53c1054a9a89d36167d1f88d2b227a10c23cc
+kde/markdownpart:
+  upstream-sha: fd68bb9ee44317f6d3516755f8b6c6f870560ef0
+kde/svgpart:
+  upstream-sha: 0afccd65106c63ad8b7d6e5d9874d23cbafb7edb
+kde/qtkeychain:
+  upstream-sha: a95a88b38ca8e261e2704795fbbd84dc82db2072

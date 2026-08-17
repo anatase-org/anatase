@@ -1,0 +1,15 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index fbeb00ca429..4e645f19025 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -933,6 +933,10 @@ calligra_drop_products_on_old_flag(words  PART_WORDS APP_WORDS)
+ # by calling calligra_disable_product with the product id and the reason,
+ # e.g.:
+ # calligra_disable_product(APP_FOO "isn't buildable at the moment")
++calligra_disable_product(APP_BRAINDUMP "Disabled, will (probably) be removed from Calligra")
++calligra_disable_product(APP_CSTESTER "not wanted in fedora packaging")
++calligra_disable_product(APP_DEVTOOLS "not wanted in fedora packaging")
++calligra_disable_product(PART_COMPONENTS "not used since Gemini is disabled")
+ 
+ #############################################
+ ####     Calculate buildable products    ####
