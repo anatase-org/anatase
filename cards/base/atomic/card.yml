@@ -235,6 +235,7 @@ postprocess: |
     QT_PLUGIN_PATH=/app/lib64/qt6/plugins:/usr/lib64/qt6/plugins
     QML2_IMPORT_PATH=/app/lib64/qt6/qml:/usr/lib64/qt6/qml
     QT_QPA_PLATFORMTHEME=kde
+    XDG_DATA_DIRS=/app/share:/usr/share:/usr/share/runtime/share:/run/host/user-share:/run/host/share
     EOF
     # DO NOT TOUCH THIS CASUALLY.
     # anatase-runtime-deploy embeds the Flatpak-imported OSTree commit and OCI
