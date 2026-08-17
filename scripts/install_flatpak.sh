@@ -110,7 +110,12 @@ for ref in refs:
     elif path.suffix in (".yaml", ".yml"):
         card = path
     else:
-        card = path / "card.yaml"
+        for candidate in (path.with_suffix(".yml"), path.with_suffix(".yaml")):
+            if candidate.exists():
+                card = candidate
+                break
+        else:
+            card = path.with_suffix(".yml")
     if not card.exists():
         raise SystemExit(f"Flatpak card not found: {card}")
 
@@ -124,7 +129,10 @@ for ref in refs:
     if not isinstance(app_id, str) or not app_id.strip():
         raise SystemExit(f"{card}: missing flatpak.id")
 
-    app_name = card.parent.name
+    if card.name in ("card.yaml", "card.yml"):
+        app_name = card.parent.name
+    else:
+        app_name = card.stem
     image = f"{repository}:{app_name}"
     print(f"{ref}\t{card}\t{app_id.strip()}\t{app_name}\t{image}")
 PY
