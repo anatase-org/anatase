@@ -1,7 +1,7 @@
 Name:		anatase-logos
 Summary:	Anatase-related icons and pictures
 Version:	42.0.1
-Release:	5%{?dist}
+Release:	1%{?dist}
 
 License:	LicenseRef-Anatase-Logos
 Source0:	favicon.svg

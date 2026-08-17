@@ -50,6 +50,9 @@
   </sodipodi:namedview>
   <defs
      id="defs1">
+    <style
+       type="text/css"
+       id="current-color-scheme">.ColorScheme-Text { color:#232629; }</style>
     <linearGradient
        id="swatch24"
        inkscape:swatch="solid">
@@ -250,7 +253,8 @@
        inkscape:label="logos internal"
        transform="translate(-95.467017,-79.260303)">
       <path
-         style="fill:url(#linearGradient8);stroke:none;stroke-width:7.75985;stroke-miterlimit:5.2;stroke-dasharray:none"
+         class="ColorScheme-Text"
+         style="fill:currentColor;stroke:none;stroke-width:7.75985;stroke-miterlimit:5.2;stroke-dasharray:none"
          d="m 325.83324,325.49277 98.50862,89.23853 30.09239,111.78116 -92.3467,-71.1052 z"
          id="path9-9-1-8"
          sodipodi:nodetypes="ccccc" />
@@ -272,7 +276,8 @@
          transform="matrix(0.33767757,0.2088199,-0.2088199,0.33767757,580.97592,488.66985)" />
       <path
          sodipodi:type="star"
-         style="fill:url(#linearGradient10);stroke-width:1.121;stroke-miterlimit:5.2"
+         class="ColorScheme-Text"
+         style="fill:currentColor;stroke-width:1.121;stroke-miterlimit:5.2"
          id="path11-2-8-3"
          inkscape:flatsided="true"
          sodipodi:sides="6"
@@ -288,7 +293,8 @@
          transform="matrix(1.2429276,0.09488828,-0.09488828,1.2429276,53.142449,415.59116)" />
       <path
          sodipodi:type="star"
-         style="fill:url(#linearGradient327-9-6-8);stroke-width:1.121;stroke-miterlimit:5.2"
+         class="ColorScheme-Text"
+         style="fill:currentColor;stroke-width:1.121;stroke-miterlimit:5.2"
          id="path12-1-5-1"
          inkscape:flatsided="true"
          sodipodi:sides="6"
