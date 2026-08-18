@@ -177,12 +177,16 @@ install -d -m0755 %{buildroot}%{_sysconfdir}/dbus-1/system.d/
 install -d -m0755 %{buildroot}%{_unitdir}/
 install -d -m0755 %{buildroot}%{_userunitdir}/gamescope-session-plus.service.wants/
 install -d -m0755 %{buildroot}%{_libdir}/
+install -d -m0755 %{buildroot}%{_datadir}/steamos-manager/devices/
 
 # Install binaries
 install -D -m755 target/rpm/steamos-manager %{buildroot}%{_libdir}/steamos-manager
 
 # Install license
 install -D -m644 LICENSE %{buildroot}%{_datadir}/licenses/%{name}/LICENSE
+
+# Install the shared Steam Deck LCD (Jupiter) and OLED (Galileo) device config
+install -m644 data/devices/steam-deck.toml %{buildroot}%{_datadir}/steamos-manager/devices/
 
 # Install systemd and dbus service files
 install -m644 data/system/com.steampowered.SteamOSManager1.service %{buildroot}%{_datadir}/dbus-1/system-services/
@@ -215,6 +219,9 @@ ln -s ../steamos-manager.service %{buildroot}%{_userunitdir}/gamescope-session-p
 
 # Binaries
 %{_libdir}/steamos-manager
+
+# Device configuration
+%{_datadir}/steamos-manager/devices/steam-deck.toml
 
 # DBus Service Files
 %{_datadir}/dbus-1/services/com.steampowered.SteamOSManager1.service
