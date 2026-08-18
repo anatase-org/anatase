@@ -10849,3 +10849,702 @@ index 088fa8e9e9af..bdbaff5847d5 100644
  		hdr_output_metadata metadata = {};
  		metadata.metadata_type = 0;
  
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Tue, 18 Aug 2026 17:38:25 +0200
+Subject: fix crash with FSR, HDR, and framegen due to incorrect memory buffer
+ type
+
+---
+ src/frame_generation_vulkan.cpp               |   5 +-
+ src/meson.build                               |   4 +
+ src/rendervulkan.cpp                          | 121 ++++++++++++++++--
+ src/rendervulkan.hpp                          |  19 ++-
+ src/shaders/cs_composite_rcas_rgb10a2.comp    |   7 +
+ src/shaders/cs_composite_rcas_rgba16f.comp    |   7 +
+ src/shaders/cs_easu.comp                      |  44 +------
+ src/shaders/cs_easu_common.h                  |  57 +++++++++
+ src/shaders/cs_easu_fp16.comp                 |  44 +------
+ src/shaders/cs_easu_fp16_rgba16f.comp         |   9 ++
+ src/shaders/cs_easu_rgba16f.comp              |   8 ++
+ ...s_ffx_opticalflow_prepare_luma_scaled.comp |  17 ++-
+ src/shaders/descriptor_set.h                  |  10 +-
+ 13 files changed, 240 insertions(+), 112 deletions(-)
+ create mode 100644 src/shaders/cs_composite_rcas_rgb10a2.comp
+ create mode 100644 src/shaders/cs_composite_rcas_rgba16f.comp
+ create mode 100644 src/shaders/cs_easu_common.h
+ create mode 100644 src/shaders/cs_easu_fp16_rgba16f.comp
+ create mode 100644 src/shaders/cs_easu_rgba16f.comp
+
+diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
+index 4a6696249bdb..0a3045c7ae75 100644
+--- a/src/frame_generation_vulkan.cpp
++++ b/src/frame_generation_vulkan.cpp
+@@ -746,7 +746,10 @@ namespace
+ 			};
+ 
+ 			const auto common = Upload( constants );
+-			if ( !Dispatch( cmdBuffer->rawBuffer(), clampedScale == 100 ? resources->prepare : resources->prepareScaled,
++			// FidelityFX's prepare-luma shader does not bounds-check its rounded-up
++			// 32x32 dispatch. Use the bounds-safe adapter at every scale, including
++			// 100%, so non-aligned extents cannot access beyond the source or luma.
++			if ( !Dispatch( cmdBuffer->rawBuffer(), resources->prepareScaled,
+ 				{
+ 					Sampled( source->srgbView() ), Storage( resources->luma[current][0] ), common,
+ 				}, ( resources->lumaExtent.width + 31 ) / 32, ( resources->lumaExtent.height + 31 ) / 32 ) )
+diff --git a/src/meson.build b/src/meson.build
+index eb793c3429db..ef2a62a82c03 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -67,8 +67,12 @@ shader_src = [
+   'shaders/cs_composite_blur_cond.comp',
+   'shaders/cs_composite_rcas.comp',
+   'shaders/cs_composite_rcas_fp16.comp',
++  'shaders/cs_composite_rcas_rgba16f.comp',
++  'shaders/cs_composite_rcas_rgb10a2.comp',
+   'shaders/cs_easu.comp',
+   'shaders/cs_easu_fp16.comp',
++  'shaders/cs_easu_rgba16f.comp',
++  'shaders/cs_easu_fp16_rgba16f.comp',
+   'shaders/cs_gaussian_blur_horizontal.comp',
+   'shaders/cs_nis.comp',
+   'shaders/cs_nis_fp16.comp',
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index bfd9e83b7f44..4217f98376e3 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -47,8 +47,12 @@
+ #include "cs_composite_blur_cond.h"
+ #include "cs_composite_rcas.h"
+ #include "cs_composite_rcas_fp16.h"
++#include "cs_composite_rcas_rgba16f.h"
++#include "cs_composite_rcas_rgb10a2.h"
+ #include "cs_easu.h"
+ #include "cs_easu_fp16.h"
++#include "cs_easu_rgba16f.h"
++#include "cs_easu_fp16_rgba16f.h"
+ #include "cs_gaussian_blur_horizontal.h"
+ #include "cs_nis.h"
+ #include "cs_nis_fp16.h"
+@@ -988,16 +992,20 @@ bool CVulkanDevice::createShaders()
+ 	SHADER(BLUR_COND, cs_composite_blur_cond);
+ 	SHADER(BLUR_FIRST_PASS, cs_gaussian_blur_horizontal);
+ 	SHADER(RCAS, cs_composite_rcas);
++	SHADER(RCAS_RGBA16F, cs_composite_rcas_rgba16f);
++	SHADER(RCAS_RGB10A2, cs_composite_rcas_rgb10a2);
+ 	if (m_bSupportsFp16)
+ 	{
+ 		SHADER(RCAS_FP16, cs_composite_rcas_fp16);
+ 		SHADER(EASU, cs_easu_fp16);
++		SHADER(EASU_RGBA16F, cs_easu_fp16_rgba16f);
+ 		SHADER(NIS, cs_nis_fp16);
+ 	}
+ 	else
+ 	{
+ 		SHADER(RCAS_FP16, cs_composite_rcas);
+ 		SHADER(EASU, cs_easu);
++		SHADER(EASU_RGBA16F, cs_easu_rgba16f);
+ 		SHADER(NIS, cs_nis);
+ 	}
+ 	SHADER(RGB_TO_NV12, cs_rgb_to_nv12);
+@@ -1040,6 +1048,7 @@ bool CVulkanDevice::createScratchResources()
+ 		vk_log.errorf( "vkAllocateDescriptorSets failed" );
+ 		return false;
+ 	}
++	m_freeDescriptorSets.assign( m_descriptorSets.begin(), m_descriptorSets.end() );
+ 
+ 	// Make and map upload buffer
+ 	
+@@ -1237,7 +1246,10 @@ void CVulkanDevice::compileAllPipelines()
+ 	SHADER(BLUR_FIRST_PASS, 1, 2, 1);
+ 	SHADER(RCAS, k_nMaxLayers, k_nMaxYcbcrMask_ToPreCompile, 1);
+ 	SHADER(RCAS_FP16, k_nMaxLayers, k_nMaxYcbcrMask_ToPreCompile, 1);
++	SHADER(RCAS_RGBA16F, k_nMaxLayers, k_nMaxYcbcrMask_ToPreCompile, 1);
++	SHADER(RCAS_RGB10A2, k_nMaxLayers, k_nMaxYcbcrMask_ToPreCompile, 1);
+ 	SHADER(EASU, 1, 1, 1);
++	SHADER(EASU_RGBA16F, 1, 1, 1);
+ 	SHADER(NIS, 1, 1, 1);
+ 	SHADER(RGB_TO_NV12, 1, 1, 1);
+ 	SHADER(ROTATION, k_nMaxLayers, k_nMaxYcbcrMask_ToPreCompile, k_nMaxBlurLayers);
+@@ -1406,6 +1418,32 @@ uint64_t CVulkanDevice::submit( std::unique_ptr<CVulkanCmdBuffer> cmdBuffer)
+ 	return nextSeqNo;
+ }
+ 
++VkDescriptorSet CVulkanDevice::descriptorSet()
++{
++	// Updating a descriptor set that an earlier submission still uses is invalid.
++	// Reclaim completed command buffers first; only wait when all sets are busy.
++	if ( m_freeDescriptorSets.empty() )
++		garbageCollect();
++
++	if ( m_freeDescriptorSets.empty() && !m_pendingCmdBufs.empty() )
++	{
++		vk_log.warnf( "Descriptor set pool exhausted; waiting for the oldest Vulkan submission" );
++		wait( m_pendingCmdBufs.begin()->first );
++	}
++
++	assert( !m_freeDescriptorSets.empty() );
++	VkDescriptorSet descriptorSet = m_freeDescriptorSets.back();
++	m_freeDescriptorSets.pop_back();
++	return descriptorSet;
++}
++
++void CVulkanDevice::recycleDescriptorSets( std::vector<VkDescriptorSet>& descriptorSets )
++{
++	m_freeDescriptorSets.insert(
++		m_freeDescriptorSets.end(), descriptorSets.begin(), descriptorSets.end() );
++	descriptorSets.clear();
++}
++
+ void CVulkanDevice::garbageCollect( void )
+ {
+ 	uint64_t currentSeqNo;
+@@ -1594,12 +1632,14 @@ CVulkanCmdBuffer::CVulkanCmdBuffer(CVulkanDevice *parent, VkCommandBuffer cmdBuf
+ 
+ CVulkanCmdBuffer::~CVulkanCmdBuffer()
+ {
++	m_device->recycleDescriptorSets( m_descriptorSets );
+ 	m_device->vk.FreeCommandBuffers(m_device->device(), m_device->commandPool(), 1, &m_cmdBuffer);
+ }
+ 
+ void CVulkanCmdBuffer::reset()
+ {
+ 	vk_check( m_device->vk.ResetCommandBuffer(m_cmdBuffer, 0) );
++	m_device->recycleDescriptorSets( m_descriptorSets );
+ 	m_textureRefs.clear();
+ 	m_textureState.clear();
+ 
+@@ -1704,6 +1744,7 @@ void CVulkanCmdBuffer::dispatch(uint32_t x, uint32_t y, uint32_t z)
+ 	insertBarrier();
+ 
+ 	VkDescriptorSet descriptorSet = m_device->descriptorSet();
++	m_descriptorSets.push_back( descriptorSet );
+ 
+ 	std::array<VkWriteDescriptorSet, 7> writeDescriptorSets;
+ 	std::array<VkDescriptorImageInfo, VKR_SAMPLER_SLOTS> imageDescriptors = {};
+@@ -1902,6 +1943,13 @@ void CVulkanCmdBuffer::copyBufferToImage(VkBuffer buffer, VkDeviceSize offset, u
+ 	m_textureRefs.emplace_back(std::move(dst));
+ }
+ 
++static uint32_t external_queue_family( CVulkanDevice *device )
++{
++	return device->supportsModifiers()
++		? VK_QUEUE_FAMILY_FOREIGN_EXT
++		: VK_QUEUE_FAMILY_EXTERNAL_KHR;
++}
++
+ void CVulkanCmdBuffer::prepareSrcImage(CVulkanTexture *image)
+ {
+ 	auto result = m_textureState.emplace(image, TextureState());
+@@ -1910,7 +1958,8 @@ void CVulkanCmdBuffer::prepareSrcImage(CVulkanTexture *image)
+ 		return;
+ 	// using the swapchain image as a source without writing to it doesn't make any sense
+ 	assert(image->outputImage() == false);
+-	result.first->second.needsImport = image->externalImage();
++	result.first->second.needsImport =
++		image->queueFamily == external_queue_family( m_device );
+ 	result.first->second.needsExport = image->externalImage();
+ }
+ 
+@@ -1921,6 +1970,8 @@ void CVulkanCmdBuffer::prepareDestImage(CVulkanTexture *image)
+ 	if (!result.second)
+ 		return;
+ 	result.first->second.discarded = true;
++	result.first->second.needsImport =
++		image->queueFamily == external_queue_family( m_device );
+ 	result.first->second.needsExport = image->externalImage();
+ 	result.first->second.needsPresentLayout = image->outputImage();
+ }
+@@ -1945,7 +1996,7 @@ void CVulkanCmdBuffer::insertBarrier(bool flush)
+ {
+ 	std::vector<VkImageMemoryBarrier> barriers;
+ 
+-	uint32_t externalQueue = m_device->supportsModifiers() ? VK_QUEUE_FAMILY_FOREIGN_EXT : VK_QUEUE_FAMILY_EXTERNAL_KHR;
++	uint32_t externalQueue = external_queue_family( m_device );
+ 
+ 	VkImageSubresourceRange subResRange =
+ 	{
+@@ -1986,6 +2037,7 @@ void CVulkanCmdBuffer::insertBarrier(bool flush)
+ 		};
+ 
+ 		barriers.push_back(memoryBarrier);
++		image->queueFamily = memoryBarrier.dstQueueFamilyIndex;
+ 
+ 		state.discarded = false;
+ 		state.dirty = false;
+@@ -2132,6 +2184,11 @@ bool CVulkanTexture::BInit( uint32_t width, uint32_t height, uint32_t depth, uin
+ 	}
+ 
+ 	m_bExternal = pDMA || flags.bExportable == true;
++	// Imported DMA-BUFs begin in the external producer's ownership. Locally
++	// allocated exportable images remain unowned until their first Vulkan use.
++	queueFamily = pDMA
++		? external_queue_family( &g_device )
++		: VK_QUEUE_FAMILY_IGNORED;
+ 
+ 	// Possible extensions for below
+ 	wsi_image_create_info wsiImageCreateInfo = {};
+@@ -3522,11 +3579,12 @@ bool vulkan_make_output()
+ 	return true;
+ }
+ 
+-static void update_tmp_images( uint32_t width, uint32_t height )
++static void update_tmp_images( uint32_t width, uint32_t height, uint32_t drmFormat = DRM_FORMAT_ARGB8888 )
+ {
+ 	if ( g_output.tmpOutput != nullptr
+ 			&& width == g_output.tmpOutput->width()
+-			&& height == g_output.tmpOutput->height() )
++			&& height == g_output.tmpOutput->height()
++			&& drmFormat == g_output.tmpOutput->drmFormat() )
+ 	{
+ 		return;
+ 	}
+@@ -3536,7 +3594,7 @@ static void update_tmp_images( uint32_t width, uint32_t height )
+ 	createFlags.bStorage = true;
+ 
+ 	g_output.tmpOutput = new CVulkanTexture();
+-	bool bSuccess = g_output.tmpOutput->BInit( width, height, 1u, DRM_FORMAT_ARGB8888, createFlags, nullptr );
++	bool bSuccess = g_output.tmpOutput->BInit( width, height, 1u, drmFormat, createFlags, nullptr );
+ 
+ 	if ( !bSuccess )
+ 	{
+@@ -4082,6 +4140,17 @@ static bool is_8bit_sdr_target( const CVulkanTexture *texture )
+ 	       texture->format() == VK_FORMAT_R8G8B8A8_UNORM;
+ }
+ 
++static bool is_fp16_fsr_target( const CVulkanTexture *texture )
++{
++	return texture->format() == VK_FORMAT_R16G16B16A16_SFLOAT;
++}
++
++static bool is_rgb10a2_fsr_target( const CVulkanTexture *texture )
++{
++	// GLSL's rgb10_a2 storage format maps to Vulkan's A2B10G10R10 view.
++	return texture->format() == VK_FORMAT_A2B10G10R10_UNORM_PACK32;
++}
++
+ static bool can_use_simple_fsr_output( const FrameInfo_t *frameInfo, CVulkanTexture *output, EOTF outputTF )
+ {
+ 	if ( frameInfo->layerCount != 1 ||
+@@ -4200,12 +4269,20 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
+ 		uint32_t tempY = frameInfo->layers[0].integerHeight();
+ 
+ 		if ( !pFsrIntermediateOverride )
+-			update_tmp_images(tempX, tempY);
++		{
++			const uint32_t fsrIntermediateFormat = ColorspaceIsHDR( frameInfo->layers[0].colorspace )
++				? DRM_FORMAT_ABGR16161616F
++				: DRM_FORMAT_ARGB8888;
++			update_tmp_images( tempX, tempY, fsrIntermediateFormat );
++		}
+ 		gamescope::Rc<CVulkanTexture> fsrIntermediate = pFsrIntermediateOverride;
+ 		if ( !fsrIntermediate )
+ 			fsrIntermediate = g_output.tmpOutput;
+ 
+-		cmdBuffer->bindPipeline(g_device.pipeline(SHADER_TYPE_EASU));
++		const ShaderType easuShader = is_fp16_fsr_target( fsrIntermediate.get() )
++			? SHADER_TYPE_EASU_RGBA16F
++			: SHADER_TYPE_EASU;
++		cmdBuffer->bindPipeline(g_device.pipeline(easuShader));
+ 		cmdBuffer->bindTarget(fsrIntermediate);
+ 		cmdBuffer->bindTexture(0, frameInfo->layers[0].tex);
+ 		cmdBuffer->setTextureSrgb(0, true);
+@@ -4218,9 +4295,13 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
+ 		cmdBuffer->dispatch(div_roundup(tempX, pixelsPerGroup), div_roundup(tempY, pixelsPerGroup));
+ 
+ 		const bool simpleFsrOutput = can_use_simple_fsr_output( frameInfo, compositeImage.get(), outputTF );
+-		const ShaderType rcasShader = can_use_fp16_fsr_rcas( frameInfo, compositeImage.get(), outputTF )
+-			? SHADER_TYPE_RCAS_FP16
+-			: SHADER_TYPE_RCAS;
++		const ShaderType rcasShader = is_fp16_fsr_target( compositeImage.get() )
++			? SHADER_TYPE_RCAS_RGBA16F
++			: is_rgb10a2_fsr_target( compositeImage.get() )
++				? SHADER_TYPE_RCAS_RGB10A2
++				: can_use_fp16_fsr_rcas( frameInfo, compositeImage.get(), outputTF )
++					? SHADER_TYPE_RCAS_FP16
++					: SHADER_TYPE_RCAS;
+ 		cmdBuffer->bindPipeline(g_device.pipeline(rcasShader, frameInfo->layerCount, frameInfo->ycbcrMask() & ~1, 0u, frameInfo->colorspaceMask(), outputTF, false, simpleFsrOutput ));
+ 		bind_all_layers(cmdBuffer.get(), frameInfo);
+ 		cmdBuffer->bindTexture(0, fsrIntermediate);
+@@ -4733,6 +4814,7 @@ namespace
+ 			FrameGenerationQueuedFrame real = {
+ 				realLayer, false, frameInfo->useFSRLayer0, nullptr,
+ 				m_currentRealOutputId };
++			const bool hdrFsr = fsrEnabled && ColorspaceIsHDR( realLayer.colorspace );
+ 
+ 			std::optional<uint64_t> sequence;
+ 			if ( abDuplicate )
+@@ -4745,7 +4827,9 @@ namespace
+ 			{
+ 				const uint32_t outputWidth = fsrEnabled ? uint32_t( g_nOutputWidth ) : rawSource->width();
+ 				const uint32_t outputHeight = fsrEnabled ? uint32_t( g_nOutputHeight ) : rawSource->height();
+-				const uint32_t outputFormat = fsrEnabled
++				const uint32_t outputFormat = hdrFsr
++					? DRM_FORMAT_XBGR2101010
++					: fsrEnabled
+ 					? ( realLayer.tex->drmFormat() != DRM_FORMAT_INVALID
+ 						? realLayer.tex->drmFormat() : g_output.uOutputFormat )
+ 					: rawSource->drmFormat();
+@@ -4866,6 +4950,15 @@ namespace
+ 					generated.layer.scale = { 1.0f, 1.0f };
+ 					generated.layer.offset = { 0.0f, 0.0f };
+ 					generated.layer.blackBorder = false;
++					generated.layer.filter = GamescopeUpscaleFilter::NEAREST;
++				}
++				if ( generatedFrame.applyOutputColorMgmt )
++				{
++					// This scanout already contains the compositor's display-encoded
++					// result. Keep its output colorspace and HDR metadata, but do not
++					// apply the source plane's color pipeline a second time in KMS.
++					generated.layer.applyColorMgmt = false;
++					generated.layer.ctm = nullptr;
+ 				}
+ 
+ 				// With preemptive upscaling disabled for frame generation, prepare
+@@ -4918,6 +5011,7 @@ namespace
+ 					real.layer.scale = { 1.0f, 1.0f };
+ 					real.layer.offset = { 0.0f, 0.0f };
+ 					real.layer.blackBorder = false;
++					real.layer.filter = GamescopeUpscaleFilter::NEAREST;
+ 					real.useFSR = false;
+ 					if ( realFrame.outputEncodingEOTF == EOTF_Gamma22 )
+ 						real.layer.colorspace = GAMESCOPE_APP_TEXTURE_COLORSPACE_SRGB;
+@@ -4925,6 +5019,11 @@ namespace
+ 						real.layer.colorspace = realFrame.outputEncodingEOTF == EOTF_PQ
+ 							? GAMESCOPE_APP_TEXTURE_COLORSPACE_HDR10_PQ
+ 							: GAMESCOPE_APP_TEXTURE_COLORSPACE_SCRGB;
++					if ( realFrame.applyOutputColorMgmt )
++					{
++						real.layer.applyColorMgmt = false;
++						real.layer.ctm = nullptr;
++					}
+ 				}
+ 			}
+ 
+diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
+index 4d7ffab49a68..a0edd0d642c1 100644
+--- a/src/rendervulkan.hpp
++++ b/src/rendervulkan.hpp
+@@ -623,8 +623,11 @@ enum ShaderType {
+ 	SHADER_TYPE_BLUR_COND,
+ 	SHADER_TYPE_BLUR_FIRST_PASS,
+ 	SHADER_TYPE_EASU,
++	SHADER_TYPE_EASU_RGBA16F,
+ 	SHADER_TYPE_RCAS,
+ 	SHADER_TYPE_RCAS_FP16,
++	SHADER_TYPE_RCAS_RGBA16F,
++	SHADER_TYPE_RCAS_RGB10A2,
+ 	SHADER_TYPE_NIS,
+ 	SHADER_TYPE_RGB_TO_NV12,
+ 	SHADER_TYPE_ROTATION,
+@@ -858,12 +861,8 @@ public:
+ 	bool isComplete(uint64_t sequence);
+ 	void waitIdle(bool reset = true);
+ 	void garbageCollect();
+-	inline VkDescriptorSet descriptorSet()
+-	{
+-		VkDescriptorSet ret = m_descriptorSets[m_currentDescriptorSet];
+-		m_currentDescriptorSet = (m_currentDescriptorSet + 1) % m_descriptorSets.size();
+-		return ret;
+-	}
++	VkDescriptorSet descriptorSet();
++	void recycleDescriptorSets( std::vector<VkDescriptorSet>& descriptorSets );
+ 
+ 	std::shared_ptr<VulkanTimelineSemaphore_t> CreateTimelineSemaphore( uint64_t ulStartingPoint, bool bShared = false );
+ 	std::shared_ptr<VulkanTimelineSemaphore_t> ImportTimelineSemaphore( gamescope::CTimeline *pTimeline );
+@@ -971,11 +970,10 @@ protected:
+ 
+ 	static constexpr uint32_t k_uMaxConcurrentSubmits = 8;
+ 
+-	// currently just one set, no need to double buffer because we
+-	// vkQueueWaitIdle after each submit.
+-	// should be moved to the output if we are going to support multiple outputs
++	// Descriptor sets are checked out by command buffers and returned only after
++	// the submission using them has completed.
+ 	std::array<VkDescriptorSet, k_uMaxConcurrentSubmits * 3> m_descriptorSets;
+-	uint32_t m_currentDescriptorSet = 0;
++	std::vector<VkDescriptorSet> m_freeDescriptorSets;
+ 
+ 	VkBuffer m_uploadBuffer;
+ 	VkDeviceMemory m_uploadBufferMemory;
+@@ -1073,6 +1071,7 @@ private:
+ 
+ 	std::vector<VulkanTimelinePoint_t> m_ExternalDependencies;
+ 	std::vector<VulkanTimelinePoint_t> m_ExternalSignals;
++	std::vector<VkDescriptorSet> m_descriptorSets;
+ 
+ 	uint32_t m_renderBufferOffset = 0;
+ };
+diff --git a/src/shaders/cs_composite_rcas_rgb10a2.comp b/src/shaders/cs_composite_rcas_rgb10a2.comp
+new file mode 100644
+index 000000000000..4c2cd654699a
+--- /dev/null
++++ b/src/shaders/cs_composite_rcas_rgb10a2.comp
+@@ -0,0 +1,7 @@
++#version 460
++
++#extension GL_GOOGLE_include_directive : require
++#extension GL_EXT_scalar_block_layout : require
++
++#define VKR_TARGET_FORMAT rgb10_a2
++#include "cs_composite_rcas_common.h"
+diff --git a/src/shaders/cs_composite_rcas_rgba16f.comp b/src/shaders/cs_composite_rcas_rgba16f.comp
+new file mode 100644
+index 000000000000..eedc6993158f
+--- /dev/null
++++ b/src/shaders/cs_composite_rcas_rgba16f.comp
+@@ -0,0 +1,7 @@
++#version 460
++
++#extension GL_GOOGLE_include_directive : require
++#extension GL_EXT_scalar_block_layout : require
++
++#define VKR_TARGET_FORMAT rgba16f
++#include "cs_composite_rcas_common.h"
+diff --git a/src/shaders/cs_easu.comp b/src/shaders/cs_easu.comp
+index d13ee9577779..0cef5fb088e1 100644
+--- a/src/shaders/cs_easu.comp
++++ b/src/shaders/cs_easu.comp
+@@ -3,45 +3,5 @@
+ #extension GL_GOOGLE_include_directive : require
+ #extension GL_EXT_scalar_block_layout : require
+ 
+-#include "descriptor_set.h"
+-
+-layout(
+-  local_size_x = 64,
+-  local_size_y = 1,
+-  local_size_z = 1) in;
+-
+-layout(binding = 0, scalar)
+-uniform layers_t {
+-    uvec4 c1, c2, c3, c4;
+-};
+-
+-#define A_GPU 1
+-#define A_GLSL 1
+-#include "ffx_a.h"
+-#define FSR_EASU_F 1
+-AF4 FsrEasuRF(AF2 p){return AF4(textureGather(s_samplers[0], p, 0));}
+-AF4 FsrEasuGF(AF2 p){return AF4(textureGather(s_samplers[0], p, 1));}
+-AF4 FsrEasuBF(AF2 p){return AF4(textureGather(s_samplers[0], p, 2));}
+-#include "ffx_fsr1.h"
+-
+-void easuPass(uvec2 pos)
+-{
+-    vec3 color;
+-    FsrEasuF(color, pos, c1, c2, c3, c4);
+-    imageStore(dst, ivec2(pos), vec4(color, 1));
+-}
+-
+-void main()
+-{
+-    // AMD recommends to use this swizzle and to process 4 pixel per invocation
+-    // for better cache utilisation
+-    uvec2 pos = ARmp8x8(gl_LocalInvocationID.x) + uvec2(gl_WorkGroupID.x << 4u, gl_WorkGroupID.y << 4u);
+-    easuPass(pos);
+-    pos.x += 8u;
+-    easuPass(pos);
+-    pos.y += 8u;
+-    easuPass(pos);
+-    pos.x -= 8u;
+-    easuPass(pos);
+-}
+-
++#define FSR_EASU_USE_FP16 0
++#include "cs_easu_common.h"
+diff --git a/src/shaders/cs_easu_common.h b/src/shaders/cs_easu_common.h
+new file mode 100644
+index 000000000000..70eb2ca97f10
+--- /dev/null
++++ b/src/shaders/cs_easu_common.h
+@@ -0,0 +1,57 @@
++#include "descriptor_set.h"
++
++layout(
++  local_size_x = 64,
++  local_size_y = 1,
++  local_size_z = 1) in;
++
++layout(binding = 0, scalar)
++uniform layers_t {
++    uvec4 c1, c2, c3, c4;
++};
++
++#define A_GPU 1
++#define A_GLSL 1
++#if FSR_EASU_USE_FP16
++#define A_HALF 1
++#endif
++#include "ffx_a.h"
++
++#if FSR_EASU_USE_FP16
++#define FSR_EASU_H 1
++f16vec4 FsrEasuRH(vec2 p) { return f16vec4(textureGather(s_samplers[0], p, 0)); }
++f16vec4 FsrEasuGH(vec2 p) { return f16vec4(textureGather(s_samplers[0], p, 1)); }
++f16vec4 FsrEasuBH(vec2 p) { return f16vec4(textureGather(s_samplers[0], p, 2)); }
++#else
++#define FSR_EASU_F 1
++AF4 FsrEasuRF(AF2 p) { return AF4(textureGather(s_samplers[0], p, 0)); }
++AF4 FsrEasuGF(AF2 p) { return AF4(textureGather(s_samplers[0], p, 1)); }
++AF4 FsrEasuBF(AF2 p) { return AF4(textureGather(s_samplers[0], p, 2)); }
++#endif
++#include "ffx_fsr1.h"
++
++void easuPass(uvec2 pos)
++{
++#if FSR_EASU_USE_FP16
++    f16vec3 color;
++    FsrEasuH(color, pos, c1, c2, c3, c4);
++#else
++    vec3 color;
++    FsrEasuF(color, pos, c1, c2, c3, c4);
++#endif
++    imageStore(dst, ivec2(pos), vec4(color, 1));
++}
++
++void main()
++{
++    // AMD recommends to use this swizzle and to process 4 pixels per invocation
++    // for better cache utilisation.
++    uvec2 pos = ARmp8x8(gl_LocalInvocationID.x) + uvec2(gl_WorkGroupID.x << 4u, gl_WorkGroupID.y << 4u);
++    easuPass(pos);
++    pos.x += 8u;
++    easuPass(pos);
++    pos.y += 8u;
++    easuPass(pos);
++    pos.x -= 8u;
++    easuPass(pos);
++}
+diff --git a/src/shaders/cs_easu_fp16.comp b/src/shaders/cs_easu_fp16.comp
+index 403c2b28dc1b..76840661a904 100644
+--- a/src/shaders/cs_easu_fp16.comp
++++ b/src/shaders/cs_easu_fp16.comp
+@@ -4,45 +4,5 @@
+ #extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+ #extension GL_EXT_scalar_block_layout : require
+ 
+-#include "descriptor_set.h"
+-
+-layout(
+-  local_size_x = 64,
+-  local_size_y = 1,
+-  local_size_z = 1) in;
+-
+-layout(binding = 0, scalar)
+-uniform layers_t {
+-    uvec4 c1, c2, c3, c4;
+-};
+-
+-#define A_GPU 1
+-#define A_GLSL 1
+-#define A_HALF 1
+-#include "ffx_a.h"
+-#define FSR_EASU_H 1
+-f16vec4 FsrEasuRH(vec2 p) {return f16vec4(textureGather(s_samplers[0], p, 0));}
+-f16vec4 FsrEasuGH(vec2 p) {return f16vec4(textureGather(s_samplers[0], p, 1));}
+-f16vec4 FsrEasuBH(vec2 p) {return f16vec4(textureGather(s_samplers[0], p, 2));}
+-#include "ffx_fsr1.h"
+-
+-void easuPass(uvec2 pos)
+-{
+-    f16vec3 color;
+-    FsrEasuH(color, pos, c1, c2, c3, c4);
+-    imageStore(dst, ivec2(pos), vec4(color, 1));
+-}
+-
+-void main()
+-{
+-    // AMD recommends to use this swizzle and to process 4 pixel per invocation
+-    // for better cache utilisation
+-    uvec2 pos = ARmp8x8(gl_LocalInvocationID.x) + uvec2(gl_WorkGroupID.x << 4u, gl_WorkGroupID.y << 4u);
+-    easuPass(pos);
+-    pos.x += 8u;
+-    easuPass(pos);
+-    pos.y += 8u;
+-    easuPass(pos);
+-    pos.x -= 8u;
+-    easuPass(pos);
+-}
++#define FSR_EASU_USE_FP16 1
++#include "cs_easu_common.h"
+diff --git a/src/shaders/cs_easu_fp16_rgba16f.comp b/src/shaders/cs_easu_fp16_rgba16f.comp
+new file mode 100644
+index 000000000000..4e07af2e1a9a
+--- /dev/null
++++ b/src/shaders/cs_easu_fp16_rgba16f.comp
+@@ -0,0 +1,9 @@
++#version 460
++
++#extension GL_GOOGLE_include_directive : require
++#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
++#extension GL_EXT_scalar_block_layout : require
++
++#define VKR_TARGET_FORMAT rgba16f
++#define FSR_EASU_USE_FP16 1
++#include "cs_easu_common.h"
+diff --git a/src/shaders/cs_easu_rgba16f.comp b/src/shaders/cs_easu_rgba16f.comp
+new file mode 100644
+index 000000000000..2a9845492a3c
+--- /dev/null
++++ b/src/shaders/cs_easu_rgba16f.comp
+@@ -0,0 +1,8 @@
++#version 460
++
++#extension GL_GOOGLE_include_directive : require
++#extension GL_EXT_scalar_block_layout : require
++
++#define VKR_TARGET_FORMAT rgba16f
++#define FSR_EASU_USE_FP16 0
++#include "cs_easu_common.h"
+diff --git a/src/shaders/cs_ffx_opticalflow_prepare_luma_scaled.comp b/src/shaders/cs_ffx_opticalflow_prepare_luma_scaled.comp
+index c1706451bf2b..0a8dda68d14c 100644
+--- a/src/shaders/cs_ffx_opticalflow_prepare_luma_scaled.comp
++++ b/src/shaders/cs_ffx_opticalflow_prepare_luma_scaled.comp
+@@ -70,9 +70,20 @@ void main()
+         const ivec2 outputPosition = ivec2(gl_GlobalInvocationID.xy) * 2 + ivec2(x, y);
+         if (any(greaterThanEqual(outputPosition, constants.targetSize)))
+             continue;
+-        const vec2 sourcePosition = (vec2(outputPosition) + 0.5) *
+-            vec2(constants.sourceSize) / vec2(constants.targetSize);
++
++        vec3 sourceColor;
++        if (all(equal(constants.sourceSize, constants.targetSize)))
++        {
++            // Keep the full-resolution path to one source fetch per pixel.
++            sourceColor = texelFetch(inputColor, outputPosition, 0).rgb;
++        }
++        else
++        {
++            const vec2 sourcePosition = (vec2(outputPosition) + 0.5) *
++                vec2(constants.sourceSize) / vec2(constants.targetSize);
++            sourceColor = sampleBilinear(sourcePosition);
++        }
+         imageStore(outputLuma, outputPosition,
+-            uvec4(uint(clamp(luminance(sampleBilinear(sourcePosition)), 0.0, 1.0) * 255.0), 0, 0, 0));
++            uvec4(uint(clamp(luminance(sourceColor), 0.0, 1.0) * 255.0), 0, 0, 0));
+     }
+ }
+diff --git a/src/shaders/descriptor_set.h b/src/shaders/descriptor_set.h
+index 723e964f4ed2..c04f8d1c3bb5 100644
+--- a/src/shaders/descriptor_set.h
++++ b/src/shaders/descriptor_set.h
+@@ -45,10 +45,14 @@ uint get_layer_colorspace(uint layerIdx) {
+     return bitfieldExtract(c_colorspaceMask, int(layerIdx) * colorspace_max_bits, colorspace_max_bits);
+ }
+ 
+-layout(binding = 1, rgba8) writeonly uniform image2D dst;
++#ifndef VKR_TARGET_FORMAT
++#define VKR_TARGET_FORMAT rgba8
++#endif
++
++layout(binding = 1, VKR_TARGET_FORMAT) writeonly uniform image2D dst;
+ // alias
+-layout(binding = 1, rgba8) writeonly uniform image2D dst_luma;
+-layout(binding = 2, rgba8) writeonly uniform image2D dst_chroma;
++layout(binding = 1, VKR_TARGET_FORMAT) writeonly uniform image2D dst_luma;
++layout(binding = 2, VKR_TARGET_FORMAT) writeonly uniform image2D dst_chroma;
+ 
+ layout(binding = 3) uniform sampler2D s_samplers[VKR_SAMPLER_SLOTS];
+ layout(binding = 4) uniform sampler2D s_ycbcr_samplers[VKR_SAMPLER_SLOTS];
