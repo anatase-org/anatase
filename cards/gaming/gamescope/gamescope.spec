@@ -176,7 +176,7 @@ rm -rf %{buildroot}%{_datadir}/gamescope
 %{_datadir}/vulkan/implicit_layer.d/VkLayer_FROG_gamescope_wsi.*.json
 %else
 %doc README.md
-%{_bindir}/gamescope
+%caps(cap_sys_nice=ep) %{_bindir}/gamescope
 %{_bindir}/gamescopectl
 %{_bindir}/gamescopereaper
 %{_bindir}/gamescopestream
