@@ -169,6 +169,7 @@ packages:
   - b43-openfwwf
   - intel-lpmd
   - libva-intel-media-driver
+  - microcode_ctl
   - pciutils
   - prefixdevname
   - thermald

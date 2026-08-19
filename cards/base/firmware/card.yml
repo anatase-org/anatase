@@ -19,6 +19,7 @@ specs:
       - amd-gpu-firmware
       - amd-ucode-firmware
       - atheros-firmware
+      - alsa-sof-firmware
       - brcmfmac-firmware
       - cirrus-audio-firmware
       - intel-audio-firmware
