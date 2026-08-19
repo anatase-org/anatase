@@ -175,6 +175,7 @@ packages:
   - thermald
   - usb_modeswitch
   - usbutils
+  - alsa-sof-firmware
 
   # Boot and splash
   - plymouth
