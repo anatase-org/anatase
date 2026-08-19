@@ -10857,26 +10857,50 @@ Subject: fix crash with FSR, HDR, and framegen due to incorrect memory buffer
  type
 
 ---
+ src/frame_generation_pacing.hpp               |   6 +
  src/frame_generation_vulkan.cpp               |   5 +-
- src/meson.build                               |   4 +
- src/rendervulkan.cpp                          | 121 ++++++++++++++++--
- src/rendervulkan.hpp                          |  19 ++-
+ src/meson.build                               |   5 +
+ src/rendervulkan.cpp                          | 197 +++++++++++++++---
+ src/rendervulkan.hpp                          |  20 +-
+ src/shaders/cs_composite_blit.comp            |  46 +---
+ src/shaders/cs_composite_blit_common.h        |  45 ++++
+ src/shaders/cs_composite_blit_rgb10a2.comp    |   7 +
  src/shaders/cs_composite_rcas_rgb10a2.comp    |   7 +
  src/shaders/cs_composite_rcas_rgba16f.comp    |   7 +
- src/shaders/cs_easu.comp                      |  44 +------
- src/shaders/cs_easu_common.h                  |  57 +++++++++
- src/shaders/cs_easu_fp16.comp                 |  44 +------
- src/shaders/cs_easu_fp16_rgba16f.comp         |   9 ++
- src/shaders/cs_easu_rgba16f.comp              |   8 ++
- ...s_ffx_opticalflow_prepare_luma_scaled.comp |  17 ++-
+ src/shaders/cs_easu.comp                      |  44 +---
+ src/shaders/cs_easu_common.h                  |  57 +++++
+ src/shaders/cs_easu_fp16.comp                 |  44 +---
+ src/shaders/cs_easu_fp16_rgba16f.comp         |   9 +
+ src/shaders/cs_easu_rgba16f.comp              |   8 +
+ ...s_ffx_opticalflow_prepare_luma_scaled.comp |  17 +-
  src/shaders/descriptor_set.h                  |  10 +-
- 13 files changed, 240 insertions(+), 112 deletions(-)
+ tests/test_frame_generation_config.cpp        |   5 +
+ 18 files changed, 360 insertions(+), 179 deletions(-)
+ create mode 100644 src/shaders/cs_composite_blit_common.h
+ create mode 100644 src/shaders/cs_composite_blit_rgb10a2.comp
  create mode 100644 src/shaders/cs_composite_rcas_rgb10a2.comp
  create mode 100644 src/shaders/cs_composite_rcas_rgba16f.comp
  create mode 100644 src/shaders/cs_easu_common.h
  create mode 100644 src/shaders/cs_easu_fp16_rgba16f.comp
  create mode 100644 src/shaders/cs_easu_rgba16f.comp
 
+diff --git a/src/frame_generation_pacing.hpp b/src/frame_generation_pacing.hpp
+index b85ae7201531..78bfd89f4ad5 100644
+--- a/src/frame_generation_pacing.hpp
++++ b/src/frame_generation_pacing.hpp
+@@ -44,6 +44,12 @@ namespace gamescope
+ 			( queuedFrames == 1u && !frontFrameGenerated );
+ 	}
+ 
++	constexpr bool FrameGenerationShouldPrecomposeRealFrame(
++		bool fsrEnabled, bool hdrOutput, bool usesRawSource )
++	{
++		return usesRawSource && ( fsrEnabled || hdrOutput );
++	}
++
+ 	constexpr bool FrameGenerationOutputDeadlineMissed(
+ 		uint64_t now, uint64_t deadline, uint64_t interval )
+ 	{
 diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
 index 4a6696249bdb..0a3045c7ae75 100644
 --- a/src/frame_generation_vulkan.cpp
@@ -10894,10 +10918,15 @@ index 4a6696249bdb..0a3045c7ae75 100644
  					Sampled( source->srgbView() ), Storage( resources->luma[current][0] ), common,
  				}, ( resources->lumaExtent.width + 31 ) / 32, ( resources->lumaExtent.height + 31 ) / 32 ) )
 diff --git a/src/meson.build b/src/meson.build
-index eb793c3429db..ef2a62a82c03 100644
+index eb793c3429db..f4ba7652ba89 100644
 --- a/src/meson.build
 +++ b/src/meson.build
-@@ -67,8 +67,12 @@ shader_src = [
+@@ -63,12 +63,17 @@ endif
+ 
+ shader_src = [
+   'shaders/cs_composite_blit.comp',
++  'shaders/cs_composite_blit_rgb10a2.comp',
+   'shaders/cs_composite_blur.comp',
    'shaders/cs_composite_blur_cond.comp',
    'shaders/cs_composite_rcas.comp',
    'shaders/cs_composite_rcas_fp16.comp',
@@ -10911,10 +10940,15 @@ index eb793c3429db..ef2a62a82c03 100644
    'shaders/cs_nis.comp',
    'shaders/cs_nis_fp16.comp',
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index bfd9e83b7f44..4217f98376e3 100644
+index bfd9e83b7f44..c8d05d7527e4 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
-@@ -47,8 +47,12 @@
+@@ -43,12 +43,17 @@
+ #include "Utils/Process.h"
+ 
+ #include "cs_composite_blit.h"
++#include "cs_composite_blit_rgb10a2.h"
+ #include "cs_composite_blur.h"
  #include "cs_composite_blur_cond.h"
  #include "cs_composite_rcas.h"
  #include "cs_composite_rcas_fp16.h"
@@ -10927,7 +10961,12 @@ index bfd9e83b7f44..4217f98376e3 100644
  #include "cs_gaussian_blur_horizontal.h"
  #include "cs_nis.h"
  #include "cs_nis_fp16.h"
-@@ -988,16 +992,20 @@ bool CVulkanDevice::createShaders()
+@@ -984,20 +989,25 @@ bool CVulkanDevice::createShaders()
+ 	std::array<ShaderInfo_t, SHADER_TYPE_COUNT> shaderInfos;
+ #define SHADER(type, array) shaderInfos[SHADER_TYPE_##type] = {array , sizeof(array)}
+ 	SHADER(BLIT, cs_composite_blit);
++	SHADER(BLIT_RGB10A2, cs_composite_blit_rgb10a2);
+ 	SHADER(BLUR, cs_composite_blur);
  	SHADER(BLUR_COND, cs_composite_blur_cond);
  	SHADER(BLUR_FIRST_PASS, cs_gaussian_blur_horizontal);
  	SHADER(RCAS, cs_composite_rcas);
@@ -10948,7 +10987,7 @@ index bfd9e83b7f44..4217f98376e3 100644
  		SHADER(NIS, cs_nis);
  	}
  	SHADER(RGB_TO_NV12, cs_rgb_to_nv12);
-@@ -1040,6 +1048,7 @@ bool CVulkanDevice::createScratchResources()
+@@ -1040,6 +1050,7 @@ bool CVulkanDevice::createScratchResources()
  		vk_log.errorf( "vkAllocateDescriptorSets failed" );
  		return false;
  	}
@@ -10956,7 +10995,13 @@ index bfd9e83b7f44..4217f98376e3 100644
  
  	// Make and map upload buffer
  	
-@@ -1237,7 +1246,10 @@ void CVulkanDevice::compileAllPipelines()
+@@ -1232,12 +1243,16 @@ void CVulkanDevice::compileAllPipelines()
+ 	std::array<PipelineInfo_t, SHADER_TYPE_COUNT> pipelineInfos;
+ #define SHADER(type, layer_count, max_ycbcr, blur_layers) pipelineInfos[SHADER_TYPE_##type] = {SHADER_TYPE_##type, layer_count, max_ycbcr, blur_layers}
+ 	SHADER(BLIT, k_nMaxLayers, k_nMaxYcbcrMask_ToPreCompile, 1);
++	SHADER(BLIT_RGB10A2, k_nMaxLayers, k_nMaxYcbcrMask_ToPreCompile, 1);
+ 	SHADER(BLUR, k_nMaxLayers, k_nMaxYcbcrMask_ToPreCompile, k_nMaxBlurLayers);
+ 	SHADER(BLUR_COND, k_nMaxLayers, k_nMaxYcbcrMask_ToPreCompile, k_nMaxBlurLayers);
  	SHADER(BLUR_FIRST_PASS, 1, 2, 1);
  	SHADER(RCAS, k_nMaxLayers, k_nMaxYcbcrMask_ToPreCompile, 1);
  	SHADER(RCAS_FP16, k_nMaxLayers, k_nMaxYcbcrMask_ToPreCompile, 1);
@@ -10967,7 +11012,7 @@ index bfd9e83b7f44..4217f98376e3 100644
  	SHADER(NIS, 1, 1, 1);
  	SHADER(RGB_TO_NV12, 1, 1, 1);
  	SHADER(ROTATION, k_nMaxLayers, k_nMaxYcbcrMask_ToPreCompile, k_nMaxBlurLayers);
-@@ -1406,6 +1418,32 @@ uint64_t CVulkanDevice::submit( std::unique_ptr<CVulkanCmdBuffer> cmdBuffer)
+@@ -1406,6 +1421,32 @@ uint64_t CVulkanDevice::submit( std::unique_ptr<CVulkanCmdBuffer> cmdBuffer)
  	return nextSeqNo;
  }
  
@@ -11000,7 +11045,7 @@ index bfd9e83b7f44..4217f98376e3 100644
  void CVulkanDevice::garbageCollect( void )
  {
  	uint64_t currentSeqNo;
-@@ -1594,12 +1632,14 @@ CVulkanCmdBuffer::CVulkanCmdBuffer(CVulkanDevice *parent, VkCommandBuffer cmdBuf
+@@ -1594,12 +1635,14 @@ CVulkanCmdBuffer::CVulkanCmdBuffer(CVulkanDevice *parent, VkCommandBuffer cmdBuf
  
  CVulkanCmdBuffer::~CVulkanCmdBuffer()
  {
@@ -11015,7 +11060,7 @@ index bfd9e83b7f44..4217f98376e3 100644
  	m_textureRefs.clear();
  	m_textureState.clear();
  
-@@ -1704,6 +1744,7 @@ void CVulkanCmdBuffer::dispatch(uint32_t x, uint32_t y, uint32_t z)
+@@ -1704,6 +1747,7 @@ void CVulkanCmdBuffer::dispatch(uint32_t x, uint32_t y, uint32_t z)
  	insertBarrier();
  
  	VkDescriptorSet descriptorSet = m_device->descriptorSet();
@@ -11023,7 +11068,7 @@ index bfd9e83b7f44..4217f98376e3 100644
  
  	std::array<VkWriteDescriptorSet, 7> writeDescriptorSets;
  	std::array<VkDescriptorImageInfo, VKR_SAMPLER_SLOTS> imageDescriptors = {};
-@@ -1902,6 +1943,13 @@ void CVulkanCmdBuffer::copyBufferToImage(VkBuffer buffer, VkDeviceSize offset, u
+@@ -1902,6 +1946,13 @@ void CVulkanCmdBuffer::copyBufferToImage(VkBuffer buffer, VkDeviceSize offset, u
  	m_textureRefs.emplace_back(std::move(dst));
  }
  
@@ -11037,7 +11082,7 @@ index bfd9e83b7f44..4217f98376e3 100644
  void CVulkanCmdBuffer::prepareSrcImage(CVulkanTexture *image)
  {
  	auto result = m_textureState.emplace(image, TextureState());
-@@ -1910,7 +1958,8 @@ void CVulkanCmdBuffer::prepareSrcImage(CVulkanTexture *image)
+@@ -1910,7 +1961,8 @@ void CVulkanCmdBuffer::prepareSrcImage(CVulkanTexture *image)
  		return;
  	// using the swapchain image as a source without writing to it doesn't make any sense
  	assert(image->outputImage() == false);
@@ -11047,7 +11092,7 @@ index bfd9e83b7f44..4217f98376e3 100644
  	result.first->second.needsExport = image->externalImage();
  }
  
-@@ -1921,6 +1970,8 @@ void CVulkanCmdBuffer::prepareDestImage(CVulkanTexture *image)
+@@ -1921,6 +1973,8 @@ void CVulkanCmdBuffer::prepareDestImage(CVulkanTexture *image)
  	if (!result.second)
  		return;
  	result.first->second.discarded = true;
@@ -11056,7 +11101,7 @@ index bfd9e83b7f44..4217f98376e3 100644
  	result.first->second.needsExport = image->externalImage();
  	result.first->second.needsPresentLayout = image->outputImage();
  }
-@@ -1945,7 +1996,7 @@ void CVulkanCmdBuffer::insertBarrier(bool flush)
+@@ -1945,7 +1999,7 @@ void CVulkanCmdBuffer::insertBarrier(bool flush)
  {
  	std::vector<VkImageMemoryBarrier> barriers;
  
@@ -11065,7 +11110,7 @@ index bfd9e83b7f44..4217f98376e3 100644
  
  	VkImageSubresourceRange subResRange =
  	{
-@@ -1986,6 +2037,7 @@ void CVulkanCmdBuffer::insertBarrier(bool flush)
+@@ -1986,6 +2040,7 @@ void CVulkanCmdBuffer::insertBarrier(bool flush)
  		};
  
  		barriers.push_back(memoryBarrier);
@@ -11073,7 +11118,7 @@ index bfd9e83b7f44..4217f98376e3 100644
  
  		state.discarded = false;
  		state.dirty = false;
-@@ -2132,6 +2184,11 @@ bool CVulkanTexture::BInit( uint32_t width, uint32_t height, uint32_t depth, uin
+@@ -2132,6 +2187,11 @@ bool CVulkanTexture::BInit( uint32_t width, uint32_t height, uint32_t depth, uin
  	}
  
  	m_bExternal = pDMA || flags.bExportable == true;
@@ -11085,7 +11130,7 @@ index bfd9e83b7f44..4217f98376e3 100644
  
  	// Possible extensions for below
  	wsi_image_create_info wsiImageCreateInfo = {};
-@@ -3522,11 +3579,12 @@ bool vulkan_make_output()
+@@ -3522,11 +3582,12 @@ bool vulkan_make_output()
  	return true;
  }
  
@@ -11100,7 +11145,7 @@ index bfd9e83b7f44..4217f98376e3 100644
  	{
  		return;
  	}
-@@ -3536,7 +3594,7 @@ static void update_tmp_images( uint32_t width, uint32_t height )
+@@ -3536,7 +3597,7 @@ static void update_tmp_images( uint32_t width, uint32_t height )
  	createFlags.bStorage = true;
  
  	g_output.tmpOutput = new CVulkanTexture();
@@ -11109,7 +11154,7 @@ index bfd9e83b7f44..4217f98376e3 100644
  
  	if ( !bSuccess )
  	{
-@@ -4082,6 +4140,17 @@ static bool is_8bit_sdr_target( const CVulkanTexture *texture )
+@@ -4082,6 +4143,24 @@ static bool is_8bit_sdr_target( const CVulkanTexture *texture )
  	       texture->format() == VK_FORMAT_R8G8B8A8_UNORM;
  }
  
@@ -11118,16 +11163,23 @@ index bfd9e83b7f44..4217f98376e3 100644
 +	return texture->format() == VK_FORMAT_R16G16B16A16_SFLOAT;
 +}
 +
-+static bool is_rgb10a2_fsr_target( const CVulkanTexture *texture )
++static bool is_rgb10a2_target( const CVulkanTexture *texture )
 +{
 +	// GLSL's rgb10_a2 storage format maps to Vulkan's A2B10G10R10 view.
 +	return texture->format() == VK_FORMAT_A2B10G10R10_UNORM_PACK32;
 +}
 +
++static ShaderType blit_shader_for_target( const CVulkanTexture *texture )
++{
++	return is_rgb10a2_target( texture )
++		? SHADER_TYPE_BLIT_RGB10A2
++		: SHADER_TYPE_BLIT;
++}
++
  static bool can_use_simple_fsr_output( const FrameInfo_t *frameInfo, CVulkanTexture *output, EOTF outputTF )
  {
  	if ( frameInfo->layerCount != 1 ||
-@@ -4200,12 +4269,20 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
+@@ -4200,12 +4279,20 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
  		uint32_t tempY = frameInfo->layers[0].integerHeight();
  
  		if ( !pFsrIntermediateOverride )
@@ -11150,7 +11202,7 @@ index bfd9e83b7f44..4217f98376e3 100644
  		cmdBuffer->bindTarget(fsrIntermediate);
  		cmdBuffer->bindTexture(0, frameInfo->layers[0].tex);
  		cmdBuffer->setTextureSrgb(0, true);
-@@ -4218,9 +4295,13 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
+@@ -4218,9 +4305,13 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
  		cmdBuffer->dispatch(div_roundup(tempX, pixelsPerGroup), div_roundup(tempY, pixelsPerGroup));
  
  		const bool simpleFsrOutput = can_use_simple_fsr_output( frameInfo, compositeImage.get(), outputTF );
@@ -11159,7 +11211,7 @@ index bfd9e83b7f44..4217f98376e3 100644
 -			: SHADER_TYPE_RCAS;
 +		const ShaderType rcasShader = is_fp16_fsr_target( compositeImage.get() )
 +			? SHADER_TYPE_RCAS_RGBA16F
-+			: is_rgb10a2_fsr_target( compositeImage.get() )
++			: is_rgb10a2_target( compositeImage.get() )
 +				? SHADER_TYPE_RCAS_RGB10A2
 +				: can_use_fp16_fsr_rcas( frameInfo, compositeImage.get(), outputTF )
 +					? SHADER_TYPE_RCAS_FP16
@@ -11167,26 +11219,78 @@ index bfd9e83b7f44..4217f98376e3 100644
  		cmdBuffer->bindPipeline(g_device.pipeline(rcasShader, frameInfo->layerCount, frameInfo->ycbcrMask() & ~1, 0u, frameInfo->colorspaceMask(), outputTF, false, simpleFsrOutput ));
  		bind_all_layers(cmdBuffer.get(), frameInfo);
  		cmdBuffer->bindTexture(0, fsrIntermediate);
-@@ -4733,6 +4814,7 @@ namespace
+@@ -4276,7 +4367,10 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
+ 		nisFrameInfo.layers[0].scale.x = 1.0f;
+ 		nisFrameInfo.layers[0].scale.y = 1.0f;
+ 
+-		cmdBuffer->bindPipeline( g_device.pipeline(SHADER_TYPE_BLIT, nisFrameInfo.layerCount, nisFrameInfo.ycbcrMask(), 0u, nisFrameInfo.colorspaceMask(), outputTF ));
++		const ShaderType nisBlitShader = applyRotation
++			? SHADER_TYPE_BLIT
++			: blit_shader_for_target( compositeImage.get() );
++		cmdBuffer->bindPipeline( g_device.pipeline(nisBlitShader, nisFrameInfo.layerCount, nisFrameInfo.ycbcrMask(), 0u, nisFrameInfo.colorspaceMask(), outputTF ));
+ 		bind_all_layers(cmdBuffer.get(), &nisFrameInfo);
+ 
+ 		if (applyRotation) {
+@@ -4352,7 +4446,7 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
+ 
+ 			cmdBuffer->dispatch(div_roundup(currentOutputWidth, pixelsPerGroup), div_roundup(currentOutputHeight, pixelsPerGroup));
+ 		} else {
+-			cmdBuffer->bindPipeline( g_device.pipeline(SHADER_TYPE_BLIT, frameInfo->layerCount, frameInfo->ycbcrMask(), 0u, frameInfo->colorspaceMask(), outputTF ));
++			cmdBuffer->bindPipeline( g_device.pipeline(blit_shader_for_target( compositeImage.get() ), frameInfo->layerCount, frameInfo->ycbcrMask(), 0u, frameInfo->colorspaceMask(), outputTF ));
+ 			bind_all_layers(cmdBuffer.get(), frameInfo);
+ 			cmdBuffer->bindTarget(compositeImage);
+ 			cmdBuffer->uploadConstants<BlitPushData_t>(frameInfo);
+@@ -4733,6 +4827,7 @@ namespace
  			FrameGenerationQueuedFrame real = {
  				realLayer, false, frameInfo->useFSRLayer0, nullptr,
  				m_currentRealOutputId };
-+			const bool hdrFsr = fsrEnabled && ColorspaceIsHDR( realLayer.colorspace );
++			const bool hdrOutput = ColorspaceIsHDR( realLayer.colorspace );
  
  			std::optional<uint64_t> sequence;
  			if ( abDuplicate )
-@@ -4745,7 +4827,9 @@ namespace
+@@ -4745,7 +4840,9 @@ namespace
  			{
  				const uint32_t outputWidth = fsrEnabled ? uint32_t( g_nOutputWidth ) : rawSource->width();
  				const uint32_t outputHeight = fsrEnabled ? uint32_t( g_nOutputHeight ) : rawSource->height();
 -				const uint32_t outputFormat = fsrEnabled
-+				const uint32_t outputFormat = hdrFsr
++				const uint32_t outputFormat = hdrOutput
 +					? DRM_FORMAT_XBGR2101010
 +					: fsrEnabled
  					? ( realLayer.tex->drmFormat() != DRM_FORMAT_INVALID
  						? realLayer.tex->drmFormat() : g_output.uOutputFormat )
  					: rawSource->drmFormat();
-@@ -4866,6 +4950,15 @@ namespace
+@@ -4810,15 +4907,15 @@ namespace
+ 				}
+ 				else
+ 				{
+-					// FI's SDR midpoint is raw encoded color in FP16. Treat it as
+-					// passthrough data for this format conversion, then retain the
+-					// game's colorspace metadata on the scanout layer.
+-					if ( !ColorspaceIsHDR( realLayer.colorspace ) )
++					// Preserve SDR midpoint values verbatim. HDR midpoints are linear
++					// scRGB, so encode them into the display EOTF while writing the
++					// native 10-bit scanout.
++					if ( !hdrOutput )
+ 						generatedFrame.layers[0].colorspace = GAMESCOPE_APP_TEXTURE_COLORSPACE_LINEAR;
+-					else if ( realLayer.colorspace == GAMESCOPE_APP_TEXTURE_COLORSPACE_HDR10_PQ )
++					else
+ 					{
+ 						generatedFrame.applyOutputColorMgmt = true;
+-						generatedFrame.outputEncodingEOTF = EOTF_PQ;
++						generatedFrame.outputEncodingEOTF = frameInfo->outputEncodingEOTF;
+ 					}
+ 					generatedFrame.layers[0].scale = { 1.0f, 1.0f };
+ 					generatedFrame.layers[0].offset = { 0.0f, 0.0f };
+@@ -4855,7 +4952,7 @@ namespace
+ 				}
+ 
+ 				generated.layer.tex = scanout;
+-				if ( fsrEnabled && generatedFrame.outputEncodingEOTF == EOTF_Gamma22 )
++				if ( generatedFrame.applyOutputColorMgmt && generatedFrame.outputEncodingEOTF == EOTF_Gamma22 )
+ 					generated.layer.colorspace = GAMESCOPE_APP_TEXTURE_COLORSPACE_SRGB;
+ 				else if ( ColorspaceIsHDR( realLayer.colorspace ) )
+ 					generated.layer.colorspace = generatedFrame.outputEncodingEOTF == EOTF_PQ
+@@ -4866,13 +4963,26 @@ namespace
  					generated.layer.scale = { 1.0f, 1.0f };
  					generated.layer.offset = { 0.0f, 0.0f };
  					generated.layer.blackBorder = false;
@@ -11201,16 +11305,74 @@ index bfd9e83b7f44..4217f98376e3 100644
 +					generated.layer.ctm = nullptr;
  				}
  
- 				// With preemptive upscaling disabled for frame generation, prepare
-@@ -4918,6 +5011,7 @@ namespace
- 					real.layer.scale = { 1.0f, 1.0f };
- 					real.layer.offset = { 0.0f, 0.0f };
- 					real.layer.blackBorder = false;
-+					real.layer.filter = GamescopeUpscaleFilter::NEAREST;
+-				// With preemptive upscaling disabled for frame generation, prepare
+-				// the real frame's single FSR result after the midpoint result. This
+-				// leaves presentation as two cheap scanouts and gives the midpoint
+-				// first use of the GPU before its earlier deadline.
+-				if ( fsrEnabled && realLayer.tex.get() == rawSource.get() )
++				// Keep both halves of an HDR pair in the same display-encoded scanout
++				// format. Alternating the generated scanout with the raw HDR layer
++				// otherwise makes KMS reprogram the plane color pipeline every output
++				// slot, which is slow enough to destroy VRR frame pacing. FSR already
++				// requires this precomposition; HDR requires it even without FSR.
++				// Submit the real result after the midpoint so the earlier deadline
++				// retains first use of the GPU.
++				if ( gamescope::FrameGenerationShouldPrecomposeRealFrame(
++						fsrEnabled, hdrOutput, realLayer.tex.get() == rawSource.get() ) )
+ 				{
+ 					gamescope::Rc<CVulkanTexture> realScanout = AcquireScanout(
+ 						outputWidth, outputHeight, outputFormat, scanout.get() );
+@@ -4887,15 +4997,27 @@ namespace
+ 					realFrame.layers[0] = realLayer;
+ 					realFrame.layers[0].acquirePoint = nullptr;
+ 					realFrame.layers[0].opacity = 1.0f;
+-					realFrame.useFSRLayer0 = true;
++					realFrame.useFSRLayer0 = fsrEnabled;
+ 					realFrame.applyOutputColorMgmt = frameInfo->applyOutputColorMgmt;
+ 					realFrame.outputEncodingEOTF = frameInfo->outputEncodingEOTF;
+-					if ( realFrame.layers[0].integerWidth() == uint32_t( g_nOutputWidth ) &&
+-						realFrame.layers[0].integerHeight() == uint32_t( g_nOutputHeight ) &&
+-						close_enough( realFrame.layers[0].offset.x, 0.0f ) &&
+-						close_enough( realFrame.layers[0].offset.y, 0.0f ) )
++					if ( fsrEnabled )
+ 					{
++						if ( realFrame.layers[0].integerWidth() == uint32_t( g_nOutputWidth ) &&
++							realFrame.layers[0].integerHeight() == uint32_t( g_nOutputHeight ) &&
++							close_enough( realFrame.layers[0].offset.x, 0.0f ) &&
++							close_enough( realFrame.layers[0].offset.y, 0.0f ) )
++						{
++							realFrame.layers[0].blackBorder = false;
++						}
++					}
++					else
++					{
++						// The target has the raw source extent. Composite the real frame
++						// one-to-one, then retain its original presentation scale below.
++						realFrame.layers[0].scale = { 1.0f, 1.0f };
++						realFrame.layers[0].offset = { 0.0f, 0.0f };
+ 						realFrame.layers[0].blackBorder = false;
++						realFrame.layers[0].ctm = nullptr;
+ 					}
+ 
+ 					auto realCmdBuffer = g_device.commandBuffer();
+@@ -4915,9 +5037,13 @@ namespace
+ 					}
+ 
+ 					real.layer.tex = realScanout;
+-					real.layer.scale = { 1.0f, 1.0f };
+-					real.layer.offset = { 0.0f, 0.0f };
+-					real.layer.blackBorder = false;
++					if ( fsrEnabled )
++					{
++						real.layer.scale = { 1.0f, 1.0f };
++						real.layer.offset = { 0.0f, 0.0f };
++						real.layer.blackBorder = false;
++						real.layer.filter = GamescopeUpscaleFilter::NEAREST;
++					}
  					real.useFSR = false;
  					if ( realFrame.outputEncodingEOTF == EOTF_Gamma22 )
  						real.layer.colorspace = GAMESCOPE_APP_TEXTURE_COLORSPACE_SRGB;
-@@ -4925,6 +5019,11 @@ namespace
+@@ -4925,6 +5051,11 @@ namespace
  						real.layer.colorspace = realFrame.outputEncodingEOTF == EOTF_PQ
  							? GAMESCOPE_APP_TEXTURE_COLORSPACE_HDR10_PQ
  							: GAMESCOPE_APP_TEXTURE_COLORSPACE_SCRGB;
@@ -11223,10 +11385,15 @@ index bfd9e83b7f44..4217f98376e3 100644
  			}
  
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index 4d7ffab49a68..a0edd0d642c1 100644
+index 4d7ffab49a68..4a6c05169fee 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
-@@ -623,8 +623,11 @@ enum ShaderType {
+@@ -619,12 +619,16 @@ struct VulkanOutput_t
+ 
+ enum ShaderType {
+ 	SHADER_TYPE_BLIT = 0,
++	SHADER_TYPE_BLIT_RGB10A2,
+ 	SHADER_TYPE_BLUR,
  	SHADER_TYPE_BLUR_COND,
  	SHADER_TYPE_BLUR_FIRST_PASS,
  	SHADER_TYPE_EASU,
@@ -11238,7 +11405,7 @@ index 4d7ffab49a68..a0edd0d642c1 100644
  	SHADER_TYPE_NIS,
  	SHADER_TYPE_RGB_TO_NV12,
  	SHADER_TYPE_ROTATION,
-@@ -858,12 +861,8 @@ public:
+@@ -858,12 +862,8 @@ public:
  	bool isComplete(uint64_t sequence);
  	void waitIdle(bool reset = true);
  	void garbageCollect();
@@ -11253,7 +11420,7 @@ index 4d7ffab49a68..a0edd0d642c1 100644
  
  	std::shared_ptr<VulkanTimelineSemaphore_t> CreateTimelineSemaphore( uint64_t ulStartingPoint, bool bShared = false );
  	std::shared_ptr<VulkanTimelineSemaphore_t> ImportTimelineSemaphore( gamescope::CTimeline *pTimeline );
-@@ -971,11 +970,10 @@ protected:
+@@ -971,11 +971,10 @@ protected:
  
  	static constexpr uint32_t k_uMaxConcurrentSubmits = 8;
  
@@ -11268,7 +11435,7 @@ index 4d7ffab49a68..a0edd0d642c1 100644
  
  	VkBuffer m_uploadBuffer;
  	VkDeviceMemory m_uploadBufferMemory;
-@@ -1073,6 +1071,7 @@ private:
+@@ -1073,6 +1072,7 @@ private:
  
  	std::vector<VulkanTimelinePoint_t> m_ExternalDependencies;
  	std::vector<VulkanTimelinePoint_t> m_ExternalSignals;
@@ -11276,6 +11443,124 @@ index 4d7ffab49a68..a0edd0d642c1 100644
  
  	uint32_t m_renderBufferOffset = 0;
  };
+diff --git a/src/shaders/cs_composite_blit.comp b/src/shaders/cs_composite_blit.comp
+index b728d46c0e67..740cee39a115 100644
+--- a/src/shaders/cs_composite_blit.comp
++++ b/src/shaders/cs_composite_blit.comp
+@@ -3,48 +3,4 @@
+ #extension GL_GOOGLE_include_directive : require
+ #extension GL_EXT_scalar_block_layout : require
+ 
+-#include "descriptor_set.h"
+-
+-layout(
+-  local_size_x = 8,
+-  local_size_y = 8,
+-  local_size_z = 1) in;
+-
+-#include "blit_push_data.h"
+-#include "composite.h"
+-
+-vec4 sampleLayer(uint layerIdx, vec2 uv) {
+-    if ((c_ycbcrMask & (1 << layerIdx)) != 0)
+-        return sampleLayer(s_ycbcr_samplers[layerIdx], layerIdx, uv, false);
+-    return sampleLayer(s_samplers[layerIdx], layerIdx, uv, true);
+-}
+-
+-void main() {
+-    uvec2 coord = uvec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);
+-    uvec2 outSize = imageSize(dst);
+-
+-    if (coord.x >= outSize.x || coord.y >= outSize.y)
+-        return;
+-
+-    vec2 uv = vec2(coord);
+-    vec4 outputValue = vec4(0.0f);
+-
+-    if (checkDebugFlag(compositedebug_PlaneBorders))
+-        outputValue = vec4(1.0f, 0.0f, 0.0f, 0.0f);
+-
+-    if (c_layerCount > 0) {
+-        outputValue = sampleLayer(0, uv) * u_opacity[0];
+-    }
+-
+-    for (int i = 1; i < c_layerCount; i++) {
+-        vec4 layerColor = sampleLayer(i, uv);
+-        outputValue = BlendLayer( i, outputValue, layerColor, u_opacity[i] );
+-    }
+-
+-    outputValue.rgb = encodeOutputColor(outputValue.rgb);
+-    imageStore(dst, ivec2(coord), outputValue);
+-
+-    // Indicator to quickly tell if we're in the compositing path or not.
+-    if (checkDebugFlag(compositedebug_Markers))
+-        compositing_debug(coord);
+-}
++#include "cs_composite_blit_common.h"
+diff --git a/src/shaders/cs_composite_blit_common.h b/src/shaders/cs_composite_blit_common.h
+new file mode 100644
+index 000000000000..b1995922077d
+--- /dev/null
++++ b/src/shaders/cs_composite_blit_common.h
+@@ -0,0 +1,45 @@
++#include "descriptor_set.h"
++
++layout(
++  local_size_x = 8,
++  local_size_y = 8,
++  local_size_z = 1) in;
++
++#include "blit_push_data.h"
++#include "composite.h"
++
++vec4 sampleLayer(uint layerIdx, vec2 uv) {
++    if ((c_ycbcrMask & (1 << layerIdx)) != 0)
++        return sampleLayer(s_ycbcr_samplers[layerIdx], layerIdx, uv, false);
++    return sampleLayer(s_samplers[layerIdx], layerIdx, uv, true);
++}
++
++void main() {
++    uvec2 coord = uvec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);
++    uvec2 outSize = imageSize(dst);
++
++    if (coord.x >= outSize.x || coord.y >= outSize.y)
++        return;
++
++    vec2 uv = vec2(coord);
++    vec4 outputValue = vec4(0.0f);
++
++    if (checkDebugFlag(compositedebug_PlaneBorders))
++        outputValue = vec4(1.0f, 0.0f, 0.0f, 0.0f);
++
++    if (c_layerCount > 0) {
++        outputValue = sampleLayer(0, uv) * u_opacity[0];
++    }
++
++    for (int i = 1; i < c_layerCount; i++) {
++        vec4 layerColor = sampleLayer(i, uv);
++        outputValue = BlendLayer( i, outputValue, layerColor, u_opacity[i] );
++    }
++
++    outputValue.rgb = encodeOutputColor(outputValue.rgb);
++    imageStore(dst, ivec2(coord), outputValue);
++
++    // Indicator to quickly tell if we're in the compositing path or not.
++    if (checkDebugFlag(compositedebug_Markers))
++        compositing_debug(coord);
++}
+diff --git a/src/shaders/cs_composite_blit_rgb10a2.comp b/src/shaders/cs_composite_blit_rgb10a2.comp
+new file mode 100644
+index 000000000000..38393aa38838
+--- /dev/null
++++ b/src/shaders/cs_composite_blit_rgb10a2.comp
+@@ -0,0 +1,7 @@
++#version 450
++
++#extension GL_GOOGLE_include_directive : require
++#extension GL_EXT_scalar_block_layout : require
++
++#define VKR_TARGET_FORMAT rgb10_a2
++#include "cs_composite_blit_common.h"
 diff --git a/src/shaders/cs_composite_rcas_rgb10a2.comp b/src/shaders/cs_composite_rcas_rgb10a2.comp
 new file mode 100644
 index 000000000000..4c2cd654699a
@@ -11548,3 +11833,465 @@ index 723e964f4ed2..c04f8d1c3bb5 100644
  
  layout(binding = 3) uniform sampler2D s_samplers[VKR_SAMPLER_SLOTS];
  layout(binding = 4) uniform sampler2D s_ycbcr_samplers[VKR_SAMPLER_SLOTS];
+diff --git a/tests/test_frame_generation_config.cpp b/tests/test_frame_generation_config.cpp
+index cbf317528e3f..c64ca0a7fd55 100644
+--- a/tests/test_frame_generation_config.cpp
++++ b/tests/test_frame_generation_config.cpp
+@@ -79,6 +79,11 @@ int main()
+ 	assert( !FrameGenerationCanAcceptSourceFrame( 1, true ) );
+ 	assert( !FrameGenerationCanAcceptSourceFrame( 2, true ) );
+ 
++	assert( FrameGenerationShouldPrecomposeRealFrame( true, false, true ) );
++	assert( FrameGenerationShouldPrecomposeRealFrame( false, true, true ) );
++	assert( !FrameGenerationShouldPrecomposeRealFrame( false, false, true ) );
++	assert( !FrameGenerationShouldPrecomposeRealFrame( true, true, false ) );
++
+ 	constexpr uint64_t outputInterval = 8'333'333;
+ 	const uint64_t firstDeadline = FrameGenerationNextOutputDeadline(
+ 		0, 100'000'000, outputInterval );
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: cmspam <charlesmillerspam@gmail.com>
+Date: Fri, 8 May 2026 16:36:28 +0900
+Subject: rendervulkan: mark screenshot texture as bSampled
+
+Screenshot textures created in vulkan_acquire_screenshot_texture() were
+missing bSampled, so no sampled image view was set up for the
+RGB-to-NV12 conversion shader. The result was a black PipeWire frame
+during e.g. Steam Remote Play. Affects both Intel and NVIDIA hardware.
+---
+ src/rendervulkan.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index c8d05d7527e4..3ca1650242ec 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -3787,6 +3787,7 @@ static gamescope::Rc<CVulkanTexture> acquire_pooled_texture( auto& pool, uint32_
+ 			textureFlags.bMappable = true;
+ 			textureFlags.bTransferDst = true;
+ 			textureFlags.bStorage = true;
++			textureFlags.bSampled = true; // required for RGB-to-NV12 shader to sample this texture
+ 			if (exportable || drmFormat == DRM_FORMAT_NV12) {
+ 				textureFlags.bExportable = true;
+ 				textureFlags.bLinear = true; // TODO: support multi-planar DMA-BUF export via PipeWire
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Olivier Tilloy <otilloy@igalia.com>
+Date: Fri, 15 May 2026 19:53:05 +0200
+Subject: steamcompmgr: consistently use the texture dimensions to write a
+ screenshot to file
+
+The PNG code path applied some post-processing and incorrectly used
+currentOutputWidth and currentOutputHeight which are global variables that
+paint_pipewire() temporarily modifies with the stream's dimensions and then
+restores.
+
+When requesting a PNG screenshot while a screen capture was ongoing at a
+different (lower) resolution, the output image would have the dimensions of the
+video capture.
+---
+ src/steamcompmgr.cpp | 30 ++++++++++++++++--------------
+ 1 file changed, 16 insertions(+), 14 deletions(-)
+
+diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
+index c5857042a7d5..a5280861498b 100644
+--- a/src/steamcompmgr.cpp
++++ b/src/steamcompmgr.cpp
+@@ -3089,6 +3089,8 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 				pthread_setname_np( pthread_self(), "gamescope-scrsh" );
+ 
+ 				const uint8_t *mappedData = pScreenshotTexture->mappedData();
++				const uint32_t width = pScreenshotTexture->width();
++				const uint32_t height = pScreenshotTexture->height();
+ 
+ 				bool bScreenshotSuccess = false;
+ 
+@@ -3096,18 +3098,18 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 				{
+ 					// Make our own copy of the image to remove the alpha channel.
+ 					constexpr uint32_t kCompCnt = 3;
+-					auto imageData = std::vector<uint16_t>( g_nOutputWidth * g_nOutputHeight * kCompCnt );
++					auto imageData = std::vector<uint16_t>( width * height * kCompCnt );
+ 
+-					for (uint32_t y = 0; y < g_nOutputHeight; y++)
++					for (uint32_t y = 0; y < height; y++)
+ 					{
+-						for (uint32_t x = 0; x < g_nOutputWidth; x++)
++						for (uint32_t x = 0; x < width; x++)
+ 						{
+ 							uint32_t *pInPixel = (uint32_t *)&mappedData[(y * pScreenshotTexture->rowPitch()) + x * (32 / 8)];
+ 							uint32_t uInPixel = *pInPixel;
+ 
+-							imageData[y * g_nOutputWidth * kCompCnt + x * kCompCnt + 0] = (uInPixel & (0b1111111111 << 20)) >> 20;
+-							imageData[y * g_nOutputWidth * kCompCnt + x * kCompCnt + 1] = (uInPixel & (0b1111111111 << 10)) >> 10;
+-							imageData[y * g_nOutputWidth * kCompCnt + x * kCompCnt + 2] = (uInPixel & (0b1111111111 << 0))  >> 0;
++							imageData[y * width * kCompCnt + x * kCompCnt + 0] = (uInPixel & (0b1111111111 << 20)) >> 20;
++							imageData[y * width * kCompCnt + x * kCompCnt + 1] = (uInPixel & (0b1111111111 << 10)) >> 10;
++							imageData[y * width * kCompCnt + x * kCompCnt + 2] = (uInPixel & (0b1111111111 << 0))  >> 0;
+ 						}
+ 					}
+ 
+@@ -3115,7 +3117,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ #if HAVE_AVIF
+ 					avifResult avifResult = AVIF_RESULT_OK;
+ 
+-					avifImage *pAvifImage = avifImageCreate( g_nOutputWidth, g_nOutputHeight, 10, AVIF_PIXEL_FORMAT_YUV444 );
++					avifImage *pAvifImage = avifImageCreate( width, height, 10, AVIF_PIXEL_FORMAT_YUV444 );
+ 					defer( avifImageDestroy( pAvifImage ) );
+ 					pAvifImage->yuvRange = AVIF_RANGE_FULL;
+ 					pAvifImage->colorPrimaries = bHDRScreenshot ? AVIF_COLOR_PRIMARIES_BT2020 : AVIF_COLOR_PRIMARIES_BT709;
+@@ -3145,7 +3147,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 					rgbAvifImage.ignoreAlpha = AVIF_TRUE;
+ 
+ 					rgbAvifImage.pixels = (uint8_t *)imageData.data();
+-					rgbAvifImage.rowBytes = g_nOutputWidth * kCompCnt * sizeof( uint16_t );
++					rgbAvifImage.rowBytes = width * kCompCnt * sizeof( uint16_t );
+ 
+ 					if ( ( avifResult = avifImageRGBToYUV( pAvifImage, &rgbAvifImage ) ) != AVIF_RESULT_OK ) // Not really! See Matrix Coefficients IDENTITY above.
+ 					{
+@@ -3190,12 +3192,12 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 				else if (pScreenshotTexture->format() == VK_FORMAT_B8G8R8A8_UNORM)
+ 				{
+ 					// Make our own copy of the image to remove the alpha channel.
+-					auto imageData = std::vector<uint8_t>(currentOutputWidth * currentOutputHeight * 4);
++					auto imageData = std::vector<uint8_t>(width * height * 4);
+ 					const uint32_t comp = 4;
+-					const uint32_t pitch = currentOutputWidth * comp;
+-					for (uint32_t y = 0; y < currentOutputHeight; y++)
++					const uint32_t pitch = width * comp;
++					for (uint32_t y = 0; y < height; y++)
+ 					{
+-						for (uint32_t x = 0; x < currentOutputWidth; x++)
++						for (uint32_t x = 0; x < width; x++)
+ 						{
+ 							// BGR...
+ 							imageData[y * pitch + x * comp + 0] = mappedData[y * pScreenshotTexture->rowPitch() + x * comp + 2];
+@@ -3204,7 +3206,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 							imageData[y * pitch + x * comp + 3] = 255;
+ 						}
+ 					}
+-					if ( stbi_write_png( oScreenshotInfo->szScreenshotPath.c_str(), currentOutputWidth, currentOutputHeight, 4, imageData.data(), pitch ) )
++					if ( stbi_write_png( oScreenshotInfo->szScreenshotPath.c_str(), width, height, 4, imageData.data(), pitch ) )
+ 					{
+ 						xwm_log.infof( "Screenshot saved to %s", oScreenshotInfo->szScreenshotPath.c_str() );
+ 						bScreenshotSuccess = true;
+@@ -3227,7 +3229,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 
+ #if 0
+ 						char cmd[4096];
+-						sprintf(cmd, "ffmpeg -f rawvideo -pixel_format nv12 -video_size %dx%d -i %s %s_encoded.png", pScreenshotTexture->width(), pScreenshotTexture->height(), oScreenshotInfo->szScreenshotPath.c_str(), oScreenshotInfo->szScreenshotPath.c_str() );
++						sprintf(cmd, "ffmpeg -f rawvideo -pixel_format nv12 -video_size %dx%d -i %s %s_encoded.png", width, height, oScreenshotInfo->szScreenshotPath.c_str(), oScreenshotInfo->szScreenshotPath.c_str() );
+ 
+ 						int ret = system(cmd);
+ 
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Matthew Schwartz <matthew.schwartz@linux.dev>
+Date: Mon, 20 Jul 2026 12:29:29 -0700
+Subject: rendervulkan: fall back to XBGR2101010 when XRGB2101010 is
+ unsupported
+
+XRGB2101010 storage images are an optional Vulkan feature that NVIDIA
+hardware doesn't support, so imageStore writes land in XBGR order and both
+Pipewire NV12 capture and AVIF screenshots get red and blue channels
+swapped.
+
+Query the format features once and capture as XBGR2101010 if XRGB2101010
+lacks linear storage/sampled support, and unpack screenshot pixels
+according to the texture's actual format. This fixes the inverted colors
+in remote play streaming from both NVK and NVIDIA prop drivers.
+---
+ src/rendervulkan.cpp | 19 +++++++++++++++++++
+ src/rendervulkan.hpp |  1 +
+ src/steamcompmgr.cpp | 17 +++++++++++------
+ 3 files changed, 31 insertions(+), 6 deletions(-)
+
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index 3ca1650242ec..8c6d6adc89ff 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -3827,6 +3827,25 @@ gamescope::Rc<CVulkanTexture> vulkan_acquire_capture_texture(uint32_t width, uin
+ 	return texture;
+ }
+ 
++// XRGB2101010 storage images are an optional Vulkan feature that NVIDIA hardware
++// doesn't support, and imageStore lands in XBGR order there, swapping R/B.
++uint32_t vulkan_get_rgb10_capture_format( void )
++{
++	static uint32_t s_uFormat = []()
++	{
++		// Pooled capture textures are mappable, hence linear-tiled.
++		VkFormatProperties props;
++		g_device.vk.GetPhysicalDeviceFormatProperties( g_device.physDev(), VK_FORMAT_A2R10G10B10_UNORM_PACK32, &props );
++		constexpr VkFormatFeatureFlags uNeeded = VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
++		if ( ( props.linearTilingFeatures & uNeeded ) == uNeeded )
++			return DRM_FORMAT_XRGB2101010;
++
++		vk_log.infof( "XRGB2101010 lacks linear storage/sampled support, capturing as XBGR2101010" );
++		return DRM_FORMAT_XBGR2101010;
++	}();
++	return s_uFormat;
++}
++
+ // Internal display's native brightness.
+ float g_flInternalDisplayBrightnessNits = 500.0f;
+ 
+diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
+index 4a6c05169fee..b7ad6d236014 100644
+--- a/src/rendervulkan.hpp
++++ b/src/rendervulkan.hpp
+@@ -477,6 +477,7 @@ void vulkan_wait( uint64_t ulSeqNo, bool bReset );
+ gamescope::Rc<CVulkanTexture> vulkan_get_last_output_image( bool partial, bool defer );
+ gamescope::Rc<CVulkanTexture> vulkan_acquire_screenshot_texture(uint32_t width, uint32_t height, bool exportable, uint32_t drmFormat, EStreamColorspace colorspace = k_EStreamColorspace_Unknown);
+ gamescope::Rc<CVulkanTexture> vulkan_acquire_capture_texture(uint32_t width, uint32_t height, bool exportable, uint32_t drmFormat, EStreamColorspace colorspace = k_EStreamColorspace_Unknown);
++uint32_t vulkan_get_rgb10_capture_format( void );
+ 
+ void vulkan_present_to_window( uint64_t frameGenerationOutputId );
+ 
+diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
+index a5280861498b..1a4147325016 100644
+--- a/src/steamcompmgr.cpp
++++ b/src/steamcompmgr.cpp
+@@ -2444,7 +2444,7 @@ static void paint_pipewire()
+ 	}
+ 
+ 	gamescope::Rc<CVulkanTexture> pRGBTexture = s_pPipewireBuffer->texture->isYcbcr()
+-		? vulkan_acquire_capture_texture( uWidth, uHeight, false, DRM_FORMAT_XRGB2101010 )
++		? vulkan_acquire_capture_texture( uWidth, uHeight, false, vulkan_get_rgb10_capture_format() )
+ 		: gamescope::Rc<CVulkanTexture>{ s_pPipewireBuffer->texture };
+ 
+ 	gamescope::Rc<CVulkanTexture> pYUVTexture = s_pPipewireBuffer->texture->isYcbcr() ? s_pPipewireBuffer->texture : nullptr;
+@@ -2965,7 +2965,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 		uint32_t drmCaptureFormat = DRM_FORMAT_INVALID;
+ 
+ 		if ( path.extension() == ".avif" )
+-			drmCaptureFormat = DRM_FORMAT_XRGB2101010;
++			drmCaptureFormat = vulkan_get_rgb10_capture_format();
+ 		else if ( path.extension() == ".png" )
+ 			drmCaptureFormat = DRM_FORMAT_XRGB8888;
+ 		else if ( path.extension() == ".nv12.bin" )
+@@ -3094,12 +3094,17 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 
+ 				bool bScreenshotSuccess = false;
+ 
+-				if ( pScreenshotTexture->format() == VK_FORMAT_A2R10G10B10_UNORM_PACK32 )
++				if ( pScreenshotTexture->format() == VK_FORMAT_A2R10G10B10_UNORM_PACK32 ||
++				     pScreenshotTexture->format() == VK_FORMAT_A2B10G10R10_UNORM_PACK32 )
+ 				{
+ 					// Make our own copy of the image to remove the alpha channel.
+ 					constexpr uint32_t kCompCnt = 3;
+ 					auto imageData = std::vector<uint16_t>( width * height * kCompCnt );
+ 
++					// R sits at bits 20-29 for XRGB, 0-9 for XBGR. B mirrors it.
++					const uint32_t uRedShift = pScreenshotTexture->format() == VK_FORMAT_A2R10G10B10_UNORM_PACK32 ? 20 : 0;
++					const uint32_t uBlueShift = 20 - uRedShift;
++
+ 					for (uint32_t y = 0; y < height; y++)
+ 					{
+ 						for (uint32_t x = 0; x < width; x++)
+@@ -3107,9 +3112,9 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 							uint32_t *pInPixel = (uint32_t *)&mappedData[(y * pScreenshotTexture->rowPitch()) + x * (32 / 8)];
+ 							uint32_t uInPixel = *pInPixel;
+ 
+-							imageData[y * width * kCompCnt + x * kCompCnt + 0] = (uInPixel & (0b1111111111 << 20)) >> 20;
+-							imageData[y * width * kCompCnt + x * kCompCnt + 1] = (uInPixel & (0b1111111111 << 10)) >> 10;
+-							imageData[y * width * kCompCnt + x * kCompCnt + 2] = (uInPixel & (0b1111111111 << 0))  >> 0;
++							imageData[y * width * kCompCnt + x * kCompCnt + 0] = (uInPixel >> uRedShift)  & 0b1111111111;
++							imageData[y * width * kCompCnt + x * kCompCnt + 1] = (uInPixel >> 10) & 0b1111111111;
++							imageData[y * width * kCompCnt + x * kCompCnt + 2] = (uInPixel >> uBlueShift) & 0b1111111111;
+ 						}
+ 					}
+ 
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Olivier Tilloy <otilloy@igalia.com>
+Date: Fri, 15 May 2026 21:51:35 +0200
+Subject: steamcompmgr: fix the error message when a screenshot is requested
+ with an unsupported file extension
+
+---
+ src/steamcompmgr.cpp | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
+index 1a4147325016..4ea9d5adb60d 100644
+--- a/src/steamcompmgr.cpp
++++ b/src/steamcompmgr.cpp
+@@ -2970,6 +2970,8 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 			drmCaptureFormat = DRM_FORMAT_XRGB8888;
+ 		else if ( path.extension() == ".nv12.bin" )
+ 			drmCaptureFormat = DRM_FORMAT_NV12;
++		else
++			xwm_log.errorf( "Unsupported extension for a screenshot: %s", path.extension().string().c_str() );
+ 
+ 		gamescope::Rc<CVulkanTexture> pScreenshotTexture;
+ 		if ( drmCaptureFormat != DRM_FORMAT_INVALID )
+@@ -3274,7 +3276,8 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 		}
+ 		else
+ 		{
+-			xwm_log.errorf( "Oh no, we ran out of screenshot images. Not actually writing a screenshot." );
++			if ( drmCaptureFormat != DRM_FORMAT_INVALID )
++				xwm_log.errorf( "Oh no, we ran out of screenshot images. Not actually writing a screenshot." );
+ 			if ( oScreenshotInfo->bX11PropertyRequested )
+ 			{
+ 				XDeleteProperty( root_ctx->dpy, root_ctx->root, root_ctx->atoms.gamescopeScreenShotAtom );
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Olivier Tilloy <otilloy@igalia.com>
+Date: Fri, 15 May 2026 20:14:04 +0200
+Subject: steamcompmgr: fix the detection of the .nv12.bin extension for
+ screenshot requests
+
+The extension() method returns only the rightmost extension, in that case ".bin",
+so the check would never match. As a result the format wouldn't be assigned,
+and the request would always fail with this misleading error message:
+
+    "Oh no, we ran out of screenshot images. Not actually writing a screenshot."
+---
+ src/steamcompmgr.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
+index 4ea9d5adb60d..fef8e8784765 100644
+--- a/src/steamcompmgr.cpp
++++ b/src/steamcompmgr.cpp
+@@ -2968,7 +2968,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 			drmCaptureFormat = vulkan_get_rgb10_capture_format();
+ 		else if ( path.extension() == ".png" )
+ 			drmCaptureFormat = DRM_FORMAT_XRGB8888;
+-		else if ( path.extension() == ".nv12.bin" )
++		else if ( path.extension() == ".bin" && path.stem().extension() == ".nv12" )
+ 			drmCaptureFormat = DRM_FORMAT_NV12;
+ 		else
+ 			xwm_log.errorf( "Unsupported extension for a screenshot: %s", path.extension().string().c_str() );
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Matthew Schwartz <matthew.schwartz@linux.dev>
+Date: Mon, 20 Jul 2026 15:07:24 -0700
+Subject: steamcompmgr: capture screenshots at render size, not output size
+
+Base-plane-only screenshots were captured at the output resolution, so
+rendering a game above the display size for screenshot purposes was
+thrown away. Acquire the screenshot texture at the nested render size
+and repaint the focus and override windows at that size, the same way
+paint_pipewire() captures at an arbitrary size. This applies in both
+directions: an upscaled game is now captured at its smaller native
+render size with no scaler artifacts, matching the base_plane_only
+semantics of capturing just the game. The screen_buffer type still
+captures the displayed output 1:1. NV12 requests and screenshots with
+no focus window keep the output-size path.
+
+Fixes: https://github.com/ValveSoftware/gamescope/issues/1996
+---
+ src/steamcompmgr.cpp | 37 ++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 36 insertions(+), 1 deletion(-)
+
+diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
+index fef8e8784765..10af66f6f439 100644
+--- a/src/steamcompmgr.cpp
++++ b/src/steamcompmgr.cpp
+@@ -2973,9 +2973,18 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 		else
+ 			xwm_log.errorf( "Unsupported extension for a screenshot: %s", path.extension().string().c_str() );
+ 
++		// Repaint base-plane-only screenshots at the game's render resolution to preserve supersampling.
++		const bool bRenderSizeScreenshot =
++			oScreenshotInfo->eScreenshotType == GAMESCOPE_CONTROL_SCREENSHOT_TYPE_BASE_PLANE_ONLY &&
++			drmCaptureFormat != DRM_FORMAT_NV12 &&
++			pFocus->focusWindow != nullptr;
++
++		const uint32_t uScreenshotWidth = bRenderSizeScreenshot ? g_nNestedWidth : g_nOutputWidth;
++		const uint32_t uScreenshotHeight = bRenderSizeScreenshot ? g_nNestedHeight : g_nOutputHeight;
++
+ 		gamescope::Rc<CVulkanTexture> pScreenshotTexture;
+ 		if ( drmCaptureFormat != DRM_FORMAT_INVALID )
+-			pScreenshotTexture = vulkan_acquire_screenshot_texture( g_nOutputWidth, g_nOutputHeight, false, drmCaptureFormat );
++			pScreenshotTexture = vulkan_acquire_screenshot_texture( uScreenshotWidth, uScreenshotHeight, false, drmCaptureFormat );
+ 
+ 		if ( pScreenshotTexture )
+ 		{
+@@ -3041,6 +3050,32 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+ 			else if ( oScreenshotInfo->eScreenshotType == GAMESCOPE_CONTROL_SCREENSHOT_TYPE_FULL_COMPOSITION ||
+ 					  oScreenshotInfo->eScreenshotType == GAMESCOPE_CONTROL_SCREENSHOT_TYPE_SCREEN_BUFFER )
+ 				oScreenshotSeq = vulkan_composite( &screenshotFrameInfo, nullptr, false, pScreenshotTexture );
++			else if ( bRenderSizeScreenshot )
++			{
++				FrameInfo_t renderSizeScreenshotFrameInfo{};
++				renderSizeScreenshotFrameInfo.applyOutputColorMgmt = true;
++				renderSizeScreenshotFrameInfo.outputEncodingEOTF = bHDRScreenshot ? EOTF_PQ : EOTF_Gamma22;
++				for ( uint32_t nInputEOTF = 0; nInputEOTF < EOTF_Count; nInputEOTF++ )
++				{
++					auto& luts = bHDRScreenshot ? g_ScreenshotColorMgmtLutsHDR : g_ScreenshotColorMgmtLuts;
++					renderSizeScreenshotFrameInfo.lut3D[nInputEOTF] = luts[nInputEOTF].vk_lut3d;
++					renderSizeScreenshotFrameInfo.shaperLut[nInputEOTF] = luts[nInputEOTF].vk_lut1d;
++				}
++
++				const uint32_t uBackupWidth = currentOutputWidth;
++				const uint32_t uBackupHeight = currentOutputHeight;
++				currentOutputWidth = uScreenshotWidth;
++				currentOutputHeight = uScreenshotHeight;
++
++				paint_window( pFocus->focusWindow, pFocus->focusWindow, &renderSizeScreenshotFrameInfo, nullptr, 0, 1.0f, pFocus->overrideWindow );
++				if ( pFocus->overrideWindow && !pFocus->focusWindow->isSteamStreamingClient )
++					paint_window( pFocus->overrideWindow, pFocus->focusWindow, &renderSizeScreenshotFrameInfo, nullptr, PaintWindowFlag::NoFilter, 1.0f, pFocus->overrideWindow );
++
++				oScreenshotSeq = vulkan_screenshot( &renderSizeScreenshotFrameInfo, pScreenshotTexture, nullptr );
++
++				currentOutputWidth = uBackupWidth;
++				currentOutputHeight = uBackupHeight;
++			}
+ 			else
+ 				oScreenshotSeq = vulkan_screenshot( &screenshotFrameInfo, pScreenshotTexture, nullptr );
+ 
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Wed, 19 Aug 2026 12:15:43 +0200
+Subject: stop dropping the app's declared CTM to fix incorrect HDR values
+
+regression from bff10d5331f8
+---
+ src/rendervulkan.cpp | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index 8c6d6adc89ff..bc353223530b 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -4931,16 +4931,21 @@ namespace
+ 					// scRGB, so encode them into the display EOTF while writing the
+ 					// native 10-bit scanout.
+ 					if ( !hdrOutput )
++					{
+ 						generatedFrame.layers[0].colorspace = GAMESCOPE_APP_TEXTURE_COLORSPACE_LINEAR;
++						generatedFrame.layers[0].ctm = nullptr;
++					}
+ 					else
+ 					{
++						// The midpoint remains linear scRGB with Rec.709 primaries.
++						// Keep the source layer's 709 -> 2020 CTM when encoding it
++						// for the HDR scanout, matching the FSR and direct-scanout paths.
+ 						generatedFrame.applyOutputColorMgmt = true;
+ 						generatedFrame.outputEncodingEOTF = frameInfo->outputEncodingEOTF;
+ 					}
+ 					generatedFrame.layers[0].scale = { 1.0f, 1.0f };
+ 					generatedFrame.layers[0].offset = { 0.0f, 0.0f };
+ 					generatedFrame.layers[0].blackBorder = false;
+-					generatedFrame.layers[0].ctm = nullptr;
+ 				}
+ 
+ 				if ( !m_completionTimeline )
+@@ -5034,10 +5039,10 @@ namespace
+ 					{
+ 						// The target has the raw source extent. Composite the real frame
+ 						// one-to-one, then retain its original presentation scale below.
++						// Preserve the HDR source CTM just as the FSR path does.
+ 						realFrame.layers[0].scale = { 1.0f, 1.0f };
+ 						realFrame.layers[0].offset = { 0.0f, 0.0f };
+ 						realFrame.layers[0].blackBorder = false;
+-						realFrame.layers[0].ctm = nullptr;
+ 					}
+ 
+ 					auto realCmdBuffer = g_device.commandBuffer();
