@@ -102,3 +102,234 @@ index 61553d39e07c..acaacb9ac37d 100644
              QCoreApplication::instance()->exit(-1);
          }
      });
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Thu, 20 Aug 2026 00:18:31 +0200
+Subject: make controller presses translate to enter to attempt a login
+
+---
+ CMakeLists.txt                           |  2 +
+ src/frontend/greeter/CMakeLists.txt      |  2 +
+ src/frontend/greeter/controllerinput.cpp | 92 ++++++++++++++++++++++++
+ src/frontend/greeter/controllerinput.h   | 25 +++++++
+ src/frontend/greeter/main.cpp            | 17 +++++
+ 5 files changed, 138 insertions(+)
+ create mode 100644 src/frontend/greeter/controllerinput.cpp
+ create mode 100644 src/frontend/greeter/controllerinput.h
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 52af3b61b437..b03e19e22845 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -58,6 +58,8 @@ pkg_check_modules(SYSTEMD REQUIRED "systemd")
+ 
+ pkg_check_modules(LIBSYSTEMD REQUIRED "libsystemd" IMPORTED_TARGET)
+ 
++pkg_check_modules(LIBUDEV REQUIRED "libudev" IMPORTED_TARGET)
++
+ if (NOT DEFINED SYSTEMD_SYSTEM_UNIT_DIR)
+     pkg_get_variable(SYSTEMD_SYSTEM_UNIT_DIR systemd systemdsystemunitdir)
+ endif()
+diff --git a/src/frontend/greeter/CMakeLists.txt b/src/frontend/greeter/CMakeLists.txt
+index be8ea32e05d1..ce3c2602f590 100644
+--- a/src/frontend/greeter/CMakeLists.txt
++++ b/src/frontend/greeter/CMakeLists.txt
+@@ -10,6 +10,7 @@ set(LOGIN_GREETER_SRCS
+     backend/SocketWriter.cpp
+     mockbackend/MockGreeterProxy.cpp
+     blurscreenbridge.cpp
++    controllerinput.cpp
+     greetereventfilter.cpp
+ )
+ 
+@@ -56,6 +57,7 @@ target_link_libraries(plasma-login-greeter PRIVATE
+     LayerShellQt::Interface
+     PW::KWorkspace
+     KF6::ScreenDpms
++    PkgConfig::LIBUDEV
+ )
+ 
+ ecm_finalize_qml_module(plasma-login-greeter)
+diff --git a/src/frontend/greeter/controllerinput.cpp b/src/frontend/greeter/controllerinput.cpp
+new file mode 100644
+index 000000000000..fbe369067138
+--- /dev/null
++++ b/src/frontend/greeter/controllerinput.cpp
+@@ -0,0 +1,92 @@
++/*
++ * SPDX-FileCopyrightText: 2026 KDE Contributors
++ *
++ * SPDX-License-Identifier: LGPL-2.0-or-later
++ */
++
++#include "controllerinput.h"
++
++#include <QDebug>
++#include <QSocketNotifier>
++
++#include <cerrno>
++#include <fcntl.h>
++#include <linux/input-event-codes.h>
++#include <linux/input.h>
++#include <unistd.h>
++
++#include <libudev.h>
++
++namespace
++{
++bool isControllerButton(unsigned int code)
++{
++    return (code >= BTN_MISC && code < BTN_MOUSE) || (code >= BTN_JOYSTICK && code < BTN_DIGI) || (code >= BTN_GEAR_DOWN && code <= BTN_GEAR_UP)
++        || (code >= BTN_DPAD_UP && code <= BTN_GRIPR2) || (code >= BTN_TRIGGER_HAPPY1 && code <= BTN_TRIGGER_HAPPY40);
++}
++}
++
++ControllerInput::ControllerInput(QObject *parent)
++    : QObject(parent)
++{
++    udev *context = udev_new();
++    if (!context) {
++        return;
++    }
++
++    udev_enumerate *enumerate = udev_enumerate_new(context);
++    if (enumerate) {
++        udev_enumerate_add_match_subsystem(enumerate, "input");
++        udev_enumerate_add_match_property(enumerate, "ID_INPUT_JOYSTICK", "1");
++        udev_enumerate_scan_devices(enumerate);
++
++        udev_list_entry *entry = nullptr;
++        udev_list_entry_foreach(entry, udev_enumerate_get_list_entry(enumerate))
++        {
++            udev_device *device = udev_device_new_from_syspath(context, udev_list_entry_get_name(entry));
++            const char *devnode = device ? udev_device_get_devnode(device) : nullptr;
++            const char *sysname = device ? udev_device_get_sysname(device) : nullptr;
++            if (devnode && sysname && qstrncmp(sysname, "event", 5) == 0) {
++                const int fd = open(devnode, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
++                if (fd >= 0) {
++                    m_deviceFds.append(fd);
++                    auto *notifier = new QSocketNotifier(fd, QSocketNotifier::Read, this);
++                    connect(notifier, &QSocketNotifier::activated, this, [this, fd, notifier] {
++                        input_event events[16];
++                        const ssize_t bytesRead = read(fd, events, sizeof(events));
++                        if (bytesRead < 0 && errno == EAGAIN) {
++                            return;
++                        }
++                        if (bytesRead <= 0) {
++                            notifier->setEnabled(false);
++                            m_deviceFds.removeOne(fd);
++                            close(fd);
++                            return;
++                        }
++
++                        const size_t eventCount = bytesRead / sizeof(input_event);
++                        for (size_t i = 0; i < eventCount; ++i) {
++                            if (events[i].type == EV_KEY && events[i].value == 1 && isControllerButton(events[i].code)) {
++                                Q_EMIT buttonPressed();
++                            }
++                        }
++                    });
++                } else {
++                    qWarning() << "Unable to open controller input device" << devnode << ':' << qt_error_string(errno);
++                }
++            }
++            if (device) {
++                udev_device_unref(device);
++            }
++        }
++        udev_enumerate_unref(enumerate);
++    }
++    udev_unref(context);
++}
++
++ControllerInput::~ControllerInput()
++{
++    for (int fd : m_deviceFds) {
++        close(fd);
++    }
++}
+diff --git a/src/frontend/greeter/controllerinput.h b/src/frontend/greeter/controllerinput.h
+new file mode 100644
+index 000000000000..fda3933dc244
+--- /dev/null
++++ b/src/frontend/greeter/controllerinput.h
+@@ -0,0 +1,25 @@
++/*
++ * SPDX-FileCopyrightText: 2026 KDE Contributors
++ *
++ * SPDX-License-Identifier: LGPL-2.0-or-later
++ */
++
++#pragma once
++
++#include <QList>
++#include <QObject>
++
++class ControllerInput : public QObject
++{
++    Q_OBJECT
++
++public:
++    explicit ControllerInput(QObject *parent = nullptr);
++    ~ControllerInput() override;
++
++Q_SIGNALS:
++    void buttonPressed();
++
++private:
++    QList<int> m_deviceFds;
++};
+diff --git a/src/frontend/greeter/main.cpp b/src/frontend/greeter/main.cpp
+index 699e2ad0c39a..ecd71d3f5ccc 100644
+--- a/src/frontend/greeter/main.cpp
++++ b/src/frontend/greeter/main.cpp
+@@ -7,9 +7,11 @@
+ #include <QCommandLineOption>
+ #include <QCommandLineParser>
+ #include <QGuiApplication>
++#include <QKeyEvent>
+ #include <QObject>
+ #include <QQmlContext>
+ #include <QScreen>
++#include <QWindow>
+ 
+ #include <KLocalizedString>
+ #include <KWindowSystem>
+@@ -22,6 +24,7 @@
+ #include "mockbackend/MockGreeterProxy.h"
+ 
+ #include "blurscreenbridge.h"
++#include "controllerinput.h"
+ #include "greetereventfilter.h"
+ #include "models/sessionmodel.h"
+ #include "models/usermodel.h"
+@@ -35,7 +38,20 @@ public:
+     explicit LoginGreeter(QObject *parent = nullptr)
+         : QObject(parent)
+         , m_engine(new PlasmaQuick::SharedQmlEngine)
++        , m_controllerInput(new ControllerInput(this))
+     {
++        connect(m_controllerInput, &ControllerInput::buttonPressed, this, [] {
++            QWindow *window = qGuiApp->focusWindow();
++            if (!window) {
++                return;
++            }
++
++            QKeyEvent pressEvent(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier, QStringLiteral("\r"));
++            QCoreApplication::sendEvent(window, &pressEvent);
++            QKeyEvent releaseEvent(QEvent::KeyRelease, Qt::Key_Return, Qt::NoModifier, QStringLiteral("\r"));
++            QCoreApplication::sendEvent(window, &releaseEvent);
++        });
++
+         connect(qApp, &QGuiApplication::screenAdded, this, [this](QScreen *screen) {
+             createWindowForScreen(screen);
+         });
+@@ -92,6 +108,7 @@ private:
+     }
+ 
+     PlasmaQuick::SharedQmlEngine m_engine;
++    ControllerInput *m_controllerInput;
+     static bool s_testMode;
+ };
+ 
