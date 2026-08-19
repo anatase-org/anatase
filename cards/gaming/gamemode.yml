@@ -155,6 +155,7 @@ files:
   - files/gamemode.desktop
   - files/gamescope-portals.conf
   - files/steam-subscriber-agreement-qr.png
+  - files/steam
 
 postprocess: |
   set -eux
@@ -177,6 +178,8 @@ postprocess: |
       /usr/share/xdg-desktop-portal/gamescope-portals/gamescope-portals.conf
   install -Dm0644 /files/files/steam-subscriber-agreement-qr.png \
       /usr/share/anatase/gamemode/steam-subscriber-agreement-qr.png
+  install -Dm0755 /files/files/steam \
+      /usr/bin/steam
 
   # Sanity check preflight
   python3 - <<'PY'
@@ -210,7 +213,10 @@ postprocess: |
       -e '/^PartOf=graphical-session.target$/d' \
       /usr/lib/systemd/user/xdg-desktop-portal-holo.service
 
-  bash -n /usr/libexec/anatase-gamemode /usr/bin/anatase-gamemode-session
+  bash -n \
+      /usr/libexec/anatase-gamemode \
+      /usr/bin/anatase-gamemode-session \
+      /usr/bin/steam
   grep -Fx 'Exec=/usr/bin/anatase-gamemode-session' \
       /usr/share/wayland-sessions/gamemode.desktop
   grep -Fx 'DesktopNames=gamescope' \

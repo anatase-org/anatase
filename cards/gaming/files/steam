@@ -1,0 +1,5 @@
+#!/usr/bin/bash
+
+# Faugus checks for a host Steam executable before enabling Steam shortcuts.
+echo "Install Steam from Discover!"
+exit 0
