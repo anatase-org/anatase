@@ -81,9 +81,6 @@ packages:
 postprocess: |
   set -eux
 
-  # Fix unrar
-  ln -s unar /usr/bin/unrar
-
   #
   # Modt config
   #
