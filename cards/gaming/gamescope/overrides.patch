@@ -12295,3 +12295,489 @@ index 8c6d6adc89ff..bc353223530b 100644
  					}
  
  					auto realCmdBuffer = g_device.commandBuffer();
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Thu, 20 Aug 2026 18:40:16 +0200
+Subject: temporarily add gdm just for nvidia to force contiguous allocations
+
+---
+ src/Backends/DRMBackend.cpp    | 106 ++++++++++++++++++++++++++
+ src/Backends/DeferredBackend.h |  14 ++++
+ src/backend.h                  |  12 ++-
+ src/meson.build                |   4 +-
+ src/rendervulkan.cpp           | 135 +++++++++++++++++++++++++++++++--
+ src/rendervulkan.hpp           |   2 +
+ 6 files changed, 263 insertions(+), 10 deletions(-)
+
+diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
+index f21a470dba1b..35be9c03f1d6 100644
+--- a/src/Backends/DRMBackend.cpp
++++ b/src/Backends/DRMBackend.cpp
+@@ -52,6 +52,10 @@
+ #include "libdisplay-info/cta.h"
+ #include "wlr_end.hpp"
+ 
++#if HAVE_GBM
++#include <gbm.h>
++#endif
++
+ #include "gamescope-control-protocol.h"
+ 
+ static constexpr bool k_bUseCursorPlane = false;
+@@ -109,6 +113,10 @@ struct drm_t {
+ 	uint64_t cursor_width, cursor_height;
+ 	bool allow_modifiers;
+ 	struct wlr_drm_format_set formats;
++	bool is_nvidia = false;
++#if HAVE_GBM
++	struct gbm_device *gbm = nullptr;
++#endif
+ 
+ 	std::vector< std::unique_ptr< gamescope::CDRMPlane > > planes;
+ 	std::vector< std::unique_ptr< gamescope::CDRMCRTC > > crtcs;
+@@ -1272,6 +1280,18 @@ bool init_drm(struct drm_t *drm, int width, int height, int refresh)
+ 		return false;
+ 	}
+ 
++	drm->is_nvidia = false;
++	if ( drmVersion *pVersion = drmGetVersion( drm->fd ) )
++	{
++		drm->is_nvidia = pVersion->name && strcmp( pVersion->name, "nvidia-drm" ) == 0;
++		drmFreeVersion( pVersion );
++	}
++
++#if !HAVE_GBM
++	if ( drm->is_nvidia )
++		drm_log.errorf( "Gamescope was built without GBM support; Vulkan scanout allocation will be used on NVIDIA." );
++#endif
++
+ 	if (drmGetCap(drm->fd, DRM_CAP_CURSOR_WIDTH, &drm->cursor_width) != 0) {
+ 		drm->cursor_width = 64;
+ 	}
+@@ -1425,6 +1445,15 @@ bool init_drm(struct drm_t *drm, int width, int height, int refresh)
+ 
+ 	drm->needs_modeset = true;
+ 
++#if HAVE_GBM
++	if ( drm->is_nvidia )
++	{
++		drm->gbm = gbm_create_device( drm->fd );
++		if ( !drm->gbm )
++			drm_log.errorf( "Failed to create GBM device for NVIDIA scanout buffers; Vulkan scanout allocation will be used." );
++	}
++#endif
++
+ 	return true;
+ }
+ 
+@@ -1587,6 +1616,14 @@ void finish_drm(struct drm_t *drm)
+ 	drm->crtcs.clear();
+ 	drm->connectors.clear();
+ 
++#if HAVE_GBM
++	if ( drm->gbm )
++	{
++		gbm_device_destroy( drm->gbm );
++		drm->gbm = nullptr;
++	}
++#endif
++
+ 
+ 
+ 	// We can't close the DRM FD here, it might still be in use by the
+@@ -3582,7 +3619,9 @@ namespace gamescope
+ 
+ 			FrameInfo_t fsrScanoutFrameInfo;
+ 			const FrameInfo_t::Layer_t &fsrBaseLayer = pFrameInfo->layers[0];
++			const bool bForceBackendComposition = UsesBackendAllocatedScanout();
+ 			const bool bCanPreprocessFsrBase =
++				!bForceBackendComposition &&
+ 				pFrameInfo->useFSRLayer0 &&
+ 				pFrameInfo->layerCount > 1 &&
+ 				!cv_composite_force &&
+@@ -3645,6 +3684,8 @@ namespace gamescope
+ 
+ 			bool bNeedsFullComposite = false;
+ 			bNeedsFullComposite |= cv_composite_force;
++			// NVIDIA client DMA-BUFs have no physical-contiguity guarantee.
++			bNeedsFullComposite |= bForceBackendComposition;
+ 			bNeedsFullComposite |= bWasFirstFrame;
+ 			bNeedsFullComposite |= pFrameInfo->useFSRLayer0;
+ 			bNeedsFullComposite |= pFrameInfo->useNISLayer0;
+@@ -3961,6 +4002,71 @@ namespace gamescope
+ 			return drm_fbid_from_dmabuf( &g_DRM, pDmaBuf );
+ 		}
+ 
++		virtual bool UsesBackendAllocatedScanout() const override
++		{
++			return g_DRM.is_nvidia;
++		}
++
++		virtual bool CreateScanoutDmabuf( uint32_t uWidth, uint32_t uHeight, uint32_t uDrmFormat,
++		                                  std::span<const uint64_t> ulModifiers,
++		                                  wlr_dmabuf_attributes *pDmaBuf ) override
++		{
++#if HAVE_GBM
++			if ( !g_DRM.gbm || ulModifiers.empty() )
++				return false;
++
++			struct gbm_bo *pBo = gbm_bo_create_with_modifiers2(
++				g_DRM.gbm, uWidth, uHeight, uDrmFormat,
++				ulModifiers.data(), ulModifiers.size(),
++				GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT );
++			if ( !pBo )
++			{
++				drm_log.errorf_errno( "Failed to allocate NVIDIA GBM scanout buffer" );
++				return false;
++			}
++
++			*pDmaBuf = {
++				.width = int32_t( uWidth ),
++				.height = int32_t( uHeight ),
++				.format = uDrmFormat,
++				.modifier = gbm_bo_get_modifier( pBo ),
++			};
++
++			const int nPlanes = gbm_bo_get_plane_count( pBo );
++			bool bSuccess = nPlanes >= 1 && nPlanes <= WLR_DMABUF_MAX_PLANES &&
++				Algorithm::Contains( ulModifiers, pDmaBuf->modifier );
++
++			for ( int i = 0; bSuccess && i < nPlanes; i++ )
++			{
++				const int nFd = gbm_bo_get_fd_for_plane( pBo, i );
++				if ( nFd < 0 )
++				{
++					drm_log.errorf_errno( "Failed to export NVIDIA GBM scanout buffer" );
++					bSuccess = false;
++					break;
++				}
++
++				pDmaBuf->fd[i] = nFd;
++				pDmaBuf->offset[i] = gbm_bo_get_offset( pBo, i );
++				pDmaBuf->stride[i] = gbm_bo_get_stride_for_plane( pBo, i );
++				pDmaBuf->n_planes = i + 1;
++			}
++
++			gbm_bo_destroy( pBo );
++
++			if ( !bSuccess || pDmaBuf->n_planes != nPlanes )
++			{
++				wlr_dmabuf_attributes_finish( pDmaBuf );
++				*pDmaBuf = {};
++				return false;
++			}
++
++			return true;
++#else
++			return false;
++#endif
++		}
++
+ 		virtual bool UsesModifiers() const override
+ 		{
+ 			return g_DRM.allow_modifiers;
+diff --git a/src/Backends/DeferredBackend.h b/src/Backends/DeferredBackend.h
+index 0f7346605078..44c13e28addd 100644
+--- a/src/Backends/DeferredBackend.h
++++ b/src/Backends/DeferredBackend.h
+@@ -163,6 +163,20 @@ namespace gamescope
+             return m_pChild->ImportDmabufToBackend( pDmaBuf );
+ 		}
+ 
++		virtual bool UsesBackendAllocatedScanout() const override
++		{
++            std::shared_lock lock{ m_mutInit };
++            return m_bInittedChild && m_pChild->UsesBackendAllocatedScanout();
++		}
++
++		virtual bool CreateScanoutDmabuf( uint32_t uWidth, uint32_t uHeight, uint32_t uDrmFormat,
++		                                  std::span<const uint64_t> ulModifiers,
++		                                  wlr_dmabuf_attributes *pDmaBuf ) override
++		{
++            std::shared_lock lock{ m_mutInit };
++            return m_bInittedChild && m_pChild->CreateScanoutDmabuf( uWidth, uHeight, uDrmFormat, ulModifiers, pDmaBuf );
++		}
++
+ 		virtual bool UsesModifiers() const override
+ 		{
+             return true;
+diff --git a/src/backend.h b/src/backend.h
+index 958f489ce82a..7ffdf9b3f5d2 100644
+--- a/src/backend.h
++++ b/src/backend.h
+@@ -338,6 +338,17 @@ namespace gamescope
+         // Rc manages acquire/release of buffer to/from client while imported.
+         virtual OwningRc<IBackendFb> ImportDmabufToBackend( wlr_dmabuf_attributes *pDmaBuf ) = 0;
+ 
++        // Some KMS drivers impose placement constraints that Vulkan external
++        // allocations cannot express. Such backends may allocate the final
++        // scanout buffer themselves and let Vulkan import it.
++        virtual bool UsesBackendAllocatedScanout() const { return false; }
++        virtual bool CreateScanoutDmabuf( uint32_t uWidth, uint32_t uHeight, uint32_t uDrmFormat,
++                                          std::span<const uint64_t> ulModifiers,
++                                          wlr_dmabuf_attributes *pDmaBuf )
++        {
++            return false;
++        }
++
+         virtual bool UsesModifiers() const = 0;
+         virtual std::span<const uint64_t> GetSupportedModifiers( uint32_t uDrmFormat ) const = 0;
+ 		inline bool SupportsFormat( uint32_t uDrmFormat ) const
+@@ -499,4 +510,3 @@ inline gamescope::IBackend *GetBackend()
+ {
+     return gamescope::IBackend::Get();
+ }
+-
+diff --git a/src/meson.build b/src/meson.build
+index f4ba7652ba89..7a723123ecc4 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -11,6 +11,7 @@ dep_xmu = dependency('xmu')
+ dep_xi = dependency('xi')
+ 
+ drm_dep = dependency('libdrm', version: '>= 2.4.113', required: get_option('drm_backend'))
++gbm_dep = dependency('gbm', version: '>= 21.3', required: false)
+ eis_dep = dependency('libeis-1.0', required : get_option('input_emulation'))
+ 
+ wayland_server = dependency('wayland-server', version: '>=1.21')
+@@ -286,6 +287,7 @@ if sdl2_dep.found()
+ endif
+ 
+ gamescope_cpp_args += '-DHAVE_DRM=@0@'.format(drm_dep.found().to_int())
++gamescope_cpp_args += '-DHAVE_GBM=@0@'.format((drm_dep.found() and gbm_dep.found()).to_int())
+ gamescope_cpp_args += '-DHAVE_SDL2=@0@'.format(sdl2_dep.found().to_int())
+ gamescope_cpp_args += '-DHAVE_AVIF=@0@'.format(avif_dep.found().to_int())
+ gamescope_cpp_args += '-DHAVE_LIBCAP=@0@'.format(cap_dep.found().to_int())
+@@ -334,7 +336,7 @@ gamescope_version = configure_file(
+     include_directories : [reshade_include, sol2_include],
+     dependencies: [
+       dep_wayland, dep_x11, dep_xdamage, dep_xcomposite, dep_xrender, dep_xext, dep_xfixes,
+-      dep_xxf86vm, dep_xres, glm_dep, drm_dep, wayland_server,
++      dep_xxf86vm, dep_xres, glm_dep, drm_dep, gbm_dep, wayland_server,
+       xkbcommon, thread_dep, sdl2_dep, wlroots_dep,
+       vulkan_dep, liftoff_dep, dep_xtst, dep_xmu, cap_dep, epoll_dep, pipewire_dep, librt_dep,
+       stb_dep, displayinfo_dep, openvr_dep, dep_xcursor, avif_dep, dep_xi,
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index bc353223530b..6f06f14a5b20 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -2157,7 +2157,7 @@ bool CVulkanTexture::BInit( uint32_t width, uint32_t height, uint32_t depth, uin
+ 		usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+ 	}
+ 
+-	if ( flags.bFlippable == true )
++	if ( flags.bFlippable == true && pDMA == nullptr )
+ 	{
+ 		flags.bExportable = true;
+ 	}
+@@ -2377,6 +2377,7 @@ bool CVulkanTexture::BInit( uint32_t width, uint32_t height, uint32_t depth, uin
+ 		vk_errorf( res, "vkCreateImage failed" );
+ 		return false;
+ 	}
++	m_bOwnsImage = true;
+ 	
+ 	VkMemoryRequirements memRequirements;
+ 	g_device.vk.GetImageMemoryRequirements(g_device.device(), m_vkImage, &memRequirements);
+@@ -2440,6 +2441,31 @@ bool CVulkanTexture::BInit( uint32_t width, uint32_t height, uint32_t depth, uin
+ 				return false;
+ 			}
+ 
++			VkMemoryFdPropertiesKHR fdProperties = {
++				.sType = VK_STRUCTURE_TYPE_MEMORY_FD_PROPERTIES_KHR,
++			};
++			res = g_device.vk.GetMemoryFdPropertiesKHR(
++				g_device.device(), VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT,
++				fd, &fdProperties );
++			if ( res != VK_SUCCESS )
++			{
++				vk_errorf( res, "vkGetMemoryFdPropertiesKHR failed" );
++				close( fd );
++				return false;
++			}
++
++			const uint32_t uMemoryTypeBits = memRequirements.memoryTypeBits & fdProperties.memoryTypeBits;
++			int32_t nMemoryType = g_device.findMemoryType( properties, uMemoryTypeBits );
++			if ( nMemoryType < 0 )
++				nMemoryType = g_device.findMemoryType( 0, uMemoryTypeBits );
++			if ( nMemoryType < 0 )
++			{
++				vk_log.errorf( "No compatible Vulkan memory type for scanout DMA-BUF import" );
++				close( fd );
++				return false;
++			}
++			allocInfo.memoryTypeIndex = uint32_t( nMemoryType );
++
+ 			// Memory already provided by pDMA
+ 			importMemoryInfo = {
+ 					.sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR,
+@@ -2452,6 +2478,8 @@ bool CVulkanTexture::BInit( uint32_t width, uint32_t height, uint32_t depth, uin
+ 		res = g_device.vk.AllocateMemory( g_device.device(), &allocInfo, nullptr, &memoryHandle );
+ 		if ( res != VK_SUCCESS )
+ 		{
++			if ( pDMA != nullptr )
++				close( importMemoryInfo.fd );
+ 			vk_errorf( res, "vkAllocateMemory failed" );
+ 			return false;
+ 		}
+@@ -2598,13 +2626,30 @@ bool CVulkanTexture::BInit( uint32_t width, uint32_t height, uint32_t depth, uin
+ 
+ 		m_dmabuf = dmabuf;
+ 	}
++	else if ( pDMA != nullptr && flags.bFlippable == true )
++	{
++		m_dmabuf = *pDMA;
++		m_dmabuf.n_planes = 0;
++		for ( int i = 0; i < pDMA->n_planes; i++ )
++		{
++			m_dmabuf.fd[i] = dup( pDMA->fd[i] );
++			if ( m_dmabuf.fd[i] < 0 )
++			{
++				vk_log.errorf_errno( "dup failed" );
++				return false;
++			}
++			m_dmabuf.n_planes = i + 1;
++		}
++	}
+ 
+ 	if ( flags.bFlippable == true )
+ 	{
+ 		m_pBackendFb = GetBackend()->ImportDmabufToBackend( &m_dmabuf );
++		if ( pDMA != nullptr && m_pBackendFb == nullptr )
++			return false;
+ 	}
+ 
+-	bool bHasAlpha = pDMA ? DRMFormatHasAlpha( pDMA->format ) : true;
++	bool bHasAlpha = ( pDMA && !flags.bOutputImage ) ? DRMFormatHasAlpha( pDMA->format ) : true;
+ 
+ 	if (!bHasAlpha )
+ 	{
+@@ -2818,14 +2863,15 @@ CVulkanTexture::~CVulkanTexture( void )
+ 	if ( m_pBackendFb != nullptr )
+ 		m_pBackendFb = nullptr;
+ 
+-	if ( m_vkImageMemory != VK_NULL_HANDLE )
++	if ( m_vkImage != VK_NULL_HANDLE && m_bOwnsImage )
+ 	{
+-		if ( m_vkImage != VK_NULL_HANDLE )
+-		{
+-			g_device.vk.DestroyImage( g_device.device(), m_vkImage, nullptr );
+-			m_vkImage = VK_NULL_HANDLE;
+-		}
++		g_device.vk.DestroyImage( g_device.device(), m_vkImage, nullptr );
++		m_vkImage = VK_NULL_HANDLE;
++		m_bOwnsImage = false;
++	}
+ 
++	if ( m_vkImageMemory != VK_NULL_HANDLE )
++	{
+ 		g_device.vk.FreeMemory( g_device.device(), m_vkImageMemory, nullptr );
+ 		m_vkImageMemory = VK_NULL_HANDLE;
+ 	}
+@@ -3396,6 +3442,63 @@ bool vulkan_remake_swapchain( void )
+ 	return bRet;
+ }
+ 
++static std::vector<uint64_t> vulkan_get_backend_scanout_modifiers( VulkanOutput_t *pOutput )
++{
++	std::vector<uint64_t> modifiers;
++	const bool bHasOverlay = pOutput->uOutputFormatOverlay != VK_FORMAT_UNDEFINED && !kDisablePartialComposition;
++
++	for ( uint64_t ulModifier : GetBackend()->GetSupportedModifiers( pOutput->uOutputFormat ) )
++	{
++		if ( ulModifier == DRM_FORMAT_MOD_INVALID )
++			continue;
++		if ( bHasOverlay &&
++		     !gamescope::Algorithm::Contains( GetBackend()->GetSupportedModifiers( pOutput->uOutputFormatOverlay ), ulModifier ) )
++			continue;
++		modifiers.push_back( ulModifier );
++	}
++
++	return modifiers;
++}
++
++static bool vulkan_make_backend_output_images( VulkanOutput_t *pOutput,
++	const CVulkanTexture::createFlags &outputImageflags,
++	uint32_t uWidth, uint32_t uHeight )
++{
++	const std::vector<uint64_t> modifiers = vulkan_get_backend_scanout_modifiers( pOutput );
++	if ( modifiers.empty() )
++		return false;
++
++	const bool bHasOverlay = pOutput->uOutputFormatOverlay != VK_FORMAT_UNDEFINED && !kDisablePartialComposition;
++	for ( size_t i = 0; i < pOutput->outputImages.size(); i++ )
++	{
++		wlr_dmabuf_attributes dmabuf = {};
++		if ( !GetBackend()->CreateScanoutDmabuf(
++			uWidth, uHeight, pOutput->uOutputFormat, modifiers, &dmabuf ) )
++			return false;
++
++		pOutput->outputImages[i] = new CVulkanTexture();
++		bool bSuccess = pOutput->outputImages[i]->BInit(
++			uWidth, uHeight, 1u, pOutput->uOutputFormat,
++			outputImageflags, &dmabuf );
++
++		if ( bSuccess && bHasOverlay )
++		{
++			wlr_dmabuf_attributes overlayDmabuf = dmabuf;
++			overlayDmabuf.format = pOutput->uOutputFormatOverlay;
++			pOutput->outputImagesPartialOverlay[i] = new CVulkanTexture();
++			bSuccess = pOutput->outputImagesPartialOverlay[i]->BInit(
++				uWidth, uHeight, 1u, pOutput->uOutputFormatOverlay,
++				outputImageflags, &overlayDmabuf );
++		}
++
++		wlr_dmabuf_attributes_finish( &dmabuf );
++		if ( !bSuccess )
++			return false;
++	}
++
++	return true;
++}
++
+ static bool vulkan_make_output_images( VulkanOutput_t *pOutput )
+ {
+ 	CVulkanTexture::createFlags outputImageflags;
+@@ -3425,6 +3528,22 @@ static bool vulkan_make_output_images( VulkanOutput_t *pOutput )
+ 		l_nOutputHeight = g_nOutputWidth;
+ 	}
+ 
++	if ( GetBackend()->UsesBackendAllocatedScanout() )
++	{
++		if ( vulkan_make_backend_output_images( pOutput, outputImageflags, l_nOutputWidth, l_nOutputHeight ) )
++		{
++			// Oh no.
++			pOutput->temporaryHackyBlankImage = vulkan_create_debug_blank_texture();
++			return true;
++		}
++
++		vk_log.errorf( "Failed to create NVIDIA GBM scanout buffers; falling back to Vulkan scanout allocation." );
++		for ( auto &pImage : pOutput->outputImages )
++			pImage = nullptr;
++		for ( auto &pImage : pOutput->outputImagesPartialOverlay )
++			pImage = nullptr;
++	}
++
+ 	pOutput->outputImages[0] = new CVulkanTexture();
+ 	bool bSuccess = pOutput->outputImages[0]->BInit( l_nOutputWidth, l_nOutputHeight, 1u, uDRMFormat, outputImageflags );
+ 	if ( bSuccess != true )
+diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
+index b7ad6d236014..d6809d2757ec 100644
+--- a/src/rendervulkan.hpp
++++ b/src/rendervulkan.hpp
+@@ -211,6 +211,7 @@ private:
+ 	bool m_bInitialized = false;
+ 	bool m_bExternal = false;
+ 	bool m_bOutputImage = false;
++	bool m_bOwnsImage = false;
+ 
+ 	uint32_t m_drmFormat = DRM_FORMAT_INVALID;
+ 
+@@ -808,6 +809,7 @@ static inline uint32_t div_roundup(uint32_t x, uint32_t y)
+ 	VK_FUNC(GetImageMemoryRequirements) \
+ 	VK_FUNC(GetImageSubresourceLayout) \
+ 	VK_FUNC(GetMemoryFdKHR) \
++	VK_FUNC(GetMemoryFdPropertiesKHR) \
+ 	VK_FUNC(GetQueryPoolResults) \
+ 	VK_FUNC(GetSemaphoreCounterValue) \
+ 	VK_FUNC(GetSwapchainImagesKHR) \
