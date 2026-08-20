@@ -689,7 +689,7 @@ ex ()
       *.tar.gz)    tar xzf $1               ;;
       *.tar.xz)    tar xzf $1               ;;
       *.bz2)       bunzip2 $1               ;;
-      *.rar)       unrar x $1               ;;
+      *.rar)       unar $1                  ;;
       *.gz)        gunzip $1                ;;
       *.tar)       tar xf $1                ;;
       *.tbz2)      tar xjf $1               ;;
