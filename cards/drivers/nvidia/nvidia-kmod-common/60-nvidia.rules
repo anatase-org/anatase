@@ -4,6 +4,10 @@
 # case without a started display.
 ACTION=="add|bind", KERNEL=="nvidia", RUN+="/usr/bin/nvidia-modprobe"
 
+# Start NVIDIA services when a GPU is present
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", TAG+="systemd", ENV{SYSTEMD_WANTS}+="nvidia-powerd.service nvidia-persistenced.service"
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030200", TAG+="systemd", ENV{SYSTEMD_WANTS}+="nvidia-powerd.service nvidia-persistenced.service"
+
 # Enable runtime PM for NVIDIA VGA/3D controller devices on driver bind
 ACTION=="bind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", TEST=="power/control", ATTR{power/control}="auto"
 ACTION=="bind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030200", TEST=="power/control", ATTR{power/control}="auto"

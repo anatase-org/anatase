@@ -5,7 +5,6 @@ Description=NVIDIA Persistence Daemon
 Type=forking
 PIDFile=/run/nvidia-persistenced/nvidia-persistenced.pid
 Restart=always
-ExecCondition=/usr/bin/sh -c 'grep -qs "^pci:v000010DE" /sys/bus/pci/devices/*/modalias'
 ExecStart=/usr/bin/nvidia-persistenced
 User=nvidia-persistenced
 Group=nvidia-persistenced
