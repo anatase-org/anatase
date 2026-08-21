@@ -126,9 +126,9 @@ postprocess: |-
   if [ -f "$desktop_file" ]; then
       sed -i \
           -e 's|/usr/bin/steam|/app/bin/anatase-steam|g' \
-          -e '/^PrefersNonDefaultGPU=/d' \
-          -e '/^X-KDE-RunOnDiscreteGpu=/d' \
           "$desktop_file"
+          # -e '/^PrefersNonDefaultGPU=/d' \
+          # -e '/^X-KDE-RunOnDiscreteGpu=/d' \
       if grep -q '^StartupWMClass=' "$desktop_file"; then
           sed -i 's|^StartupWMClass=.*|StartupWMClass=Steam|' "$desktop_file"
       else
