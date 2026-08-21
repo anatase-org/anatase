@@ -4,9 +4,10 @@ Date: Fri, 22 Nov 2024 01:37:48 +0100
 Subject: [NA] add dev script
 
 ---
- 0001-cstdint.patch |  37 ++++++++++++
- sync.sh            | 141 +++++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 178 insertions(+)
+ 0001-cstdint.patch     |  37 ++++++++++++
+ subprojects/.gitignore |   3 +
+ sync.sh                | 129 +++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 169 insertions(+)
  create mode 100644 0001-cstdint.patch
  create mode 100755 sync.sh
 
@@ -53,12 +54,24 @@ index 000000000000..5b4351521b45
 +-- 
 +2.41.0
 +
+diff --git a/subprojects/.gitignore b/subprojects/.gitignore
+index aa2345109697..00e448b6c3d8 100644
+--- a/subprojects/.gitignore
++++ b/subprojects/.gitignore
+@@ -1,3 +1,6 @@
+ glm-*
+ packagecache
+ stb
++.wraplock
++v4l-utils.wrap
++glm
+\ No newline at end of file
 diff --git a/sync.sh b/sync.sh
 new file mode 100755
-index 000000000000..a4105f51102b
+index 000000000000..7066f2631f2d
 --- /dev/null
 +++ b/sync.sh
-@@ -0,0 +1,141 @@
+@@ -0,0 +1,129 @@
 +#!/bin/sh
 +
 +usage() {
@@ -161,18 +174,6 @@ index 000000000000..a4105f51102b
 +    fi
 +
 +    sudo rpm-ostree usroverlay || true
-+    if [ -n "$requested_user" ] || [ -z "$login_config_mounted" ]; then
-+        printf '%s\n' \
-+            '[Autologin]' \
-+            'Relogin=true' \
-+            "User=$session_user" \
-+            'Session=gamemode.desktop' |
-+            sudo tee /run/plasmalogin.conf >/dev/null
-+        sudo chcon --reference=/etc/plasmalogin.conf /run/plasmalogin.conf
-+    fi
-+    if [ -z "$login_config_mounted" ]; then
-+        sudo mount --bind /run/plasmalogin.conf /etc/plasmalogin.conf
-+    fi
 +    sudo mv ~/gamescope /usr/bin/gamescope
 +    sudo systemctl restart plasmalogin
 +
@@ -12298,7 +12299,7 @@ index 8c6d6adc89ff..bc353223530b 100644
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
-Date: Thu, 20 Aug 2026 18:40:16 +0200
+Date: Fri, 21 Aug 2026 19:35:04 +0200
 Subject: temporarily add gdm just for nvidia to force contiguous allocations
 
 ---
@@ -12781,3 +12782,498 @@ index b7ad6d236014..d6809d2757ec 100644
  	VK_FUNC(GetQueryPoolResults) \
  	VK_FUNC(GetSemaphoreCounterValue) \
  	VK_FUNC(GetSwapchainImagesKHR) \
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Fri, 21 Aug 2026 19:30:05 +0200
+Subject: blank all other GPU monitors on startup
+
+When plugging in an eGPU, the display of a handheld might still stay on. Blank all CRTCs in other GPUs to make sure that does not happen
+---
+ src/wlserver.cpp | 38 +++++++++++++++++++++++++++++++-------
+ 1 file changed, 31 insertions(+), 7 deletions(-)
+
+diff --git a/src/wlserver.cpp b/src/wlserver.cpp
+index bdbaff5847d5..8cf0dfc1d4b4 100644
+--- a/src/wlserver.cpp
++++ b/src/wlserver.cpp
+@@ -9,6 +9,7 @@
+ #include <poll.h>
+ #include <fcntl.h>
+ #include <xf86drm.h>
++#include <xf86drmMode.h>
+ #include <sys/eventfd.h>
+ 
+ #include <linux/input-event-codes.h>
+@@ -1754,6 +1755,21 @@ static void kms_device_handle_change( struct wl_listener *listener, void *data )
+ 	nudge_steamcompmgr();
+ }
+ 
++static void blank_kms_device( struct wlr_device *device )
++{
++	drmModeRes *resources = drmModeGetResources( device->fd );
++	if ( !resources )
++		return;
++
++	for ( int i = 0; i < resources->count_crtcs; i++ )
++	{
++		if ( drmModeSetCrtc( device->fd, resources->crtcs[i], 0, 0, 0, nullptr, 0, nullptr ) != 0 )
++			wl_log.errorf_errno( "Failed to blank unused KMS device" );
++	}
++
++	drmModeFreeResources( resources );
++}
++
+ int wlsession_open_kms( const char *device_name ) {
+ 	if ( device_name != nullptr )
+ 	{
+@@ -1761,19 +1777,27 @@ int wlsession_open_kms( const char *device_name ) {
+ 		if ( wlserver.wlr.device == nullptr )
+ 			return -1;
+ 	}
+-	else
++
++	struct wlr_device *devices[8] = {};
++	ssize_t n = wlr_session_find_gpus( wlserver.wlr.session, 8, devices );
++	if ( n < 0 )
++		n = 0;
++
++	if ( wlserver.wlr.device == nullptr )
+ 	{
+-		ssize_t n = wlr_session_find_gpus( wlserver.wlr.session, 1, &wlserver.wlr.device );
+-		if ( n < 0 )
+-		{
+-			wl_log.errorf( "Failed to list GPUs" );
+-			return -1;
+-		}
+ 		if ( n == 0 )
+ 		{
+ 			wl_log.errorf( "No GPU detected" );
+ 			return -1;
+ 		}
++
++		wlserver.wlr.device = devices[0];
++	}
++
++	for ( ssize_t i = 0; i < n; i++ )
++	{
++		if ( devices[i]->dev != wlserver.wlr.device->dev )
++			blank_kms_device( devices[i] );
+ 	}
+ 
+ 	struct wl_listener *listener = new wl_listener();
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sat, 22 Aug 2026 00:13:15 +0200
+Subject: match the display to the chosen gpu
+
+currently, gamescope chooses gpu 0 regardless. Well, what if gpu 0 is not the one with the gpu? Choose the correct one instead on start based on priority
+---
+ src/Backends/DRMBackend.cpp | 113 ++++++++++++++++++++++++++----------
+ src/wlserver.cpp            |  25 +++++++-
+ src/wlserver.hpp            |   3 +-
+ subprojects/v4l-utils       |   1 +
+ 4 files changed, 107 insertions(+), 35 deletions(-)
+ create mode 160000 subprojects/v4l-utils
+
+diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
+index 35be9c03f1d6..ce2c56cd2a51 100644
+--- a/src/Backends/DRMBackend.cpp
++++ b/src/Backends/DRMBackend.cpp
+@@ -1008,15 +1008,42 @@ static std::unordered_map<std::string, int> parse_connector_priorities(const cha
+ 	return priorities;
+ }
+ 
+-static int get_connector_priority(struct drm_t *drm, const char *name)
++static int get_connector_priority(const std::unordered_map<std::string, int> &priorities, const char *name)
+ {
+-	if (drm->connector_priorities.count(name) > 0) {
+-		return drm->connector_priorities[name];
++	if ( auto iter = priorities.find( name ); iter != priorities.end() ) {
++		return iter->second;
+ 	}
+-	if (drm->connector_priorities.count("*") > 0) {
+-		return drm->connector_priorities["*"];
++	if ( auto iter = priorities.find( "*" ); iter != priorities.end() ) {
++		return iter->second;
+ 	}
+-	return drm->connector_priorities.size();
++	return priorities.size();
++}
++
++static int get_best_connector_priority_for_fd( int fd, const void *userdata )
++{
++	const auto &priorities = *static_cast<const std::unordered_map<std::string, int> *>( userdata );
++	drmModeRes *resources = drmModeGetResources( fd );
++	if ( !resources )
++		return INT_MAX;
++
++	int best_priority = INT_MAX;
++	for ( int i = 0; i < resources->count_connectors; i++ )
++	{
++		drmModeConnector *connector = drmModeGetConnector( fd, resources->connectors[i] );
++		if ( !connector )
++			continue;
++
++		if ( connector->connection == DRM_MODE_CONNECTED )
++		{
++			char name[64];
++			snprintf( name, sizeof( name ), "%s-%u", drmModeGetConnectorTypeName( connector->connector_type ), connector->connector_type_id );
++			best_priority = std::min( best_priority, get_connector_priority( priorities, name ) );
++		}
++		drmModeFreeConnector( connector );
++	}
++
++	drmModeFreeResources( resources );
++	return best_priority;
+ }
+ 
+ static bool get_saved_mode(const char *description, saved_mode &mode_info)
+@@ -1071,7 +1098,7 @@ static bool setup_best_connector(struct drm_t *drm, bool force, bool initial)
+ 		if ( g_bForceInternal && pConnector->GetScreenType() == gamescope::GAMESCOPE_SCREEN_TYPE_EXTERNAL )
+ 			continue;
+ 
+-		int nPriority = get_connector_priority( drm, pConnector->GetName() );
++		int nPriority = get_connector_priority( drm->connector_priorities, pConnector->GetName() );
+ 		if ( nPriority < nBestPriority )
+ 		{
+ 			best = pConnector;
+@@ -1234,7 +1261,7 @@ gamescope_liftoff_log_handler(enum liftoff_log_priority liftoff_priority, const
+ 	liftoff_log_scope.vlogf(priority, fmt, args);
+ }
+ 
+-bool init_drm(struct drm_t *drm, int width, int height, int refresh)
++bool init_drm(struct drm_t *drm, int fd, int width, int height, int refresh)
+ {
+ 	load_pnps();
+ 
+@@ -1244,33 +1271,26 @@ bool init_drm(struct drm_t *drm, int width, int height, int refresh)
+ 	drm->preferred_height = height;
+ 	drm->preferred_refresh = refresh;
+ 
++	drm->fd = fd;
+ 	drm->device_name = nullptr;
+-	dev_t dev_id = 0;
+-	if (vulkan_primary_dev_id(&dev_id)) {
++
++	struct stat fd_stat = {};
++	if ( fstat( drm->fd, &fd_stat ) == 0 )
++	{
+ 		drmDevice *drm_dev = nullptr;
+-		if (drmGetDeviceFromDevId(dev_id, 0, &drm_dev) != 0) {
+-			drm_log.errorf("Failed to find DRM device with device ID %" PRIu64, (uint64_t)dev_id);
+-			return false;
++		if ( drmGetDeviceFromDevId( fd_stat.st_rdev, 0, &drm_dev ) == 0 )
++		{
++			if ( drm_dev->available_nodes & (1 << DRM_NODE_PRIMARY) )
++				drm->device_name = strdup( drm_dev->nodes[DRM_NODE_PRIMARY] );
++			drmFreeDevice( &drm_dev );
+ 		}
+-		assert(drm_dev->available_nodes & (1 << DRM_NODE_PRIMARY));
+-		drm->device_name = strdup(drm_dev->nodes[DRM_NODE_PRIMARY]);
+-		drm_log.infof("opening DRM node '%s'", drm->device_name);
+-	}
+-	else
+-	{
+-		drm_log.infof("warning: picking an arbitrary DRM device");
+ 	}
+ 
+-	drm->fd = wlsession_open_kms( drm->device_name );
+-	if ( drm->fd < 0 )
+-	{
+-		drm_log.errorf("Could not open KMS device");
+-		return false;
+-	}
++	drm_log.infof( "opening DRM node '%s'", drm->device_name ? drm->device_name : "unknown" );
+ 
+ 	if ( !drmIsKMS( drm->fd ) )
+ 	{
+-		drm_log.errorf( "'%s' is not a KMS device", drm->device_name );
++		drm_log.errorf( "'%s' is not a KMS device", drm->device_name ? drm->device_name : "unknown" );
+ 		wlsession_close_kms();
+ 		return -1;
+ 	}
+@@ -3547,19 +3567,48 @@ namespace gamescope
+ 
+ 		virtual bool Init() override
+ 		{
+-			if ( !vulkan_init( vulkan_get_instance(), VK_NULL_HANDLE ) )
++			if ( !wlsession_init() )
+ 			{
+-				fprintf( stderr, "Failed to initialize Vulkan\n" );
++				fprintf( stderr, "Failed to initialize Wayland session\n" );
+ 				return false;
+ 			}
+ 
+-			if ( !wlsession_init() )
++			const auto connector_priorities = parse_connector_priorities( g_sOutputName );
++			int kms_fd = wlsession_open_kms( nullptr, get_best_connector_priority_for_fd, &connector_priorities );
++			if ( kms_fd < 0 )
+ 			{
+-				fprintf( stderr, "Failed to initialize Wayland session\n" );
++				fprintf( stderr, "Failed to select KMS device\n" );
++				return false;
++			}
++
++			struct stat fd_stat = {};
++			if ( fstat( kms_fd, &fd_stat ) != 0 )
++			{
++				drm_log.errorf_errno( "Failed to identify selected KMS device" );
++				return false;
++			}
++
++			drmDevice *drm_device = nullptr;
++			if ( drmGetDeviceFromDevId( fd_stat.st_rdev, 0, &drm_device ) != 0 ||
++			     drm_device->bustype != DRM_BUS_PCI || !drm_device->deviceinfo.pci )
++			{
++				drm_log.errorf( "Selected KMS device has no PCI identity" );
++				if ( drm_device )
++					drmFreeDevice( &drm_device );
++				return false;
++			}
++
++			g_preferVendorID = drm_device->deviceinfo.pci->vendor_id;
++			g_preferDeviceID = drm_device->deviceinfo.pci->device_id;
++			drmFreeDevice( &drm_device );
++
++			if ( !vulkan_init( vulkan_get_instance(), VK_NULL_HANDLE ) )
++			{
++				fprintf( stderr, "Failed to initialize Vulkan\n" );
+ 				return false;
+ 			}
+ 
+-			return init_drm( &g_DRM, g_nPreferredOutputWidth, g_nPreferredOutputHeight, g_nNestedRefresh );
++			return init_drm( &g_DRM, kms_fd, g_nPreferredOutputWidth, g_nPreferredOutputHeight, g_nNestedRefresh );
+ 		}
+ 
+ 		virtual bool PostInit() override
+diff --git a/src/wlserver.cpp b/src/wlserver.cpp
+index 8cf0dfc1d4b4..9f54aac2fdc2 100644
+--- a/src/wlserver.cpp
++++ b/src/wlserver.cpp
+@@ -77,6 +77,7 @@
+ #include "gpuvis_trace_utils.h"
+ 
+ #include <algorithm>
++#include <climits>
+ #include <list>
+ #include <set>
+ 
+@@ -1770,7 +1771,7 @@ static void blank_kms_device( struct wlr_device *device )
+ 	drmModeFreeResources( resources );
+ }
+ 
+-int wlsession_open_kms( const char *device_name ) {
++int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector selector, const void *userdata ) {
+ 	if ( device_name != nullptr )
+ 	{
+ 		wlserver.wlr.device = wlr_session_open_file( wlserver.wlr.session, device_name );
+@@ -1791,7 +1792,27 @@ int wlsession_open_kms( const char *device_name ) {
+ 			return -1;
+ 		}
+ 
+-		wlserver.wlr.device = devices[0];
++		int best_priority = INT_MAX;
++
++		for ( ssize_t i = 0; i < n; i++ )
++		{
++			int priority = selector ? selector( devices[i]->fd, userdata ) : 0;
++			if ( priority < best_priority )
++			{
++				best_priority = priority;
++				wlserver.wlr.device = devices[i];
++			}
++		}
++
++		if ( wlserver.wlr.device == nullptr )
++		{
++			wl_log.infof( "No connected KMS connector found; falling back to the first GPU" );
++			wlserver.wlr.device = devices[0];
++		}
++		else
++		{
++			wl_log.infof( "Selected KMS device with connector priority %d", best_priority );
++		}
+ 	}
+ 
+ 	for ( ssize_t i = 0; i < n; i++ )
+diff --git a/src/wlserver.hpp b/src/wlserver.hpp
+index accaae61c2dd..bb005b9658fc 100644
+--- a/src/wlserver.hpp
++++ b/src/wlserver.hpp
+@@ -227,7 +227,8 @@ struct wlserver_touch {
+ void xwayland_surface_commit(struct wlr_surface *wlr_surface);
+ 
+ bool wlsession_init( void );
+-int wlsession_open_kms( const char *device_name );
++using wlsession_kms_device_selector = int (*)( int fd, const void *userdata );
++int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector selector, const void *userdata );
+ void wlsession_close_kms();
+ 
+ bool wlserver_init( void );
+diff --git a/subprojects/v4l-utils b/subprojects/v4l-utils
+new file mode 160000
+index 000000000000..1316a80455ef
+--- /dev/null
++++ b/subprojects/v4l-utils
+@@ -0,0 +1 @@
++Subproject commit 1316a80455ef70889bea89491f37cd69170f3ee7
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sat, 22 Aug 2026 00:29:17 +0200
+Subject: drm: preserve DMA-BUF lifetime when scanout import fail
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This description is descent:
+
+Some client DMA-BUFs, such as buffers rendered by an NVIDIA offload GPU, can be imported by Gamescope’s Vulkan renderer but not converted into framebuffers by the AMD KMS device.
+Previously, failure to create the DRM framebuffer also discarded the object carrying the client’s release point, potentially signalling buffer release while Vulkan was still using it.
+Introduce a non-scanout framebuffer object that preserves buffer lifetime and release synchronization while returning nullptr from EnsureImported(). This prevents hardware-plane scanout and allows Gamescope to fall back safely to Vulkan composition.
+
+TLDR: you cant scannout an nvidia buffer through an AMD GPU
+---
+ src/Backends/DRMBackend.cpp | 15 ++++++++++++++-
+ 1 file changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
+index ce2c56cd2a51..e297e44d7fe7 100644
+--- a/src/Backends/DRMBackend.cpp
++++ b/src/Backends/DRMBackend.cpp
+@@ -561,6 +561,15 @@ namespace gamescope
+ 	private:
+ 		uint32_t m_uFbId = 0;
+ 	};
++
++	// Client DMA-BUFs can be importable by the Vulkan renderer without being
++	// importable by the KMS device. Keep the buffer and its release point tied
++	// to the texture lifetime, but make it explicitly ineligible for scanout.
++	class CDRMNonScanoutFb final : public CBaseBackendFb
++	{
++	public:
++		IBackendFb *EnsureImported() override { return nullptr; }
++	};
+ }
+ 
+ uint32_t g_nDRMFormat = DRM_FORMAT_INVALID;
+@@ -4048,7 +4057,11 @@ namespace gamescope
+ 
+ 		virtual OwningRc<IBackendFb> ImportDmabufToBackend( wlr_dmabuf_attributes *pDmaBuf ) override
+ 		{
+-			return drm_fbid_from_dmabuf( &g_DRM, pDmaBuf );
++			OwningRc<IBackendFb> pFb = drm_fbid_from_dmabuf( &g_DRM, pDmaBuf );
++			if ( !pFb )
++				pFb = new CDRMNonScanoutFb;
++
++			return pFb;
+ 		}
+ 
+ 		virtual bool UsesBackendAllocatedScanout() const override
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sat, 22 Aug 2026 01:17:21 +0200
+Subject: force explicit sync on removable gpu
+
+goes easy on the PCIe link, otherwise we might cause crashes
+---
+ src/Backends/DRMBackend.cpp |  5 ++++-
+ src/wlserver.cpp            | 26 +++++++++++++++++++++++++-
+ src/wlserver.hpp            |  2 +-
+ 3 files changed, 30 insertions(+), 3 deletions(-)
+
+diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
+index e297e44d7fe7..998478fb1168 100644
+--- a/src/Backends/DRMBackend.cpp
++++ b/src/Backends/DRMBackend.cpp
+@@ -3583,12 +3583,15 @@ namespace gamescope
+ 			}
+ 
+ 			const auto connector_priorities = parse_connector_priorities( g_sOutputName );
+-			int kms_fd = wlsession_open_kms( nullptr, get_best_connector_priority_for_fd, &connector_priorities );
++			bool has_external_gpu = false;
++			int kms_fd = wlsession_open_kms( nullptr, get_best_connector_priority_for_fd, &connector_priorities, &has_external_gpu );
+ 			if ( kms_fd < 0 )
+ 			{
+ 				fprintf( stderr, "Failed to select KMS device\n" );
+ 				return false;
+ 			}
++			if ( has_external_gpu )
++				cv_drm_debug_disable_explicit_sync = true;
+ 
+ 			struct stat fd_stat = {};
+ 			if ( fstat( kms_fd, &fd_stat ) != 0 )
+diff --git a/src/wlserver.cpp b/src/wlserver.cpp
+index 9f54aac2fdc2..a0cf09123382 100644
+--- a/src/wlserver.cpp
++++ b/src/wlserver.cpp
+@@ -11,6 +11,8 @@
+ #include <xf86drm.h>
+ #include <xf86drmMode.h>
+ #include <sys/eventfd.h>
++#include <sys/stat.h>
++#include <sys/sysmacros.h>
+ 
+ #include <linux/input-event-codes.h>
+ 
+@@ -1771,7 +1773,26 @@ static void blank_kms_device( struct wlr_device *device )
+ 	drmModeFreeResources( resources );
+ }
+ 
+-int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector selector, const void *userdata ) {
++static bool kms_device_is_removable( struct wlr_device *device )
++{
++	struct stat fd_stat = {};
++	if ( fstat( device->fd, &fd_stat ) != 0 )
++		return false;
++
++	char path[64];
++	snprintf( path, sizeof( path ), "/sys/dev/char/%u:%u/device/removable", major( fd_stat.st_rdev ), minor( fd_stat.st_rdev ) );
++
++	char value[16] = {};
++	int fd = open( path, O_RDONLY | O_CLOEXEC );
++	if ( fd < 0 )
++		return false;
++
++	ssize_t length = read( fd, value, sizeof( value ) - 1 );
++	close( fd );
++	return length >= 9 && !strncmp( value, "removable", 9 );
++}
++
++int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector selector, const void *userdata, bool *has_external_gpu ) {
+ 	if ( device_name != nullptr )
+ 	{
+ 		wlserver.wlr.device = wlr_session_open_file( wlserver.wlr.session, device_name );
+@@ -1783,6 +1804,7 @@ int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector s
+ 	ssize_t n = wlr_session_find_gpus( wlserver.wlr.session, 8, devices );
+ 	if ( n < 0 )
+ 		n = 0;
++	*has_external_gpu = false;
+ 
+ 	if ( wlserver.wlr.device == nullptr )
+ 	{
+@@ -1817,6 +1839,8 @@ int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector s
+ 
+ 	for ( ssize_t i = 0; i < n; i++ )
+ 	{
++		*has_external_gpu |= n > 1 && kms_device_is_removable( devices[i] );
++
+ 		if ( devices[i]->dev != wlserver.wlr.device->dev )
+ 			blank_kms_device( devices[i] );
+ 	}
+diff --git a/src/wlserver.hpp b/src/wlserver.hpp
+index bb005b9658fc..0cd40596402b 100644
+--- a/src/wlserver.hpp
++++ b/src/wlserver.hpp
+@@ -228,7 +228,7 @@ void xwayland_surface_commit(struct wlr_surface *wlr_surface);
+ 
+ bool wlsession_init( void );
+ using wlsession_kms_device_selector = int (*)( int fd, const void *userdata );
+-int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector selector, const void *userdata );
++int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector selector, const void *userdata, bool *has_external_gpu );
+ void wlsession_close_kms();
+ 
+ bool wlserver_init( void );
