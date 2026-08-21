@@ -13,6 +13,13 @@ esac
 [ -z "${ANATASE_ZSH_ENTERED:-}" ] || return 0
 anatase_zsh_path=$(command -v zsh) || return 0
 
+# Existing users may not have inherited .zshrc from /etc/skel. Without it,
+# zsh opens its new-user configuration wizard before loading /etc/zshrc.
+anatase_zdotdir=${ZDOTDIR:-$HOME}
+if [ ! -e "${anatase_zdotdir}/.zshrc" ]; then
+    touch "${anatase_zdotdir}/.zshrc" 2>/dev/null || true
+fi
+
 export ANATASE_ZSH_ENTERED=1
 export SHELL="$anatase_zsh_path"
 if shopt -q login_shell; then
