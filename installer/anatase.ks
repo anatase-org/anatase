@@ -96,22 +96,25 @@ done
 #
 
 %post --erroronfail --nochroot --interpreter=/usr/bin/bash --log=/tmp/anaconda-efi-payload.log
-# Copy our MOK key to the efi root so that users have access to it
-
-target_efi="/mnt/sysimage/boot/efi"
-if [ ! -d "$target_efi" ]; then
-    echo "no target EFI system partition mounted; skipping EFI payload copy"
+set -euo pipefail
+if [ ! -d /sys/firmware/efi/efivars ]; then
     exit 0
 fi
 
-efi_source="/usr/lib/ludos/efi"
-if [ ! -d "$efi_source" ]; then
-    echo "missing Anatase EFI payload directory: $efi_source" >&2
-    exit 1
-fi
+target_efi=/mnt/sysimage/boot/efi
+efi_spec="$(awk '$2 == "/boot/efi" { print $1; exit }' /mnt/sysroot/etc/fstab)"
+[ -n "$efi_spec" ]
+efi_device="$(findfs "$efi_spec")"
+mount "$efi_device" "$target_efi"
+trap 'umount "$target_efi"' EXIT
 
-cp -R --no-preserve=mode,ownership,timestamps "$efi_source/." "$target_efi/"
-sync "$target_efi"
+install -m0644 /usr/lib/ludos/efi/ANATASE-KEY-ENROLLME.der "$target_efi/"
+read -r efi_parent efi_part < <(lsblk --nodeps -nro PKNAME,PARTN "$efi_device")
+[ -n "$efi_parent" ] && [ -n "$efi_part" ]
+[ -f "$target_efi/EFI/anatase/shimx64.efi" ]
+command -v efibootmgr >/dev/null
+efibootmgr --create --disk "/dev/$efi_parent" --part "$efi_part" \
+    --loader '\EFI\anatase\shimx64.efi' --label Anatase
 %end
 
 #

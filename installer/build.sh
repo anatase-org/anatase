@@ -117,6 +117,58 @@ if new not in text:
 PY
 rm -rf /usr/lib*/python*/site-packages/pyanaconda/modules/storage/partitioning/automatic/__pycache__
 
+# For OSTree payloads Anaconda delegates bootloader installation to bootupd.
+# On UEFI, mount Anaconda's selected ESP in the payload service's namespace and
+# let bootupd use it instead of rediscovering the first ESP on the boot disk.
+# BIOS still needs the whole-disk target.
+python3 <<'PY'
+from glob import glob
+
+path, = glob("/usr/lib*/python*/site-packages/pyanaconda/modules/payloads/payload/rpm_ostree/installation.py")
+with open(path) as f:
+    text = f.read()
+replacements = {
+'''        # do not insert UEFI entry if leavebootorder was requested
+        if not bootloader.KeepBootOrder:
+            log.debug("Adding --update-firmware to bootupdctl call")
+            bootupdctl_args.append("--update-firmware")
+''': '''        if bootloader.IsEFI():
+            efi_id = device_tree.GetMountPoints()["/boot/efi"]
+            efi_data = DeviceData.from_structure(device_tree.GetDeviceData(efi_id))
+            target_root = conf.target.physical_root
+            safe_exec_program("mount", [efi_data.path, target_root + "/boot/efi"])
+            bootupdctl_args.extend(("--src-root", self._sysroot))
+            exec_root = "/"
+        else:
+            bootupdctl_args.extend(("--device", dev_data.path))
+            target_root = "/"
+            exec_root = self._sysroot
+''',
+'''                *bootupdctl_args,
+                "--device",
+                dev_data.path,
+                "/",
+            ],
+            root=self._sysroot
+''': '''                *bootupdctl_args,
+                target_root,
+            ],
+            root=exec_root
+''',
+}
+for old, new in replacements.items():
+    if old in text:
+        if text.count(old) != 1:
+            raise SystemExit(f"found multiple Anaconda bootupd matches in {path}")
+        text = text.replace(old, new)
+    elif new not in text:
+        raise SystemExit(f"failed to find Anaconda bootupd invocation in {path}")
+
+with open(path, "w") as f:
+    f.write(text)
+PY
+rm -rf /usr/lib*/python*/site-packages/pyanaconda/modules/payloads/payload/rpm_ostree/__pycache__
+
 # Drop Fedora feedback/reporting UI from the Anaconda Web UI.
 webui_dir=/usr/share/cockpit/anaconda-webui
 if [ -f "${webui_dir}/index.css.gz" ]; then
