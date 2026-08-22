@@ -379,6 +379,18 @@ postprocess: |
         fi
     done
 
+    # The shim fallback CSV is UTF-16LE and still uses Fedora for its boot
+    # entry label and description after the vendor directory is renamed.
+    for boot_csv in /usr/lib/efi/*/*/EFI/anatase/BOOT*.CSV; do
+        [ -f "${boot_csv}" ] || continue
+        boot_csv_tmp="${boot_csv}.tmp"
+        iconv -f UTF-16 -t UTF-8 "${boot_csv}" |
+            sed 's/Fedora/Anatase/g' |
+            iconv -f UTF-8 -t UTF-16 > "${boot_csv_tmp}"
+        chmod --reference="${boot_csv}" "${boot_csv_tmp}"
+        mv "${boot_csv_tmp}" "${boot_csv}"
+    done
+
     # Allow forcing bootupd to update efi by bumping dist
     dist=1
     install -d "/usr/lib/efi/anatase/${dist}/EFI"
