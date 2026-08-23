@@ -234,3 +234,415 @@ index c2aacca661c3..54094ab30712 100644
                  }
                  break;
              case EI_EVENT_SEAT_REMOVED:
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sat, 11 Jul 2026 19:27:51 +0200
+Subject: xwayland: accept 24-bit SHM uploads to 32-bit drawables
+
+---
+ Xext/shm.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/Xext/shm.c b/Xext/shm.c
+index 1eed91bc552e..bfacdb0d072e 100644
+--- a/Xext/shm.c
++++ b/Xext/shm.c
+@@ -540,7 +540,14 @@ ProcShmPutImage(ClientPtr client)
+         length *= stuff->depth;
+     }
+     else if (stuff->format == ZPixmap) {
+-        if (pDraw->depth != stuff->depth)
++        /*
++         * Chromium's software compositor can use a depth-24 XImage for an
++         * ARGB32 drawable.  Both formats have 32 bits per pixel, so allow
++         * this exact case and preserve the high byte supplied by the client.
++         */
++        if (pDraw->depth == 32 && stuff->depth == 24)
++            stuff->depth = 32;
++        else if (pDraw->depth != stuff->depth)
+             return BadMatch;
+         length = PixmapBytePad(stuff->totalWidth, stuff->depth);
+     }
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sat, 11 Jul 2026 19:45:20 +0200
+Subject: xwayland: gate text input on libei 1.6
+
+---
+ hw/xwayland/xwayland-xtest.c       | 27 ++++++++++++++++++++++++---
+ include/meson.build                |  1 +
+ include/xwayland-config.h.meson.in |  1 +
+ meson.build                        |  1 +
+ 4 files changed, 27 insertions(+), 3 deletions(-)
+
+diff --git a/hw/xwayland/xwayland-xtest.c b/hw/xwayland/xwayland-xtest.c
+index 54094ab30712..e2994c0189d9 100644
+--- a/hw/xwayland/xwayland-xtest.c
++++ b/hw/xwayland/xwayland-xtest.c
+@@ -75,7 +75,10 @@ struct xwl_ei_client {
+     struct xorg_list link;      /* in clients_for_reuse */
+     ClientPtr client;           /* can be NULL if the X11 client is gone */
+     char *cmdline;
+-    bool accept_pointer, accept_keyboard, accept_abs, accept_text;
++    bool accept_pointer, accept_keyboard, accept_abs;
++#ifdef XWL_HAS_EI_TEXT
++    bool accept_text;
++#endif
+     struct ei *ei;
+     int ei_fd;
+ #ifdef XWL_HAS_EI_PORTAL
+@@ -85,7 +88,9 @@ struct xwl_ei_client {
+     struct ei_seat *ei_seat;
+     struct ei_device *ei_pointer;
+     struct ei_device *ei_keyboard;
++#ifdef XWL_HAS_EI_TEXT
+     struct ei_device *ei_text;
++#endif
+     struct xorg_list abs_devices;
+     struct xorg_list pending_emulated_events;
+ 
+@@ -181,12 +186,14 @@ add_ei_device(struct xwl_ei_client *xwl_ei_client, struct ei_device *device)
+         }
+     }
+ 
++#ifdef XWL_HAS_EI_TEXT
+     if (ei_device_has_capability(device, EI_DEVICE_CAP_TEXT) &&
+         xwl_ei_client->ei_text == NULL) {
+         fprintf(stderr, "Xwayland: found ei text device");
+         xwl_ei_client->ei_text = ei_device_ref(device);
+         used = true;
+     }
++#endif
+ 
+     if (!used)
+         ei_device_close(device);
+@@ -386,7 +393,9 @@ setup_ei(ClientPtr client)
+     xwl_ei_client->accept_pointer = false;
+     xwl_ei_client->accept_keyboard = false;
+     xwl_ei_client->accept_abs = false;
++#ifdef XWL_HAS_EI_TEXT
+     xwl_ei_client->accept_text = false;
++#endif
+     xwl_ei_client->ei = ei;
+     xwl_ei_client->ei_fd = -1;
+     xwl_ei_client->client = client;
+@@ -435,8 +444,10 @@ xwl_ei_start_emulating(struct xwl_ei_client *xwl_ei_client)
+     xorg_list_for_each_entry(abs, &xwl_ei_client->abs_devices, link) {
+         ei_device_start_emulating(abs->device, sequence);
+     }
++#ifdef XWL_HAS_EI_TEXT
+     if (xwl_ei_client->ei_text)
+         ei_device_start_emulating(xwl_ei_client->ei_text, sequence);
++#endif
+ }
+ 
+ static void
+@@ -606,6 +617,7 @@ xwl_send_event_to_ei(struct xwl_ei_client *xwl_ei_client, DeviceIntPtr dev,
+                 return false;
+ 
+             ei_device = xwl_ei_client->ei_keyboard;
++#ifdef XWL_HAS_EI_TEXT
+             if (xwl_ei_client->ei_text) {
+                 int sym = XkbKeySym(dev->master->key->xkbInfo->desc, detail, 0);
+                 if (sym > 0) {
+@@ -614,6 +626,7 @@ xwl_send_event_to_ei(struct xwl_ei_client *xwl_ei_client, DeviceIntPtr dev,
+                     break;
+                 }
+             }
++#endif
+             ei_device_keyboard_key(ei_device, detail - 8, type == KeyPress);
+             ei_device_frame(ei_device, ei_now(ei));
+             break;
+@@ -763,9 +776,11 @@ xwl_ei_update_caps(struct xwl_ei_client *xwl_ei_client,
+         if (ei_device == abs->device)
+             xwl_ei_client->accept_abs = true;
+     }
++#ifdef XWL_HAS_EI_TEXT
+     if (ei_device == xwl_ei_client->ei_text) {
+         xwl_ei_client->accept_text = true;
+     }
++#endif
+ }
+ 
+ static bool
+@@ -776,9 +791,12 @@ xwl_ei_devices_are_ready(struct xwl_ei_client *xwl_ei_client)
+         (xwl_ei_client->accept_pointer ||
+          !ei_seat_has_capability(xwl_ei_client->ei_seat, EI_DEVICE_CAP_POINTER)) &&
+         (xwl_ei_client->accept_abs ||
+-         !ei_seat_has_capability(xwl_ei_client->ei_seat, EI_DEVICE_CAP_POINTER_ABSOLUTE)) &&
++         !ei_seat_has_capability(xwl_ei_client->ei_seat, EI_DEVICE_CAP_POINTER_ABSOLUTE))
++#ifdef XWL_HAS_EI_TEXT
++        &&
+         (xwl_ei_client->accept_text ||
+          !ei_seat_has_capability(xwl_ei_client->ei_seat, EI_DEVICE_CAP_TEXT))
++#endif
+         )
+         return true;
+ 
+@@ -833,7 +851,10 @@ xwl_handle_ei_event(int fd, int ready, void *data)
+                                               EI_DEVICE_CAP_BUTTON,
+                                               EI_DEVICE_CAP_SCROLL,
+                                               EI_DEVICE_CAP_KEYBOARD,
+-                                              EI_DEVICE_CAP_TEXT, NULL);
++#ifdef XWL_HAS_EI_TEXT
++                                              EI_DEVICE_CAP_TEXT,
++#endif
++                                              NULL);
+                 }
+                 break;
+             case EI_EVENT_SEAT_REMOVED:
+diff --git a/include/meson.build b/include/meson.build
+index 72e1e5d5b0dd..61b140e3ff8e 100644
+--- a/include/meson.build
++++ b/include/meson.build
+@@ -323,6 +323,7 @@ xwayland_data.set('XWL_HAS_LIBDECOR', have_libdecor ? '1' : false)
+ xwayland_data.set('XWL_HAS_XWAYLAND_EXTENSION', xwaylandproto_dep.found() ? '1' : false)
+ xwayland_data.set('XWL_HAS_EI', build_ei)
+ xwayland_data.set('XWL_HAS_EI_PORTAL', build_ei_portal)
++xwayland_data.set('XWL_HAS_EI_TEXT', build_ei_text)
+ 
+ configure_file(output : 'xwayland-config.h',
+                input : 'xwayland-config.h.meson.in',
+diff --git a/include/xwayland-config.h.meson.in b/include/xwayland-config.h.meson.in
+index 17ca8fcb0cee..d1e2bb8f9a0a 100644
+--- a/include/xwayland-config.h.meson.in
++++ b/include/xwayland-config.h.meson.in
+@@ -18,3 +18,4 @@
+ 
+ /* Enable XDG portal integration */
+ #mesondefine XWL_HAS_EI_PORTAL
++#mesondefine XWL_HAS_EI_TEXT
+diff --git a/meson.build b/meson.build
+index 737cc8f79222..8583a18f2f71 100644
+--- a/meson.build
++++ b/meson.build
+@@ -223,6 +223,7 @@ liboeffis_dep = dependency('liboeffis-1.0', version: '>= 1.0.0', required: get_o
+ 
+ build_ei = libei_dep.found() and get_option('xwayland_ei') != 'false'
+ build_ei_portal = liboeffis_dep.found() and get_option('xwayland_ei') in ['portal', 'auto']
++build_ei_text = build_ei and libei_dep.version().version_compare('>= 1.6.0')
+ 
+ # Lots of sha1 options, because Linux is about choice :)
+ 
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sun, 23 Aug 2026 21:45:20 +0200
+Subject: dri3: notify screen drivers of the client DRM device
+
+DRI3 1.4 clients identify the DRM device used for a drawable with SetDRMDeviceInUse, but the server currently only validates and logs the request. Screen drivers therefore cannot make device-specific import decisions.
+
+Extend dri3_screen_info to version 5 with an optional callback and invoke it after validating the request window. Existing drivers retain their current behavior.
+---
+ dri3/dri3.h         | 10 +++++++++-
+ dri3/dri3_request.c | 11 ++++++++++-
+ 2 files changed, 19 insertions(+), 2 deletions(-)
+
+diff --git a/dri3/dri3.h b/dri3/dri3.h
+index 14f9a1efa76f..a4d3fafbb8a4 100644
+--- a/dri3/dri3.h
++++ b/dri3/dri3.h
+@@ -28,7 +28,7 @@
+ #include <X11/extensions/dri3proto.h>
+ #include <randrstr.h>
+ 
+-#define DRI3_SCREEN_INFO_VERSION        4
++#define DRI3_SCREEN_INFO_VERSION        5
+ 
+ extern RESTYPE dri3_syncobj_type;
+ 
+@@ -117,6 +117,11 @@ typedef struct dri3_syncobj *(*dri3_import_syncobj_proc) (ClientPtr client,
+                                                           XID id,
+                                                           int fd);
+ 
++typedef void (*dri3_set_drm_device_in_use_proc) (ClientPtr client,
++                                                  ScreenPtr screen,
++                                                  uint32_t drm_major,
++                                                  uint32_t drm_minor);
++
+ typedef struct dri3_screen_info {
+     uint32_t                    version;
+ 
+@@ -137,6 +142,9 @@ typedef struct dri3_screen_info {
+     /* Version 4 */
+     dri3_import_syncobj_proc    import_syncobj;
+ 
++    /* Version 5 */
++    dri3_set_drm_device_in_use_proc set_drm_device_in_use;
++
+ } dri3_screen_info_rec, *dri3_screen_info_ptr;
+ 
+ extern _X_EXPORT Bool
+diff --git a/dri3/dri3_request.c b/dri3/dri3_request.c
+index 98c37aa91289..ef623fcb5ca8 100644
+--- a/dri3/dri3_request.c
++++ b/dri3/dri3_request.c
+@@ -578,6 +578,7 @@ static int
+ proc_dri3_set_drm_device_in_use(ClientPtr client)
+ {
+     REQUEST(xDRI3SetDRMDeviceInUseReq);
++    dri3_screen_priv_ptr dri3;
+     WindowPtr window;
+     int status;
+ 
+@@ -587,7 +588,15 @@ proc_dri3_set_drm_device_in_use(ClientPtr client)
+     if (status != Success)
+         return status;
+ 
+-    /* TODO Eventually we should use this information to have
++    dri3 = dri3_screen_priv(window->drawable.pScreen);
++    if (dri3 && dri3->info && dri3->info->version >= 5 &&
++        dri3->info->set_drm_device_in_use)
++        dri3->info->set_drm_device_in_use(client,
++                                          window->drawable.pScreen,
++                                          stuff->drmMajor,
++                                          stuff->drmMinor);
++
++    /* TODO Eventually we should also use this information to have
+      * DRI3GetSupportedModifiers return device-specific modifiers, but for now
+      * we will ignore it until multi-device support is more complete.
+      * Otherwise we can't advertise support for DRI3 1.4.
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sun, 23 Aug 2026 21:47:00 +0200
+Subject: xwayland: reject cross-device NVIDIA DMA-BUF imports
+
+On an NVIDIA eGPU rendering for an AMD-driven Xwayland screen, importing the client DMA-BUF eventually faults the NVIDIA producer with Xid 31. The fault also reproduces when the buffer is CPU-mapped or passed through for the compositor to import, while preserving synchronization without accessing the buffer is stable.
+
+Track the DRM device reported by each DRI3 1.4 client. When that device uses the NVIDIA DRM driver and differs from the Xwayland render device, reject PixmapFromBuffers before establishing an attachment. Clients such as Steam can then select their safe system-compositor fallback. Imports from the Xwayland device and non-NVIDIA cross-device imports remain unchanged.
+---
+ hw/xwayland/xwayland-glamor-gbm.c | 61 ++++++++++++++++++++++++++++++-
+ hw/xwayland/xwayland-screen.h     |  3 ++
+ 2 files changed, 62 insertions(+), 2 deletions(-)
+
+diff --git a/hw/xwayland/xwayland-glamor-gbm.c b/hw/xwayland/xwayland-glamor-gbm.c
+index 05668b8e9558..2595c05f4624 100644
+--- a/hw/xwayland/xwayland-glamor-gbm.c
++++ b/hw/xwayland/xwayland-glamor-gbm.c
+@@ -37,6 +37,7 @@
+ #include <sys/eventfd.h>
+ #endif /* DRI3 */
+ #include <sys/stat.h>
++#include <sys/sysmacros.h>
+ #include <xf86drm.h>
+ #include <drm_fourcc.h>
+ #if defined(__linux__)
+@@ -753,6 +754,52 @@ xwl_dri3_open_client(ClientPtr client,
+ 
+     return Success;
+ }
++
++static void
++xwl_dri3_set_drm_device_in_use(ClientPtr client, ScreenPtr screen,
++                               uint32_t drm_major, uint32_t drm_minor)
++{
++    struct xwl_screen *xwl_screen = xwl_screen_get(screen);
++    struct xwl_gbm_private *xwl_gbm = xwl_gbm_get(xwl_screen);
++    struct xwl_client *xwl_client = xwl_client_get(client);
++    drmDevicePtr device = NULL;
++    drmVersionPtr version = NULL;
++    struct stat render_stat;
++    int fd = -1;
++
++    if (xwl_client->drm_device_major == drm_major &&
++        xwl_client->drm_device_minor == drm_minor)
++        return;
++
++    xwl_client->drm_device_major = drm_major;
++    xwl_client->drm_device_minor = drm_minor;
++    xwl_client->reject_foreign_nvidia = FALSE;
++
++    if (fstat(xwl_gbm->drm_fd, &render_stat) < 0 ||
++        (major(render_stat.st_rdev) == drm_major &&
++         minor(render_stat.st_rdev) == drm_minor) ||
++        drmGetDeviceFromDevId(makedev(drm_major, drm_minor), 0,
++                              &device) != 0)
++        return;
++
++    if (device->available_nodes & (1 << DRM_NODE_RENDER))
++        fd = open(device->nodes[DRM_NODE_RENDER], O_RDWR | O_CLOEXEC);
++    else if (device->available_nodes & (1 << DRM_NODE_PRIMARY))
++        fd = open(device->nodes[DRM_NODE_PRIMARY], O_RDWR | O_CLOEXEC);
++
++    if (fd >= 0)
++        version = drmGetVersion(fd);
++
++    if (version && version->name &&
++        strncmp(version->name, "nvidia", strlen("nvidia")) == 0)
++        xwl_client->reject_foreign_nvidia = TRUE;
++
++    if (version)
++        drmFreeVersion(version);
++    if (fd >= 0)
++        close(fd);
++    drmFreeDevice(&device);
++}
+ #endif /* DRI3 */
+ 
+ PixmapPtr
+@@ -763,6 +810,8 @@ glamor_pixmap_from_fds(ScreenPtr screen, CARD8 num_fds, const int *fds,
+ {
+     struct xwl_screen *xwl_screen = xwl_screen_get(screen);
+     struct xwl_gbm_private *xwl_gbm = xwl_gbm_get(xwl_screen);
++    ClientPtr client = GetCurrentClient();
++    struct xwl_client *xwl_client = client ? xwl_client_get(client) : NULL;
+     struct gbm_bo *bo = NULL;
+     PixmapPtr pixmap;
+     int i;
+@@ -773,6 +822,14 @@ glamor_pixmap_from_fds(ScreenPtr screen, CARD8 num_fds, const int *fds,
+         strides[0] < width * bpp / 8)
+        goto error;
+ 
++    /* Importing an NVIDIA DMA-BUF into a different DRM device can make the
++     * NVIDIA producer fault even when synchronization is correct. Refuse the
++    * import before either device establishes an attachment so clients can
++    * fall back to a safe presentation path.
++     */
++    if (xwl_client && xwl_client->reject_foreign_nvidia)
++        goto error;
++
+     if (xwl_gbm->dmabuf_capable && modifier != DRM_FORMAT_MOD_INVALID) {
+ #ifdef GBM_BO_WITH_MODIFIERS
+        struct gbm_import_fd_modifier_data data;
+@@ -1243,7 +1300,7 @@ xwl_gbm_supports_syncobjs(struct xwl_screen *xwl_screen)
+ }
+ 
+ static dri3_screen_info_rec xwl_dri3_info = {
+-    .version = 2,
++    .version = 5,
+     .open = NULL,
+     .pixmap_from_fds = glamor_pixmap_from_fds,
+     .fds_from_pixmap = glamor_fds_from_pixmap,
+@@ -1252,6 +1309,7 @@ static dri3_screen_info_rec xwl_dri3_info = {
+     .get_modifiers = xwl_glamor_get_modifiers,
+     .get_drawable_modifiers = xwl_glamor_get_drawable_modifiers,
+     .import_syncobj = NULL, /* need to check for kernel support */
++    .set_drm_device_in_use = xwl_dri3_set_drm_device_in_use,
+ };
+ #endif /* DRI3 */
+ 
+@@ -1815,7 +1873,6 @@ xwl_glamor_gbm_init_screen(struct xwl_screen *xwl_screen)
+     struct xwl_gbm_private *xwl_gbm = xwl_gbm_get(xwl_screen);
+ #ifdef DRI3
+     if (xwl_gbm->supports_syncobjs) {
+-        xwl_dri3_info.version = 4;
+         xwl_dri3_info.import_syncobj = xwl_dri3_import_syncobj;
+     }
+ 
+diff --git a/hw/xwayland/xwayland-screen.h b/hw/xwayland/xwayland-screen.h
+index 9751bd25dfc6..52facf2692c0 100644
+--- a/hw/xwayland/xwayland-screen.h
++++ b/hw/xwayland/xwayland-screen.h
+@@ -159,6 +159,9 @@ struct xwl_screen {
+ 
+ struct xwl_client {
+     struct xwl_emulated_mode emulated_modes[XWL_CLIENT_MAX_EMULATED_MODES];
++    uint32_t drm_device_major;
++    uint32_t drm_device_minor;
++    Bool reject_foreign_nvidia;
+ };
+ 
+ struct xwl_client *xwl_client_get(ClientPtr client);
