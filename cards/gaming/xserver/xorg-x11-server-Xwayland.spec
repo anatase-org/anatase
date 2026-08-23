@@ -17,6 +17,7 @@ Source0:   https://gitlab.freedesktop.org/xorg/%{pkgname}/-/archive/%{commit}/%{
 %else
 Source0:   https://www.x.org/pub/individual/xserver/%{pkgname}-%{version}.tar.xz
 %endif
+Patch0:    overrides.patch
 
 License:   MIT
 

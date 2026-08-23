@@ -99,6 +99,7 @@ specs:
   - spec: xserver/xorg-x11-server-Xwayland.spec
     files:
       - xorg-x11-server-Xwayland.spec
+      - overrides.patch
     packages:
       - xorg-x11-server-Xwayland
     upstream:
