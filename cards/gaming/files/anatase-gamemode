@@ -147,13 +147,6 @@ elif [[ $board_name = Jupiter ]]; then
     export STEAM_DISPLAY_REFRESH_LIMITS=40,60
 fi
 
-# Lenovo Legion Go 2
-# TODO: gamescope needs to handle this internally, no per device quirk
-product_name="$(cat /sys/class/dmi/id/product_name 2>/dev/null || true)"
-if [[ $product_name = 83N0 || $product_name = 83N1 ]]; then
-    gamescope_args+=(--hdr-pq-internal-enable)
-fi
-
 # The Steam Flatpak sees host data files below /run/host/share.
 export STEAM_UPDATEUI_PNG_BACKGROUND=/run/host/share/pixmaps/anatase-logo-sprite.png
 
