@@ -15,7 +15,7 @@ URL:       http://www.x.org
 %if 0%{?gitdate}
 Source0:   https://gitlab.freedesktop.org/xorg/%{pkgname}/-/archive/%{commit}/%{pkgname}-%{shortcommit}.tar.gz
 %else
-Source0:   https://www.x.org/pub/individual/xserver/%{pkgname}-%{version}.tar.xz
+Source0:   https://src.fedoraproject.org/repo/pkgs/rpms/%{name}/%{pkgname}-%{version}.tar.xz/sha512/e06e58025b441892fdd17ac55fd5c7e137bffc941b76ad784dc008047c778c6ee2895fcc47b9e8c74b1d8372491e69c39933c4186aec4df55571614f8ba98e3c/%{pkgname}-%{version}.tar.xz
 %endif
 Patch0:    overrides.patch
 
