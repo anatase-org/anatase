@@ -116,7 +116,7 @@ export GAMESCOPE_DISPLAY_DISABLED=1
 export QT_QPA_PLATFORM_THEME=kde
 
 export ENABLE_GAMESCOPE_WSI=1
-export GAMESCOPE_LIMITER_FILE="$(mktemp /tmp/gamescope-limiter.XXXXXXXX)"
+export GAMESCOPE_LIMITER_FILE="$(mktemp "$tmpdir/gamescope-limiter.XXXXXXXX")"
 export XCURSOR_THEME=steam
 export XCURSOR_SCALE=256
 
