@@ -1723,103 +1723,6 @@ index b1df90b3ec38..ac171992f3d4 100644
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
-Date: Sat, 30 Aug 2025 15:32:00 +0200
-Subject: fix(hdr): disable PQ on handheld internal displays
-
-For some reason, the PQ transfer function does not work on current
-handhelds. So use gamma 22 instead. This allows us to skip creating
-configs and read the HDR metadata from the displays.
----
- src/Backends/DRMBackend.cpp | 8 +++++++-
- src/backend.h               | 1 +
- src/main.cpp                | 3 +++
- src/steamcompmgr.cpp        | 4 ++++
- 4 files changed, 15 insertions(+), 1 deletion(-)
-
-diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index ac171992f3d4..9464b80b6ec7 100644
---- a/src/Backends/DRMBackend.cpp
-+++ b/src/Backends/DRMBackend.cpp
-@@ -2515,7 +2515,13 @@ namespace gamescope
- 				 pHDRStaticMetadata && pHDRStaticMetadata->eotfs && pHDRStaticMetadata->eotfs->pq )
- 			{
- 				m_Mutable.HDR.bExposeHDRSupport = true;
--				m_Mutable.HDR.eOutputEncodingEOTF = EOTF_PQ;
-+				if (disableInternalPq && GetScreenType() == GAMESCOPE_SCREEN_TYPE_INTERNAL)
-+					// Current handheld internal displays have issues
-+					// with PQ, e.g., Ayaneo 3, Steam Deck etc.
-+					// Use Gamma 2.2 as the safest option for now.
-+					m_Mutable.HDR.eOutputEncodingEOTF = EOTF_Gamma22;
-+				else
-+					m_Mutable.HDR.eOutputEncodingEOTF = EOTF_PQ;
- 				m_Mutable.HDR.uMaxContentLightLevel =
- 					pHDRStaticMetadata->desired_content_max_luminance
- 					? nits_to_u16( pHDRStaticMetadata->desired_content_max_luminance )
-diff --git a/src/backend.h b/src/backend.h
-index 607c25d9a0db..958f489ce82a 100644
---- a/src/backend.h
-+++ b/src/backend.h
-@@ -24,6 +24,7 @@ struct wlr_dmabuf_attributes;
- struct FrameInfo_t;
- 
- extern bool steamMode;
-+extern bool disableInternalPq;
- 
- namespace gamescope
- {
-diff --git a/src/main.cpp b/src/main.cpp
-index ee221188037c..1835424f62b3 100644
---- a/src/main.cpp
-+++ b/src/main.cpp
-@@ -143,6 +143,7 @@ const struct option *gamescope_options = (struct option[]){
- 	{ "hdr-enabled", no_argument, nullptr, 0 },
- 	{ "hdr-sdr-content-nits", required_argument, nullptr, 0 },
- 	{ "hdr-itm-enabled", no_argument, nullptr, 0 },
-+	{ "hdr-pq-internal-enable", no_argument, nullptr, 0 },
- 	{ "hdr-itm-sdr-nits", required_argument, nullptr, 0 },
- 	{ "hdr-itm-target-nits", required_argument, nullptr, 0 },
- 	{ "hdr-debug-force-support", no_argument, nullptr, 0 },
-@@ -209,6 +210,7 @@ const char usage[] =
- 	"  --sdr-gamut-wideness           Set the 'wideness' of the gamut for SDR comment. 0 - 1.\n"
- 	"  --hdr-sdr-content-nits         set the luminance of SDR content in nits. Default: 400 nits.\n"
- 	"  --hdr-itm-enabled              enable SDR->HDR inverse tone mapping. only works for SDR input.\n"
-+	"  --hdr-pq-internal-enable       enable PQ transform even on internal displays (e.g. Legion Go 2)\n"
- 	"  --hdr-itm-sdr-nits             set the luminance of SDR content in nits used as the input for the inverse tone mapping process.\n"
- 	"                                 Default: 100 nits, Max: 1000 nits\n"
- 	"  --hdr-itm-target-nits          set the target luminace of the inverse tone mapping process.\n"
-@@ -622,6 +624,7 @@ static bool IsInDebugSession()
- #endif
- 
- bool steamMode = false;
-+bool disableInternalPq = true;
- bool g_bLaunchMangoapp = false;
- 
- static void UpdateCompatEnvVars()
-diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index fe0120b04adc..101204632c16 100644
---- a/src/steamcompmgr.cpp
-+++ b/src/steamcompmgr.cpp
-@@ -153,6 +153,8 @@ gamescope_color_mgmt_luts g_ScreenshotColorMgmtLutsHDR[ EOTF_Count ];
- static lut1d_t g_tmpLut1d;
- static lut3d_t g_tmpLut3d;
- 
-+extern bool disableInternalPq;
-+
- extern int g_nDynamicRefreshHz;
- 
- bool g_bForceHDRSupportDebug = false;
-@@ -8203,6 +8205,8 @@ steamcompmgr_main(int argc, char **argv)
- 					g_bForceHDR10OutputDebug = true;
- 				} else if (strcmp(opt_name, "hdr-itm-enabled") == 0 || strcmp(opt_name, "hdr-itm-enable") == 0) {
- 					g_bHDRItmEnable = true;
-+				} else if (strcmp(opt_name, "hdr-pq-internal-enable") == 0) {
-+					disableInternalPq = false;
- 				} else if (strcmp(opt_name, "sdr-gamut-wideness") == 0) {
- 					g_ColorMgmt.pending.sdrGamutWideness = atof(optarg);
- 				} else if (strcmp(opt_name, "hdr-sdr-content-nits") == 0) {
-
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Antheas Kapenekakis <git@antheas.dev>
 Date: Sun, 31 Aug 2025 20:55:02 +0200
 Subject: fix: separate blend tf to its own check
 
@@ -1835,7 +1738,7 @@ there are no edge cases where only subproperties are supported.
  1 file changed, 32 insertions(+), 8 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 9464b80b6ec7..c859d58f147b 100644
+index ac171992f3d4..8fade6191029 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -567,6 +567,7 @@ extern std::string g_reshade_effect;
@@ -1846,7 +1749,7 @@ index 9464b80b6ec7..c859d58f147b 100644
  bool drm_set_connector( struct drm_t *drm, gamescope::CDRMConnector *conn );
  
  struct drm_color_ctm2 {
-@@ -2744,13 +2745,15 @@ drm_prepare_liftoff( struct drm_t *drm, const struct FrameInfo_t *frameInfo, boo
+@@ -2738,13 +2739,15 @@ drm_prepare_liftoff( struct drm_t *drm, const struct FrameInfo_t *frameInfo, boo
  				}
  			}
  
@@ -1865,7 +1768,7 @@ index 9464b80b6ec7..c859d58f147b 100644
  				if (!cv_drm_debug_disable_ctm && frameInfo->layers[i].ctm != nullptr)
  					liftoff_layer_set_property( drm->lo_layers[ i ], "AMD_PLANE_CTM", frameInfo->layers[i].ctm->GetBlobValue() );
  				else
-@@ -2766,13 +2769,16 @@ drm_prepare_liftoff( struct drm_t *drm, const struct FrameInfo_t *frameInfo, boo
+@@ -2760,13 +2763,16 @@ drm_prepare_liftoff( struct drm_t *drm, const struct FrameInfo_t *frameInfo, boo
  			liftoff_layer_unset_property( drm->lo_layers[ i ], "COLOR_RANGE" );
  			liftoff_layer_unset_property( drm->lo_layers[ i ], "pixel blend mode" );
  
@@ -1883,7 +1786,7 @@ index 9464b80b6ec7..c859d58f147b 100644
  				liftoff_layer_set_property( drm->lo_layers[ i ], "AMD_PLANE_CTM", 0 );
  			}
  		}
-@@ -2924,7 +2930,7 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
+@@ -2918,7 +2924,7 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
  
  	bool bSinglePlane = frameInfo->layerCount < 2 && cv_drm_single_plane_optimizations;
  
@@ -1892,7 +1795,7 @@ index 9464b80b6ec7..c859d58f147b 100644
  	{
  		if ( !cv_drm_debug_disable_output_tf && !bSinglePlane )
  		{
-@@ -3436,7 +3442,20 @@ bool drm_supports_color_mgmt(struct drm_t *drm)
+@@ -3430,7 +3436,20 @@ bool drm_supports_color_mgmt(struct drm_t *drm)
  	if ( !drm->pPrimaryPlane )
  		return false;
  
@@ -1914,7 +1817,7 @@ index 9464b80b6ec7..c859d58f147b 100644
  }
  
  std::span<const uint32_t> drm_get_valid_refresh_rates( struct drm_t *drm )
-@@ -3566,12 +3585,12 @@ namespace gamescope
+@@ -3560,12 +3579,12 @@ namespace gamescope
  			if ( g_bOutputHDREnabled )
  			{
  				bNeedsFullComposite |= g_bHDRItmEnable;
@@ -1929,7 +1832,7 @@ index 9464b80b6ec7..c859d58f147b 100644
  					bNeedsFullComposite |= ColorspaceIsHDR( pFrameInfo->layers[0].colorspace );
  			}
  
-@@ -3985,6 +4004,11 @@ namespace gamescope
+@@ -3979,6 +3998,11 @@ namespace gamescope
  			return drm_supports_color_mgmt( &g_DRM );
  		}
  
@@ -2035,10 +1938,10 @@ user exits it.
  2 files changed, 53 insertions(+), 26 deletions(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 101204632c16..47eaceb180c1 100644
+index fe0120b04adc..2bb27b393816 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -890,6 +890,7 @@ global_focus_t *GetCurrentFocus()
+@@ -888,6 +888,7 @@ global_focus_t *GetCurrentFocus()
  uint32_t		currentOutputWidth, currentOutputHeight;
  int 			currentOutputRefresh;
  bool			currentHDROutput = false;
@@ -2046,7 +1949,7 @@ index 101204632c16..47eaceb180c1 100644
  bool			currentHDRForce = false;
  
  std::vector< uint32_t > vecFocuscontrolAppIDs;
-@@ -6933,6 +6934,8 @@ void handle_presented_for_window( steamcompmgr_win_t* w )
+@@ -6931,6 +6932,8 @@ void handle_presented_for_window( steamcompmgr_win_t* w )
  			}
  		}
  
@@ -2055,7 +1958,7 @@ index 101204632c16..47eaceb180c1 100644
  		if (!lastCommit->presentation_feedbacks.empty() || lastCommit->present_id)
  		{
  			if (!lastCommit->presentation_feedbacks.empty())
-@@ -8582,7 +8585,54 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8578,7 +8581,54 @@ steamcompmgr_main(int argc, char **argv)
  
  		g_uCompositeDebug = cv_composite_debug;
  
@@ -2111,7 +2014,7 @@ index 101204632c16..47eaceb180c1 100644
  
  		// Pick our width/height for this potential frame, regardless of how it might change later
  		// At some point we might even add proper locking so we get real updates atomically instead
-@@ -8590,8 +8640,7 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8586,8 +8636,7 @@ steamcompmgr_main(int argc, char **argv)
  		if ( currentOutputWidth != g_nOutputWidth ||
  			 currentOutputHeight != g_nOutputHeight ||
  			 currentOutputRefresh != g_nOutputRefresh ||
@@ -2121,7 +2024,7 @@ index 101204632c16..47eaceb180c1 100644
  		{
  			if ( g_nXWaylandCount > 1 )
  			{
-@@ -8615,33 +8664,10 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8611,33 +8660,10 @@ steamcompmgr_main(int argc, char **argv)
  				vulkan_remake_output_images();
  			}
  
@@ -2178,7 +2081,7 @@ Subject: fix: prevent crashing if display is not connected
  1 file changed, 3 insertions(+), 4 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index c859d58f147b..56da74651122 100644
+index 8fade6191029..a46585e0f2f6 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -712,12 +712,11 @@ static uint32_t pick_plane_format( const struct wlr_drm_format_set *formats, uin
@@ -3144,10 +3047,10 @@ Subject: drm: scan out FSR base plane when possible
  1 file changed, 59 insertions(+), 1 deletion(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 56da74651122..1b1575f7bc54 100644
+index a46585e0f2f6..367176c8b21d 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
-@@ -3554,6 +3554,65 @@ namespace gamescope
+@@ -3548,6 +3548,65 @@ namespace gamescope
  				}
  			}
  
@@ -3213,7 +3116,7 @@ index 56da74651122..1b1575f7bc54 100644
  			bool bLayer0ScreenSize = close_enough(pFrameInfo->layers[0].scale.x, 1.0f) && close_enough(pFrameInfo->layers[0].scale.y, 1.0f);
  
  			bool bNeedsCompositeFromFilter = (g_upscaleFilter == GamescopeUpscaleFilter::NEAREST || g_upscaleFilter == GamescopeUpscaleFilter::PIXEL) && !bLayer0ScreenSize;
-@@ -4141,4 +4200,3 @@ int HackyDRMPresent( const FrameInfo_t *pFrameInfo, bool bAsync )
+@@ -4135,4 +4194,3 @@ int HackyDRMPresent( const FrameInfo_t *pFrameInfo, bool bAsync )
  {
  	return static_cast<gamescope::CDRMBackend *>( GetBackend() )->Present( pFrameInfo, bAsync );
  }
@@ -3423,7 +3326,7 @@ index 22ff8a97e111..07e25f4b39e8 100644
    'main.cpp',
    'edid.cpp',
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 47eaceb180c1..46659441400c 100644
+index 2bb27b393816..d0081ffcab6d 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -85,6 +85,7 @@
@@ -3434,7 +3337,7 @@ index 47eaceb180c1..46659441400c 100644
  #include "log.hpp"
  #include "Utils/Defer.h"
  #include "win32_styles.h"
-@@ -6053,6 +6054,18 @@ handle_property_notify(xwayland_ctx_t *ctx, XPropertyEvent *ev)
+@@ -6051,6 +6052,18 @@ handle_property_notify(xwayland_ctx_t *ctx, XPropertyEvent *ev)
  		if ( g_upscaleFilter == GamescopeUpscaleFilter::FSR || g_upscaleFilter == GamescopeUpscaleFilter::NIS )
  			hasRepaint = true;
  	}
@@ -3453,7 +3356,7 @@ index 47eaceb180c1..46659441400c 100644
  	if ( ev->atom == ctx->atoms.gamescopeXWaylandModeControl )
  	{
  		std::vector< uint32_t > xwayland_mode_ctl;
-@@ -7697,6 +7710,9 @@ void init_xwayland_ctx(uint32_t serverId, gamescope_xwayland_server_t *xwayland_
+@@ -7695,6 +7708,9 @@ void init_xwayland_ctx(uint32_t serverId, gamescope_xwayland_server_t *xwayland_
  	ctx->atoms.gamescopeLowLatency = XInternAtom( ctx->dpy, "GAMESCOPE_LOW_LATENCY", false );
  
  	ctx->atoms.gamescopeFSRFeedback = XInternAtom( ctx->dpy, "GAMESCOPE_FSR_FEEDBACK", false );
@@ -3463,7 +3366,7 @@ index 47eaceb180c1..46659441400c 100644
  
  	ctx->atoms.gamescopeBlurMode = XInternAtom( ctx->dpy, "GAMESCOPE_BLUR_MODE", false );
  	ctx->atoms.gamescopeBlurRadius = XInternAtom( ctx->dpy, "GAMESCOPE_BLUR_RADIUS", false );
-@@ -8366,6 +8382,17 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8362,6 +8378,17 @@ steamcompmgr_main(int argc, char **argv)
  
  		g_SteamCompMgrWaiter.PollEvents();
  
@@ -5698,7 +5601,7 @@ Subject: steamcompmgr: pace pre-FSR x2 frame generation with direct scanout
  create mode 100644 src/frame_generation_pacing.hpp
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 1b1575f7bc54..a05b2a62799c 100644
+index 367176c8b21d..fa925c7c4f43 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -140,6 +140,7 @@ struct drm_t {
@@ -5731,7 +5634,7 @@ index 1b1575f7bc54..a05b2a62799c 100644
  	{
  		std::unique_lock lock( drm->m_QueuedFbIdsMutex );
  		drm->m_QueuedFbIds.clear();
-@@ -2620,7 +2629,13 @@ drm_prepare_liftoff( struct drm_t *drm, const struct FrameInfo_t *frameInfo, boo
+@@ -2614,7 +2623,13 @@ drm_prepare_liftoff( struct drm_t *drm, const struct FrameInfo_t *frameInfo, boo
  				return -EINVAL;
  			}
  
@@ -5746,7 +5649,7 @@ index 1b1575f7bc54..a05b2a62799c 100644
  
  
  			liftoff_layer_set_property( drm->lo_layers[ i ], "FB_ID", pDrmFb->GetFbId());
-@@ -2921,6 +2936,7 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
+@@ -2915,6 +2930,7 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
  	}
  
  	drm->m_FbIdsInRequest.clear();
@@ -5754,7 +5657,7 @@ index 1b1575f7bc54..a05b2a62799c 100644
  
  	bool needs_modeset = drm->needs_modeset.exchange(false);
  
-@@ -3114,6 +3130,7 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
+@@ -3108,6 +3124,7 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
  		drm->req = nullptr;
  
  		drm->m_FbIdsInRequest.clear();
@@ -5762,7 +5665,7 @@ index 1b1575f7bc54..a05b2a62799c 100644
  
  		if ( needs_modeset )
  			drm->needs_modeset = true;
-@@ -4101,6 +4118,7 @@ namespace gamescope
+@@ -4095,6 +4112,7 @@ namespace gamescope
  			gpuvis_trace_printf( "flip commit %" PRIu64, (uint64_t)GetCurrentConnector()->PresentationFeedback().m_uQueuedPresents );
  
  			ret = drmModeAtomicCommit(drm->fd, drm->req, drm->flags, &m_PresentCtxs[uCurrentPresentCtx] );
@@ -6959,7 +6862,7 @@ index 7eec13953835..efc1dee0e170 100644
      float blend = 0.5;
      if (!previousValid && currentValid)
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 46659441400c..a9ae8afc9e70 100644
+index d0081ffcab6d..859fdd21e71f 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -86,6 +86,7 @@
@@ -6970,7 +6873,7 @@ index 46659441400c..a9ae8afc9e70 100644
  #include "log.hpp"
  #include "Utils/Defer.h"
  #include "win32_styles.h"
-@@ -2486,7 +2487,7 @@ gamescope::ConVar<bool> cv_paint_cursor_plane{ "paint_cursor_plane", true };
+@@ -2484,7 +2485,7 @@ gamescope::ConVar<bool> cv_paint_cursor_plane{ "paint_cursor_plane", true };
  gamescope::ConVar<bool> cv_paint_mura_plane{ "paint_mura_plane", true };
  
  static void
@@ -6979,7 +6882,7 @@ index 46659441400c..a9ae8afc9e70 100644
  {
  	if ( !pFocus )
  		return;
-@@ -2521,7 +2522,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms)
+@@ -2519,7 +2520,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms)
  	override = pFocus->overrideWindow;
  	input = pFocus->inputFocusWindow;
  
@@ -6988,7 +6891,7 @@ index 46659441400c..a9ae8afc9e70 100644
  	{
  		currentFrameRate = 300 * 1000.0f / (currentTime - lastSampledFrameTime);
  		lastSampledFrameTime = currentTime;
-@@ -2756,11 +2757,34 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms)
+@@ -2754,11 +2755,34 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms)
  		frameInfo.useNISLayer0 = false;
  	}
  
@@ -7023,7 +6926,7 @@ index 46659441400c..a9ae8afc9e70 100644
  	g_bFirstFrame = false;
  
  	update_app_target_refresh_cycle();
-@@ -5649,18 +5673,56 @@ steamcompmgr_flush_frame_done( steamcompmgr_win_t *w )
+@@ -5647,18 +5671,56 @@ steamcompmgr_flush_frame_done( steamcompmgr_win_t *w )
  
  static std::optional<uint64_t> s_oLowestFPSLimitScheduleVRR;
  
@@ -7084,7 +6987,7 @@ index 46659441400c..a9ae8afc9e70 100644
  		{
  			uint64_t schedule = w->last_commit_first_latch_time + g_SteamCompMgrLimitedAppRefreshCycle;
  
-@@ -5678,27 +5740,34 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
+@@ -5676,27 +5738,34 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
  	}
  	else
  	{
@@ -7130,7 +7033,7 @@ index 46659441400c..a9ae8afc9e70 100644
  	{
  		w->unlockedForFrameCallback = true;
  	}
-@@ -6810,22 +6879,19 @@ void handle_done_commits_xwayland( xwayland_ctx_t *ctx, bool vblank, uint64_t vb
+@@ -6808,22 +6877,19 @@ void handle_done_commits_xwayland( xwayland_ctx_t *ctx, bool vblank, uint64_t vb
  	// very fast loop yes
  	for ( auto& entry : ctx->doneCommits.listCommitsDone )
  	{
@@ -7162,7 +7065,7 @@ index 46659441400c..a9ae8afc9e70 100644
  
  		if (entry.fifo && (!entry_vblank || fifo_win_seqs.count(entry.winSeq) > 0))
  		{
-@@ -6879,12 +6945,25 @@ void handle_done_commits_xdg( bool vblank, uint64_t vblank_idx )
+@@ -6877,12 +6943,25 @@ void handle_done_commits_xdg( bool vblank, uint64_t vblank_idx )
  
  	uint64_t now = get_time_in_nanos();
  
@@ -7191,7 +7094,7 @@ index 46659441400c..a9ae8afc9e70 100644
  		{
  			commits_before_their_time.push_back( entry );
  			continue;
-@@ -6931,7 +7010,11 @@ void handle_presented_for_window( steamcompmgr_win_t* w )
+@@ -6929,7 +7008,11 @@ void handle_presented_for_window( steamcompmgr_win_t* w )
  		: g_SteamCompMgrAppRefreshCycle;
  
  	commit_t *lastCommit = get_window_last_done_commit_peek(w);
@@ -7204,7 +7107,7 @@ index 46659441400c..a9ae8afc9e70 100644
  	{
  		if ( !cv_mangoapp_use_output_timing )
  		{
-@@ -8162,6 +8245,40 @@ static gamescope::CTimerFunction g_FPSLimitVRRTimer{ []
+@@ -8160,6 +8243,40 @@ static gamescope::CTimerFunction g_FPSLimitVRRTimer{ []
  	g_FPSLimitVRRTimer.DisarmTimer();
  }};
  
@@ -7245,7 +7148,7 @@ index 46659441400c..a9ae8afc9e70 100644
  void
  steamcompmgr_main(int argc, char **argv)
  {
-@@ -8316,6 +8433,7 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8312,6 +8429,7 @@ steamcompmgr_main(int argc, char **argv)
  
  	g_SteamCompMgrWaiter.AddWaitable( &GetVBlankTimer() );
  	g_SteamCompMgrWaiter.AddWaitable( &g_FPSLimitVRRTimer );
@@ -7253,7 +7156,7 @@ index 46659441400c..a9ae8afc9e70 100644
  	GetVBlankTimer().ArmNextVBlank( true );
  
  	{
-@@ -8382,6 +8500,17 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8378,6 +8496,17 @@ steamcompmgr_main(int argc, char **argv)
  
  		g_SteamCompMgrWaiter.PollEvents();
  
@@ -7271,7 +7174,7 @@ index 46659441400c..a9ae8afc9e70 100644
  		static uint64_t s_lastFrameGenerationStateSerial = 0;
  		const uint64_t frameGenerationStateSerial = gamescope::GetFrameGenerationStateSerial();
  		if ( frameGenerationStateSerial != s_lastFrameGenerationStateSerial )
-@@ -8435,7 +8564,8 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8431,7 +8560,8 @@ steamcompmgr_main(int argc, char **argv)
  		}
  
  		// We can always vblank if VRR.
@@ -7281,7 +7184,7 @@ index 46659441400c..a9ae8afc9e70 100644
  		if ( bVRR )
  			vblank = true;
  
-@@ -8777,6 +8907,15 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8773,6 +8903,15 @@ steamcompmgr_main(int argc, char **argv)
  					g_SteamCompMgrLimitedAppRefreshCycle = g_SteamCompMgrAppRefreshCycle * nVblankDivisor;
  				}
  			}
@@ -7297,7 +7200,7 @@ index 46659441400c..a9ae8afc9e70 100644
  		}
  
  		// Handle presentation-time stuff
-@@ -8951,6 +9090,7 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8947,6 +9086,7 @@ steamcompmgr_main(int argc, char **argv)
  			// for composition to finish before submitting.
  			// If we want to do async + composite, we should set up syncfile stuff and have DRM wait on it.
  			const bool bSurfaceWantsAsync = (g_HeldCommits[HELD_COMMIT_BASE] != nullptr && g_HeldCommits[HELD_COMMIT_BASE]->async);
@@ -7305,7 +7208,7 @@ index 46659441400c..a9ae8afc9e70 100644
  			const bool bTearing = cv_tearing_enabled && GetBackend()->SupportsTearing() && bSurfaceWantsAsync;
  
  			enum class FlipType
-@@ -8980,6 +9120,39 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8976,6 +9116,39 @@ steamcompmgr_main(int argc, char **argv)
  			else
  				eFlipType = FlipType::Normal;
  
@@ -7345,7 +7248,7 @@ index 46659441400c..a9ae8afc9e70 100644
  			bool bShouldPaint = false;
  
  			//if ( GetBackend()->IsVisible() )
-@@ -9042,15 +9215,52 @@ steamcompmgr_main(int argc, char **argv)
+@@ -9038,15 +9211,52 @@ steamcompmgr_main(int argc, char **argv)
  				bShouldPaint = false;
  			}
  
@@ -7529,10 +7432,10 @@ index 000000000000..04c5c3523989
 +kill -0 "$gamescope_pid"
 +echo "headless frame-generation smoke session stayed alive"
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index a9ae8afc9e70..d527a5620a4b 100644
+index 859fdd21e71f..ffa334f7536f 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -2529,6 +2529,30 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -2527,6 +2527,30 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  		frameCounter = 0;
  
  		stats_printf( "fps=%f\n", currentFrameRate );
@@ -7563,7 +7466,7 @@ index a9ae8afc9e70..d527a5620a4b 100644
  
  		if ( window_is_steam( w ) )
  		{
-@@ -5744,12 +5768,8 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
+@@ -5742,12 +5766,8 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
  		{
  			if ( frameGenerationActive )
  			{
@@ -8356,10 +8259,10 @@ index ae9f8b7bc555..adc70cab300a 100644
  void vulkan_frame_generation_reset();
  
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index d527a5620a4b..55294c6062ea 100644
+index ffa334f7536f..42b3ec0be490 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -1052,6 +1052,19 @@ window_is_steam( steamcompmgr_win_t *w )
+@@ -1050,6 +1050,19 @@ window_is_steam( steamcompmgr_win_t *w )
  	return w && ( w->isSteamLegacyBigPicture || w->appID == 769 );
  }
  
@@ -8379,7 +8282,7 @@ index d527a5620a4b..55294c6062ea 100644
  static bool
  window_is_vr_scene_app( steamcompmgr_win_t *w )
  {
-@@ -2790,8 +2803,9 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -2788,8 +2801,9 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  	}
  
  	const gamescope::FrameGenerationConfig frameGeneration = gamescope::GetFrameGenerationConfig();
@@ -8391,7 +8294,7 @@ index d527a5620a4b..55294c6062ea 100644
  		g_HeldCommits[HELD_COMMIT_BASE] &&
  		g_HeldCommits[HELD_COMMIT_BASE]->commitID == g_uCurrentBasePlaneCommitID;
  	if ( frameGenerationEligible )
-@@ -5699,7 +5713,7 @@ static std::optional<uint64_t> s_oLowestFPSLimitScheduleVRR;
+@@ -5697,7 +5711,7 @@ static std::optional<uint64_t> s_oLowestFPSLimitScheduleVRR;
  
  static bool steamcompmgr_can_latch_frame_generation_between_vblanks()
  {
@@ -8400,7 +8303,7 @@ index d527a5620a4b..55294c6062ea 100644
  }
  
  static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vblank_idx,
-@@ -5712,7 +5726,8 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
+@@ -5710,7 +5724,8 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
  		? std::min( g_nSteamCompMgrTargetFPS, nRefreshHz ) : nRefreshHz;
  	const global_focus_t *currentFocus = GetCurrentFocus();
  	const bool frameGenerationActive = gamescope::GetFrameGenerationConfig().enabled &&
@@ -8410,7 +8313,7 @@ index d527a5620a4b..55294c6062ea 100644
  	const bool shouldLimit = frameGenerationActive ||
  		( g_nSteamCompMgrTargetFPS && ( bShouldLimitFPS || b_bForceFrameLimit ) );
  
-@@ -5720,9 +5735,14 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
+@@ -5718,9 +5733,14 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
  	{
  		const bool blocked = frameCallback
  			? !vulkan_frame_generation_can_request_source_frame()
@@ -8426,7 +8329,7 @@ index d527a5620a4b..55294c6062ea 100644
  		const uint64_t schedule = w->last_commit_first_latch_time +
  			g_SteamCompMgrLimitedAppRefreshCycle;
  		static constexpr uint64_t kFrameGenerationScheduleFudge = 200'000;
-@@ -7279,7 +7299,13 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
+@@ -7277,7 +7297,13 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
  									( pCurrentFocus->focusWindow && pCurrentFocus->focusWindow->isSteamStreamingClient && w->isSteamStreamingClientVideo ) )
  									&& !bMangoappSocketDisable;
  
@@ -8441,7 +8344,7 @@ index d527a5620a4b..55294c6062ea 100644
  		bool bPreemptiveUpscale = bValidPreemptiveScale && newCommit->ShouldPreemptivelyUpscale();
  
  		bool bKnownReady = false;
-@@ -8927,7 +8953,7 @@ steamcompmgr_main(int argc, char **argv)
+@@ -8923,7 +8949,7 @@ steamcompmgr_main(int argc, char **argv)
  					g_SteamCompMgrLimitedAppRefreshCycle = g_SteamCompMgrAppRefreshCycle * nVblankDivisor;
  				}
  			}
@@ -8450,7 +8353,7 @@ index d527a5620a4b..55294c6062ea 100644
  			{
  				const int nRealRefreshHz = gamescope::ConvertmHzToHz( nRealRefreshmHz );
  				const int nTotalFPS = g_nSteamCompMgrTargetFPS
-@@ -9110,7 +9136,8 @@ steamcompmgr_main(int argc, char **argv)
+@@ -9106,7 +9132,8 @@ steamcompmgr_main(int argc, char **argv)
  			// for composition to finish before submitting.
  			// If we want to do async + composite, we should set up syncfile stuff and have DRM wait on it.
  			const bool bSurfaceWantsAsync = (g_HeldCommits[HELD_COMMIT_BASE] != nullptr && g_HeldCommits[HELD_COMMIT_BASE]->async);
@@ -8460,7 +8363,7 @@ index d527a5620a4b..55294c6062ea 100644
  			const bool bTearing = cv_tearing_enabled && GetBackend()->SupportsTearing() && bSurfaceWantsAsync;
  
  			enum class FlipType
-@@ -9151,7 +9178,7 @@ steamcompmgr_main(int argc, char **argv)
+@@ -9147,7 +9174,7 @@ steamcompmgr_main(int argc, char **argv)
  				: 0;
  			const bool frameGenerationFreeRunning = bFrameGeneration &&
  				( bVRR || eFlipType == FlipType::Async );
@@ -8469,7 +8372,7 @@ index d527a5620a4b..55294c6062ea 100644
  				vulkan_frame_generation_has_pending_frame();
  			const uint64_t frameGenerationNow = get_time_in_nanos();
  
-@@ -9173,6 +9200,14 @@ steamcompmgr_main(int argc, char **argv)
+@@ -9169,6 +9196,14 @@ steamcompmgr_main(int argc, char **argv)
  			const bool frameGenerationTimerOutputDue = frameGenerationFreeRunning &&
  				frameGenerationPending && s_bFrameGenerationOutputTimerDue;
  
@@ -8539,7 +8442,7 @@ Subject: mangoapp: report frame generation output timing
  7 files changed, 98 insertions(+), 18 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index a05b2a62799c..e8d8f31f0697 100644
+index fa925c7c4f43..e941a0e26c84 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -562,6 +562,7 @@ extern bool g_bDebugLayers;
@@ -8568,7 +8471,7 @@ index a05b2a62799c..e8d8f31f0697 100644
  
  	// Nudge so that steamcompmgr releases commits.
  	nudge_steamcompmgr();
-@@ -4113,6 +4114,8 @@ namespace gamescope
+@@ -4107,6 +4108,8 @@ namespace gamescope
  			uint32_t uCurrentPresentCtx = m_uNextPresentCtx;
  			m_uNextPresentCtx = ( m_uNextPresentCtx + 1 ) % 3;
  			m_PresentCtxs[uCurrentPresentCtx].ulPendingFlipCount = GetCurrentConnector()->PresentationFeedback().m_uQueuedPresents;
@@ -8857,10 +8760,10 @@ index adc70cab300a..37a4abcf92be 100644
  void vulkan_garbage_collect( void );
  bool vulkan_remake_swapchain( void );
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 55294c6062ea..a19569c8e49c 100644
+index 42b3ec0be490..813ec1c59a91 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -1058,7 +1058,7 @@ steamcompmgr_window_allows_frame_generation( steamcompmgr_win_t *w )
+@@ -1056,7 +1056,7 @@ steamcompmgr_window_allows_frame_generation( steamcompmgr_win_t *w )
  	return w && !window_is_steam( w ) && !w->isSteamStreamingClient;
  }
  
@@ -9289,10 +9192,10 @@ Subject: steamcompmgr: pace overlays during frame generation
  1 file changed, 42 insertions(+), 8 deletions(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index a19569c8e49c..1d5e10a84c07 100644
+index 813ec1c59a91..61678f48093d 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -1058,6 +1058,20 @@ steamcompmgr_window_allows_frame_generation( steamcompmgr_win_t *w )
+@@ -1056,6 +1056,20 @@ steamcompmgr_window_allows_frame_generation( steamcompmgr_win_t *w )
  	return w && !window_is_steam( w ) && !w->isSteamStreamingClient;
  }
  
@@ -9313,7 +9216,7 @@ index a19569c8e49c..1d5e10a84c07 100644
  bool steamcompmgr_frame_generation_enabled_for_focus()
  {
  	const global_focus_t *focus = GetCurrentFocus();
-@@ -5728,7 +5742,10 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
+@@ -5726,7 +5740,10 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
  	const bool frameGenerationActive = gamescope::GetFrameGenerationConfig().enabled &&
  		steamcompmgr_window_allows_frame_generation( w ) &&
  		currentFocus && w == currentFocus->focusWindow;
@@ -9324,7 +9227,7 @@ index a19569c8e49c..1d5e10a84c07 100644
  		( g_nSteamCompMgrTargetFPS && ( bShouldLimitFPS || b_bForceFrameLimit ) );
  
  	if ( frameGenerationActive && w )
-@@ -5760,6 +5777,11 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
+@@ -5758,6 +5775,11 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
  		}
  		return true;
  	}
@@ -9336,7 +9239,7 @@ index a19569c8e49c..1d5e10a84c07 100644
  
  	if ( GetBackend()->GetCurrentConnector() && GetBackend()->GetCurrentConnector()->IsVRRActive() )
  	{
-@@ -6919,7 +6941,6 @@ void handle_done_commits_xwayland( xwayland_ctx_t *ctx, bool vblank, uint64_t vb
+@@ -6917,7 +6939,6 @@ void handle_done_commits_xwayland( xwayland_ctx_t *ctx, bool vblank, uint64_t vb
  	// very fast loop yes
  	for ( auto& entry : ctx->doneCommits.listCommitsDone )
  	{
@@ -9344,7 +9247,7 @@ index a19569c8e49c..1d5e10a84c07 100644
  		steamcompmgr_win_t *entry_window = nullptr;
  		for ( steamcompmgr_win_t *w = ctx->list; w; w = w->xwayland().next )
  		{
-@@ -6929,11 +6950,17 @@ void handle_done_commits_xwayland( xwayland_ctx_t *ctx, bool vblank, uint64_t vb
+@@ -6927,11 +6948,17 @@ void handle_done_commits_xwayland( xwayland_ctx_t *ctx, bool vblank, uint64_t vb
  				break;
  			}
  		}
@@ -9364,7 +9267,7 @@ index a19569c8e49c..1d5e10a84c07 100644
  		{
  			commits_before_their_time.push_back( entry );
  			continue;
-@@ -6957,7 +6984,7 @@ void handle_done_commits_xwayland( xwayland_ctx_t *ctx, bool vblank, uint64_t vb
+@@ -6955,7 +6982,7 @@ void handle_done_commits_xwayland( xwayland_ctx_t *ctx, bool vblank, uint64_t vb
  				continue;
  			if (handle_done_commit(w, ctx, entry.commitID, entry.earliestPresentTime, entry.earliestLatchTime))
  			{
@@ -9373,7 +9276,7 @@ index a19569c8e49c..1d5e10a84c07 100644
  					fifo_win_seqs.insert(entry.winSeq);
  				break;
  			}
-@@ -6997,13 +7024,17 @@ void handle_done_commits_xdg( bool vblank, uint64_t vblank_idx )
+@@ -6995,13 +7022,17 @@ void handle_done_commits_xdg( bool vblank, uint64_t vblank_idx )
  				break;
  			}
  		}
@@ -9393,7 +9296,7 @@ index a19569c8e49c..1d5e10a84c07 100644
  		{
  			commits_before_their_time.push_back( entry );
  			continue;
-@@ -7027,7 +7058,7 @@ void handle_done_commits_xdg( bool vblank, uint64_t vblank_idx )
+@@ -7025,7 +7056,7 @@ void handle_done_commits_xdg( bool vblank, uint64_t vblank_idx )
  				continue;
  			if (handle_done_commit(xdg_win.get(), nullptr, entry.commitID, entry.earliestPresentTime, entry.earliestLatchTime))
  			{
@@ -9402,7 +9305,7 @@ index a19569c8e49c..1d5e10a84c07 100644
  					fifo_win_seqs.insert(entry.winSeq);
  				break;
  			}
-@@ -7045,7 +7076,10 @@ void handle_presented_for_window( steamcompmgr_win_t* w )
+@@ -7043,7 +7074,10 @@ void handle_presented_for_window( steamcompmgr_win_t* w )
  
  	uint64_t next_refresh_time = g_SteamCompMgrVBlankTime.schedule.ulTargetVBlank;
  
@@ -9565,10 +9468,10 @@ index 30fb951ce5d0..d7d8b6b0ee17 100644
  gamescope::Rc<CVulkanTexture> vulkan_get_last_output_image( bool partial, bool defer );
  gamescope::Rc<CVulkanTexture> vulkan_acquire_screenshot_texture(uint32_t width, uint32_t height, bool exportable, uint32_t drmFormat, EStreamColorspace colorspace = k_EStreamColorspace_Unknown);
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 1d5e10a84c07..4e5109a2ee89 100644
+index 61678f48093d..24eb8ba258e7 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -2568,10 +2568,20 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -2566,10 +2566,20 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  		stats_printf( "framegen_fi_interpolation_gpu_ms=%f\n", frameGenerationTelemetry.gpu.interpolationAndInpaintingMilliseconds );
  		stats_printf( "framegen_generated_fsr_gpu_ms=%f\n", frameGenerationTelemetry.gpu.generatedFsrMilliseconds );
  		stats_printf( "framegen_total_gpu_ms=%f\n", frameGenerationTelemetry.gpu.totalMilliseconds );
@@ -9589,7 +9492,7 @@ index 1d5e10a84c07..4e5109a2ee89 100644
  		stats_printf( "framegen_flow_scale_percent=%u\n", frameGenerationTelemetry.flowScalePercent );
  		stats_printf( "framegen_source_cadence_hz=%u\n", frameGenerationTelemetry.sourceCadenceHz );
  		stats_printf( "framegen_output_cadence_hz=%u\n", frameGenerationTelemetry.outputCadenceHz );
-@@ -5754,7 +5764,11 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
+@@ -5752,7 +5762,11 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
  			? !vulkan_frame_generation_can_request_source_frame()
  			: !vulkan_frame_generation_can_accept_source_frame();
  		if ( blocked )
@@ -9601,7 +9504,7 @@ index 1d5e10a84c07..4e5109a2ee89 100644
  		// Source callbacks own the 60 Hz cadence. Once the midpoint drains and
  		// only its following real frame remains, latch the next source immediately
  		// so generation gets the complete interval before its output slot.
-@@ -5775,6 +5789,8 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
+@@ -5773,6 +5787,8 @@ static bool steamcompmgr_should_vblank_window( bool bShouldLimitFPS, uint64_t vb
  			}
  			return false;
  		}
@@ -9610,7 +9513,7 @@ index 1d5e10a84c07..4e5109a2ee89 100644
  		return true;
  	}
  	if ( frameGenerationOverlayActive )
-@@ -9233,6 +9249,12 @@ steamcompmgr_main(int argc, char **argv)
+@@ -9229,6 +9245,12 @@ steamcompmgr_main(int argc, char **argv)
  
  			const bool frameGenerationTimerOutputDue = frameGenerationFreeRunning &&
  				frameGenerationPending && s_bFrameGenerationOutputTimerDue;
@@ -9623,7 +9526,7 @@ index 1d5e10a84c07..4e5109a2ee89 100644
  
  			if ( frameGenerationTimerOutputDue &&
  				vulkan_frame_generation_drop_stale_generated_frame(
-@@ -9309,8 +9331,7 @@ steamcompmgr_main(int argc, char **argv)
+@@ -9305,8 +9327,7 @@ steamcompmgr_main(int argc, char **argv)
  				if ( frameGenerationFreeRunning )
  					bShouldPaint = frameGenerationTimerOutputDue;
  				else if ( vblank )
@@ -9873,10 +9776,10 @@ index d7d8b6b0ee17..c0ece3055b2a 100644
  	double searchAndFilterMilliseconds = 0.0;
  	double vectorFieldMilliseconds = 0.0;
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 4e5109a2ee89..630fbe7e7824 100644
+index 24eb8ba258e7..0be44a433aca 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -2568,6 +2568,17 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -2566,6 +2566,17 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  		stats_printf( "framegen_fi_interpolation_gpu_ms=%f\n", frameGenerationTelemetry.gpu.interpolationAndInpaintingMilliseconds );
  		stats_printf( "framegen_generated_fsr_gpu_ms=%f\n", frameGenerationTelemetry.gpu.generatedFsrMilliseconds );
  		stats_printf( "framegen_total_gpu_ms=%f\n", frameGenerationTelemetry.gpu.totalMilliseconds );
@@ -9934,10 +9837,10 @@ index c0ece3055b2a..dd2b718516eb 100644
  	uint32_t outputCadenceHz = 0;
  };
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 630fbe7e7824..91aae1fa4577 100644
+index 0be44a433aca..c2bb884b68d1 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -6221,7 +6221,7 @@ handle_property_notify(xwayland_ctx_t *ctx, XPropertyEvent *ev)
+@@ -6219,7 +6219,7 @@ handle_property_notify(xwayland_ctx_t *ctx, XPropertyEvent *ev)
  	if ( ev->atom == ctx->atoms.gamescopeFrameGenerationFlowScale )
  	{
  		gamescope::SetFrameGenerationFlowScale(
@@ -10245,10 +10148,10 @@ Subject: framegen: fix screenshot teardown crash
  2 files changed, 43 insertions(+), 18 deletions(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 91aae1fa4577..69f81340ae8d 100644
+index c2bb884b68d1..bc31432ad5be 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -2837,6 +2837,14 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -2835,6 +2835,14 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  		g_bFSRActive = ( heldCommit->upscaledTexture->eFilter == GamescopeUpscaleFilter::FSR );
  	}
  
@@ -10263,7 +10166,7 @@ index 91aae1fa4577..69f81340ae8d 100644
  	const gamescope::FrameGenerationConfig frameGeneration = gamescope::GetFrameGenerationConfig();
  	const bool frameGenerationEligible = frameGeneration.enabled &&
  		steamcompmgr_window_allows_frame_generation( w ) &&
-@@ -2930,11 +2938,17 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -2928,11 +2936,17 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  		return;
  	}
  
@@ -10283,7 +10186,7 @@ index 91aae1fa4577..69f81340ae8d 100644
  		std::filesystem::path path = std::filesystem::path{ oScreenshotInfo->szScreenshotPath };
  
  		uint32_t drmCaptureFormat = DRM_FORMAT_INVALID;
-@@ -2953,8 +2967,8 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -2951,8 +2965,8 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  		if ( pScreenshotTexture )
  		{
  			bool bHDRScreenshot = path.extension() == ".avif" &&
@@ -10294,7 +10197,7 @@ index 91aae1fa4577..69f81340ae8d 100644
  								  oScreenshotInfo->eScreenshotType != GAMESCOPE_CONTROL_SCREENSHOT_TYPE_SCREEN_BUFFER;
  
  			if ( drmCaptureFormat == DRM_FORMAT_NV12 || oScreenshotInfo->eScreenshotType != GAMESCOPE_CONTROL_SCREENSHOT_TYPE_SCREEN_BUFFER )
-@@ -2963,18 +2977,18 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -2961,18 +2975,18 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  				for ( uint32_t nInputEOTF = 0; nInputEOTF < EOTF_Count; nInputEOTF++ )
  				{
  					auto& luts = bHDRScreenshot ? g_ScreenshotColorMgmtLutsHDR : g_ScreenshotColorMgmtLuts;
@@ -10318,7 +10221,7 @@ index 91aae1fa4577..69f81340ae8d 100644
  							break;
  						}
  					}
-@@ -2984,11 +2998,11 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -2982,11 +2996,11 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  					if ( is_mura_correction_enabled() )
  					{
  						// Remove the last layer which is for mura...
@@ -10333,7 +10236,7 @@ index 91aae1fa4577..69f81340ae8d 100644
  								break;
  							}
  						}
-@@ -2996,10 +3010,10 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -2994,10 +3008,10 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  				}
  
  				// Re-enable output color management (blending) if it was disabled by mura.
@@ -10346,7 +10249,7 @@ index 91aae1fa4577..69f81340ae8d 100644
  
  			uint32_t uCompositeDebugBackup = g_uCompositeDebug;
  
-@@ -3010,12 +3024,12 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -3008,12 +3022,12 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  
  			std::optional<uint64_t> oScreenshotSeq;
  			if ( drmCaptureFormat == DRM_FORMAT_NV12 )
@@ -10362,7 +10265,7 @@ index 91aae1fa4577..69f81340ae8d 100644
  
  			if ( oScreenshotInfo->eScreenshotType != GAMESCOPE_CONTROL_SCREENSHOT_TYPE_SCREEN_BUFFER )
  			{
-@@ -6714,6 +6728,7 @@ static void
+@@ -6712,6 +6726,7 @@ static void
  steamcompmgr_exit(void)
  {
  	g_ImageWaiter.Shutdown();
@@ -10420,10 +10323,10 @@ Subject: framegen: unblock Steam focus transitions
  1 file changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 69f81340ae8d..70089af75953 100644
+index bc31432ad5be..ed8a3d013b72 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -9254,7 +9254,11 @@ steamcompmgr_main(int argc, char **argv)
+@@ -9250,7 +9250,11 @@ steamcompmgr_main(int argc, char **argv)
  				: 0;
  			const bool frameGenerationFreeRunning = bFrameGeneration &&
  				( bVRR || eFlipType == FlipType::Async );
@@ -10527,10 +10430,10 @@ index dd2b718516eb..4d7ffab49a68 100644
  
  
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 70089af75953..2743705bd8de 100644
+index ed8a3d013b72..e716a1e4720e 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -1439,16 +1439,26 @@ import_commit (
+@@ -1437,16 +1437,26 @@ import_commit (
  		commit->fifo = false;
  	}
  
@@ -10563,7 +10466,7 @@ index 70089af75953..2743705bd8de 100644
  	{
  		pBackendFb = GetBackend()->ImportDmabufToBackend( &dmabuf );
  	}
-@@ -1456,7 +1466,8 @@ import_commit (
+@@ -1454,7 +1464,8 @@ import_commit (
  	gamescope::OwningRc<CVulkanTexture> pOwnedTexture = vulkan_create_texture_from_wlr_buffer( buf, std::move( pBackendFb ) );
  	commit->vulkanTex = pOwnedTexture;
  
@@ -10573,7 +10476,7 @@ index 70089af75953..2743705bd8de 100644
  
  	return commit;
  }
-@@ -7490,6 +7501,13 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
+@@ -7488,6 +7499,13 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
  			{
  				fence = dup( dmabuf.fd[0] );
  			}
@@ -10672,10 +10575,10 @@ A warning per frame is noisy and wasteful.
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 2743705bd8de..c5857042a7d5 100644
+index e716a1e4720e..c916fbfea76a 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -7354,7 +7354,7 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
+@@ -7352,7 +7352,7 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
  		wlserver_lock();
  		wlr_buffer_unlock( buf );
  		wlserver_unlock();
@@ -10684,77 +10587,6 @@ index 2743705bd8de..c5857042a7d5 100644
  
  		// If we have a duplicated commit + frame callback, ensure that is signalled.
  		// This matches Mutter and Weston behavior, so it's plausible that some application relies on forward progress.
-
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Antheas Kapenekakis <git@antheas.dev>
-Date: Sat, 15 Aug 2026 17:28:25 +0200
-Subject: add maxbpc property and constraint connectors
-
-the amd driver does not constrain it itself, where especially for dp to hdmi, it can send 12 bytes per color, causing flr to kick in earlier. By sending 8 we guarantee better behavior
----
- src/Backends/DRMBackend.cpp | 14 ++++++++++++++
- 1 file changed, 14 insertions(+)
-
-diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index e8d8f31f0697..49e24cf9d88e 100644
---- a/src/Backends/DRMBackend.cpp
-+++ b/src/Backends/DRMBackend.cpp
-@@ -391,6 +391,7 @@ namespace gamescope
- 			std::optional<CDRMAtomicProperty> vrr_capable;
- 			std::optional<CDRMAtomicProperty> EDID;
- 			std::optional<CDRMAtomicProperty> Broadcast_RGB;
-+			std::optional<CDRMAtomicProperty> max_bpc;
- 			std::optional<CDRMAtomicProperty> DUMMY_END;
- 		};
- 		      ConnectorProperties &GetProperties()       { return m_Props; }
-@@ -1476,6 +1477,9 @@ void finish_drm(struct drm_t *drm)
- 
- 		if ( pConnector->GetProperties().content_type )
- 			pConnector->GetProperties().content_type->SetPendingValue( req, 0, true );
-+
-+		if ( pConnector->GetProperties().max_bpc )
-+			pConnector->GetProperties().max_bpc->SetPendingValue( req, pConnector->GetProperties().max_bpc->GetInitialValue(), true );
- 	}
- 
- 	for ( std::unique_ptr< gamescope::CDRMCRTC > &pCRTC : drm->crtcs )
-@@ -2193,6 +2197,7 @@ namespace gamescope
- 			m_Props.vrr_capable              = CDRMAtomicProperty::Instantiate( "vrr_capable",            this, *rawProperties );
- 			m_Props.EDID                     = CDRMAtomicProperty::Instantiate( "EDID",                   this, *rawProperties );
- 			m_Props.Broadcast_RGB            = CDRMAtomicProperty::Instantiate( "Broadcast RGB",          this, *rawProperties );
-+			m_Props.max_bpc                  = CDRMAtomicProperty::Instantiate( "max bpc",                this, *rawProperties );
- 		}
- 
- 		ParseEDID();
-@@ -2914,6 +2919,8 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
- 	drm_colorspace uColorimetry = DRM_MODE_COLORIMETRY_DEFAULT;
- 
- 	const bool bWantsHDR10 = g_bOutputHDREnabled && frameInfo->outputEncodingEOTF == EOTF_PQ;
-+	// Request only the color depth needed by the active output encoding.
-+	const uint64_t uMaxBpc = bWantsHDR10 ? 10u : 8u;
- 	gamescope::BackendBlob *pHDRMetadata = nullptr;
- 	if ( drm->pConnector && drm->pConnector->SupportsHDR10() )
- 	{
-@@ -2936,6 +2943,10 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
- 			drm->needs_modeset = true;
- 	}
- 
-+	if ( drm->pConnector && drm->pConnector->GetProperties().max_bpc &&
-+		 uMaxBpc != drm->pConnector->GetProperties().max_bpc->GetCurrentValue() )
-+		drm->needs_modeset = true;
-+
- 	drm->m_FbIdsInRequest.clear();
- 	drm_close_in_fences( drm );
- 
-@@ -3094,6 +3105,9 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
- 		if ( drm->pConnector->GetProperties().content_type )
- 			drm->pConnector->GetProperties().content_type->SetPendingValue( drm->req, DRM_MODE_CONTENT_TYPE_GAME, bForceInRequest );
- 
-+		if ( drm->pConnector->GetProperties().max_bpc )
-+			drm->pConnector->GetProperties().max_bpc->SetPendingValue( drm->req, uMaxBpc, bForceInRequest );
-+
- 		GamescopeBroadcastRGBMode_t eBroadcastRGB = drm->pConnector->GetScreenType() == gamescope::GAMESCOPE_SCREEN_TYPE_EXTERNAL
- 			? s_ExternalBroadcastRGBMode
- 			: GAMESCOPE_BROADCAST_RGB_MODE_AUTOMATIC;
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
@@ -10767,10 +10599,10 @@ tvs may set 60hz as the default output. This is not optimal, especially if they 
  1 file changed, 13 insertions(+), 2 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 49e24cf9d88e..ed64ac462302 100644
+index e941a0e26c84..876507b6ff58 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
-@@ -2146,13 +2146,24 @@ namespace gamescope
+@@ -2142,13 +2142,24 @@ namespace gamescope
  			if (bGoodRefreshA != bGoodRefreshB)
  				return bGoodRefreshA;
  
@@ -10813,10 +10645,10 @@ Moreover, parts of the metadata block are optional, and gamescope rejects the wh
  2 files changed, 3 insertions(+), 23 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index ed64ac462302..b69ec9f797ac 100644
+index 876507b6ff58..4b72bf9096af 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
-@@ -2573,25 +2573,10 @@ namespace gamescope
+@@ -2562,25 +2562,10 @@ namespace gamescope
  			hdr_output_metadata defaultHDRMetadata{};
  			hdr_metadata_infoframe *pInfoframe = &defaultHDRMetadata.hdmi_metadata_type1;
  
@@ -11907,10 +11739,10 @@ video capture.
  1 file changed, 16 insertions(+), 14 deletions(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index c5857042a7d5..a5280861498b 100644
+index c916fbfea76a..e24399aedb9b 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -3089,6 +3089,8 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -3087,6 +3087,8 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  				pthread_setname_np( pthread_self(), "gamescope-scrsh" );
  
  				const uint8_t *mappedData = pScreenshotTexture->mappedData();
@@ -11919,7 +11751,7 @@ index c5857042a7d5..a5280861498b 100644
  
  				bool bScreenshotSuccess = false;
  
-@@ -3096,18 +3098,18 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -3094,18 +3096,18 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  				{
  					// Make our own copy of the image to remove the alpha channel.
  					constexpr uint32_t kCompCnt = 3;
@@ -11944,7 +11776,7 @@ index c5857042a7d5..a5280861498b 100644
  						}
  					}
  
-@@ -3115,7 +3117,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -3113,7 +3115,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  #if HAVE_AVIF
  					avifResult avifResult = AVIF_RESULT_OK;
  
@@ -11953,7 +11785,7 @@ index c5857042a7d5..a5280861498b 100644
  					defer( avifImageDestroy( pAvifImage ) );
  					pAvifImage->yuvRange = AVIF_RANGE_FULL;
  					pAvifImage->colorPrimaries = bHDRScreenshot ? AVIF_COLOR_PRIMARIES_BT2020 : AVIF_COLOR_PRIMARIES_BT709;
-@@ -3145,7 +3147,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -3143,7 +3145,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  					rgbAvifImage.ignoreAlpha = AVIF_TRUE;
  
  					rgbAvifImage.pixels = (uint8_t *)imageData.data();
@@ -11962,7 +11794,7 @@ index c5857042a7d5..a5280861498b 100644
  
  					if ( ( avifResult = avifImageRGBToYUV( pAvifImage, &rgbAvifImage ) ) != AVIF_RESULT_OK ) // Not really! See Matrix Coefficients IDENTITY above.
  					{
-@@ -3190,12 +3192,12 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -3188,12 +3190,12 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  				else if (pScreenshotTexture->format() == VK_FORMAT_B8G8R8A8_UNORM)
  				{
  					// Make our own copy of the image to remove the alpha channel.
@@ -11979,7 +11811,7 @@ index c5857042a7d5..a5280861498b 100644
  						{
  							// BGR...
  							imageData[y * pitch + x * comp + 0] = mappedData[y * pScreenshotTexture->rowPitch() + x * comp + 2];
-@@ -3204,7 +3206,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -3202,7 +3204,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  							imageData[y * pitch + x * comp + 3] = 255;
  						}
  					}
@@ -11988,7 +11820,7 @@ index c5857042a7d5..a5280861498b 100644
  					{
  						xwm_log.infof( "Screenshot saved to %s", oScreenshotInfo->szScreenshotPath.c_str() );
  						bScreenshotSuccess = true;
-@@ -3227,7 +3229,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -3225,7 +3227,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  
  #if 0
  						char cmd[4096];
@@ -12062,10 +11894,10 @@ index 4a6c05169fee..b7ad6d236014 100644
  void vulkan_present_to_window( uint64_t frameGenerationOutputId );
  
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index a5280861498b..1a4147325016 100644
+index e24399aedb9b..73637b0d1661 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -2444,7 +2444,7 @@ static void paint_pipewire()
+@@ -2442,7 +2442,7 @@ static void paint_pipewire()
  	}
  
  	gamescope::Rc<CVulkanTexture> pRGBTexture = s_pPipewireBuffer->texture->isYcbcr()
@@ -12074,7 +11906,7 @@ index a5280861498b..1a4147325016 100644
  		: gamescope::Rc<CVulkanTexture>{ s_pPipewireBuffer->texture };
  
  	gamescope::Rc<CVulkanTexture> pYUVTexture = s_pPipewireBuffer->texture->isYcbcr() ? s_pPipewireBuffer->texture : nullptr;
-@@ -2965,7 +2965,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -2963,7 +2963,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  		uint32_t drmCaptureFormat = DRM_FORMAT_INVALID;
  
  		if ( path.extension() == ".avif" )
@@ -12083,7 +11915,7 @@ index a5280861498b..1a4147325016 100644
  		else if ( path.extension() == ".png" )
  			drmCaptureFormat = DRM_FORMAT_XRGB8888;
  		else if ( path.extension() == ".nv12.bin" )
-@@ -3094,12 +3094,17 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -3092,12 +3092,17 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  
  				bool bScreenshotSuccess = false;
  
@@ -12102,7 +11934,7 @@ index a5280861498b..1a4147325016 100644
  					for (uint32_t y = 0; y < height; y++)
  					{
  						for (uint32_t x = 0; x < width; x++)
-@@ -3107,9 +3112,9 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -3105,9 +3110,9 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  							uint32_t *pInPixel = (uint32_t *)&mappedData[(y * pScreenshotTexture->rowPitch()) + x * (32 / 8)];
  							uint32_t uInPixel = *pInPixel;
  
@@ -12127,10 +11959,10 @@ Subject: steamcompmgr: fix the error message when a screenshot is requested
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 1a4147325016..4ea9d5adb60d 100644
+index 73637b0d1661..ec0087f3d928 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -2970,6 +2970,8 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -2968,6 +2968,8 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  			drmCaptureFormat = DRM_FORMAT_XRGB8888;
  		else if ( path.extension() == ".nv12.bin" )
  			drmCaptureFormat = DRM_FORMAT_NV12;
@@ -12139,7 +11971,7 @@ index 1a4147325016..4ea9d5adb60d 100644
  
  		gamescope::Rc<CVulkanTexture> pScreenshotTexture;
  		if ( drmCaptureFormat != DRM_FORMAT_INVALID )
-@@ -3274,7 +3276,8 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -3272,7 +3274,8 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  		}
  		else
  		{
@@ -12166,10 +11998,10 @@ and the request would always fail with this misleading error message:
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 4ea9d5adb60d..fef8e8784765 100644
+index ec0087f3d928..0ac5639b4ab1 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -2968,7 +2968,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -2966,7 +2966,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  			drmCaptureFormat = vulkan_get_rgb10_capture_format();
  		else if ( path.extension() == ".png" )
  			drmCaptureFormat = DRM_FORMAT_XRGB8888;
@@ -12201,10 +12033,10 @@ Fixes: https://github.com/ValveSoftware/gamescope/issues/1996
  1 file changed, 36 insertions(+), 1 deletion(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index fef8e8784765..10af66f6f439 100644
+index 0ac5639b4ab1..f9e085d82c76 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
-@@ -2973,9 +2973,18 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -2971,9 +2971,18 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  		else
  			xwm_log.errorf( "Unsupported extension for a screenshot: %s", path.extension().string().c_str() );
  
@@ -12224,7 +12056,7 @@ index fef8e8784765..10af66f6f439 100644
  
  		if ( pScreenshotTexture )
  		{
-@@ -3041,6 +3050,32 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
+@@ -3039,6 +3048,32 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
  			else if ( oScreenshotInfo->eScreenshotType == GAMESCOPE_CONTROL_SCREENSHOT_TYPE_FULL_COMPOSITION ||
  					  oScreenshotInfo->eScreenshotType == GAMESCOPE_CONTROL_SCREENSHOT_TYPE_SCREEN_BUFFER )
  				oScreenshotSeq = vulkan_composite( &screenshotFrameInfo, nullptr, false, pScreenshotTexture );
@@ -12323,7 +12155,7 @@ Subject: temporarily add gdm just for nvidia to force contiguous allocations
  6 files changed, 263 insertions(+), 10 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index b69ec9f797ac..97d7e068a64e 100644
+index 4b72bf9096af..f175aeabdd78 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -52,6 +52,10 @@
@@ -12348,7 +12180,7 @@ index b69ec9f797ac..97d7e068a64e 100644
  
  	std::vector< std::unique_ptr< gamescope::CDRMPlane > > planes;
  	std::vector< std::unique_ptr< gamescope::CDRMCRTC > > crtcs;
-@@ -1272,6 +1280,18 @@ bool init_drm(struct drm_t *drm, int width, int height, int refresh)
+@@ -1271,6 +1279,18 @@ bool init_drm(struct drm_t *drm, int width, int height, int refresh)
  		return false;
  	}
  
@@ -12367,7 +12199,7 @@ index b69ec9f797ac..97d7e068a64e 100644
  	if (drmGetCap(drm->fd, DRM_CAP_CURSOR_WIDTH, &drm->cursor_width) != 0) {
  		drm->cursor_width = 64;
  	}
-@@ -1425,6 +1445,15 @@ bool init_drm(struct drm_t *drm, int width, int height, int refresh)
+@@ -1424,6 +1444,15 @@ bool init_drm(struct drm_t *drm, int width, int height, int refresh)
  
  	drm->needs_modeset = true;
  
@@ -12383,7 +12215,7 @@ index b69ec9f797ac..97d7e068a64e 100644
  	return true;
  }
  
-@@ -1587,6 +1616,14 @@ void finish_drm(struct drm_t *drm)
+@@ -1583,6 +1612,14 @@ void finish_drm(struct drm_t *drm)
  	drm->crtcs.clear();
  	drm->connectors.clear();
  
@@ -12398,7 +12230,7 @@ index b69ec9f797ac..97d7e068a64e 100644
  
  
  	// We can't close the DRM FD here, it might still be in use by the
-@@ -3584,7 +3621,9 @@ namespace gamescope
+@@ -3564,7 +3601,9 @@ namespace gamescope
  
  			FrameInfo_t fsrScanoutFrameInfo;
  			const FrameInfo_t::Layer_t &fsrBaseLayer = pFrameInfo->layers[0];
@@ -12408,7 +12240,7 @@ index b69ec9f797ac..97d7e068a64e 100644
  				pFrameInfo->useFSRLayer0 &&
  				pFrameInfo->layerCount > 1 &&
  				!cv_composite_force &&
-@@ -3647,6 +3686,8 @@ namespace gamescope
+@@ -3627,6 +3666,8 @@ namespace gamescope
  
  			bool bNeedsFullComposite = false;
  			bNeedsFullComposite |= cv_composite_force;
@@ -12417,7 +12249,7 @@ index b69ec9f797ac..97d7e068a64e 100644
  			bNeedsFullComposite |= bWasFirstFrame;
  			bNeedsFullComposite |= pFrameInfo->useFSRLayer0;
  			bNeedsFullComposite |= pFrameInfo->useNISLayer0;
-@@ -3963,6 +4004,71 @@ namespace gamescope
+@@ -3943,6 +3984,71 @@ namespace gamescope
  			return drm_fbid_from_dmabuf( &g_DRM, pDmaBuf );
  		}
  
@@ -12515,10 +12347,10 @@ index 0f7346605078..44c13e28addd 100644
  		{
              return true;
 diff --git a/src/backend.h b/src/backend.h
-index 958f489ce82a..7ffdf9b3f5d2 100644
+index 607c25d9a0db..277f676a647b 100644
 --- a/src/backend.h
 +++ b/src/backend.h
-@@ -338,6 +338,17 @@ namespace gamescope
+@@ -337,6 +337,17 @@ namespace gamescope
          // Rc manages acquire/release of buffer to/from client while imported.
          virtual OwningRc<IBackendFb> ImportDmabufToBackend( wlr_dmabuf_attributes *pDmaBuf ) = 0;
  
@@ -12536,7 +12368,7 @@ index 958f489ce82a..7ffdf9b3f5d2 100644
          virtual bool UsesModifiers() const = 0;
          virtual std::span<const uint64_t> GetSupportedModifiers( uint32_t uDrmFormat ) const = 0;
  		inline bool SupportsFormat( uint32_t uDrmFormat ) const
-@@ -499,4 +510,3 @@ inline gamescope::IBackend *GetBackend()
+@@ -498,4 +509,3 @@ inline gamescope::IBackend *GetBackend()
  {
      return gamescope::IBackend::Get();
  }
@@ -12889,10 +12721,10 @@ currently, gamescope chooses gpu 0 regardless. Well, what if gpu 0 is not the on
  create mode 160000 subprojects/v4l-utils
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 97d7e068a64e..c9d006d3b57e 100644
+index f175aeabdd78..f015cd9a31eb 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
-@@ -1008,15 +1008,42 @@ static std::unordered_map<std::string, int> parse_connector_priorities(const cha
+@@ -1007,15 +1007,42 @@ static std::unordered_map<std::string, int> parse_connector_priorities(const cha
  	return priorities;
  }
  
@@ -12941,7 +12773,7 @@ index 97d7e068a64e..c9d006d3b57e 100644
  }
  
  static bool get_saved_mode(const char *description, saved_mode &mode_info)
-@@ -1071,7 +1098,7 @@ static bool setup_best_connector(struct drm_t *drm, bool force, bool initial)
+@@ -1070,7 +1097,7 @@ static bool setup_best_connector(struct drm_t *drm, bool force, bool initial)
  		if ( g_bForceInternal && pConnector->GetScreenType() == gamescope::GAMESCOPE_SCREEN_TYPE_EXTERNAL )
  			continue;
  
@@ -12950,7 +12782,7 @@ index 97d7e068a64e..c9d006d3b57e 100644
  		if ( nPriority < nBestPriority )
  		{
  			best = pConnector;
-@@ -1234,7 +1261,7 @@ gamescope_liftoff_log_handler(enum liftoff_log_priority liftoff_priority, const
+@@ -1233,7 +1260,7 @@ gamescope_liftoff_log_handler(enum liftoff_log_priority liftoff_priority, const
  	liftoff_log_scope.vlogf(priority, fmt, args);
  }
  
@@ -12959,7 +12791,7 @@ index 97d7e068a64e..c9d006d3b57e 100644
  {
  	load_pnps();
  
-@@ -1244,33 +1271,26 @@ bool init_drm(struct drm_t *drm, int width, int height, int refresh)
+@@ -1243,33 +1270,26 @@ bool init_drm(struct drm_t *drm, int width, int height, int refresh)
  	drm->preferred_height = height;
  	drm->preferred_refresh = refresh;
  
@@ -13005,7 +12837,7 @@ index 97d7e068a64e..c9d006d3b57e 100644
  		wlsession_close_kms();
  		return -1;
  	}
-@@ -3549,19 +3569,48 @@ namespace gamescope
+@@ -3529,19 +3549,48 @@ namespace gamescope
  
  		virtual bool Init() override
  		{
@@ -13217,3 +13049,198 @@ index 9f54aac2fdc2..e20be330240c 100644
  }
  
  #endif
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 24 Aug 2026 02:26:33 +0200
+Subject: fix hdr framegen on nvidia being black
+
+---
+ src/rendervulkan.cpp | 15 ++++++++++++---
+ 1 file changed, 12 insertions(+), 3 deletions(-)
+
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index 6f06f14a5b20..01bfc18643f4 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -5125,7 +5125,11 @@ namespace
+ 				// requires this precomposition; HDR requires it even without FSR.
+ 				// Submit the real result after the midpoint so the earlier deadline
+ 				// retains first use of the GPU.
+-				if ( gamescope::FrameGenerationShouldPrecomposeRealFrame(
++				// Backend-allocated scanout paths always perform a final Vulkan
++				// composition, so they do not alternate KMS plane color state and do
++				// not need a second frame-generation intermediate for the real slot.
++				if ( !GetBackend()->UsesBackendAllocatedScanout() &&
++					 gamescope::FrameGenerationShouldPrecomposeRealFrame(
+ 						fsrEnabled, hdrOutput, realLayer.tex.get() == rawSource.get() ) )
+ 				{
+ 					gamescope::Rc<CVulkanTexture> realScanout = AcquireScanout(
+@@ -5266,14 +5270,19 @@ namespace
+ 				return nullptr;
+ 
+ 			CVulkanTexture::createFlags flags;
+-			flags.bFlippable = true;
++			// Backend-allocated scanout paths (currently NVIDIA DRM) always
++			// composite into their own final buffer. Keep frame-generation output
++			// device-local there: exporting it and transferring ownership to the
++			// foreign queue family is both unnecessary and breaks the subsequent
++			// Vulkan sampling pass on NVIDIA.
++			flags.bFlippable = !GetBackend()->UsesBackendAllocatedScanout();
+ 			flags.bSampled = true;
+ 			flags.bStorage = true;
+ 			flags.bTransferSrc = true;
+ 			gamescope::OwningRc<CVulkanTexture> image = new CVulkanTexture;
+ 			if ( !image->BInit( width, height, 1, drmFormat, flags ) )
+ 				return nullptr;
+-			if ( GetBackend()->IsSessionBased() && !image->GetBackendFb() )
++			if ( flags.bFlippable && GetBackend()->IsSessionBased() && !image->GetBackendFb() )
+ 				return nullptr;
+ 			m_scanoutImages.push_back( std::move( image ) );
+ 			return m_scanoutImages.back();
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 24 Aug 2026 21:15:38 +0200
+Subject: fix buggy hdr internal displays with heuristic instead
+
+---
+ src/Backends/DRMBackend.cpp | 13 +++++++++++--
+ src/color_helpers.cpp       | 16 ++++++++++++++--
+ src/color_helpers.h         |  2 ++
+ 3 files changed, 27 insertions(+), 4 deletions(-)
+
+diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
+index f015cd9a31eb..15a4ba7c8279 100644
+--- a/src/Backends/DRMBackend.cpp
++++ b/src/Backends/DRMBackend.cpp
+@@ -2593,7 +2593,16 @@ namespace gamescope
+ 				 pHDRStaticMetadata && pHDRStaticMetadata->eotfs && pHDRStaticMetadata->eotfs->pq )
+ 			{
+ 				m_Mutable.HDR.bExposeHDRSupport = true;
+-				m_Mutable.HDR.eOutputEncodingEOTF = EOTF_PQ;
++				// Some internal panels advertise BT.2020/PQ while reporting an
++				// SDR-sized native gamut and do not actually decode PQ correctly.
++				// Require a coherent wide-gamut EDID before using PQ on an internal
++				// panel. External sinks remain responsible for interpreting the
++				// advertised BT.2020/PQ signal.
++				const bool bTrustPQ = GetScreenType() != GAMESCOPE_SCREEN_TYPE_INTERNAL ||
++					BIsWideGamut( m_Mutable.DisplayColorimetry );
++				m_Mutable.HDR.eOutputEncodingEOTF = bTrustPQ ? EOTF_PQ : EOTF_Gamma22;
++				if ( !bTrustPQ )
++					drm_log.warnf( "Ignoring incoherent PQ capability on internal connector %s with SDR-gamut primaries.", m_Mutable.szName );
+ 				m_Mutable.HDR.uMaxContentLightLevel =
+ 					pHDRStaticMetadata->desired_content_max_luminance
+ 					? nits_to_u16( pHDRStaticMetadata->desired_content_max_luminance )
+@@ -2997,7 +3006,7 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
+ 	{
+ 		if ( !cv_drm_debug_disable_output_tf && !bSinglePlane )
+ 		{
+-			drm->pending.output_tf = g_bOutputHDREnabled
++			drm->pending.output_tf = frameInfo->outputEncodingEOTF == EOTF_PQ
+ 				? AMDGPU_TRANSFER_FUNCTION_PQ_EOTF
+ 				: AMDGPU_TRANSFER_FUNCTION_SRGB_EOTF;
+ 		}
+diff --git a/src/color_helpers.cpp b/src/color_helpers.cpp
+index 64430a5f0c08..b60b68249326 100644
+--- a/src/color_helpers.cpp
++++ b/src/color_helpers.cpp
+@@ -830,8 +830,20 @@ void calcColorTransform( lut1d_t * pShaper, int nLutSize1d,
+ 
+ bool BIsWideGamut( const displaycolorimetry_t & nativeDisplayOutput )
+ {
+-    // Use red as a sentinal for a wide-gamut display
+-    return ( nativeDisplayOutput.primaries.r.x > 0.650f && nativeDisplayOutput.primaries.r.y < 0.320f );
++    auto gamutArea = []( const primaries_t &primaries )
++    {
++        const float twiceArea =
++            primaries.r.x * ( primaries.g.y - primaries.b.y ) +
++            primaries.g.x * ( primaries.b.y - primaries.r.y ) +
++            primaries.b.x * ( primaries.r.y - primaries.g.y );
++        return 0.5f * std::abs( twiceArea );
++    };
++
++    // Coordinate sentinels are sensitive to EDID quantization (for example,
++    // DCI-P3 red is exactly on y=0.32). Compare the full primary triangle and
++    // require a meaningful increase over Rec.709 instead.
++    return gamutArea( nativeDisplayOutput.primaries ) >
++        gamutArea( displaycolorimetry_709.primaries ) * 1.10f;
+ }
+ 
+ void buildSDRColorimetry( displaycolorimetry_t * pColorimetry, colormapping_t *pMapping,
+diff --git a/src/color_helpers.h b/src/color_helpers.h
+index cefa74e403e8..84d395d83ccf 100644
+--- a/src/color_helpers.h
++++ b/src/color_helpers.h
+@@ -385,6 +385,8 @@ void calcColorTransform( lut1d_t * pShaper, int nLutSize1d,
+ // Build colorimetry and a gamut mapping for the given SDR configuration
+ // Note: the output colorimetry will use the native display's white point
+ // Only the color gamut will change
++bool BIsWideGamut( const displaycolorimetry_t & nativeDisplayOutput );
++
+ void buildSDRColorimetry( displaycolorimetry_t * pColorimetry, colormapping_t *pMapping,
+ 	float flSDRGamutWideness, const displaycolorimetry_t & nativeDisplayOutput );
+ 
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 24 Aug 2026 22:52:18 +0200
+Subject: add retry for automatic gpu detection
+
+...to avoid crashes when kwin does not release on time
+---
+ src/wlserver.cpp | 29 +++++++++++++++++++++--------
+ 1 file changed, 21 insertions(+), 8 deletions(-)
+
+diff --git a/src/wlserver.cpp b/src/wlserver.cpp
+index e20be330240c..d64bd605d9c3 100644
+--- a/src/wlserver.cpp
++++ b/src/wlserver.cpp
+@@ -1788,6 +1788,9 @@ static void blank_unused_kms_devices()
+ }
+ 
+ int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector selector, const void *userdata ) {
++	constexpr int k_nMaxRetries = 10;
++	constexpr unsigned int k_nRetryIntervalSeconds = 1;
++
+ 	if ( device_name != nullptr )
+ 	{
+ 		wlserver.wlr.device = wlr_session_open_file( wlserver.wlr.session, device_name );
+@@ -1796,19 +1799,29 @@ int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector s
+ 	}
+ 
+ 	struct wlr_device *devices[8] = {};
+-	ssize_t n = wlr_session_find_gpus( wlserver.wlr.session, 8, devices );
+-	if ( n < 0 )
+-		n = 0;
+-	s_kmsDevices.assign( devices, devices + n );
+-
+-	if ( wlserver.wlr.device == nullptr )
++	ssize_t n = 0;
++	for ( int nRetry = 0; ; nRetry++ )
+ 	{
+-		if ( n == 0 )
++		n = wlr_session_find_gpus( wlserver.wlr.session, 8, devices );
++		if ( n < 0 )
++			n = 0;
++		if ( n > 0 || wlserver.wlr.device != nullptr )
++			break;
++
++		if ( nRetry == k_nMaxRetries )
+ 		{
+-			wl_log.errorf( "No GPU detected" );
++			wl_log.errorf( "No GPU detected after %d retries", k_nMaxRetries );
+ 			return -1;
+ 		}
+ 
++		wl_log.warnf( "No GPU detected; retrying in %u second (%d/%d)",
++			k_nRetryIntervalSeconds, nRetry + 1, k_nMaxRetries );
++		sleep( k_nRetryIntervalSeconds );
++	}
++	s_kmsDevices.assign( devices, devices + n );
++
++	if ( wlserver.wlr.device == nullptr )
++	{
+ 		int best_priority = INT_MAX;
+ 
+ 		for ( ssize_t i = 0; i < n; i++ )
