@@ -333,3 +333,137 @@ index 699e2ad0c39a..ecd71d3f5ccc 100644
      static bool s_testMode;
  };
  
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 24 Aug 2026 16:44:38 +0200
+Subject: support one-shot autologin overrides
+
+---
+ src/daemon/Display.cpp | 72 ++++++++++++++++++++++++++++++++++++++++--
+ src/daemon/Display.h   |  1 +
+ 2 files changed, 70 insertions(+), 3 deletions(-)
+
+diff --git a/src/daemon/Display.cpp b/src/daemon/Display.cpp
+index 92feddb249b0..d9dfbe254966 100644
+--- a/src/daemon/Display.cpp
++++ b/src/daemon/Display.cpp
+@@ -18,6 +18,7 @@
+ 
+ #include "Display.h"
+ 
++#include "Constants.h"
+ #include "DaemonApp.h"
+ #include "DisplayManager.h"
+ #include "Greeter.h"
+@@ -31,6 +32,8 @@
+ #include <QLocalSocket>
+ #include <QTimer>
+ 
++#include <optional>
++
+ #include <pwd.h>
+ #include <sys/time.h>
+ #include <unistd.h>
+@@ -54,6 +57,63 @@ static int s_ttyFailures = 0;
+ 
+ namespace PLASMALOGIN
+ {
++namespace
++{
++struct NextSessionRequest {
++    QString user;
++    Session session;
++};
++
++std::optional<NextSessionRequest> takeNextSessionRequest()
++{
++    const QString requestPath = QStringLiteral(RUNTIME_DIR) + QStringLiteral("/next-session.conf");
++    if (!QFile::exists(requestPath)) {
++        return std::nullopt;
++    }
++
++    const QString claimedPath = requestPath + QStringLiteral(".consumed");
++    QFile::remove(claimedPath);
++    if (!QFile::rename(requestPath, claimedPath)) {
++        qWarning() << "Unable to claim next session request" << requestPath;
++        return std::nullopt;
++    }
++
++    QString user;
++    QString sessionName;
++    {
++        KConfig requestConfig(claimedPath, KConfig::SimpleConfig);
++        const KConfigGroup autologinGroup(&requestConfig, QStringLiteral("Autologin"));
++        user = autologinGroup.readEntry(QStringLiteral("User"));
++        sessionName = autologinGroup.readEntry(QStringLiteral("Session"));
++    }
++
++    if (!QFile::remove(claimedPath)) {
++        qWarning() << "Unable to remove consumed next session request" << claimedPath;
++    }
++
++    if (user.isEmpty() || sessionName.isEmpty()) {
++        qWarning() << "Next session request is missing its user or session";
++        return std::nullopt;
++    }
++
++    if (!getpwnam(qPrintable(user))) {
++        qWarning() << "Unable to find user from next session request" << user;
++        return std::nullopt;
++    }
++
++    Session session = Session::create(Session::WaylandSession, sessionName);
++    if (!session.isValid()) {
++        session = Session::create(Session::X11Session, sessionName);
++    }
++    if (!session.isValid()) {
++        qWarning() << "Unable to find session from next session request" << sessionName;
++        return std::nullopt;
++    }
++
++    return NextSessionRequest{user, session};
++}
++} // namespace
++
+ bool isTtyInUse(const QString &desiredTty)
+ {
+     if (Logind::isAvailable()) {
+@@ -127,8 +187,14 @@ Display::Display(Seat *parent)
+     });
+     connect(m_greeter, &Greeter::displayServerFailed, this, &Display::displayServerFailed);
+ 
+-    // Load autologin configuration (whether to autologin, user, session, session type)
+-    if ((PlasmaLogin::config()->autologinRelogin() || daemonApp->tryLockFirstLogin()) && !PlasmaLogin::config()->autologinUser().isEmpty()) {
++    // A next-session request overrides the persistent autologin configuration once.
++    if (const auto request = takeNextSessionRequest()) {
++        m_autologinUser = request->user;
++        m_autologinSession = request->session;
++        daemonApp->tryLockFirstLogin();
++    } else if ((PlasmaLogin::config()->autologinRelogin() || daemonApp->tryLockFirstLogin()) && !PlasmaLogin::config()->autologinUser().isEmpty()) {
++        // Load autologin configuration (whether to autologin, user, session, session type)
++        m_autologinUser = PlasmaLogin::config()->autologinUser();
+         // determine session type
+         QString autologinSession = PlasmaLogin::config()->autologinSession();
+         m_autologinSession = Session::create(Session::WaylandSession, autologinSession);
+@@ -174,7 +240,7 @@ bool Display::start()
+     // (rootful X + X11 autologin session).
+     if (m_autologinSession.isValid()) {
+         m_auth->setAutologin(true);
+-        if (startAuth(PlasmaLogin::config()->autologinUser(), QString(), m_autologinSession)) {
++        if (startAuth(m_autologinUser, QString(), m_autologinSession)) {
+             return true;
+         } else {
+             return handleAutologinFailure();
+diff --git a/src/daemon/Display.h b/src/daemon/Display.h
+index bdfa1cd35f0b..ec2af1571de1 100644
+--- a/src/daemon/Display.h
++++ b/src/daemon/Display.h
+@@ -82,6 +82,7 @@ private:
+     QString m_passPhrase;
+     QString m_sessionName;
+     QString m_reuseSessionId;
++    QString m_autologinUser;
+ 
+     Session m_autologinSession;
+ 

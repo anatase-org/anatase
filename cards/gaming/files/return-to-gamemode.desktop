@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Return to Gamemode
+Comment=Log out and start Gamemode
+Exec=/usr/bin/return-to-gamemode
+Icon=gamemode
+Terminal=false
+Categories=Game;
+OnlyShowIn=KDE;
+StartupNotify=false

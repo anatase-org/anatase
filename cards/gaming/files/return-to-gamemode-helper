@@ -1,0 +1,43 @@
+#!/bin/bash
+
+set -euo pipefail
+
+if (( $# != 0 )); then
+    echo "Usage: ${0##*/}" >&2
+    exit 2
+fi
+
+if (( EUID != 0 )); then
+    echo "This helper must run as root" >&2
+    exit 1
+fi
+
+caller_uid=${PKEXEC_UID-}
+if [[ ! $caller_uid =~ ^[0-9]+$ ]] || (( caller_uid == 0 )); then
+    echo "PKEXEC_UID does not identify a non-root user" >&2
+    exit 1
+fi
+
+passwd_entry=$(getent passwd "$caller_uid") || {
+    echo "Unable to resolve the calling user" >&2
+    exit 1
+}
+IFS=: read -r caller_name _ resolved_uid _ _ _ _ <<< "$passwd_entry"
+if [[ -z $caller_name || $resolved_uid != "$caller_uid" ]]; then
+    echo "Unable to resolve the calling user" >&2
+    exit 1
+fi
+
+runtime_dir=/run/plasmalogin
+if [[ ! -d $runtime_dir ]]; then
+    install -d -o root -g root -m 0711 "$runtime_dir"
+fi
+
+umask 077
+temporary_file=$(mktemp -p "$runtime_dir" .next-session.conf.XXXXXX)
+trap 'rm -f -- "$temporary_file"' EXIT
+
+printf '[Autologin]\nUser=%s\nSession=gamemode.desktop\n' "$caller_name" > "$temporary_file"
+mv -fT -- "$temporary_file" "$runtime_dir/next-session.conf"
+
+trap - EXIT
