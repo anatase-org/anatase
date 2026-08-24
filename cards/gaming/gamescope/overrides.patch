@@ -4,10 +4,10 @@ Date: Fri, 22 Nov 2024 01:37:48 +0100
 Subject: [NA] add dev script
 
 ---
- 0001-cstdint.patch     |  37 ++++++++++++
+ 0001-cstdint.patch     |  37 +++++++++++
  subprojects/.gitignore |   3 +
- sync.sh                | 129 +++++++++++++++++++++++++++++++++++++++++
- 3 files changed, 169 insertions(+)
+ sync.sh                | 141 +++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 181 insertions(+)
  create mode 100644 0001-cstdint.patch
  create mode 100755 sync.sh
 
@@ -68,10 +68,10 @@ index aa2345109697..00e448b6c3d8 100644
 \ No newline at end of file
 diff --git a/sync.sh b/sync.sh
 new file mode 100755
-index 000000000000..7066f2631f2d
+index 000000000000..a4105f51102b
 --- /dev/null
 +++ b/sync.sh
-@@ -0,0 +1,129 @@
+@@ -0,0 +1,141 @@
 +#!/bin/sh
 +
 +usage() {
@@ -174,6 +174,18 @@ index 000000000000..7066f2631f2d
 +    fi
 +
 +    sudo rpm-ostree usroverlay || true
++    if [ -n "$requested_user" ] || [ -z "$login_config_mounted" ]; then
++        printf '%s\n' \
++            '[Autologin]' \
++            'Relogin=true' \
++            "User=$session_user" \
++            'Session=gamemode.desktop' |
++            sudo tee /run/plasmalogin.conf >/dev/null
++        sudo chcon --reference=/etc/plasmalogin.conf /run/plasmalogin.conf
++    fi
++    if [ -z "$login_config_mounted" ]; then
++        sudo mount --bind /run/plasmalogin.conf /etc/plasmalogin.conf
++    fi
 +    sudo mv ~/gamescope /usr/bin/gamescope
 +    sudo systemctl restart plasmalogin
 +
@@ -13122,158 +13134,3144 @@ index 000000000000..1316a80455ef
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
-Date: Sat, 22 Aug 2026 00:29:17 +0200
-Subject: drm: preserve DMA-BUF lifetime when scanout import fail
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Date: Sun, 23 Aug 2026 02:01:10 +0200
+Subject: sync: add device-agnostic sync_file interop
 
-This description is descent:
-
-Some client DMA-BUFs, such as buffers rendered by an NVIDIA offload GPU, can be imported by Gamescope’s Vulkan renderer but not converted into framebuffers by the AMD KMS device.
-Previously, failure to create the DRM framebuffer also discarded the object carrying the client’s release point, potentially signalling buffer release while Vulkan was still using it.
-Introduce a non-scanout framebuffer object that preserves buffer lifetime and release synchronization while returning nullptr from EnsureImported(). This prevents hardware-plane scanout and allows Gamescope to fall back safely to Vulkan composition.
-
-TLDR: you cant scannout an nvidia buffer through an AMD GPU
 ---
- src/Backends/DRMBackend.cpp | 15 ++++++++++++++-
- 1 file changed, 14 insertions(+), 1 deletion(-)
+ src/DmabufSync.cpp   | 75 ++++++++++++++++++++++++++++++++++++++
+ src/DmabufSync.h     | 19 ++++++++++
+ src/Timeline.cpp     | 37 +++++++++++--------
+ src/Timeline.h       |  2 +
+ src/meson.build      |  1 +
+ src/rendervulkan.cpp | 87 +++++++++++++++++++++++++++++++++++++++++++-
+ src/rendervulkan.hpp | 14 +++++++
+ 7 files changed, 217 insertions(+), 18 deletions(-)
+ create mode 100644 src/DmabufSync.cpp
+ create mode 100644 src/DmabufSync.h
 
-diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index ce2c56cd2a51..e297e44d7fe7 100644
---- a/src/Backends/DRMBackend.cpp
-+++ b/src/Backends/DRMBackend.cpp
-@@ -561,6 +561,15 @@ namespace gamescope
- 	private:
- 		uint32_t m_uFbId = 0;
- 	};
+diff --git a/src/DmabufSync.cpp b/src/DmabufSync.cpp
+new file mode 100644
+index 000000000000..4849ac0d3fca
+--- /dev/null
++++ b/src/DmabufSync.cpp
+@@ -0,0 +1,75 @@
++#include "DmabufSync.h"
 +
-+	// Client DMA-BUFs can be importable by the Vulkan renderer without being
-+	// importable by the KMS device. Keep the buffer and its release point tied
-+	// to the texture lifetime, but make it explicitly ineligible for scanout.
-+	class CDRMNonScanoutFb final : public CBaseBackendFb
-+	{
-+	public:
-+		IBackendFb *EnsureImported() override { return nullptr; }
++#if defined(__linux__)
++#include <linux/dma-buf.h>
++#include <sys/ioctl.h>
++#include <sys/utsname.h>
++#endif
++
++#include <cerrno>
++#include <cstdlib>
++#include <cstring>
++
++namespace gamescope
++{
++#if defined(__linux__)
++    static uint32_t ToFlags( DmabufAccess access )
++    {
++        return access == DmabufAccess::Read ? DMA_BUF_SYNC_READ : DMA_BUF_SYNC_WRITE;
++    }
++#endif
++
++    bool DmabufSyncFileSupported()
++    {
++#if defined(__linux__)
++        struct utsname uts = {};
++        if ( uname( &uts ) != 0 || strcmp( uts.sysname, "Linux" ) != 0 )
++            return false;
++
++        char *minorString = nullptr;
++        const long major = strtol( uts.release, &minorString, 10 );
++        if ( !minorString || *minorString != '.' )
++            return false;
++
++        char *patchString = nullptr;
++        const long minor = strtol( minorString + 1, &patchString, 10 );
++        if ( !patchString || ( *patchString != '.' && *patchString != '\0' ) )
++            return false;
++
++        return major > 5 || ( major == 5 && minor >= 20 );
++#else
++        return false;
++#endif
++    }
++
++    int ExportDmabufSyncFile( int dmabufFd, DmabufAccess access )
++    {
++#if defined(__linux__)
++        dma_buf_export_sync_file data = {
++            .flags = ToFlags( access ),
++            .fd = -1,
++        };
++        if ( ioctl( dmabufFd, DMA_BUF_IOCTL_EXPORT_SYNC_FILE, &data ) != 0 )
++            return -1;
++
++        return data.fd;
++#else
++        errno = ENOTSUP;
++        return -1;
++#endif
++    }
++
++    bool ImportDmabufSyncFile( int dmabufFd, DmabufAccess access, int syncFileFd )
++    {
++#if defined(__linux__)
++        dma_buf_import_sync_file data = {
++            .flags = ToFlags( access ),
++            .fd = syncFileFd,
++        };
++        return ioctl( dmabufFd, DMA_BUF_IOCTL_IMPORT_SYNC_FILE, &data ) == 0;
++#else
++        errno = ENOTSUP;
++        return false;
++#endif
++    }
++}
+diff --git a/src/DmabufSync.h b/src/DmabufSync.h
+new file mode 100644
+index 000000000000..f1a852ce0b89
+--- /dev/null
++++ b/src/DmabufSync.h
+@@ -0,0 +1,19 @@
++#pragma once
++
++#include <cstdint>
++
++namespace gamescope
++{
++    enum class DmabufAccess : uint32_t
++    {
++        Read,
++        Write,
++    };
++
++    // DMA_BUF_IOCTL_{IMPORT,EXPORT}_SYNC_FILE were added in Linux 5.20.
++    bool DmabufSyncFileSupported();
++
++    // The returned fd is owned by the caller. Import does not consume syncFileFd.
++    int ExportDmabufSyncFile( int dmabufFd, DmabufAccess access );
++    bool ImportDmabufSyncFile( int dmabufFd, DmabufAccess access, int syncFileFd );
++}
+diff --git a/src/Timeline.cpp b/src/Timeline.cpp
+index 0abab64ffa22..4462802a6963 100644
+--- a/src/Timeline.cpp
++++ b/src/Timeline.cpp
+@@ -68,22 +68,9 @@ namespace gamescope
+         return m_pVkSemaphore;
+     }
+ 
+-    // CTimelinePoint
+-
+-    template <TimelinePointType Type>
+-    CTimelinePoint<Type>::CTimelinePoint( std::shared_ptr<CTimeline> pTimeline, uint64_t ulPoint  )
+-        : m_pTimeline{ std::move( pTimeline ) }
+-        , m_ulPoint{ ulPoint }
+-    {
+-    }
+-
+-    template <TimelinePointType Type>
+-    int32_t CTimelinePoint<Type>::CreateSyncFile()
++    int32_t CTimeline::ExportSyncFile( uint64_t ulPoint ) const
+     {
+-        if constexpr ( Type != TimelinePointType::Acquire )
+-            return -1;
+-
+-        const int32_t nDrmFd = m_pTimeline->GetDrmRenderFD();
++        const int32_t nDrmFd = GetDrmRenderFD();
+         uint32_t uBinarySyncobj = 0;
+         if ( drmSyncobjCreate( nDrmFd, 0, &uBinarySyncobj ) != 0 )
+         {
+@@ -93,7 +80,7 @@ namespace gamescope
+ 
+         int32_t nSyncFile = -1;
+         if ( drmSyncobjTransfer( nDrmFd, uBinarySyncobj, 0,
+-                m_pTimeline->GetSyncobjHandle(), m_ulPoint, 0 ) != 0 )
++                m_uSyncobjHandle, ulPoint, 0 ) != 0 )
+         {
+             s_TimelineLog.errorf_errno( "drmSyncobjTransfer failed" );
+         }
+@@ -107,6 +94,24 @@ namespace gamescope
+         return nSyncFile;
+     }
+ 
++    // CTimelinePoint
++
++    template <TimelinePointType Type>
++    CTimelinePoint<Type>::CTimelinePoint( std::shared_ptr<CTimeline> pTimeline, uint64_t ulPoint  )
++        : m_pTimeline{ std::move( pTimeline ) }
++        , m_ulPoint{ ulPoint }
++    {
++    }
++
++    template <TimelinePointType Type>
++    int32_t CTimelinePoint<Type>::CreateSyncFile()
++    {
++        if constexpr ( Type != TimelinePointType::Acquire )
++            return -1;
++
++        return m_pTimeline->ExportSyncFile( m_ulPoint );
++    }
++
+     template <TimelinePointType Type>
+     CTimelinePoint<Type>::~CTimelinePoint()
+     {
+diff --git a/src/Timeline.h b/src/Timeline.h
+index ba499d6da0a5..4146c29e03f5 100644
+--- a/src/Timeline.h
++++ b/src/Timeline.h
+@@ -45,6 +45,8 @@ namespace gamescope
+         int32_t GetSyncobjFd() const { return m_nSyncobjFd; }
+         uint32_t GetSyncobjHandle() const { return m_uSyncobjHandle; }
+ 
++        int32_t ExportSyncFile( uint64_t ulPoint ) const;
++
+         std::shared_ptr<VulkanTimelineSemaphore_t> ToVkSemaphore();
+         
+     private:
+diff --git a/src/meson.build b/src/meson.build
+index 7a723123ecc4..9a20b4ee56bb 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -242,6 +242,7 @@ src = [
+   'Utils/Process.cpp',
+   'Script/Script.cpp',
+   'BufferMemo.cpp',
++  'DmabufSync.cpp',
+   'steamcompmgr.cpp',
+   'convar.cpp',
+   'commit.cpp',
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index 6f06f14a5b20..b20fafc4e11b 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -1098,10 +1098,15 @@ bool CVulkanDevice::createScratchResources()
+ 		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
+ 		.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
+ 	};
++	VkExportSemaphoreCreateInfo exportCreateInfo = {
++		.sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO,
++		.pNext = &timelineCreateInfo,
++		.handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT,
 +	};
+ 
+ 	VkSemaphoreCreateInfo semCreateInfo = {
+ 		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+-		.pNext = &timelineCreateInfo,
++		.pNext = &exportCreateInfo,
+ 	};
+ 
+ 	res = vk.CreateSemaphore( device(), &semCreateInfo, NULL, &m_scratchTimelineSemaphore );
+@@ -1383,7 +1388,14 @@ uint64_t CVulkanDevice::submitInternal( CVulkanCmdBuffer* cmdBuffer )
+ 	{
+ 		pWaitSemaphores.push_back( dep.pTimelineSemaphore->pVkSemaphore );
+ 		ulWaitPoints.push_back( dep.ulPoint );
+-		uWaitStageFlags.push_back( VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT );
++		uWaitStageFlags.push_back( VK_PIPELINE_STAGE_ALL_COMMANDS_BIT );
++	}
++
++	for ( auto &dep : cmdBuffer->GetExternalBinaryDependencies() )
++	{
++		pWaitSemaphores.push_back( dep->pVkSemaphore );
++		ulWaitPoints.push_back( 0 );
++		uWaitStageFlags.push_back( VK_PIPELINE_STAGE_ALL_COMMANDS_BIT );
+ 	}
+ 
+ 	VkTimelineSemaphoreSubmitInfo timelineInfo = {
+@@ -1464,6 +1476,15 @@ VulkanTimelineSemaphore_t::~VulkanTimelineSemaphore_t()
+ 	}
  }
  
- uint32_t g_nDRMFormat = DRM_FORMAT_INVALID;
-@@ -4048,7 +4057,11 @@ namespace gamescope
- 
- 		virtual OwningRc<IBackendFb> ImportDmabufToBackend( wlr_dmabuf_attributes *pDmaBuf ) override
- 		{
--			return drm_fbid_from_dmabuf( &g_DRM, pDmaBuf );
-+			OwningRc<IBackendFb> pFb = drm_fbid_from_dmabuf( &g_DRM, pDmaBuf );
-+			if ( !pFb )
-+				pFb = new CDRMNonScanoutFb;
++VulkanBinarySemaphore_t::~VulkanBinarySemaphore_t()
++{
++	if ( pVkSemaphore != VK_NULL_HANDLE )
++	{
++		pDevice->vk.DestroySemaphore( pDevice->device(), pVkSemaphore, nullptr );
++		pVkSemaphore = VK_NULL_HANDLE;
++	}
++}
 +
-+			return pFb;
- 		}
+ int VulkanTimelineSemaphore_t::GetFd() const
+ {
+ 	const VkSemaphoreGetFdInfoKHR semaphoreGetInfo =
+@@ -1569,11 +1590,72 @@ std::shared_ptr<VulkanTimelineSemaphore_t> CVulkanDevice::ImportTimelineSemaphor
+ 	return pSemaphore;
+ }
  
- 		virtual bool UsesBackendAllocatedScanout() const override
++std::shared_ptr<VulkanBinarySemaphore_t> CVulkanDevice::ImportSyncFile( int32_t nSyncFile )
++{
++	if ( nSyncFile < 0 )
++		return nullptr;
++
++	std::shared_ptr<VulkanBinarySemaphore_t> pSemaphore = std::make_shared<VulkanBinarySemaphore_t>();
++	pSemaphore->pDevice = this;
++
++	const VkSemaphoreCreateInfo createInfo = {
++		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
++	};
++
++	VkResult res = vk.CreateSemaphore( m_device, &createInfo, nullptr, &pSemaphore->pVkSemaphore );
++	if ( res != VK_SUCCESS )
++	{
++		close( nSyncFile );
++		vk_errorf( res, "vkCreateSemaphore failed" );
++		return nullptr;
++	}
++
++	const VkImportSemaphoreFdInfoKHR importInfo = {
++		.sType = VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_FD_INFO_KHR,
++		.semaphore = pSemaphore->pVkSemaphore,
++		.flags = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT,
++		.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT,
++		.fd = nSyncFile,
++	};
++	res = vk.ImportSemaphoreFdKHR( m_device, &importInfo );
++	if ( res != VK_SUCCESS )
++	{
++		close( nSyncFile );
++		vk_errorf( res, "vkImportSemaphoreFdKHR(sync_file) failed" );
++		return nullptr;
++	}
++
++	return pSemaphore;
++}
++
++int CVulkanDevice::ExportSubmissionTimelineFd() const
++{
++	const VkSemaphoreGetFdInfoKHR getInfo = {
++		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR,
++		.semaphore = m_scratchTimelineSemaphore,
++		.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT,
++	};
++
++	int fd = -1;
++	const VkResult res = vk.GetSemaphoreFdKHR( m_device, &getInfo, &fd );
++	if ( res != VK_SUCCESS )
++	{
++		vk_errorf( res, "vkGetSemaphoreFdKHR(submission timeline) failed" );
++		return -1;
++	}
++	return fd;
++}
++
+ void CVulkanCmdBuffer::AddDependency( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint )
+ {
+ 	m_ExternalDependencies.emplace_back( std::move( pTimelineSemaphore ), ulPoint );
+ }
+ 
++void CVulkanCmdBuffer::AddBinaryDependency( std::shared_ptr<VulkanBinarySemaphore_t> pSemaphore )
++{
++	m_ExternalBinaryDependencies.emplace_back( std::move( pSemaphore ) );
++}
++
+ void CVulkanCmdBuffer::AddSignal( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint )
+ {
+ 	m_ExternalSignals.emplace_back( std::move( pTimelineSemaphore ), ulPoint );
+@@ -1647,6 +1729,7 @@ void CVulkanCmdBuffer::reset()
+ 	m_textureState.clear();
+ 
+ 	m_ExternalDependencies.clear();
++	m_ExternalBinaryDependencies.clear();
+ 	m_ExternalSignals.clear();
+ }
+ 
+diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
+index d6809d2757ec..90c2fc351b25 100644
+--- a/src/rendervulkan.hpp
++++ b/src/rendervulkan.hpp
+@@ -844,6 +844,14 @@ struct VulkanTimelineSemaphore_t
+ 	int GetFd() const;
+ };
+ 
++struct VulkanBinarySemaphore_t
++{
++	~VulkanBinarySemaphore_t();
++
++	CVulkanDevice *pDevice = nullptr;
++	VkSemaphore pVkSemaphore = VK_NULL_HANDLE;
++};
++
+ struct VulkanTimelinePoint_t
+ {
+ 	std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore;
+@@ -870,6 +878,9 @@ public:
+ 
+ 	std::shared_ptr<VulkanTimelineSemaphore_t> CreateTimelineSemaphore( uint64_t ulStartingPoint, bool bShared = false );
+ 	std::shared_ptr<VulkanTimelineSemaphore_t> ImportTimelineSemaphore( gamescope::CTimeline *pTimeline );
++	// Consumes nSyncFile regardless of success.
++	std::shared_ptr<VulkanBinarySemaphore_t> ImportSyncFile( int32_t nSyncFile );
++	int ExportSubmissionTimelineFd() const;
+ 
+ 	static const uint32_t upload_buffer_size = 1920 * 1080 * 4;
+ 
+@@ -1048,9 +1059,11 @@ public:
+ 	uint32_t queueFamily() { return m_queueFamily; }
+ 
+ 	void AddDependency( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint );
++	void AddBinaryDependency( std::shared_ptr<VulkanBinarySemaphore_t> pSemaphore );
+ 	void AddSignal( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint );
+ 
+ 	const std::vector<VulkanTimelinePoint_t> &GetExternalDependencies() const { return m_ExternalDependencies; }
++	const std::vector<std::shared_ptr<VulkanBinarySemaphore_t>> &GetExternalBinaryDependencies() const { return m_ExternalBinaryDependencies; }
+ 	const std::vector<VulkanTimelinePoint_t> &GetExternalSignals() const { return m_ExternalSignals; }
+ 
+ private:
+@@ -1074,6 +1087,7 @@ private:
+ 	std::array<CVulkanTexture *, VKR_LUT3D_COUNT> m_lut3D;
+ 
+ 	std::vector<VulkanTimelinePoint_t> m_ExternalDependencies;
++	std::vector<std::shared_ptr<VulkanBinarySemaphore_t>> m_ExternalBinaryDependencies;
+ 	std::vector<VulkanTimelinePoint_t> m_ExternalSignals;
+ 	std::vector<VkDescriptorSet> m_descriptorSets;
+ 
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
-Date: Sat, 22 Aug 2026 01:17:21 +0200
-Subject: force explicit sync on removable gpu
+Date: Sun, 23 Aug 2026 02:07:36 +0200
+Subject: sync: track DMA-BUF synchronization per commit
 
-goes easy on the PCIe link, otherwise we might cause crashes
 ---
- src/Backends/DRMBackend.cpp |  5 ++++-
- src/wlserver.cpp            | 26 +++++++++++++++++++++++++-
- src/wlserver.hpp            |  2 +-
- 3 files changed, 30 insertions(+), 3 deletions(-)
+ src/Backends/DRMBackend.cpp     | 17 +++++++++
+ src/Backends/WaylandBackend.cpp | 12 +++++--
+ src/CommitBufferSync.cpp        | 55 ++++++++++++++++++++++++++++
+ src/CommitBufferSync.h          | 38 ++++++++++++++++++++
+ src/backend.cpp                 | 63 ---------------------------------
+ src/backend.h                   | 13 -------
+ src/commit.cpp                  |  1 -
+ src/commit.h                    |  8 ++++-
+ src/meson.build                 |  1 +
+ src/rendervulkan.cpp            | 11 ++++++
+ src/rendervulkan.hpp            |  8 +++++
+ src/steamcompmgr.cpp            | 26 +++++++-------
+ 12 files changed, 160 insertions(+), 93 deletions(-)
+ create mode 100644 src/CommitBufferSync.cpp
+ create mode 100644 src/CommitBufferSync.h
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index e297e44d7fe7..998478fb1168 100644
+index ce2c56cd2a51..c9d6e69849fc 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
-@@ -3583,12 +3583,15 @@ namespace gamescope
+@@ -28,6 +28,7 @@
+ #include <vector>
+ 
+ #include "backend.h"
++#include "CommitBufferSync.h"
+ #include "color_helpers.h"
+ #include "Utils/Defer.h"
+ #include "drm_include.h"
+@@ -148,16 +149,19 @@ struct drm_t {
+ 	// FBs in the atomic request, but not yet submitted to KMS
+ 	// Accessed only on req thread
+ 	std::vector<gamescope::Rc<gamescope::IBackendFb>> m_FbIdsInRequest;
++	std::vector<std::shared_ptr<gamescope::CCommitBufferSync>> m_BufferUsesInRequest;
+ 	std::vector<int> m_InFenceFdsInRequest;
+ 
+ 	// FBs currently queued to go on screen.
+ 	// May be accessed by page flip handler thread and req thread, thus mutex.
+ 	std::mutex m_QueuedFbIdsMutex;
+ 	std::vector<gamescope::Rc<gamescope::IBackendFb>> m_QueuedFbIds;
++	std::vector<std::shared_ptr<gamescope::CCommitBufferSync>> m_QueuedBufferUses;
+ 	// FBs currently on screen.
+ 	// Accessed only on page flip handler thread.
+ 	std::mutex m_mutVisibleFbIds;
+ 	std::vector<gamescope::Rc<gamescope::IBackendFb>> m_VisibleFbIds;
++	std::vector<std::shared_ptr<gamescope::CCommitBufferSync>> m_VisibleBufferUses;
+ 
+ 	std::atomic < uint32_t > uPendingFlipCount = { 0 };
+ 
+@@ -793,6 +797,8 @@ static void page_flip_handler(int fd, unsigned int frame, unsigned int sec, unsi
+ 		// Swap and clear from queue -> visible to avoid allocations.
+ 		g_DRM.m_VisibleFbIds.swap( g_DRM.m_QueuedFbIds );
+ 		g_DRM.m_QueuedFbIds.clear();
++		g_DRM.m_VisibleBufferUses.swap( g_DRM.m_QueuedBufferUses );
++		g_DRM.m_QueuedBufferUses.clear();
+ 	}
+ 
+ 	g_DRM.uPendingFlipCount--;
+@@ -1620,14 +1626,17 @@ void finish_drm(struct drm_t *drm)
+ 	wlr_drm_format_set_finish( &drm->formats );
+ 	wlr_drm_format_set_finish( &drm->primary_formats );
+ 	drm->m_FbIdsInRequest.clear();
++	drm->m_BufferUsesInRequest.clear();
+ 	drm_close_in_fences( drm );
+ 	{
+ 		std::unique_lock lock( drm->m_QueuedFbIdsMutex );
+ 		drm->m_QueuedFbIds.clear();
++		drm->m_QueuedBufferUses.clear();
+ 	}
+ 	{
+ 		std::unique_lock lock( drm->m_mutVisibleFbIds );
+ 		drm->m_VisibleFbIds.clear();
++		drm->m_VisibleBufferUses.clear();
+ 	}
+ 	drm->sdr_static_metadata = nullptr;
+ 	drm->current = drm_t::drm_state_t{};
+@@ -2698,6 +2707,8 @@ drm_prepare_liftoff( struct drm_t *drm, const struct FrameInfo_t *frameInfo, boo
+ 			liftoff_layer_set_property( drm->lo_layers[ i ], "FB_ID", pDrmFb->GetFbId());
+ 			liftoff_layer_set_property( drm->lo_layers[ i ], "IN_FENCE_FD", nFence );
+ 			drm->m_FbIdsInRequest.emplace_back( pDrmFb );
++			if ( pLayer->bufferSync )
++				drm->m_BufferUsesInRequest.emplace_back( pLayer->bufferSync );
+ 
+ 			liftoff_layer_set_property( drm->lo_layers[ i ], "zpos", entry.layerState[i].zpos );
+ 			liftoff_layer_set_property( drm->lo_layers[ i ], "alpha", frameInfo->layers[ i ].opacity * 0xffff);
+@@ -2999,6 +3010,7 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
+ 		drm->needs_modeset = true;
+ 
+ 	drm->m_FbIdsInRequest.clear();
++	drm->m_BufferUsesInRequest.clear();
+ 	drm_close_in_fences( drm );
+ 
+ 	bool needs_modeset = drm->needs_modeset.exchange(false);
+@@ -3196,6 +3208,7 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
+ 		drm->req = nullptr;
+ 
+ 		drm->m_FbIdsInRequest.clear();
++		drm->m_BufferUsesInRequest.clear();
+ 		drm_close_in_fences( drm );
+ 
+ 		if ( needs_modeset )
+@@ -4270,6 +4283,7 @@ namespace gamescope
+ 				// Swap over request FDs -> Queue
+ 				std::unique_lock lock( drm->m_QueuedFbIdsMutex );
+ 				drm->m_QueuedFbIds.swap( drm->m_FbIdsInRequest );
++				drm->m_QueuedBufferUses.swap( drm->m_BufferUsesInRequest );
  			}
  
- 			const auto connector_priorities = parse_connector_priorities( g_sOutputName );
--			int kms_fd = wlsession_open_kms( nullptr, get_best_connector_priority_for_fd, &connector_priorities );
-+			bool has_external_gpu = false;
-+			int kms_fd = wlsession_open_kms( nullptr, get_best_connector_priority_for_fd, &connector_priorities, &has_external_gpu );
- 			if ( kms_fd < 0 )
+ 			GetCurrentConnector()->PresentationFeedback().m_uQueuedPresents++;
+@@ -4304,9 +4318,11 @@ namespace gamescope
+ 				{
+ 					std::unique_lock lock( drm->m_QueuedFbIdsMutex );
+ 					drm->m_QueuedFbIds.swap( drm->m_FbIdsInRequest );
++					drm->m_QueuedBufferUses.swap( drm->m_BufferUsesInRequest );
+ 				}
+ 				// Clear our refs.
+ 				drm->m_FbIdsInRequest.clear();
++				drm->m_BufferUsesInRequest.clear();
+ 
+ 				GetCurrentConnector()->PresentationFeedback().m_uQueuedPresents--;
+ 
+@@ -4318,6 +4334,7 @@ namespace gamescope
+ 				// Our request went through!
+ 				// Clear what we swapped with (what was previously queued)
+ 				drm->m_FbIdsInRequest.clear();
++				drm->m_BufferUsesInRequest.clear();
+ 
+ 				drm->current = drm->pending;
+ 
+diff --git a/src/Backends/WaylandBackend.cpp b/src/Backends/WaylandBackend.cpp
+index abdf7820b0f4..90b77480693c 100644
+--- a/src/Backends/WaylandBackend.cpp
++++ b/src/Backends/WaylandBackend.cpp
+@@ -1,4 +1,5 @@
+ #include "backend.h"
++#include "CommitBufferSync.h"
+ #include "rendervulkan.hpp"
+ #include "wlserver.hpp"
+ #include "vblankmanager.hpp"
+@@ -481,7 +482,7 @@ namespace gamescope
+         CWaylandFb( CWaylandBackend *pBackend, wl_buffer *pHostBuffer );
+         ~CWaylandFb();
+ 
+-        void OnCompositorAcquire();
++        void OnCompositorAcquire( std::shared_ptr<CCommitBufferSync> pBufferSync = nullptr );
+         void OnCompositorRelease();
+ 
+         wl_buffer *GetHostBuffer() const { return m_pHostBuffer; }
+@@ -495,6 +496,7 @@ namespace gamescope
+         wl_buffer *m_pHostBuffer = nullptr;
+         wlr_buffer *m_pClientBuffer = nullptr;
+         bool m_bCompositorAcquired = false;
++        std::vector<std::shared_ptr<CCommitBufferSync>> m_BufferUses;
+     };
+     const wl_buffer_listener CWaylandFb::s_BufferListener =
+     {
+@@ -934,8 +936,11 @@ namespace gamescope
+         m_pHostBuffer = nullptr;
+     }
+ 
+-    void CWaylandFb::OnCompositorAcquire()
++    void CWaylandFb::OnCompositorAcquire( std::shared_ptr<CCommitBufferSync> pBufferSync )
+     {
++        if ( pBufferSync && std::find( m_BufferUses.begin(), m_BufferUses.end(), pBufferSync ) == m_BufferUses.end() )
++            m_BufferUses.emplace_back( std::move( pBufferSync ) );
++
+         // If the compositor has acquired us, track that
+         // and increment the ref count.
+         if ( !m_bCompositorAcquired )
+@@ -953,6 +958,7 @@ namespace gamescope
+         if ( m_bCompositorAcquired )
+         {
+             m_bCompositorAcquired = false;
++            m_BufferUses.clear();
+             DecRef();
+         }
+         else
+@@ -1633,7 +1639,7 @@ namespace gamescope
+ 
+         if ( pBuffer )
+         {
+-            pWaylandFb->OnCompositorAcquire();
++            pWaylandFb->OnCompositorAcquire( pLayer->bufferSync );
+ 
+             Present(
+                 ClipPlane( WaylandPlaneState
+diff --git a/src/CommitBufferSync.cpp b/src/CommitBufferSync.cpp
+new file mode 100644
+index 000000000000..9157297528a7
+--- /dev/null
++++ b/src/CommitBufferSync.cpp
+@@ -0,0 +1,55 @@
++#include "CommitBufferSync.h"
++
++#include "wlserver.hpp"
++
++#include "wlr_begin.hpp"
++#include <wlr/render/dmabuf.h>
++#include <wlr/types/wlr_buffer.h>
++#include "wlr_end.hpp"
++
++#include <unistd.h>
++
++namespace gamescope
++{
++    CCommitBufferSync::CCommitBufferSync( wlr_buffer *pBuffer,
++        std::shared_ptr<CAcquireTimelinePoint> pAcquirePoint,
++        std::shared_ptr<CReleaseTimelinePoint> pReleasePoint )
++        : m_pBuffer{ pBuffer }
++        , m_pAcquirePoint{ std::move( pAcquirePoint ) }
++        , m_pReleasePoint{ std::move( pReleasePoint ) }
++    {
++        wlr_dmabuf_attributes dmabuf = {};
++        if ( !wlr_buffer_get_dmabuf( pBuffer, &dmabuf ) )
++            return;
++
++        m_bDmabuf = true;
++
++        m_DmabufFds.reserve( dmabuf.n_planes );
++        for ( int i = 0; i < dmabuf.n_planes; i++ )
++        {
++            const int fd = dup( dmabuf.fd[i] );
++            if ( fd < 0 )
++                break;
++            m_DmabufFds.push_back( fd );
++        }
++    }
++
++    CCommitBufferSync::~CCommitBufferSync()
++    {
++        for ( int fd : m_DmabufFds )
++            close( fd );
++        m_DmabufFds.clear();
++
++        // Dropping an explicit release point signals it. Do that before the
++        // wl_buffer release generated by the final unlock.
++        m_pReleasePoint = nullptr;
++
++        if ( m_pBuffer )
++        {
++            wlserver_lock();
++            wlr_buffer_unlock( m_pBuffer );
++            wlserver_unlock();
++            m_pBuffer = nullptr;
++        }
++    }
++}
+diff --git a/src/CommitBufferSync.h b/src/CommitBufferSync.h
+new file mode 100644
+index 000000000000..6af01b579f6b
+--- /dev/null
++++ b/src/CommitBufferSync.h
+@@ -0,0 +1,38 @@
++#pragma once
++
++#include "Timeline.h"
++
++#include <memory>
++#include <vector>
++
++struct wlr_buffer;
++
++namespace gamescope
++{
++    // Synchronization and Wayland lifetime belong to one surface commit, not
++    // to the memoized Vulkan texture or backend framebuffer shared by commits.
++    class CCommitBufferSync final
++    {
++    public:
++        CCommitBufferSync( wlr_buffer *pBuffer,
++            std::shared_ptr<CAcquireTimelinePoint> pAcquirePoint,
++            std::shared_ptr<CReleaseTimelinePoint> pReleasePoint );
++        ~CCommitBufferSync();
++
++        CCommitBufferSync( const CCommitBufferSync & ) = delete;
++        CCommitBufferSync &operator=( const CCommitBufferSync & ) = delete;
++
++        wlr_buffer *GetBuffer() const { return m_pBuffer; }
++        bool IsDmabuf() const { return m_bDmabuf; }
++        const std::vector<int> &GetDmabufFds() const { return m_DmabufFds; }
++        const std::shared_ptr<CAcquireTimelinePoint> &GetAcquirePoint() const { return m_pAcquirePoint; }
++        const std::shared_ptr<CReleaseTimelinePoint> &GetReleasePoint() const { return m_pReleasePoint; }
++
++    private:
++        wlr_buffer *m_pBuffer = nullptr;
++        bool m_bDmabuf = false;
++        std::vector<int> m_DmabufFds;
++        std::shared_ptr<CAcquireTimelinePoint> m_pAcquirePoint;
++        std::shared_ptr<CReleaseTimelinePoint> m_pReleasePoint;
++    };
++}
+diff --git a/src/backend.cpp b/src/backend.cpp
+index a6deb0edda73..1de8e08687da 100644
+--- a/src/backend.cpp
++++ b/src/backend.cpp
+@@ -77,69 +77,6 @@ namespace gamescope
+         //assert( !HasLiveReferences() );
+     }
+ 
+-    uint32_t CBaseBackendFb::IncRef()
+-    {
+-        uint32_t uRefCount = IBackendFb::IncRef();
+-        if ( m_pClientBuffer && !uRefCount )
+-        {
+-            wlserver_lock();
+-            wlr_buffer_lock( m_pClientBuffer );
+-            wlserver_unlock( false );
+-        }
+-        return uRefCount;
+-    }
+-    uint32_t CBaseBackendFb::DecRef()
+-    {
+-        wlr_buffer *pClientBuffer = m_pClientBuffer;
+-
+-        std::shared_ptr<CReleaseTimelinePoint> pReleasePoint = std::move( m_pReleasePoint );
+-        m_pReleasePoint = nullptr;
+-
+-        uint32_t uRefCount = IBackendFb::DecRef();
+-        if ( uRefCount )
+-        {
+-            if ( pReleasePoint )
+-                m_pReleasePoint = std::move( pReleasePoint );
+-        }
+-        else if ( pClientBuffer )
+-        {
+-            wlserver_lock();
+-            wlr_buffer_unlock( pClientBuffer );
+-            wlserver_unlock();
+-        }
+-        return uRefCount;
+-    }
+-
+-    void CBaseBackendFb::SetBuffer( wlr_buffer *pClientBuffer )
+-    {
+-        if ( m_pClientBuffer == pClientBuffer )
+-            return;
+-
+-        assert( m_pClientBuffer == nullptr );
+-        m_pClientBuffer = pClientBuffer;
+-        if ( GetRefCount() )
+-        {
+-            wlserver_lock();
+-            wlr_buffer_lock( m_pClientBuffer );
+-            wlserver_unlock( false );
+-        }
+-
+-        m_pReleasePoint = nullptr;
+-    }
+-
+-    void CBaseBackendFb::SetReleasePoint( std::shared_ptr<CReleaseTimelinePoint> pReleasePoint )
+-    {
+-        m_pReleasePoint = pReleasePoint;
+-
+-        if ( m_pClientBuffer && GetRefCount() )
+-        {
+-            wlserver_lock();
+-            wlr_buffer_unlock( m_pClientBuffer );
+-            wlserver_unlock();
+-            m_pClientBuffer = nullptr;
+-        }
+-    }
+-
+     /////////////////////////
+     // CBaseBackendConnector
+     /////////////////////////
+diff --git a/src/backend.h b/src/backend.h
+index 7ffdf9b3f5d2..5242ed2f4931 100644
+--- a/src/backend.h
++++ b/src/backend.h
+@@ -275,9 +275,6 @@ namespace gamescope
+     class IBackendFb : public IRcObject
+     {
+     public:
+-        virtual void SetBuffer( wlr_buffer *pClientBuffer ) = 0;
+-        virtual void SetReleasePoint( std::shared_ptr<CReleaseTimelinePoint> pReleasePoint ) = 0;
+-
+         virtual IBackendFb *EnsureImported() = 0;
+     };
+ 
+@@ -293,17 +290,7 @@ namespace gamescope
+         CBaseBackendFb();
+         virtual ~CBaseBackendFb();
+ 
+-        uint32_t IncRef() override;
+-        uint32_t DecRef() override;
+-
+-        void SetBuffer( wlr_buffer *pClientBuffer ) override;
+-        void SetReleasePoint( std::shared_ptr<CReleaseTimelinePoint> pReleasePoint ) override;
+-
+         virtual IBackendFb *EnsureImported() override { return this; };
+-
+-    private:
+-        wlr_buffer *m_pClientBuffer = nullptr;
+-        std::shared_ptr<CReleaseTimelinePoint> m_pReleasePoint;
+     };
+ 
+     class IBackend
+diff --git a/src/commit.cpp b/src/commit.cpp
+index b3fcaca24534..5b6d1c524c58 100644
+--- a/src/commit.cpp
++++ b/src/commit.cpp
+@@ -28,7 +28,6 @@ commit_t::~commit_t()
+         wlserver_presentation_feedback_discard(surf, presentation_feedbacks);
+         // presentation_feedbacks cleared by wlserver_presentation_feedback_discard
+     }
+-    wlr_buffer_unlock( buf );
+     wlserver_unlock();
+ }
+ 
+diff --git a/src/commit.h b/src/commit.h
+index 0f098a93132f..4941693157c4 100644
+--- a/src/commit.h
++++ b/src/commit.h
+@@ -7,6 +7,11 @@
+ 
+ class CVulkanTexture;
+ 
++namespace gamescope
++{
++	class CCommitBufferSync;
++}
++
+ struct UpscaledTexture_t
+ {
+ 	GamescopeUpscaleFilter eFilter{};
+@@ -39,6 +44,7 @@ struct commit_t final : public gamescope::RcObject, public gamescope::IWaitable,
+ 	bool ShouldPreemptivelyUpscale();
+ 
+ 	struct wlr_buffer *buf = nullptr;
++	std::shared_ptr<gamescope::CCommitBufferSync> bufferSync;
+ 	gamescope::Rc<CVulkanTexture> vulkanTex;
+ 	std::optional<UpscaledTexture_t> upscaledTexture;
+ 
+@@ -80,4 +86,4 @@ struct commit_t final : public gamescope::RcObject, public gamescope::IWaitable,
+ 	int m_nCommitFence = -1;
+ 	bool m_bMangoNudge = false;
+ 	CommitDoneList_t *m_pDoneCommits = nullptr; // I hate this
+-};
+\ No newline at end of file
++};
+diff --git a/src/meson.build b/src/meson.build
+index 9a20b4ee56bb..5992849ede52 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -242,6 +242,7 @@ src = [
+   'Utils/Process.cpp',
+   'Script/Script.cpp',
+   'BufferMemo.cpp',
++  'CommitBufferSync.cpp',
+   'DmabufSync.cpp',
+   'steamcompmgr.cpp',
+   'convar.cpp',
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index b20fafc4e11b..8de8b0ad3a5e 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -34,6 +34,7 @@
+ #include "wlr_end.hpp"
+ 
+ #include "rendervulkan.hpp"
++#include "CommitBufferSync.h"
+ #include "main.hpp"
+ #include "steamcompmgr.hpp"
+ #include "frame_generation_config.hpp"
+@@ -1656,6 +1657,13 @@ void CVulkanCmdBuffer::AddBinaryDependency( std::shared_ptr<VulkanBinarySemaphor
+ 	m_ExternalBinaryDependencies.emplace_back( std::move( pSemaphore ) );
+ }
+ 
++void CVulkanCmdBuffer::AddBufferUse( std::shared_ptr<gamescope::CCommitBufferSync> pBufferSync )
++{
++	if ( !pBufferSync || std::find( m_BufferUses.begin(), m_BufferUses.end(), pBufferSync ) != m_BufferUses.end() )
++		return;
++	m_BufferUses.emplace_back( std::move( pBufferSync ) );
++}
++
+ void CVulkanCmdBuffer::AddSignal( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint )
+ {
+ 	m_ExternalSignals.emplace_back( std::move( pTimelineSemaphore ), ulPoint );
+@@ -1730,6 +1738,7 @@ void CVulkanCmdBuffer::reset()
+ 
+ 	m_ExternalDependencies.clear();
+ 	m_ExternalBinaryDependencies.clear();
++	m_BufferUses.clear();
+ 	m_ExternalSignals.clear();
+ }
+ 
+@@ -4488,6 +4497,8 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
+ 		compositeImage = partial ? g_output.outputImagesPartialOverlay[ g_output.nOutImage ] : g_output.outputImages[ g_output.nOutImage ];
+ 
+ 	auto cmdBuffer = pInCommandBuffer ? std::move( pInCommandBuffer ) : g_device.commandBuffer();
++	for ( int i = 0; i < frameInfo->layerCount; i++ )
++		cmdBuffer->AddBufferUse( frameInfo->layers[i].bufferSync );
+ 
+ 	for (uint32_t i = 0; i < EOTF_Count; i++)
+ 		cmdBuffer->bindColorMgmtLuts(i, frameInfo->shaperLut[i], frameInfo->lut3D[i]);
+diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
+index 90c2fc351b25..993745c56304 100644
+--- a/src/rendervulkan.hpp
++++ b/src/rendervulkan.hpp
+@@ -22,6 +22,11 @@
+ 
+ class CVulkanCmdBuffer;
+ 
++namespace gamescope
++{
++	class CCommitBufferSync;
++}
++
+ // 1: Fade Plane (Fade outs between switching focus)
+ // 2: Video Underlay (The actual video)
+ // 3: Video Streaming UI (Game, App)
+@@ -319,6 +324,7 @@ struct FrameInfo_t
+ 		std::shared_ptr<gamescope::BackendBlob> ctm;
+ 		std::shared_ptr<gamescope::BackendBlob> hdr_metadata_blob;
+ 		std::shared_ptr<gamescope::CAcquireTimelinePoint> acquirePoint;
++		std::shared_ptr<gamescope::CCommitBufferSync> bufferSync;
+ 
+ 		GamescopeAppTextureColorspace colorspace;
+ 
+@@ -1060,6 +1066,7 @@ public:
+ 
+ 	void AddDependency( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint );
+ 	void AddBinaryDependency( std::shared_ptr<VulkanBinarySemaphore_t> pSemaphore );
++	void AddBufferUse( std::shared_ptr<gamescope::CCommitBufferSync> pBufferSync );
+ 	void AddSignal( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint );
+ 
+ 	const std::vector<VulkanTimelinePoint_t> &GetExternalDependencies() const { return m_ExternalDependencies; }
+@@ -1088,6 +1095,7 @@ private:
+ 
+ 	std::vector<VulkanTimelinePoint_t> m_ExternalDependencies;
+ 	std::vector<std::shared_ptr<VulkanBinarySemaphore_t>> m_ExternalBinaryDependencies;
++	std::vector<std::shared_ptr<gamescope::CCommitBufferSync>> m_BufferUses;
+ 	std::vector<VulkanTimelinePoint_t> m_ExternalSignals;
+ 	std::vector<VkDescriptorSet> m_descriptorSets;
+ 
+diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
+index 10af66f6f439..e607fb165338 100644
+--- a/src/steamcompmgr.cpp
++++ b/src/steamcompmgr.cpp
+@@ -97,6 +97,7 @@
+ #include "commit.h"
+ #include "reshade_effect_manager.hpp"
+ #include "BufferMemo.h"
++#include "CommitBufferSync.h"
+ #include "Utils/Process.h"
+ #include "Utils/Algorithm.h"
+ 
+@@ -1413,6 +1414,7 @@ import_commit (
+ 	steamcompmgr_win_t *w,
+ 	struct wlr_surface *surf,
+ 	struct wlr_buffer *buf,
++	std::shared_ptr<gamescope::CCommitBufferSync> bufferSync,
+ 	bool async,
+ 	std::shared_ptr<wlserver_vk_swapchain_feedback> swapchain_feedback,
+ 	std::vector<struct wl_resource*> presentation_feedbacks,
+@@ -1425,6 +1427,7 @@ import_commit (
+ 	commit->win_seq = w->seq;
+ 	commit->surf = surf;
+ 	commit->buf = buf;
++	commit->bufferSync = std::move( bufferSync );
+ 	commit->async = async;
+ 	commit->fifo = fifo;
+ 	commit->is_steam = window_is_steam( w );
+@@ -2076,6 +2079,7 @@ paint_cached_base_layer(const gamescope::Rc<commit_t>& commit, const BaseLayerIn
+ 	if (layer->colorspace == GAMESCOPE_APP_TEXTURE_COLORSPACE_SCRGB)
+ 		layer->ctm = s_scRGB709To2020Matrix;
+ 	layer->tex = commit->vulkanTex;
++	layer->bufferSync = commit->bufferSync;
+ 
+ 	layer->filter = base.filter;
+ 	layer->eAlphaBlendingMode = base.eAlphaBlendingMode;
+@@ -2145,6 +2149,7 @@ paint_window_commit( const gamescope::Rc<commit_t> &lastCommit, steamcompmgr_win
+ 	layer->filter = ( flags & PaintWindowFlag::NoFilter ) ? GamescopeUpscaleFilter::LINEAR : g_upscaleFilter;
+ 
+ 	layer->tex = lastCommit->GetTexture( layer->filter, g_upscaleScaler, layer->colorspace );
++	layer->bufferSync = lastCommit->bufferSync;
+ 
+ 	if ( flags & PaintWindowFlag::NoScale )
+ 	{
+@@ -7408,10 +7413,14 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
+ 		return;
+ 	}
+ 
++	std::shared_ptr<gamescope::CCommitBufferSync> bufferSync = std::make_shared<gamescope::CCommitBufferSync>(
++		buf, std::move( reslistentry.pAcquirePoint ), std::move( reslistentry.pReleasePoint ) );
++
+ 	gamescope::Rc<commit_t> newCommit = import_commit(
+ 		w,
+ 		reslistentry.surf,
+ 		buf,
++		bufferSync,
+ 		reslistentry.async,
+ 		std::move(reslistentry.feedback),
+ 		std::move(reslistentry.presentation_feedbacks),
+@@ -7435,7 +7444,8 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
+ 		// work. Preemptive scaling reverses that GPU order and consumes most of
+ 		// the midpoint's output slot, so let the queued real slot run its single
+ 		// FSR chain after generated-frame synthesis instead.
+-		bool bValidPreemptiveScale = reslistentry.pAcquirePoint && pCurrentFocus &&
++		const std::shared_ptr<gamescope::CAcquireTimelinePoint> &pAcquirePoint = bufferSync->GetAcquirePoint();
++		bool bValidPreemptiveScale = pAcquirePoint && pCurrentFocus &&
+ 			w == pCurrentFocus->focusWindow && cv_upscale_preemptive &&
+ 			!steamcompmgr_frame_generation_enabled_for_focus();
+ 		bool bPreemptiveUpscale = bValidPreemptiveScale && newCommit->ShouldPreemptivelyUpscale();
+@@ -7472,7 +7482,7 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
+ 
+ 				std::unique_ptr<CVulkanCmdBuffer> pCommandBuffer = g_device.commandBuffer();
+ 				
+-				pCommandBuffer->AddDependency( reslistentry.pAcquirePoint->GetTimeline()->ToVkSemaphore(), reslistentry.pAcquirePoint->GetPoint() );
++				pCommandBuffer->AddDependency( pAcquirePoint->GetTimeline()->ToVkSemaphore(), pAcquirePoint->GetPoint() );
+ 				pCommandBuffer->AddSignal( pTempImage->pReleaseTimeline->ToVkSemaphore(), ulNextReleasePoint );
+ 
+ 				static std::optional<uint64_t> s_ulLastPreemptiveUpscaleSeqNo;
+@@ -7520,20 +7530,12 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
+ 				ClearUpscaleImages();
+ 			}
+ 
+-			if ( reslistentry.pAcquirePoint )
++			if ( pAcquirePoint )
  			{
- 				fprintf( stderr, "Failed to select KMS device\n" );
- 				return false;
+-				eventFd = reslistentry.pAcquirePoint->CreateEventFd();
++				eventFd = pAcquirePoint->CreateEventFd();
  			}
-+			if ( has_external_gpu )
-+				cv_drm_debug_disable_explicit_sync = true;
+ 		}
  
- 			struct stat fd_stat = {};
- 			if ( fstat( kms_fd, &fd_stat ) != 0 )
+-		if ( gamescope::IBackendFb *pBackendFb = newCommit->vulkanTex->GetBackendFb() )
+-		{
+-			if ( reslistentry.pReleasePoint )
+-				pBackendFb->SetReleasePoint( reslistentry.pReleasePoint );
+-			else
+-				pBackendFb->SetBuffer( buf );
+-		}
+-
+ 		if ( eventFd != gamescope::CAcquireTimelinePoint::k_InvalidEvent )
+ 		{
+ 			fence = eventFd.first;
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sun, 23 Aug 2026 02:12:20 +0200
+Subject: sync: submit DMA-BUF acquires to consumers
+
+---
+ src/Backends/DRMBackend.cpp | 10 ++++++++-
+ src/CommitBufferSync.cpp    | 45 +++++++++++++++++++++++++++++++++++++
+ src/CommitBufferSync.h      | 19 ++++++++++++++++
+ src/Timeline.cpp            | 44 ++++++++++++++++++++++++++++++++++++
+ src/Timeline.h              |  2 ++
+ src/commit.cpp              | 21 +++++++++++++++++
+ src/rendervulkan.cpp        | 18 ++++++++++++---
+ src/rendervulkan.hpp        |  2 +-
+ src/steamcompmgr.cpp        | 33 +++++++++++++++++++++++----
+ 9 files changed, 185 insertions(+), 9 deletions(-)
+
+diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
+index c9d6e69849fc..01974ebe2524 100644
+--- a/src/Backends/DRMBackend.cpp
++++ b/src/Backends/DRMBackend.cpp
+@@ -2696,7 +2696,15 @@ drm_prepare_liftoff( struct drm_t *drm, const struct FrameInfo_t *frameInfo, boo
+ 			}
+ 
+ 			int nFence = cv_drm_debug_disable_in_fence_fd ? -1 : g_nAlwaysSignalledSyncFile;
+-			if ( !cv_drm_debug_disable_in_fence_fd && pLayer->acquirePoint )
++			if ( !cv_drm_debug_disable_in_fence_fd && pLayer->bufferSync &&
++				pLayer->bufferSync->UsesSyncFileInterop() && !pLayer->bufferSync->IsAcquireFallback() )
++			{
++				nFence = pLayer->bufferSync->DuplicateAcquireSyncFile();
++				if ( nFence < 0 )
++					return -EINVAL;
++				drm->m_InFenceFdsInRequest.push_back( nFence );
++			}
++			else if ( !cv_drm_debug_disable_in_fence_fd && pLayer->acquirePoint )
+ 			{
+ 				nFence = pLayer->acquirePoint->CreateSyncFile();
+ 				if ( nFence >= 0 )
+diff --git a/src/CommitBufferSync.cpp b/src/CommitBufferSync.cpp
+index 9157297528a7..a4b8bf081f11 100644
+--- a/src/CommitBufferSync.cpp
++++ b/src/CommitBufferSync.cpp
+@@ -1,5 +1,6 @@
+ #include "CommitBufferSync.h"
+ 
++#include "DmabufSync.h"
+ #include "wlserver.hpp"
+ 
+ #include "wlr_begin.hpp"
+@@ -23,6 +24,7 @@ namespace gamescope
+             return;
+ 
+         m_bDmabuf = true;
++        m_bSyncFileInterop = DmabufSyncFileSupported();
+ 
+         m_DmabufFds.reserve( dmabuf.n_planes );
+         for ( int i = 0; i < dmabuf.n_planes; i++ )
+@@ -36,6 +38,9 @@ namespace gamescope
+ 
+     CCommitBufferSync::~CCommitBufferSync()
+     {
++        if ( m_nAcquireSyncFile >= 0 )
++            close( m_nAcquireSyncFile );
++
+         for ( int fd : m_DmabufFds )
+             close( fd );
+         m_DmabufFds.clear();
+@@ -52,4 +57,44 @@ namespace gamescope
+             m_pBuffer = nullptr;
+         }
+     }
++
++    CCommitBufferSync::AcquireStatus CCommitBufferSync::PrepareAcquire()
++    {
++        if ( !UsesSyncFileInterop() || m_bAcquireFallback )
++            return AcquireStatus::Baseline;
++        if ( m_nAcquireSyncFile >= 0 )
++            return AcquireStatus::Ready;
++
++        if ( m_pAcquirePoint )
++        {
++            if ( !m_pAcquirePoint->IsMaterialized() )
++                return AcquireStatus::Pending;
++            m_nAcquireSyncFile = m_pAcquirePoint->CreateSyncFile();
++        }
++        else if ( !m_DmabufFds.empty() )
++        {
++            m_nAcquireSyncFile = ExportDmabufSyncFile( m_DmabufFds.front(), DmabufAccess::Read );
++        }
++
++        return m_nAcquireSyncFile >= 0 ? AcquireStatus::Ready : AcquireStatus::Failed;
++    }
++
++    std::pair<int32_t, bool> CCommitBufferSync::CreateAcquireAvailabilityEvent() const
++    {
++        if ( !m_pAcquirePoint )
++            return CAcquireTimelinePoint::k_InvalidEvent;
++        return m_pAcquirePoint->CreateAvailabilityEventFd();
++    }
++
++    int CCommitBufferSync::DuplicateAcquireSyncFile() const
++    {
++        return m_nAcquireSyncFile >= 0 ? dup( m_nAcquireSyncFile ) : -1;
++    }
++
++    std::pair<int32_t, bool> CCommitBufferSync::DuplicateBaselineWaitFd() const
++    {
++        if ( m_pAcquirePoint )
++            return m_pAcquirePoint->CreateEventFd();
++        return { !m_DmabufFds.empty() ? dup( m_DmabufFds.front() ) : -1, false };
++    }
+ }
+diff --git a/src/CommitBufferSync.h b/src/CommitBufferSync.h
+index 6af01b579f6b..71511a66bb72 100644
+--- a/src/CommitBufferSync.h
++++ b/src/CommitBufferSync.h
+@@ -14,6 +14,14 @@ namespace gamescope
+     class CCommitBufferSync final
+     {
+     public:
++        enum class AcquireStatus
++        {
++            Ready,
++            Pending,
++            Failed,
++            Baseline,
++        };
++
+         CCommitBufferSync( wlr_buffer *pBuffer,
+             std::shared_ptr<CAcquireTimelinePoint> pAcquirePoint,
+             std::shared_ptr<CReleaseTimelinePoint> pReleasePoint );
+@@ -28,9 +36,20 @@ namespace gamescope
+         const std::shared_ptr<CAcquireTimelinePoint> &GetAcquirePoint() const { return m_pAcquirePoint; }
+         const std::shared_ptr<CReleaseTimelinePoint> &GetReleasePoint() const { return m_pReleasePoint; }
+ 
++        AcquireStatus PrepareAcquire();
++        std::pair<int32_t, bool> CreateAcquireAvailabilityEvent() const;
++        int DuplicateAcquireSyncFile() const;
++        std::pair<int32_t, bool> DuplicateBaselineWaitFd() const;
++        void UseAcquireFallback() { m_bAcquireFallback = true; }
++        bool IsAcquireFallback() const { return m_bAcquireFallback; }
++        bool UsesSyncFileInterop() const { return m_bDmabuf && m_bSyncFileInterop; }
++
+     private:
+         wlr_buffer *m_pBuffer = nullptr;
+         bool m_bDmabuf = false;
++        bool m_bSyncFileInterop = false;
++        bool m_bAcquireFallback = false;
++        int m_nAcquireSyncFile = -1;
+         std::vector<int> m_DmabufFds;
+         std::shared_ptr<CAcquireTimelinePoint> m_pAcquirePoint;
+         std::shared_ptr<CReleaseTimelinePoint> m_pReleasePoint;
+diff --git a/src/Timeline.cpp b/src/Timeline.cpp
+index 4462802a6963..4b5b87c60be4 100644
+--- a/src/Timeline.cpp
++++ b/src/Timeline.cpp
+@@ -194,6 +194,50 @@ namespace gamescope
+         }
+     }
+ 
++    template <TimelinePointType Type>
++    bool CTimelinePoint<Type>::IsMaterialized() const
++    {
++        if constexpr ( Type != TimelinePointType::Acquire )
++            return false;
++
++        uint32_t uHandle = m_pTimeline->GetSyncobjHandle();
++        uint64_t ulPoint = m_ulPoint;
++        return drmSyncobjTimelineWait( m_pTimeline->GetDrmRenderFD(), &uHandle, &ulPoint, 1, 0,
++            DRM_SYNCOBJ_WAIT_FLAGS_WAIT_AVAILABLE, nullptr ) == 0;
++    }
++
++    template <TimelinePointType Type>
++    std::pair<int32_t, bool> CTimelinePoint<Type>::CreateAvailabilityEventFd()
++    {
++        if constexpr ( Type != TimelinePointType::Acquire )
++            return k_InvalidEvent;
++
++        if ( IsMaterialized() )
++            return k_AlreadySignalledEvent;
++
++        const int32_t nEventFd = eventfd( 0, EFD_CLOEXEC );
++        if ( nEventFd < 0 )
++        {
++            s_TimelineLog.errorf_errno( "Failed to create availability eventfd" );
++            return k_InvalidEvent;
++        }
++
++        drm_syncobj_eventfd event = {
++            .handle = m_pTimeline->GetSyncobjHandle(),
++            .flags = DRM_SYNCOBJ_WAIT_FLAGS_WAIT_AVAILABLE,
++            .point = m_ulPoint,
++            .fd = nEventFd,
++        };
++        if ( drmIoctl( m_pTimeline->GetDrmRenderFD(), DRM_IOCTL_SYNCOBJ_EVENTFD, &event ) != 0 )
++        {
++            s_TimelineLog.errorf_errno( "DRM_IOCTL_SYNCOBJ_EVENTFD availability failed" );
++            close( nEventFd );
++            return k_InvalidEvent;
++        }
++
++        return { nEventFd, false };
++    }
++
+     template class CTimelinePoint<TimelinePointType::Acquire>;
+     template class CTimelinePoint<TimelinePointType::Release>;
+ 
+diff --git a/src/Timeline.h b/src/Timeline.h
+index 4146c29e03f5..80bb4afd1e03 100644
+--- a/src/Timeline.h
++++ b/src/Timeline.h
+@@ -77,6 +77,8 @@ namespace gamescope
+         bool Wait( int64_t lTimeout = std::numeric_limits<int64_t>::max() );
+ 
+         std::pair<int32_t, bool> CreateEventFd();
++        std::pair<int32_t, bool> CreateAvailabilityEventFd();
++        bool IsMaterialized() const;
+         int32_t CreateSyncFile();
+     private:
+ 
+diff --git a/src/commit.cpp b/src/commit.cpp
+index 5b6d1c524c58..4880de314fb2 100644
+--- a/src/commit.cpp
++++ b/src/commit.cpp
+@@ -2,6 +2,7 @@
+ #include "rendervulkan.hpp"
+ #include "steamcompmgr.hpp"
+ #include "commit.h"
++#include "CommitBufferSync.h"
+ 
+ #include "gpuvis_trace_utils.h"
+ 
+@@ -58,6 +59,26 @@ void commit_t::OnPollIn()
+             return;
+     }
+ 
++    if ( bufferSync && bufferSync->UsesSyncFileInterop() && !bufferSync->IsAcquireFallback() )
++    {
++        std::pair<int32_t, bool> nextEvent = gamescope::CAcquireTimelinePoint::k_InvalidEvent;
++        const gamescope::CCommitBufferSync::AcquireStatus status = bufferSync->PrepareAcquire();
++        if ( status == gamescope::CCommitBufferSync::AcquireStatus::Pending )
++            nextEvent = bufferSync->CreateAcquireAvailabilityEvent();
++        else if ( status == gamescope::CCommitBufferSync::AcquireStatus::Failed )
++        {
++            bufferSync->UseAcquireFallback();
++            nextEvent = bufferSync->DuplicateBaselineWaitFd();
++        }
++
++        if ( nextEvent.first >= 0 && !nextEvent.second )
++        {
++            SetFence( nextEvent.first, m_bMangoNudge, m_pDoneCommits );
++            g_ImageWaiter.AddWaitable( this );
++            return;
++        }
++    }
++
+     Signal();
+ 
+     nudge_steamcompmgr();
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index 8de8b0ad3a5e..d43251433f4a 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -1657,11 +1657,20 @@ void CVulkanCmdBuffer::AddBinaryDependency( std::shared_ptr<VulkanBinarySemaphor
+ 	m_ExternalBinaryDependencies.emplace_back( std::move( pSemaphore ) );
+ }
+ 
+-void CVulkanCmdBuffer::AddBufferUse( std::shared_ptr<gamescope::CCommitBufferSync> pBufferSync )
++bool CVulkanCmdBuffer::AddBufferUse( std::shared_ptr<gamescope::CCommitBufferSync> pBufferSync )
+ {
+ 	if ( !pBufferSync || std::find( m_BufferUses.begin(), m_BufferUses.end(), pBufferSync ) != m_BufferUses.end() )
+-		return;
++		return true;
++
++	if ( pBufferSync->UsesSyncFileInterop() && !pBufferSync->IsAcquireFallback() )
++	{
++		std::shared_ptr<VulkanBinarySemaphore_t> pSemaphore = m_device->ImportSyncFile( pBufferSync->DuplicateAcquireSyncFile() );
++		if ( !pSemaphore )
++			return false;
++		AddBinaryDependency( std::move( pSemaphore ) );
++	}
+ 	m_BufferUses.emplace_back( std::move( pBufferSync ) );
++	return true;
+ }
+ 
+ void CVulkanCmdBuffer::AddSignal( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint )
+@@ -4498,7 +4507,10 @@ std::optional<uint64_t> vulkan_composite( struct FrameInfo_t *frameInfo, gamesco
+ 
+ 	auto cmdBuffer = pInCommandBuffer ? std::move( pInCommandBuffer ) : g_device.commandBuffer();
+ 	for ( int i = 0; i < frameInfo->layerCount; i++ )
+-		cmdBuffer->AddBufferUse( frameInfo->layers[i].bufferSync );
++	{
++		if ( !cmdBuffer->AddBufferUse( frameInfo->layers[i].bufferSync ) )
++			return std::nullopt;
++	}
+ 
+ 	for (uint32_t i = 0; i < EOTF_Count; i++)
+ 		cmdBuffer->bindColorMgmtLuts(i, frameInfo->shaperLut[i], frameInfo->lut3D[i]);
+diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
+index 993745c56304..07624b02f2a1 100644
+--- a/src/rendervulkan.hpp
++++ b/src/rendervulkan.hpp
+@@ -1066,7 +1066,7 @@ public:
+ 
+ 	void AddDependency( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint );
+ 	void AddBinaryDependency( std::shared_ptr<VulkanBinarySemaphore_t> pSemaphore );
+-	void AddBufferUse( std::shared_ptr<gamescope::CCommitBufferSync> pBufferSync );
++	bool AddBufferUse( std::shared_ptr<gamescope::CCommitBufferSync> pBufferSync );
+ 	void AddSignal( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint );
+ 
+ 	const std::vector<VulkanTimelinePoint_t> &GetExternalDependencies() const { return m_ExternalDependencies; }
+diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
+index e607fb165338..6cf26ed90658 100644
+--- a/src/steamcompmgr.cpp
++++ b/src/steamcompmgr.cpp
+@@ -7445,7 +7445,11 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
+ 		// the midpoint's output slot, so let the queued real slot run its single
+ 		// FSR chain after generated-frame synthesis instead.
+ 		const std::shared_ptr<gamescope::CAcquireTimelinePoint> &pAcquirePoint = bufferSync->GetAcquirePoint();
+-		bool bValidPreemptiveScale = pAcquirePoint && pCurrentFocus &&
++		gamescope::CCommitBufferSync::AcquireStatus acquireStatus = bufferSync->PrepareAcquire();
++		bool bValidPreemptiveScale =
++			acquireStatus != gamescope::CCommitBufferSync::AcquireStatus::Pending &&
++			acquireStatus != gamescope::CCommitBufferSync::AcquireStatus::Failed &&
++			pAcquirePoint && pCurrentFocus &&
+ 			w == pCurrentFocus->focusWindow && cv_upscale_preemptive &&
+ 			!steamcompmgr_frame_generation_enabled_for_focus();
+ 		bool bPreemptiveUpscale = bValidPreemptiveScale && newCommit->ShouldPreemptivelyUpscale();
+@@ -7482,7 +7486,8 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
+ 
+ 				std::unique_ptr<CVulkanCmdBuffer> pCommandBuffer = g_device.commandBuffer();
+ 				
+-				pCommandBuffer->AddDependency( pAcquirePoint->GetTimeline()->ToVkSemaphore(), pAcquirePoint->GetPoint() );
++				if ( !bufferSync->UsesSyncFileInterop() || bufferSync->IsAcquireFallback() )
++					pCommandBuffer->AddDependency( pAcquirePoint->GetTimeline()->ToVkSemaphore(), pAcquirePoint->GetPoint() );
+ 				pCommandBuffer->AddSignal( pTempImage->pReleaseTimeline->ToVkSemaphore(), ulNextReleasePoint );
+ 
+ 				static std::optional<uint64_t> s_ulLastPreemptiveUpscaleSeqNo;
+@@ -7530,7 +7535,27 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
+ 				ClearUpscaleImages();
+ 			}
+ 
+-			if ( pAcquirePoint )
++			if ( acquireStatus == gamescope::CCommitBufferSync::AcquireStatus::Ready )
++			{
++				bKnownReady = true;
++			}
++			else if ( acquireStatus == gamescope::CCommitBufferSync::AcquireStatus::Pending )
++			{
++				eventFd = bufferSync->CreateAcquireAvailabilityEvent();
++				if ( eventFd == gamescope::CAcquireTimelinePoint::k_InvalidEvent )
++				{
++					bufferSync->UseAcquireFallback();
++					eventFd = bufferSync->DuplicateBaselineWaitFd();
++				}
++				bKnownReady = eventFd.second;
++			}
++			else if ( acquireStatus == gamescope::CCommitBufferSync::AcquireStatus::Failed )
++			{
++				bufferSync->UseAcquireFallback();
++				eventFd = bufferSync->DuplicateBaselineWaitFd();
++				bKnownReady = eventFd.second;
++			}
++			else if ( pAcquirePoint )
+ 			{
+ 				eventFd = pAcquirePoint->CreateEventFd();
+ 			}
+@@ -7541,7 +7566,7 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
+ 			fence = eventFd.first;
+ 			bKnownReady = eventFd.second;
+ 		}
+-		else
++		else if ( !bKnownReady )
+ 		{
+ 			struct wlr_dmabuf_attributes dmabuf = {0};
+ 			if ( wlr_buffer_get_dmabuf( buf, &dmabuf ) )
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sun, 23 Aug 2026 02:16:16 +0200
+Subject: sync: release DMA-BUFs from their final consumer
+
+---
+ src/CommitBufferSync.cpp | 178 +++++++++++++++++++++++++++++++++++++--
+ src/CommitBufferSync.h   |   7 ++
+ src/Timeline.cpp         |   9 +-
+ src/Timeline.h           |   3 +-
+ src/rendervulkan.cpp     |  30 +++++++
+ src/rendervulkan.hpp     |   3 +
+ 6 files changed, 220 insertions(+), 10 deletions(-)
+
+diff --git a/src/CommitBufferSync.cpp b/src/CommitBufferSync.cpp
+index a4b8bf081f11..5278c4bdc238 100644
+--- a/src/CommitBufferSync.cpp
++++ b/src/CommitBufferSync.cpp
+@@ -1,6 +1,8 @@
+ #include "CommitBufferSync.h"
+ 
+ #include "DmabufSync.h"
++#include "rc.h"
++#include "waitable.h"
+ #include "wlserver.hpp"
+ 
+ #include "wlr_begin.hpp"
+@@ -8,10 +10,74 @@
+ #include <wlr/types/wlr_buffer.h>
+ #include "wlr_end.hpp"
+ 
++#include <cerrno>
++#include <poll.h>
++#include <thread>
+ #include <unistd.h>
+ 
+ namespace gamescope
+ {
++    class CDeferredBufferRelease final : public RcObject, public IWaitable
++    {
++    public:
++        CDeferredBufferRelease( int syncFileFd, wlr_buffer *pBuffer,
++            std::shared_ptr<CReleaseTimelinePoint> pReleasePoint )
++            : m_nSyncFileFd{ syncFileFd }
++            , m_pBuffer{ pBuffer }
++            , m_pReleasePoint{ std::move( pReleasePoint ) }
++        {
++        }
++
++        ~CDeferredBufferRelease()
++        {
++            if ( m_nSyncFileFd >= 0 )
++                close( m_nSyncFileFd );
++            Release();
++        }
++
++        int GetFD() override { return m_nSyncFileFd; }
++        void OnPollIn() override;
++        void OnPollHangUp() override { OnPollIn(); }
++
++        int TakeFD() { return std::exchange( m_nSyncFileFd, -1 ); }
++        wlr_buffer *TakeBuffer() { return std::exchange( m_pBuffer, nullptr ); }
++        std::shared_ptr<CReleaseTimelinePoint> TakeReleasePoint() { return std::move( m_pReleasePoint ); }
++
++    private:
++        void Release()
++        {
++            if ( !m_pBuffer )
++                return;
++
++            m_pReleasePoint = nullptr;
++            wlserver_lock();
++            wlr_buffer_unlock( m_pBuffer );
++            wlserver_unlock();
++            m_pBuffer = nullptr;
++        }
++
++        int m_nSyncFileFd = -1;
++        wlr_buffer *m_pBuffer = nullptr;
++        std::shared_ptr<CReleaseTimelinePoint> m_pReleasePoint;
++    };
++
++    static CAsyncWaiter<Rc<CDeferredBufferRelease>> &GetBufferReleaseWaiter()
++    {
++        static CAsyncWaiter<Rc<CDeferredBufferRelease>> s_Waiter{ "buffer-release" };
++        return s_Waiter;
++    }
++
++    void CDeferredBufferRelease::OnPollIn()
++    {
++        GetBufferReleaseWaiter().RemoveWaitable( Rc<CDeferredBufferRelease>{ this } );
++        if ( m_nSyncFileFd >= 0 )
++        {
++            close( m_nSyncFileFd );
++            m_nSyncFileFd = -1;
++        }
++        Release();
++    }
++
+     CCommitBufferSync::CCommitBufferSync( wlr_buffer *pBuffer,
+         std::shared_ptr<CAcquireTimelinePoint> pAcquirePoint,
+         std::shared_ptr<CReleaseTimelinePoint> pReleasePoint )
+@@ -38,6 +104,8 @@ namespace gamescope
+ 
+     CCommitBufferSync::~CCommitBufferSync()
+     {
++        FinishRelease();
++
+         if ( m_nAcquireSyncFile >= 0 )
+             close( m_nAcquireSyncFile );
+ 
+@@ -45,17 +113,113 @@ namespace gamescope
+             close( fd );
+         m_DmabufFds.clear();
+ 
+-        // Dropping an explicit release point signals it. Do that before the
+-        // wl_buffer release generated by the final unlock.
+-        m_pReleasePoint = nullptr;
++    }
+ 
+-        if ( m_pBuffer )
++    void CCommitBufferSync::RecordVulkanUse( std::shared_ptr<CTimeline> pTimeline, uint64_t ulPoint )
++    {
++        if ( ulPoint >= m_ulLastUsePoint )
+         {
++            m_pLastUseTimeline = std::move( pTimeline );
++            m_ulLastUsePoint = ulPoint;
++        }
++    }
++
++    void CCommitBufferSync::FinishRelease()
++    {
++        if ( !m_pBuffer )
++            return;
++
++        if ( !m_pLastUseTimeline || !m_ulLastUsePoint )
++        {
++            m_pReleasePoint = nullptr;
++            UnlockBuffer();
++            return;
++        }
++
++        // Do not transfer a future compositor fence into an explicit producer's
++        // release timeline. Together with the producer acquire imported by the
++        // compositor, that creates a two-way cross-driver dependency chain.
++        // Keep the release point alive and signal it from the completion worker
++        // only after the compositor has actually finished reading the buffer.
++        //
++        // Implicit Xwayland clients need the same delayed wl_buffer.release:
++        // Xwayland may otherwise signal Present idle without forwarding the
++        // DMA-BUF reservation fence to an explicit Vulkan producer.
++        DeferReleaseUntilComplete( m_pLastUseTimeline->ExportSyncFile( m_ulLastUsePoint ) );
++    }
++
++    void CCommitBufferSync::UnlockBuffer()
++    {
++        if ( !m_pBuffer )
++            return;
++
++        wlserver_lock();
++        wlr_buffer_unlock( m_pBuffer );
++        wlserver_unlock();
++        m_pBuffer = nullptr;
++    }
++
++    void CCommitBufferSync::DeferReleaseUntilComplete( int syncFileFd )
++    {
++        if ( syncFileFd < 0 && m_pLastUseTimeline )
++        {
++            CAcquireTimelinePoint completionPoint{ m_pLastUseTimeline, m_ulLastUsePoint };
++            const std::pair<int32_t, bool> event = completionPoint.CreateEventFd();
++            if ( event.second )
++            {
++                m_pReleasePoint = nullptr;
++                UnlockBuffer();
++                return;
++            }
++            syncFileFd = event.first;
++        }
++
++        if ( syncFileFd >= 0 )
++        {
++            Rc<CDeferredBufferRelease> deferred = new CDeferredBufferRelease{
++                syncFileFd, std::exchange( m_pBuffer, nullptr ), std::move( m_pReleasePoint ) };
++            if ( GetBufferReleaseWaiter().AddWaitable( deferred ) )
++                return;
++
++            // Fall back to the existing detached error-path waiter if epoll
++            // could not accept the completion fence.
++            syncFileFd = deferred->TakeFD();
++            m_pBuffer = deferred->TakeBuffer();
++            m_pReleasePoint = deferred->TakeReleasePoint();
++        }
++
++        wlr_buffer *pBuffer = std::exchange( m_pBuffer, nullptr );
++        std::shared_ptr<CReleaseTimelinePoint> pReleasePoint = std::move( m_pReleasePoint );
++        std::shared_ptr<CTimeline> pTimeline = m_pLastUseTimeline;
++        const uint64_t ulPoint = m_ulLastUsePoint;
++
++        std::thread( [syncFileFd, pBuffer, pReleasePoint = std::move( pReleasePoint ),
++                         pTimeline = std::move( pTimeline ), ulPoint]() mutable
++        {
++            bool complete = false;
++            if ( syncFileFd >= 0 )
++            {
++                pollfd pfd = { .fd = syncFileFd, .events = POLLIN };
++                int ret;
++                do
++                {
++                    ret = poll( &pfd, 1, -1 );
++                }
++                while ( ret < 0 && errno == EINTR );
++                complete = ret > 0;
++                close( syncFileFd );
++            }
++            if ( !complete && pTimeline )
++                complete = pTimeline->WaitPoint( ulPoint );
++
++            if ( !complete )
++                return;
++
++            pReleasePoint = nullptr;
+             wlserver_lock();
+-            wlr_buffer_unlock( m_pBuffer );
++            wlr_buffer_unlock( pBuffer );
+             wlserver_unlock();
+-            m_pBuffer = nullptr;
+-        }
++        } ).detach();
+     }
+ 
+     CCommitBufferSync::AcquireStatus CCommitBufferSync::PrepareAcquire()
+diff --git a/src/CommitBufferSync.h b/src/CommitBufferSync.h
+index 71511a66bb72..549b8c9a4115 100644
+--- a/src/CommitBufferSync.h
++++ b/src/CommitBufferSync.h
+@@ -43,6 +43,7 @@ namespace gamescope
+         void UseAcquireFallback() { m_bAcquireFallback = true; }
+         bool IsAcquireFallback() const { return m_bAcquireFallback; }
+         bool UsesSyncFileInterop() const { return m_bDmabuf && m_bSyncFileInterop; }
++        void RecordVulkanUse( std::shared_ptr<CTimeline> pTimeline, uint64_t ulPoint );
+ 
+     private:
+         wlr_buffer *m_pBuffer = nullptr;
+@@ -53,5 +54,11 @@ namespace gamescope
+         std::vector<int> m_DmabufFds;
+         std::shared_ptr<CAcquireTimelinePoint> m_pAcquirePoint;
+         std::shared_ptr<CReleaseTimelinePoint> m_pReleasePoint;
++        std::shared_ptr<CTimeline> m_pLastUseTimeline;
++        uint64_t m_ulLastUsePoint = 0;
++
++        void FinishRelease();
++        void UnlockBuffer();
++        void DeferReleaseUntilComplete( int syncFileFd );
+     };
+ }
+diff --git a/src/Timeline.cpp b/src/Timeline.cpp
+index 4b5b87c60be4..2683ba461783 100644
+--- a/src/Timeline.cpp
++++ b/src/Timeline.cpp
+@@ -94,6 +94,13 @@ namespace gamescope
+         return nSyncFile;
+     }
+ 
++    bool CTimeline::WaitPoint( uint64_t ulPoint ) const
++    {
++        uint32_t uHandle = m_uSyncobjHandle;
++        return drmSyncobjTimelineWait( GetDrmRenderFD(), &uHandle, &ulPoint, 1,
++            std::numeric_limits<int64_t>::max(), DRM_SYNCOBJ_WAIT_FLAGS_WAIT_FOR_SUBMIT, nullptr ) == 0;
++    }
++
+     // CTimelinePoint
+ 
+     template <TimelinePointType Type>
+@@ -115,7 +122,7 @@ namespace gamescope
+     template <TimelinePointType Type>
+     CTimelinePoint<Type>::~CTimelinePoint()
+     {
+-        if ( ShouldSignalOnDestruction() )
++        if constexpr ( Type == TimelinePointType::Release )
+         {
+             const uint32_t uHandle = m_pTimeline->GetSyncobjHandle();
+ 
+diff --git a/src/Timeline.h b/src/Timeline.h
+index 80bb4afd1e03..913da84ccfab 100644
+--- a/src/Timeline.h
++++ b/src/Timeline.h
+@@ -46,6 +46,7 @@ namespace gamescope
+         uint32_t GetSyncobjHandle() const { return m_uSyncobjHandle; }
+ 
+         int32_t ExportSyncFile( uint64_t ulPoint ) const;
++        bool WaitPoint( uint64_t ulPoint ) const;
+ 
+         std::shared_ptr<VulkanTimelineSemaphore_t> ToVkSemaphore();
+         
+@@ -72,8 +73,6 @@ namespace gamescope
+               std::shared_ptr<CTimeline> &GetTimeline()       { return m_pTimeline; }
+         const std::shared_ptr<CTimeline> &GetTimeline() const { return m_pTimeline; }
+ 
+-        constexpr bool ShouldSignalOnDestruction() const { return Type == TimelinePointType::Release; }
+-
+         bool Wait( int64_t lTimeout = std::numeric_limits<int64_t>::max() );
+ 
+         std::pair<int32_t, bool> CreateEventFd();
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index d43251433f4a..561793ce82e6 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -1423,6 +1423,7 @@ uint64_t CVulkanDevice::submitInternal( CVulkanCmdBuffer* cmdBuffer )
+ 	};
+ 
+ 	vk_check( vk.QueueSubmit( cmdBuffer->queue(), 1, &submitInfo, VK_NULL_HANDLE ) );
++	cmdBuffer->NotifyBufferUsesSubmitted( GetSubmissionTimeline(), nextSeqNo );
+ 
+ 	return nextSeqNo;
+ }
+@@ -1647,6 +1648,21 @@ int CVulkanDevice::ExportSubmissionTimelineFd() const
+ 	return fd;
+ }
+ 
++std::shared_ptr<gamescope::CTimeline> CVulkanDevice::GetSubmissionTimeline()
++{
++	if ( m_pSubmissionTimeline )
++		return m_pSubmissionTimeline;
++
++	const int fd = ExportSubmissionTimelineFd();
++	if ( fd < 0 )
++		return nullptr;
++
++	m_pSubmissionTimeline = std::make_shared<gamescope::CTimeline>( fd );
++	if ( !m_pSubmissionTimeline->IsValid() )
++		m_pSubmissionTimeline = nullptr;
++	return m_pSubmissionTimeline;
++}
++
+ void CVulkanCmdBuffer::AddDependency( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint )
+ {
+ 	m_ExternalDependencies.emplace_back( std::move( pTimelineSemaphore ), ulPoint );
+@@ -1673,6 +1689,20 @@ bool CVulkanCmdBuffer::AddBufferUse( std::shared_ptr<gamescope::CCommitBufferSyn
+ 	return true;
+ }
+ 
++void CVulkanCmdBuffer::NotifyBufferUsesSubmitted( const std::shared_ptr<gamescope::CTimeline> &pTimeline, uint64_t ulPoint )
++{
++	if ( !pTimeline )
++		return;
++
++	std::erase_if( m_BufferUses, [&]( const std::shared_ptr<gamescope::CCommitBufferSync> &pBufferSync )
++	{
++		if ( !pBufferSync->UsesSyncFileInterop() )
++			return false;
++		pBufferSync->RecordVulkanUse( pTimeline, ulPoint );
++		return true;
++	} );
++}
++
+ void CVulkanCmdBuffer::AddSignal( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint )
+ {
+ 	m_ExternalSignals.emplace_back( std::move( pTimelineSemaphore ), ulPoint );
+diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
+index 07624b02f2a1..e093b4a5787d 100644
+--- a/src/rendervulkan.hpp
++++ b/src/rendervulkan.hpp
+@@ -887,6 +887,7 @@ public:
+ 	// Consumes nSyncFile regardless of success.
+ 	std::shared_ptr<VulkanBinarySemaphore_t> ImportSyncFile( int32_t nSyncFile );
+ 	int ExportSubmissionTimelineFd() const;
++	std::shared_ptr<gamescope::CTimeline> GetSubmissionTimeline();
+ 
+ 	static const uint32_t upload_buffer_size = 1920 * 1080 * 4;
+ 
+@@ -1002,6 +1003,7 @@ protected:
+ 	uint32_t m_uploadBufferOffset = 0;
+ 
+ 	VkSemaphore m_scratchTimelineSemaphore;
++	std::shared_ptr<gamescope::CTimeline> m_pSubmissionTimeline;
+ 	std::atomic<uint64_t> m_submissionSeqNo = { 0 };
+ 	std::vector<std::unique_ptr<CVulkanCmdBuffer>> m_unusedCmdBufs;
+ 	std::map<uint64_t, std::unique_ptr<CVulkanCmdBuffer>> m_pendingCmdBufs;
+@@ -1067,6 +1069,7 @@ public:
+ 	void AddDependency( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint );
+ 	void AddBinaryDependency( std::shared_ptr<VulkanBinarySemaphore_t> pSemaphore );
+ 	bool AddBufferUse( std::shared_ptr<gamescope::CCommitBufferSync> pBufferSync );
++	void NotifyBufferUsesSubmitted( const std::shared_ptr<gamescope::CTimeline> &pTimeline, uint64_t ulPoint );
+ 	void AddSignal( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint );
+ 
+ 	const std::vector<VulkanTimelinePoint_t> &GetExternalDependencies() const { return m_ExternalDependencies; }
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sun, 23 Aug 2026 02:20:26 +0200
+Subject: sync: instrument universal DMA-BUF synchronization
+
+---
+ src/Backends/DRMBackend.cpp |   3 +
+ src/CommitBufferSync.cpp    | 188 +++++++++++++++++++++++++++++++++++-
+ src/CommitBufferSync.h      |  21 +++-
+ src/commit.cpp              |   6 +-
+ src/rendervulkan.cpp        |  11 ++-
+ src/steamcompmgr.cpp        |   6 +-
+ src/wlserver.cpp            |   1 +
+ 7 files changed, 223 insertions(+), 13 deletions(-)
+
+diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
+index 01974ebe2524..266e74ece0e3 100644
+--- a/src/Backends/DRMBackend.cpp
++++ b/src/Backends/DRMBackend.cpp
+@@ -2701,7 +2701,10 @@ drm_prepare_liftoff( struct drm_t *drm, const struct FrameInfo_t *frameInfo, boo
+ 			{
+ 				nFence = pLayer->bufferSync->DuplicateAcquireSyncFile();
+ 				if ( nFence < 0 )
++				{
++					pLayer->bufferSync->RecordFailure( "KMS acquire duplication" );
+ 					return -EINVAL;
++				}
+ 				drm->m_InFenceFdsInRequest.push_back( nFence );
+ 			}
+ 			else if ( !cv_drm_debug_disable_in_fence_fd && pLayer->acquirePoint )
+diff --git a/src/CommitBufferSync.cpp b/src/CommitBufferSync.cpp
+index 5278c4bdc238..8f3453a6a0c0 100644
+--- a/src/CommitBufferSync.cpp
++++ b/src/CommitBufferSync.cpp
+@@ -1,7 +1,10 @@
+ #include "CommitBufferSync.h"
+ 
+ #include "DmabufSync.h"
++#include "gpuvis_trace_utils.h"
++#include "log.hpp"
+ #include "rc.h"
++#include "steamcompmgr.hpp"
+ #include "waitable.h"
+ #include "wlserver.hpp"
+ 
+@@ -11,20 +14,88 @@
+ #include "wlr_end.hpp"
+ 
+ #include <cerrno>
++#include <mutex>
+ #include <poll.h>
+ #include <thread>
++#include <unordered_map>
+ #include <unistd.h>
+ 
+ namespace gamescope
+ {
++    static LogScope s_BufferSyncLog( "buffer-sync" );
++    static std::atomic<uint64_t> s_uNextSyncId = 0;
++
++    struct BufferSyncStats
++    {
++        std::atomic<uint64_t> uFailures = 0;
++
++        ~BufferSyncStats()
++        {
++            s_BufferSyncLog.infof( "DMA-BUF synchronization bridge failures: %llu",
++                static_cast<unsigned long long>( uFailures.load() ) );
++        }
++    };
++    static BufferSyncStats s_BufferSyncStats;
++
++    struct DeferredReleaseBacklog
++    {
++        struct PerClient
++        {
++            uint32_t uPending = 0;
++            bool bWarned = false;
++        };
++
++        void Add( pid_t nClientPid, uint64_t ulSyncId )
++        {
++            if ( nClientPid <= 0 )
++                return;
++
++            std::lock_guard lock( mutex );
++            PerClient &client = clients[nClientPid];
++            client.uPending++;
++            if ( client.uPending >= 4 && !client.bWarned )
++            {
++                client.bWarned = true;
++                s_BufferSyncLog.warnf(
++                    "Application with pid %d has %u DMA-BUF releases awaiting GPU completion (latest sync %llu).",
++                    nClientPid, client.uPending, static_cast<unsigned long long>( ulSyncId ) );
++            }
++        }
++
++        void Remove( pid_t nClientPid )
++        {
++            if ( nClientPid <= 0 )
++                return;
++
++            std::lock_guard lock( mutex );
++            auto iter = clients.find( nClientPid );
++            if ( iter == clients.end() )
++                return;
++
++            if ( iter->second.uPending > 0 )
++                iter->second.uPending--;
++            if ( iter->second.uPending < 4 )
++                iter->second.bWarned = false;
++            if ( iter->second.uPending == 0 )
++                clients.erase( iter );
++        }
++
++        std::mutex mutex;
++        std::unordered_map<pid_t, PerClient> clients;
++    };
++    static DeferredReleaseBacklog s_DeferredReleaseBacklog;
++
+     class CDeferredBufferRelease final : public RcObject, public IWaitable
+     {
+     public:
+         CDeferredBufferRelease( int syncFileFd, wlr_buffer *pBuffer,
+-            std::shared_ptr<CReleaseTimelinePoint> pReleasePoint )
++            std::shared_ptr<CReleaseTimelinePoint> pReleasePoint, uint64_t ulSyncId, pid_t nClientPid )
+             : m_nSyncFileFd{ syncFileFd }
+             , m_pBuffer{ pBuffer }
+             , m_pReleasePoint{ std::move( pReleasePoint ) }
++            , m_ulSyncId{ ulSyncId }
++            , m_nClientPid{ nClientPid }
++            , m_bExplicit{ bool( m_pReleasePoint ) }
+         {
+         }
+ 
+@@ -42,10 +113,18 @@ namespace gamescope
+         int TakeFD() { return std::exchange( m_nSyncFileFd, -1 ); }
+         wlr_buffer *TakeBuffer() { return std::exchange( m_pBuffer, nullptr ); }
+         std::shared_ptr<CReleaseTimelinePoint> TakeReleasePoint() { return std::move( m_pReleasePoint ); }
++        void MarkRegistered()
++        {
++            m_bRegistered = true;
++            s_DeferredReleaseBacklog.Add( m_nClientPid, m_ulSyncId );
++        }
+ 
+     private:
+         void Release()
+         {
++            if ( m_bRegistered.exchange( false ) )
++                s_DeferredReleaseBacklog.Remove( m_nClientPid );
++
+             if ( !m_pBuffer )
+                 return;
+ 
+@@ -54,11 +133,17 @@ namespace gamescope
+             wlr_buffer_unlock( m_pBuffer );
+             wlserver_unlock();
+             m_pBuffer = nullptr;
++            gpuvis_trace_printf( "buffer sync %llu completed deferred %s release",
++                static_cast<unsigned long long>( m_ulSyncId ), m_bExplicit ? "explicit" : "implicit" );
+         }
+ 
+         int m_nSyncFileFd = -1;
+         wlr_buffer *m_pBuffer = nullptr;
+         std::shared_ptr<CReleaseTimelinePoint> m_pReleasePoint;
++        uint64_t m_ulSyncId = 0;
++        pid_t m_nClientPid = -1;
++        bool m_bExplicit = false;
++        std::atomic<bool> m_bRegistered = false;
+     };
+ 
+     static CAsyncWaiter<Rc<CDeferredBufferRelease>> &GetBufferReleaseWaiter()
+@@ -78,10 +163,34 @@ namespace gamescope
+         Release();
+     }
+ 
++    static void LogModeOnce( pid_t pid, bool bExplicit, bool bInterop )
++    {
++        static std::mutex s_Mutex;
++        static std::unordered_map<pid_t, uint8_t> s_LoggedModes;
++        const uint8_t bit = bInterop ? ( bExplicit ? 1u : 2u ) : 4u;
++        {
++            std::lock_guard lock( s_Mutex );
++            uint8_t &modes = s_LoggedModes[pid];
++            if ( modes & bit )
++                return;
++            modes |= bit;
++        }
++
++        if ( !bInterop )
++            s_BufferSyncLog.warnf( "Application with pid %d is using baseline DMA-BUF synchronization; sync_file interop is unavailable.", pid );
++        else if ( bExplicit )
++            s_BufferSyncLog.infof( "Application with pid %d is using universal explicit DMA-BUF synchronization with completion-delayed release.", pid );
++        else
++            s_BufferSyncLog.infof( "Application with pid %d is using universal implicit DMA-BUF synchronization with completion-delayed release.", pid );
++    }
++
+     CCommitBufferSync::CCommitBufferSync( wlr_buffer *pBuffer,
+         std::shared_ptr<CAcquireTimelinePoint> pAcquirePoint,
+-        std::shared_ptr<CReleaseTimelinePoint> pReleasePoint )
++        std::shared_ptr<CReleaseTimelinePoint> pReleasePoint,
++        pid_t nClientPid )
+         : m_pBuffer{ pBuffer }
++        , m_ulSyncId{ ++s_uNextSyncId }
++        , m_nClientPid{ nClientPid }
+         , m_pAcquirePoint{ std::move( pAcquirePoint ) }
+         , m_pReleasePoint{ std::move( pReleasePoint ) }
+     {
+@@ -91,6 +200,7 @@ namespace gamescope
+ 
+         m_bDmabuf = true;
+         m_bSyncFileInterop = DmabufSyncFileSupported();
++        LogModeOnce( m_nClientPid, bool( m_pAcquirePoint || m_pReleasePoint ), m_bSyncFileInterop );
+ 
+         m_DmabufFds.reserve( dmabuf.n_planes );
+         for ( int i = 0; i < dmabuf.n_planes; i++ )
+@@ -121,9 +231,19 @@ namespace gamescope
+         {
+             m_pLastUseTimeline = std::move( pTimeline );
+             m_ulLastUsePoint = ulPoint;
++            gpuvis_trace_printf( "buffer sync %llu Vulkan use point %llu",
++                static_cast<unsigned long long>( m_ulSyncId ), static_cast<unsigned long long>( ulPoint ) );
+         }
+     }
+ 
++    void CCommitBufferSync::RecordFailure( const char *pszOperation ) const
++    {
++        const uint64_t count = ++s_BufferSyncStats.uFailures;
++        s_BufferSyncLog.errorf( "DMA-BUF sync %llu for pid %d failed during %s; fallback count is %llu.",
++            static_cast<unsigned long long>( m_ulSyncId ), m_nClientPid, pszOperation,
++            static_cast<unsigned long long>( count ) );
++    }
++
+     void CCommitBufferSync::FinishRelease()
+     {
+         if ( !m_pBuffer )
+@@ -131,11 +251,14 @@ namespace gamescope
+ 
+         if ( !m_pLastUseTimeline || !m_ulLastUsePoint )
+         {
++            gpuvis_trace_printf( "buffer sync %llu released without GPU use", static_cast<unsigned long long>( m_ulSyncId ) );
+             m_pReleasePoint = nullptr;
+             UnlockBuffer();
+             return;
+         }
+ 
++        const bool bExplicit = bool( m_pReleasePoint );
++
+         // Do not transfer a future compositor fence into an explicit producer's
+         // release timeline. Together with the producer acquire imported by the
+         // compositor, that creates a two-way cross-driver dependency chain.
+@@ -145,6 +268,8 @@ namespace gamescope
+         // Implicit Xwayland clients need the same delayed wl_buffer.release:
+         // Xwayland may otherwise signal Present idle without forwarding the
+         // DMA-BUF reservation fence to an explicit Vulkan producer.
++        gpuvis_trace_printf( "buffer sync %llu deferred %s release until completion",
++            static_cast<unsigned long long>( m_ulSyncId ), bExplicit ? "explicit" : "implicit" );
+         DeferReleaseUntilComplete( m_pLastUseTimeline->ExportSyncFile( m_ulLastUsePoint ) );
+     }
+ 
+@@ -177,12 +302,15 @@ namespace gamescope
+         if ( syncFileFd >= 0 )
+         {
+             Rc<CDeferredBufferRelease> deferred = new CDeferredBufferRelease{
+-                syncFileFd, std::exchange( m_pBuffer, nullptr ), std::move( m_pReleasePoint ) };
++                syncFileFd, std::exchange( m_pBuffer, nullptr ), std::move( m_pReleasePoint ),
++                m_ulSyncId, m_nClientPid };
++            deferred->MarkRegistered();
+             if ( GetBufferReleaseWaiter().AddWaitable( deferred ) )
+                 return;
+ 
+             // Fall back to the existing detached error-path waiter if epoll
+             // could not accept the completion fence.
++            RecordFailure( "deferred release registration" );
+             syncFileFd = deferred->TakeFD();
+             m_pBuffer = deferred->TakeBuffer();
+             m_pReleasePoint = deferred->TakeReleasePoint();
+@@ -224,7 +352,7 @@ namespace gamescope
+ 
+     CCommitBufferSync::AcquireStatus CCommitBufferSync::PrepareAcquire()
+     {
+-        if ( !UsesSyncFileInterop() || m_bAcquireFallback )
++        if ( !UsesSyncFileInterop() || m_bAcquireFallback.load() )
+             return AcquireStatus::Baseline;
+         if ( m_nAcquireSyncFile >= 0 )
+             return AcquireStatus::Ready;
+@@ -240,7 +368,57 @@ namespace gamescope
+             m_nAcquireSyncFile = ExportDmabufSyncFile( m_DmabufFds.front(), DmabufAccess::Read );
+         }
+ 
+-        return m_nAcquireSyncFile >= 0 ? AcquireStatus::Ready : AcquireStatus::Failed;
++        if ( m_nAcquireSyncFile >= 0 )
++        {
++            gpuvis_trace_printf( "buffer sync %llu acquire materialized", static_cast<unsigned long long>( m_ulSyncId ) );
++            return AcquireStatus::Ready;
++        }
++
++        RecordFailure( "acquire export" );
++        return AcquireStatus::Failed;
++    }
++
++    void CCommitBufferSync::UseAcquireFallback()
++    {
++        m_bAcquireFallback = true;
++        m_bAcquireFallbackReady = false;
++    }
++
++    void CCommitBufferSync::MarkAcquireFallbackReady()
++    {
++        m_bAcquireFallbackReady = true;
++        gpuvis_trace_printf( "buffer sync %llu acquire fallback complete", static_cast<unsigned long long>( m_ulSyncId ) );
++    }
++
++    bool CCommitBufferSync::BeginAcquireFallbackWait()
++    {
++        bool expected = false;
++        if ( !m_bAcquireFallbackWaitStarted.compare_exchange_strong( expected, true ) )
++            return true;
++
++        UseAcquireFallback();
++        const int syncFileFd = DuplicateAcquireSyncFile();
++        if ( syncFileFd < 0 )
++            return false;
++
++        std::shared_ptr<CCommitBufferSync> self = shared_from_this();
++        std::thread( [self = std::move( self ), syncFileFd]
++        {
++            pollfd pfd = { .fd = syncFileFd, .events = POLLIN };
++            int ret;
++            do
++            {
++                ret = poll( &pfd, 1, -1 );
++            }
++            while ( ret < 0 && errno == EINTR );
++            close( syncFileFd );
++            if ( ret <= 0 )
++                return;
++
++            self->MarkAcquireFallbackReady();
++            nudge_steamcompmgr();
++        } ).detach();
++        return true;
+     }
+ 
+     std::pair<int32_t, bool> CCommitBufferSync::CreateAcquireAvailabilityEvent() const
+diff --git a/src/CommitBufferSync.h b/src/CommitBufferSync.h
+index 549b8c9a4115..e0b154d15525 100644
+--- a/src/CommitBufferSync.h
++++ b/src/CommitBufferSync.h
+@@ -2,7 +2,9 @@
+ 
+ #include "Timeline.h"
+ 
++#include <atomic>
+ #include <memory>
++#include <sys/types.h>
+ #include <vector>
+ 
+ struct wlr_buffer;
+@@ -11,7 +13,7 @@ namespace gamescope
+ {
+     // Synchronization and Wayland lifetime belong to one surface commit, not
+     // to the memoized Vulkan texture or backend framebuffer shared by commits.
+-    class CCommitBufferSync final
++    class CCommitBufferSync final : public std::enable_shared_from_this<CCommitBufferSync>
+     {
+     public:
+         enum class AcquireStatus
+@@ -24,7 +26,8 @@ namespace gamescope
+ 
+         CCommitBufferSync( wlr_buffer *pBuffer,
+             std::shared_ptr<CAcquireTimelinePoint> pAcquirePoint,
+-            std::shared_ptr<CReleaseTimelinePoint> pReleasePoint );
++            std::shared_ptr<CReleaseTimelinePoint> pReleasePoint,
++            pid_t nClientPid );
+         ~CCommitBufferSync();
+ 
+         CCommitBufferSync( const CCommitBufferSync & ) = delete;
+@@ -40,17 +43,25 @@ namespace gamescope
+         std::pair<int32_t, bool> CreateAcquireAvailabilityEvent() const;
+         int DuplicateAcquireSyncFile() const;
+         std::pair<int32_t, bool> DuplicateBaselineWaitFd() const;
+-        void UseAcquireFallback() { m_bAcquireFallback = true; }
+-        bool IsAcquireFallback() const { return m_bAcquireFallback; }
++        void UseAcquireFallback();
++        void MarkAcquireFallbackReady();
++        bool BeginAcquireFallbackWait();
++        bool IsAcquireFallback() const { return m_bAcquireFallback.load(); }
++        bool IsAcquireFallbackReady() const { return m_bAcquireFallbackReady.load(); }
+         bool UsesSyncFileInterop() const { return m_bDmabuf && m_bSyncFileInterop; }
+         void RecordVulkanUse( std::shared_ptr<CTimeline> pTimeline, uint64_t ulPoint );
++        void RecordFailure( const char *pszOperation ) const;
+ 
+     private:
+         wlr_buffer *m_pBuffer = nullptr;
+         bool m_bDmabuf = false;
+         bool m_bSyncFileInterop = false;
+-        bool m_bAcquireFallback = false;
++        std::atomic<bool> m_bAcquireFallback = false;
++        std::atomic<bool> m_bAcquireFallbackReady = false;
++        std::atomic<bool> m_bAcquireFallbackWaitStarted = false;
+         int m_nAcquireSyncFile = -1;
++        uint64_t m_ulSyncId = 0;
++        pid_t m_nClientPid = -1;
+         std::vector<int> m_DmabufFds;
+         std::shared_ptr<CAcquireTimelinePoint> m_pAcquirePoint;
+         std::shared_ptr<CReleaseTimelinePoint> m_pReleasePoint;
+diff --git a/src/commit.cpp b/src/commit.cpp
+index 4880de314fb2..f7c28447471e 100644
+--- a/src/commit.cpp
++++ b/src/commit.cpp
+@@ -59,7 +59,11 @@ void commit_t::OnPollIn()
+             return;
+     }
+ 
+-    if ( bufferSync && bufferSync->UsesSyncFileInterop() && !bufferSync->IsAcquireFallback() )
++    if ( bufferSync && bufferSync->IsAcquireFallback() )
++    {
++        bufferSync->MarkAcquireFallbackReady();
++    }
++    else if ( bufferSync && bufferSync->UsesSyncFileInterop() )
+     {
+         std::pair<int32_t, bool> nextEvent = gamescope::CAcquireTimelinePoint::k_InvalidEvent;
+         const gamescope::CCommitBufferSync::AcquireStatus status = bufferSync->PrepareAcquire();
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index 561793ce82e6..02e2fec5940a 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -1678,11 +1678,20 @@ bool CVulkanCmdBuffer::AddBufferUse( std::shared_ptr<gamescope::CCommitBufferSyn
+ 	if ( !pBufferSync || std::find( m_BufferUses.begin(), m_BufferUses.end(), pBufferSync ) != m_BufferUses.end() )
+ 		return true;
+ 
+-	if ( pBufferSync->UsesSyncFileInterop() && !pBufferSync->IsAcquireFallback() )
++	if ( pBufferSync->UsesSyncFileInterop() && pBufferSync->IsAcquireFallback() )
++	{
++		if ( !pBufferSync->IsAcquireFallbackReady() )
++			return false;
++	}
++	else if ( pBufferSync->UsesSyncFileInterop() )
+ 	{
+ 		std::shared_ptr<VulkanBinarySemaphore_t> pSemaphore = m_device->ImportSyncFile( pBufferSync->DuplicateAcquireSyncFile() );
+ 		if ( !pSemaphore )
++		{
++			pBufferSync->RecordFailure( "Vulkan acquire import" );
++			pBufferSync->BeginAcquireFallbackWait();
+ 			return false;
++		}
+ 		AddBinaryDependency( std::move( pSemaphore ) );
+ 	}
+ 	m_BufferUses.emplace_back( std::move( pBufferSync ) );
+diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
+index 6cf26ed90658..b371a0e29fc1 100644
+--- a/src/steamcompmgr.cpp
++++ b/src/steamcompmgr.cpp
+@@ -7414,7 +7414,7 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
+ 	}
+ 
+ 	std::shared_ptr<gamescope::CCommitBufferSync> bufferSync = std::make_shared<gamescope::CCommitBufferSync>(
+-		buf, std::move( reslistentry.pAcquirePoint ), std::move( reslistentry.pReleasePoint ) );
++		buf, std::move( reslistentry.pAcquirePoint ), std::move( reslistentry.pReleasePoint ), w->pid );
+ 
+ 	gamescope::Rc<commit_t> newCommit = import_commit(
+ 		w,
+@@ -7590,7 +7590,11 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
+ 		{
+ 			newCommit->SetFence( fence, mango_nudge, doneCommits );
+ 			if ( bKnownReady )
++			{
++				if ( bufferSync->IsAcquireFallback() )
++					bufferSync->MarkAcquireFallbackReady();
+ 				newCommit->Signal();
++			}
+ 			else
+ 				g_ImageWaiter.AddWaitable( newCommit.get() );
+ 		}
 diff --git a/src/wlserver.cpp b/src/wlserver.cpp
-index 9f54aac2fdc2..a0cf09123382 100644
+index 9f54aac2fdc2..d0b885b9ec7e 100644
 --- a/src/wlserver.cpp
 +++ b/src/wlserver.cpp
-@@ -11,6 +11,8 @@
- #include <xf86drm.h>
- #include <xf86drmMode.h>
- #include <sys/eventfd.h>
-+#include <sys/stat.h>
-+#include <sys/sysmacros.h>
+@@ -1987,6 +1987,7 @@ wlserver_xdg_surface_info* waylandy_type_surface_new(struct wl_client *client, s
+ 	{
+ 		pid_t nPid = 0;
+ 		wl_client_get_credentials( client, &nPid, nullptr, nullptr );
++		window->pid = nPid;
+ 		window->appID = get_appid_from_pid( nPid );
+ 	}
+ 	window->_window_types.emplace<steamcompmgr_xdg_win_t>();
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sun, 23 Aug 2026 23:53:40 +0200
+Subject: sync: relay DMA-BUF acquires through local timelines
+
+Importing a producer sync_file directly into Vulkan or KMS leaves the compositor GPU dependent on the producer driver. In multi-GPU configurations, a failed foreign fence can therefore stall the consumer queue and the display.
+
+Create a compositor-owned timeline for each acquire and submit consumer work against that local point immediately. A shared epoll waiter relays source-fence completion to the local timeline, preserving overlapped submission without exposing Vulkan or KMS to the foreign fence.
+
+Treat EPOLLERR as terminal fence completion so errored sync_files cannot remain registered and spin indefinitely. Retain the existing CPU wait only as a fallback when relay setup fails.
+---
+ src/CommitBufferSync.cpp | 224 +++++++++++++++++++++++++++++++++++++--
+ src/CommitBufferSync.h   |   7 ++
+ src/Timeline.cpp         |  20 ++++
+ src/Timeline.h           |   2 +
+ src/commit.h             |   1 +
+ src/rendervulkan.cpp     | 112 +++++++++++++++++++-
+ src/rendervulkan.hpp     |  14 +++
+ src/waitable.h           |   4 +-
+ 8 files changed, 372 insertions(+), 12 deletions(-)
+
+diff --git a/src/CommitBufferSync.cpp b/src/CommitBufferSync.cpp
+index 8f3453a6a0c0..34ff894e85ef 100644
+--- a/src/CommitBufferSync.cpp
++++ b/src/CommitBufferSync.cpp
+@@ -4,6 +4,7 @@
+ #include "gpuvis_trace_utils.h"
+ #include "log.hpp"
+ #include "rc.h"
++#include "rendervulkan.hpp"
+ #include "steamcompmgr.hpp"
+ #include "waitable.h"
+ #include "wlserver.hpp"
+@@ -14,8 +15,10 @@
+ #include "wlr_end.hpp"
  
- #include <linux/input-event-codes.h>
+ #include <cerrno>
++#include <linux/sync_file.h>
+ #include <mutex>
+ #include <poll.h>
++#include <sys/ioctl.h>
+ #include <thread>
+ #include <unordered_map>
+ #include <unistd.h>
+@@ -108,6 +111,7 @@ namespace gamescope
  
-@@ -1771,7 +1773,26 @@ static void blank_kms_device( struct wlr_device *device )
+         int GetFD() override { return m_nSyncFileFd; }
+         void OnPollIn() override;
++        void OnPollError() override { OnPollIn(); }
+         void OnPollHangUp() override { OnPollIn(); }
+ 
+         int TakeFD() { return std::exchange( m_nSyncFileFd, -1 ); }
+@@ -163,6 +167,158 @@ namespace gamescope
+         Release();
+     }
+ 
++    class CRelaySyncFileLifetime final : public RcObject, public IWaitable
++    {
++    public:
++        explicit CRelaySyncFileLifetime( std::shared_ptr<VulkanTimelineSyncFile_t> pSyncFile )
++            : m_pSyncFile{ std::move( pSyncFile ) }
++            , m_nSyncFileFd{ m_pSyncFile ? m_pSyncFile->DuplicateSyncFile() : -1 }
++        {
++        }
++
++        ~CRelaySyncFileLifetime()
++        {
++            if ( m_nSyncFileFd >= 0 )
++                close( m_nSyncFileFd );
++        }
++
++        int GetFD() override { return m_nSyncFileFd; }
++        void OnPollIn() override;
++        void OnPollError() override { OnPollIn(); }
++        void OnPollHangUp() override { OnPollIn(); }
++
++        int TakeFD() { return std::exchange( m_nSyncFileFd, -1 ); }
++        std::shared_ptr<VulkanTimelineSyncFile_t> TakeSyncFile() { return std::move( m_pSyncFile ); }
++
++    private:
++        std::shared_ptr<VulkanTimelineSyncFile_t> m_pSyncFile;
++        int m_nSyncFileFd = -1;
++    };
++
++    static CAsyncWaiter<Rc<CRelaySyncFileLifetime>> &GetRelaySyncFileLifetimeWaiter()
++    {
++        static CAsyncWaiter<Rc<CRelaySyncFileLifetime>> s_Waiter{ "relay-sync-file" };
++        return s_Waiter;
++    }
++
++    void CRelaySyncFileLifetime::OnPollIn()
++    {
++        GetRelaySyncFileLifetimeWaiter().RemoveWaitable( Rc<CRelaySyncFileLifetime>{ this } );
++    }
++
++    static void RetainRelaySyncFileUntilComplete( std::shared_ptr<VulkanTimelineSyncFile_t> pSyncFile )
++    {
++        Rc<CRelaySyncFileLifetime> lifetime = new CRelaySyncFileLifetime{ std::move( pSyncFile ) };
++        if ( lifetime->GetFD() < 0 )
++            return;
++        if ( GetRelaySyncFileLifetimeWaiter().AddWaitable( lifetime ) )
++            return;
++
++        // Keep the pending Vulkan signal semaphore alive even if epoll could
++        // not accept its exported sync_file.
++        const int nSyncFileFd = lifetime->TakeFD();
++        std::shared_ptr<VulkanTimelineSyncFile_t> pFallbackSyncFile = lifetime->TakeSyncFile();
++        std::thread( [nSyncFileFd, pFallbackSyncFile = std::move( pFallbackSyncFile )]
++        {
++            pollfd pfd = { .fd = nSyncFileFd, .events = POLLIN };
++            int ret;
++            do
++            {
++                ret = poll( &pfd, 1, -1 );
++            }
++            while ( ret < 0 && errno == EINTR );
++            close( nSyncFileFd );
++            (void)pFallbackSyncFile;
++        } ).detach();
++    }
++
++    class CAcquireFenceRelay final : public RcObject, public IWaitable
++    {
++    public:
++        CAcquireFenceRelay( int nSourceSyncFile, std::shared_ptr<CTimeline> pRelayTimeline,
++            std::shared_ptr<VulkanTimelineSyncFile_t> pRelaySyncFile, uint64_t ulRelayPoint,
++            uint64_t ulSyncId, pid_t nClientPid )
++            : m_nSourceSyncFile{ nSourceSyncFile }
++            , m_pRelayTimeline{ std::move( pRelayTimeline ) }
++            , m_pRelaySyncFile{ std::move( pRelaySyncFile ) }
++            , m_ulRelayPoint{ ulRelayPoint }
++            , m_ulSyncId{ ulSyncId }
++            , m_nClientPid{ nClientPid }
++        {
++        }
++
++        ~CAcquireFenceRelay()
++        {
++            if ( m_nSourceSyncFile >= 0 )
++                close( m_nSourceSyncFile );
++        }
++
++        int GetFD() override { return m_nSourceSyncFile; }
++        void OnPollIn() override;
++        void OnPollError() override { Complete( true ); }
++        void OnPollHangUp() override { Complete( true ); }
++
++    private:
++        void Complete( bool bPollError );
++
++        int m_nSourceSyncFile = -1;
++        std::shared_ptr<CTimeline> m_pRelayTimeline;
++        std::shared_ptr<VulkanTimelineSyncFile_t> m_pRelaySyncFile;
++        uint64_t m_ulRelayPoint = 0;
++        uint64_t m_ulSyncId = 0;
++        pid_t m_nClientPid = -1;
++        std::atomic<bool> m_bComplete = false;
++    };
++
++    static CAsyncWaiter<Rc<CAcquireFenceRelay>> &GetAcquireFenceRelayWaiter()
++    {
++        static CAsyncWaiter<Rc<CAcquireFenceRelay>> s_Waiter{ "acquire-relay" };
++        return s_Waiter;
++    }
++
++    void CAcquireFenceRelay::OnPollIn()
++    {
++        Complete( false );
++    }
++
++    void CAcquireFenceRelay::Complete( bool bPollError )
++    {
++        if ( m_bComplete.exchange( true ) )
++            return;
++
++        GetAcquireFenceRelayWaiter().RemoveWaitable( Rc<CAcquireFenceRelay>{ this } );
++
++        int nFenceStatus = bPollError ? -EIO : 1;
++        if ( m_nSourceSyncFile >= 0 )
++        {
++            sync_file_info info = {};
++            if ( ioctl( m_nSourceSyncFile, SYNC_IOC_FILE_INFO, &info ) == 0 )
++                nFenceStatus = info.status;
++            close( m_nSourceSyncFile );
++            m_nSourceSyncFile = -1;
++        }
++
++        if ( nFenceStatus < 0 )
++        {
++            s_BufferSyncLog.warnf( "DMA-BUF sync %llu for pid %d source acquire completed with error %d; unblocking local relay.",
++                static_cast<unsigned long long>( m_ulSyncId ), m_nClientPid, nFenceStatus );
++        }
++
++        const bool bVulkanSignalled = m_pRelayTimeline->SignalPoint( m_ulRelayPoint );
++        if ( !bVulkanSignalled )
++        {
++            const uint64_t count = ++s_BufferSyncStats.uFailures;
++            s_BufferSyncLog.errorf( "DMA-BUF sync %llu for pid %d failed to signal its local acquire relay; failure count is %llu.",
++                static_cast<unsigned long long>( m_ulSyncId ), m_nClientPid,
++                static_cast<unsigned long long>( count ) );
++        }
++        else
++        {
++            gpuvis_trace_printf( "buffer sync %llu acquire relay signalled",
++                static_cast<unsigned long long>( m_ulSyncId ) );
++        }
++    }
++
+     static void LogModeOnce( pid_t pid, bool bExplicit, bool bInterop )
+     {
+         static std::mutex s_Mutex;
+@@ -179,9 +335,9 @@ namespace gamescope
+         if ( !bInterop )
+             s_BufferSyncLog.warnf( "Application with pid %d is using baseline DMA-BUF synchronization; sync_file interop is unavailable.", pid );
+         else if ( bExplicit )
+-            s_BufferSyncLog.infof( "Application with pid %d is using universal explicit DMA-BUF synchronization with completion-delayed release.", pid );
++            s_BufferSyncLog.infof( "Application with pid %d is using relayed explicit DMA-BUF synchronization with overlapped GPU submission and completion-delayed release.", pid );
+         else
+-            s_BufferSyncLog.infof( "Application with pid %d is using universal implicit DMA-BUF synchronization with completion-delayed release.", pid );
++            s_BufferSyncLog.infof( "Application with pid %d is using relayed implicit DMA-BUF synchronization with overlapped GPU submission and completion-delayed release.", pid );
+     }
+ 
+     CCommitBufferSync::CCommitBufferSync( wlr_buffer *pBuffer,
+@@ -354,16 +510,16 @@ namespace gamescope
+     {
+         if ( !UsesSyncFileInterop() || m_bAcquireFallback.load() )
+             return AcquireStatus::Baseline;
+-        if ( m_nAcquireSyncFile >= 0 )
++        if ( m_pAcquireRelayTimeline )
+             return AcquireStatus::Ready;
+ 
+-        if ( m_pAcquirePoint )
++        if ( m_nAcquireSyncFile < 0 && m_pAcquirePoint )
+         {
+             if ( !m_pAcquirePoint->IsMaterialized() )
+                 return AcquireStatus::Pending;
+             m_nAcquireSyncFile = m_pAcquirePoint->CreateSyncFile();
+         }
+-        else if ( !m_DmabufFds.empty() )
++        else if ( m_nAcquireSyncFile < 0 && !m_DmabufFds.empty() )
+         {
+             m_nAcquireSyncFile = ExportDmabufSyncFile( m_DmabufFds.front(), DmabufAccess::Read );
+         }
+@@ -371,7 +527,52 @@ namespace gamescope
+         if ( m_nAcquireSyncFile >= 0 )
+         {
+             gpuvis_trace_printf( "buffer sync %llu acquire materialized", static_cast<unsigned long long>( m_ulSyncId ) );
+-            return AcquireStatus::Ready;
++
++            // NVIDIA's Vulkan OPAQUE_FD for a timeline can be imported by DRM
++            // as a binary syncobj, so DRM timeline operations on it fail with
++            // EINVAL. Keep that relay Vulkan-only and materialize a separate
++            // local SYNC_FD for KMS. Other drivers retain the DRM-shared
++            // timeline path, avoiding RADV's synchronous pending-fence export.
++            constexpr uint32_t uNvidiaVendorId = 0x10de;
++            const bool bNeedsVulkanKmsBridge = g_device.vendorID() == uNvidiaVendorId;
++            std::shared_ptr<CTimeline> pRelayTimeline = bNeedsVulkanKmsBridge
++                ? CTimeline::CreateVulkanOnly()
++                : CTimeline::Create();
++            constexpr uint64_t ulRelayPoint = 1;
++            std::shared_ptr<VulkanTimelineSyncFile_t> pRelaySyncFile = pRelayTimeline && bNeedsVulkanKmsBridge
++                ? g_device.CreateTimelineSyncFile( pRelayTimeline->ToVkSemaphore(), ulRelayPoint )
++                : nullptr;
++            if ( pRelaySyncFile )
++                RetainRelaySyncFileUntilComplete( pRelaySyncFile );
++            const int nRelaySource = DuplicateSourceAcquireSyncFile();
++            const bool bKmsRelayReady = !bNeedsVulkanKmsBridge || bool( pRelaySyncFile );
++            if ( pRelayTimeline && bKmsRelayReady && nRelaySource >= 0 )
++            {
++                Rc<CAcquireFenceRelay> pRelay = new CAcquireFenceRelay{
++                    nRelaySource, pRelayTimeline, pRelaySyncFile, ulRelayPoint, m_ulSyncId, m_nClientPid };
++                if ( GetAcquireFenceRelayWaiter().AddWaitable( pRelay ) )
++                {
++                    m_pAcquireRelayTimeline = std::move( pRelayTimeline );
++                    m_pAcquireRelaySyncFile = std::move( pRelaySyncFile );
++                    m_ulAcquireRelayPoint = ulRelayPoint;
++                    gpuvis_trace_printf( "buffer sync %llu acquire relay armed",
++                        static_cast<unsigned long long>( m_ulSyncId ) );
++                    return AcquireStatus::Ready;
++                }
++            }
++            else if ( nRelaySource >= 0 )
++            {
++                close( nRelaySource );
++            }
++
++            // A private bridge submission may already be waiting on this
++            // point. It will not be exposed to consumers after setup failure,
++            // so signal it to let the bridge and its semaphore retire.
++            if ( pRelayTimeline && pRelaySyncFile )
++                pRelayTimeline->SignalPoint( ulRelayPoint );
++
++            RecordFailure( "acquire relay creation" );
++            return AcquireStatus::Failed;
+         }
+ 
+         RecordFailure( "acquire export" );
+@@ -397,7 +598,7 @@ namespace gamescope
+             return true;
+ 
+         UseAcquireFallback();
+-        const int syncFileFd = DuplicateAcquireSyncFile();
++        const int syncFileFd = DuplicateSourceAcquireSyncFile();
+         if ( syncFileFd < 0 )
+             return false;
+ 
+@@ -429,6 +630,15 @@ namespace gamescope
+     }
+ 
+     int CCommitBufferSync::DuplicateAcquireSyncFile() const
++    {
++        if ( m_pAcquireRelaySyncFile )
++            return m_pAcquireRelaySyncFile->DuplicateSyncFile();
++        if ( m_pAcquireRelayTimeline && m_ulAcquireRelayPoint )
++            return m_pAcquireRelayTimeline->ExportSyncFile( m_ulAcquireRelayPoint );
++        return DuplicateSourceAcquireSyncFile();
++    }
++
++    int CCommitBufferSync::DuplicateSourceAcquireSyncFile() const
+     {
+         return m_nAcquireSyncFile >= 0 ? dup( m_nAcquireSyncFile ) : -1;
+     }
+diff --git a/src/CommitBufferSync.h b/src/CommitBufferSync.h
+index e0b154d15525..b4014a285842 100644
+--- a/src/CommitBufferSync.h
++++ b/src/CommitBufferSync.h
+@@ -8,6 +8,7 @@
+ #include <vector>
+ 
+ struct wlr_buffer;
++struct VulkanTimelineSyncFile_t;
+ 
+ namespace gamescope
+ {
+@@ -38,6 +39,8 @@ namespace gamescope
+         const std::vector<int> &GetDmabufFds() const { return m_DmabufFds; }
+         const std::shared_ptr<CAcquireTimelinePoint> &GetAcquirePoint() const { return m_pAcquirePoint; }
+         const std::shared_ptr<CReleaseTimelinePoint> &GetReleasePoint() const { return m_pReleasePoint; }
++        const std::shared_ptr<CTimeline> &GetAcquireRelayTimeline() const { return m_pAcquireRelayTimeline; }
++        uint64_t GetAcquireRelayPoint() const { return m_ulAcquireRelayPoint; }
+ 
+         AcquireStatus PrepareAcquire();
+         std::pair<int32_t, bool> CreateAcquireAvailabilityEvent() const;
+@@ -60,6 +63,9 @@ namespace gamescope
+         std::atomic<bool> m_bAcquireFallbackReady = false;
+         std::atomic<bool> m_bAcquireFallbackWaitStarted = false;
+         int m_nAcquireSyncFile = -1;
++        std::shared_ptr<CTimeline> m_pAcquireRelayTimeline;
++        std::shared_ptr<VulkanTimelineSyncFile_t> m_pAcquireRelaySyncFile;
++        uint64_t m_ulAcquireRelayPoint = 0;
+         uint64_t m_ulSyncId = 0;
+         pid_t m_nClientPid = -1;
+         std::vector<int> m_DmabufFds;
+@@ -71,5 +77,6 @@ namespace gamescope
+         void FinishRelease();
+         void UnlockBuffer();
+         void DeferReleaseUntilComplete( int syncFileFd );
++        int DuplicateSourceAcquireSyncFile() const;
+     };
+ }
+diff --git a/src/Timeline.cpp b/src/Timeline.cpp
+index 2683ba461783..c7723988d3bd 100644
+--- a/src/Timeline.cpp
++++ b/src/Timeline.cpp
+@@ -33,6 +33,15 @@ namespace gamescope
+         return std::make_shared<CTimeline>( pSemaphore->GetFd(), std::move( pSemaphore ) );
+     }
+ 
++    /*static*/ std::shared_ptr<CTimeline> CTimeline::CreateVulkanOnly( const TimelineCreateDesc_t &desc )
++    {
++        std::shared_ptr<VulkanTimelineSemaphore_t> pSemaphore = g_device.CreateTimelineSemaphore( desc.ulStartingPoint );
++        if ( !pSemaphore )
++            return nullptr;
++
++        return std::make_shared<CTimeline>( -1, 0, std::move( pSemaphore ) );
++    }
++
+     CTimeline::CTimeline( int32_t nSyncobjFd, std::shared_ptr<VulkanTimelineSemaphore_t> pSemaphore )
+         : CTimeline( nSyncobjFd, SyncobjFdToHandle( nSyncobjFd ), std::move( pSemaphore ) )
+     {
+@@ -94,6 +103,17 @@ namespace gamescope
+         return nSyncFile;
+     }
+ 
++    bool CTimeline::SignalPoint( uint64_t ulPoint ) const
++    {
++        if ( m_uSyncobjHandle )
++        {
++            const uint32_t uHandle = m_uSyncobjHandle;
++            return drmSyncobjTimelineSignal( GetDrmRenderFD(), &uHandle, &ulPoint, 1 ) == 0;
++        }
++
++        return m_pVkSemaphore && m_pVkSemaphore->Signal( ulPoint );
++    }
++
+     bool CTimeline::WaitPoint( uint64_t ulPoint ) const
+     {
+         uint32_t uHandle = m_uSyncobjHandle;
+diff --git a/src/Timeline.h b/src/Timeline.h
+index 913da84ccfab..864199b7a503 100644
+--- a/src/Timeline.h
++++ b/src/Timeline.h
+@@ -26,6 +26,7 @@ namespace gamescope
+     {
+     public:
+         static std::shared_ptr<CTimeline> Create( const TimelineCreateDesc_t &desc = {} );
++        static std::shared_ptr<CTimeline> CreateVulkanOnly( const TimelineCreateDesc_t &desc = {} );
+ 
+         // Inherits nSyncobjFd's ref.
+         CTimeline( int32_t nSyncobjFd, std::shared_ptr<VulkanTimelineSemaphore_t> pSemaphore = nullptr );
+@@ -46,6 +47,7 @@ namespace gamescope
+         uint32_t GetSyncobjHandle() const { return m_uSyncobjHandle; }
+ 
+         int32_t ExportSyncFile( uint64_t ulPoint ) const;
++        bool SignalPoint( uint64_t ulPoint ) const;
+         bool WaitPoint( uint64_t ulPoint ) const;
+ 
+         std::shared_ptr<VulkanTimelineSemaphore_t> ToVkSemaphore();
+diff --git a/src/commit.h b/src/commit.h
+index 4941693157c4..8cc1bc332e4b 100644
+--- a/src/commit.h
++++ b/src/commit.h
+@@ -32,6 +32,7 @@ struct commit_t final : public gamescope::RcObject, public gamescope::IWaitable,
+ 	// For waitable:
+ 	int GetFD() final;
+ 	void OnPollIn() final;
++	void OnPollError() final { OnPollIn(); }
+ 	void Signal();
+ 	void OnPollHangUp() final;
+ 
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index 02e2fec5940a..6aac4d6833ae 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -1507,6 +1507,36 @@ int VulkanTimelineSemaphore_t::GetFd() const
+ 	return nFd;
+ }
+ 
++bool VulkanTimelineSemaphore_t::Signal( uint64_t ulPoint ) const
++{
++	const VkSemaphoreSignalInfo signalInfo =
++	{
++		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO,
++		.semaphore = pVkSemaphore,
++		.value = ulPoint,
++	};
++
++	VkResult res = pDevice->vk.SignalSemaphore( pDevice->device(), &signalInfo );
++	if ( res != VK_SUCCESS )
++	{
++		vk_errorf( res, "vkSignalSemaphore failed" );
++		return false;
++	}
++
++	return true;
++}
++
++VulkanTimelineSyncFile_t::~VulkanTimelineSyncFile_t()
++{
++	if ( nSyncFileFd >= 0 )
++		close( nSyncFileFd );
++}
++
++int VulkanTimelineSyncFile_t::DuplicateSyncFile() const
++{
++	return nSyncFileFd >= 0 ? dup( nSyncFileFd ) : -1;
++}
++
+ std::shared_ptr<VulkanTimelineSemaphore_t> CVulkanDevice::CreateTimelineSemaphore( uint64_t ulStartPoint, bool bShared )
+ {
+ 	std::shared_ptr<VulkanTimelineSemaphore_t> pSemaphore = std::make_unique<VulkanTimelineSemaphore_t>();
+@@ -1592,6 +1622,79 @@ std::shared_ptr<VulkanTimelineSemaphore_t> CVulkanDevice::ImportTimelineSemaphor
+ 	return pSemaphore;
+ }
+ 
++std::shared_ptr<VulkanTimelineSyncFile_t> CVulkanDevice::CreateTimelineSyncFile(
++	const std::shared_ptr<VulkanTimelineSemaphore_t> &pTimeline, uint64_t ulPoint )
++{
++	if ( !pTimeline || !ulPoint )
++		return nullptr;
++
++	std::shared_ptr<VulkanTimelineSyncFile_t> pSyncFile = std::make_shared<VulkanTimelineSyncFile_t>();
++	pSyncFile->pSemaphore = std::make_shared<VulkanBinarySemaphore_t>();
++	pSyncFile->pSemaphore->pDevice = this;
++
++	const VkExportSemaphoreCreateInfo exportInfo = {
++		.sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO,
++		.handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT,
++	};
++	const VkSemaphoreCreateInfo createInfo = {
++		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
++		.pNext = &exportInfo,
++	};
++	VkResult res = vk.CreateSemaphore( m_device, &createInfo, nullptr,
++		&pSyncFile->pSemaphore->pVkSemaphore );
++	if ( res != VK_SUCCESS )
++	{
++		vk_errorf( res, "vkCreateSemaphore for timeline sync_file failed" );
++		return nullptr;
++	}
++
++	const VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
++	const uint64_t ulBinarySignalValue = 0;
++	const VkTimelineSemaphoreSubmitInfo timelineInfo = {
++		.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
++		.waitSemaphoreValueCount = 1,
++		.pWaitSemaphoreValues = &ulPoint,
++		.signalSemaphoreValueCount = 1,
++		.pSignalSemaphoreValues = &ulBinarySignalValue,
++	};
++	const VkSemaphore waitSemaphore = pTimeline->pVkSemaphore;
++	const VkSemaphore signalSemaphore = pSyncFile->pSemaphore->pVkSemaphore;
++	const VkSubmitInfo submitInfo = {
++		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
++		.pNext = &timelineInfo,
++		.waitSemaphoreCount = 1,
++		.pWaitSemaphores = &waitSemaphore,
++		.pWaitDstStageMask = &waitStage,
++		.signalSemaphoreCount = 1,
++		.pSignalSemaphores = &signalSemaphore,
++	};
++	res = vk.QueueSubmit( generalQueue(), 1, &submitInfo, VK_NULL_HANDLE );
++	if ( res != VK_SUCCESS )
++	{
++		vk_errorf( res, "vkQueueSubmit for timeline sync_file failed" );
++		return nullptr;
++	}
++
++	const VkSemaphoreGetFdInfoKHR getInfo = {
++		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR,
++		.semaphore = signalSemaphore,
++		.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT,
++	};
++	res = vk.GetSemaphoreFdKHR( m_device, &getInfo, &pSyncFile->nSyncFileFd );
++	if ( res != VK_SUCCESS )
++	{
++		vk_errorf( res, "vkGetSemaphoreFdKHR for timeline sync_file failed" );
++
++		// Nothing will consume this private timeline after setup fails. Signal it
++		// so the submitted bridge can retire before its semaphore is destroyed.
++		pTimeline->Signal( ulPoint );
++		vk.QueueWaitIdle( generalQueue() );
++		return nullptr;
++	}
++
++	return pSyncFile;
++}
++
+ std::shared_ptr<VulkanBinarySemaphore_t> CVulkanDevice::ImportSyncFile( int32_t nSyncFile )
+ {
+ 	if ( nSyncFile < 0 )
+@@ -1685,14 +1788,15 @@ bool CVulkanCmdBuffer::AddBufferUse( std::shared_ptr<gamescope::CCommitBufferSyn
+ 	}
+ 	else if ( pBufferSync->UsesSyncFileInterop() )
+ 	{
+-		std::shared_ptr<VulkanBinarySemaphore_t> pSemaphore = m_device->ImportSyncFile( pBufferSync->DuplicateAcquireSyncFile() );
+-		if ( !pSemaphore )
++		const std::shared_ptr<gamescope::CTimeline> &pRelayTimeline = pBufferSync->GetAcquireRelayTimeline();
++		std::shared_ptr<VulkanTimelineSemaphore_t> pSemaphore = pRelayTimeline ? pRelayTimeline->ToVkSemaphore() : nullptr;
++		if ( !pSemaphore || !pBufferSync->GetAcquireRelayPoint() )
+ 		{
+-			pBufferSync->RecordFailure( "Vulkan acquire import" );
++			pBufferSync->RecordFailure( "Vulkan acquire relay import" );
+ 			pBufferSync->BeginAcquireFallbackWait();
+ 			return false;
+ 		}
+-		AddBinaryDependency( std::move( pSemaphore ) );
++		AddDependency( std::move( pSemaphore ), pBufferSync->GetAcquireRelayPoint() );
+ 	}
+ 	m_BufferUses.emplace_back( std::move( pBufferSync ) );
+ 	return true;
+diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
+index e093b4a5787d..e85c5d5fdfb1 100644
+--- a/src/rendervulkan.hpp
++++ b/src/rendervulkan.hpp
+@@ -826,6 +826,7 @@ static inline uint32_t div_roundup(uint32_t x, uint32_t y)
+ 	VK_FUNC(ResetCommandBuffer) \
+ 	VK_FUNC(ResetDescriptorPool) \
+ 	VK_FUNC(ResetFences) \
++	VK_FUNC(SignalSemaphore) \
+ 	VK_FUNC(UnmapMemory) \
+ 	VK_FUNC(UpdateDescriptorSets) \
+ 	VK_FUNC(WaitForFences) \
+@@ -848,6 +849,7 @@ struct VulkanTimelineSemaphore_t
+ 	VkSemaphore pVkSemaphore = VK_NULL_HANDLE;
+ 
+ 	int GetFd() const;
++	bool Signal( uint64_t ulPoint ) const;
+ };
+ 
+ struct VulkanBinarySemaphore_t
+@@ -858,6 +860,16 @@ struct VulkanBinarySemaphore_t
+ 	VkSemaphore pVkSemaphore = VK_NULL_HANDLE;
+ };
+ 
++struct VulkanTimelineSyncFile_t
++{
++	~VulkanTimelineSyncFile_t();
++
++	std::shared_ptr<VulkanBinarySemaphore_t> pSemaphore;
++	int nSyncFileFd = -1;
++
++	int DuplicateSyncFile() const;
++};
++
+ struct VulkanTimelinePoint_t
+ {
+ 	std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore;
+@@ -884,6 +896,8 @@ public:
+ 
+ 	std::shared_ptr<VulkanTimelineSemaphore_t> CreateTimelineSemaphore( uint64_t ulStartingPoint, bool bShared = false );
+ 	std::shared_ptr<VulkanTimelineSemaphore_t> ImportTimelineSemaphore( gamescope::CTimeline *pTimeline );
++	std::shared_ptr<VulkanTimelineSyncFile_t> CreateTimelineSyncFile(
++		const std::shared_ptr<VulkanTimelineSemaphore_t> &pTimeline, uint64_t ulPoint );
+ 	// Consumes nSyncFile regardless of success.
+ 	std::shared_ptr<VulkanBinarySemaphore_t> ImportSyncFile( int32_t nSyncFile );
+ 	int ExportSubmissionTimelineFd() const;
+diff --git a/src/waitable.h b/src/waitable.h
+index 36ac61ee7233..bfa8f547de2a 100644
+--- a/src/waitable.h
++++ b/src/waitable.h
+@@ -27,6 +27,7 @@ namespace gamescope
+ 
+         virtual void OnPollIn() {}
+         virtual void OnPollOut() {}
++        virtual void OnPollError() {}
+         virtual void OnPollHangUp()
+         {
+             g_WaitableLog.errorf( "IWaitable hung up. Aborting." );
+@@ -39,6 +40,8 @@ namespace gamescope
+                 this->OnPollIn();
+             if ( nEvents & EPOLLOUT )
+                 this->OnPollOut();
++            if ( nEvents & EPOLLERR )
++                this->OnPollError();
+             if ( nEvents & EPOLLHUP )
+                 this->OnPollHangUp();
+         }
+@@ -491,4 +494,3 @@ namespace gamescope
+ 
+ 
+ }
+-
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 24 Aug 2026 01:04:31 +0200
+Subject: also blank crtcs on resume
+
+---
+ src/wlserver.cpp | 24 +++++++++++++++++++-----
+ 1 file changed, 19 insertions(+), 5 deletions(-)
+
+diff --git a/src/wlserver.cpp b/src/wlserver.cpp
+index d0b885b9ec7e..460c1abe6bfc 100644
+--- a/src/wlserver.cpp
++++ b/src/wlserver.cpp
+@@ -1613,6 +1613,8 @@ void wlserver_refresh_cycle( struct wlr_surface *surface, uint64_t refresh_cycle
+ ///////////////////////
+ 
+ #if HAVE_SESSION
++static void blank_unused_kms_devices();
++
+ bool wlsession_active()
+ {
+ 	return wlserver.wlr.session->active;
+@@ -1620,6 +1622,9 @@ bool wlsession_active()
+ 
+ static void handle_session_active( struct wl_listener *listener, void *data )
+ {
++	if ( wlserver.wlr.session->active )
++		blank_unused_kms_devices();
++
+ 	GetBackend()->DirtyState( wlserver.wlr.session->active, wlserver.wlr.session->active );
+ 	wl_log.infof( "Session %s", wlserver.wlr.session->active ? "resumed" : "paused" );
+ }
+@@ -1748,6 +1753,8 @@ bool wlsession_init( void ) {
+ 
+ #if HAVE_SESSION
+ 
++static std::vector<struct wlr_device *> s_kmsDevices;
++
+ static void kms_device_handle_change( struct wl_listener *listener, void *data )
+ {
+ 	GetBackend()->DirtyState();
+@@ -1771,6 +1778,15 @@ static void blank_kms_device( struct wlr_device *device )
  	drmModeFreeResources( resources );
  }
  
--int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector selector, const void *userdata ) {
-+static bool kms_device_is_removable( struct wlr_device *device )
++static void blank_unused_kms_devices()
 +{
-+	struct stat fd_stat = {};
-+	if ( fstat( device->fd, &fd_stat ) != 0 )
-+		return false;
-+
-+	char path[64];
-+	snprintf( path, sizeof( path ), "/sys/dev/char/%u:%u/device/removable", major( fd_stat.st_rdev ), minor( fd_stat.st_rdev ) );
-+
-+	char value[16] = {};
-+	int fd = open( path, O_RDONLY | O_CLOEXEC );
-+	if ( fd < 0 )
-+		return false;
-+
-+	ssize_t length = read( fd, value, sizeof( value ) - 1 );
-+	close( fd );
-+	return length >= 9 && !strncmp( value, "removable", 9 );
++	for ( struct wlr_device *device : s_kmsDevices )
++	{
++		if ( device->dev != wlserver.wlr.device->dev )
++			blank_kms_device( device );
++	}
 +}
 +
-+int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector selector, const void *userdata, bool *has_external_gpu ) {
+ int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector selector, const void *userdata ) {
  	if ( device_name != nullptr )
  	{
- 		wlserver.wlr.device = wlr_session_open_file( wlserver.wlr.session, device_name );
-@@ -1783,6 +1804,7 @@ int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector s
+@@ -1783,6 +1799,7 @@ int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector s
  	ssize_t n = wlr_session_find_gpus( wlserver.wlr.session, 8, devices );
  	if ( n < 0 )
  		n = 0;
-+	*has_external_gpu = false;
++	s_kmsDevices.assign( devices, devices + n );
  
  	if ( wlserver.wlr.device == nullptr )
  	{
-@@ -1817,6 +1839,8 @@ int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector s
- 
- 	for ( ssize_t i = 0; i < n; i++ )
- 	{
-+		*has_external_gpu |= n > 1 && kms_device_is_removable( devices[i] );
-+
- 		if ( devices[i]->dev != wlserver.wlr.device->dev )
- 			blank_kms_device( devices[i] );
+@@ -1815,11 +1832,7 @@ int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector s
+ 		}
  	}
-diff --git a/src/wlserver.hpp b/src/wlserver.hpp
-index bb005b9658fc..0cd40596402b 100644
---- a/src/wlserver.hpp
-+++ b/src/wlserver.hpp
-@@ -228,7 +228,7 @@ void xwayland_surface_commit(struct wlr_surface *wlr_surface);
  
- bool wlsession_init( void );
- using wlsession_kms_device_selector = int (*)( int fd, const void *userdata );
--int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector selector, const void *userdata );
-+int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector selector, const void *userdata, bool *has_external_gpu );
- void wlsession_close_kms();
+-	for ( ssize_t i = 0; i < n; i++ )
+-	{
+-		if ( devices[i]->dev != wlserver.wlr.device->dev )
+-			blank_kms_device( devices[i] );
+-	}
++	blank_unused_kms_devices();
  
- bool wlserver_init( void );
+ 	struct wl_listener *listener = new wl_listener();
+ 	listener->notify = kms_device_handle_change;
+@@ -1831,6 +1844,7 @@ int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector s
+ void wlsession_close_kms()
+ {
+ 	wlr_session_close_file( wlserver.wlr.session, wlserver.wlr.device );
++	s_kmsDevices.clear();
+ }
+ 
+ #endif
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 24 Aug 2026 02:26:33 +0200
+Subject: fix hdr framegen on nvidia being black
+
+---
+ src/rendervulkan.cpp | 15 ++++++++++++---
+ 1 file changed, 12 insertions(+), 3 deletions(-)
+
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index 6aac4d6833ae..3b03ff9f2fd6 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -5374,7 +5374,11 @@ namespace
+ 				// requires this precomposition; HDR requires it even without FSR.
+ 				// Submit the real result after the midpoint so the earlier deadline
+ 				// retains first use of the GPU.
+-				if ( gamescope::FrameGenerationShouldPrecomposeRealFrame(
++				// Backend-allocated scanout paths always perform a final Vulkan
++				// composition, so they do not alternate KMS plane color state and do
++				// not need a second frame-generation intermediate for the real slot.
++				if ( !GetBackend()->UsesBackendAllocatedScanout() &&
++					 gamescope::FrameGenerationShouldPrecomposeRealFrame(
+ 						fsrEnabled, hdrOutput, realLayer.tex.get() == rawSource.get() ) )
+ 				{
+ 					gamescope::Rc<CVulkanTexture> realScanout = AcquireScanout(
+@@ -5515,14 +5519,19 @@ namespace
+ 				return nullptr;
+ 
+ 			CVulkanTexture::createFlags flags;
+-			flags.bFlippable = true;
++			// Backend-allocated scanout paths (currently NVIDIA DRM) always
++			// composite into their own final buffer. Keep frame-generation output
++			// device-local there: exporting it and transferring ownership to the
++			// foreign queue family is both unnecessary and breaks the subsequent
++			// Vulkan sampling pass on NVIDIA.
++			flags.bFlippable = !GetBackend()->UsesBackendAllocatedScanout();
+ 			flags.bSampled = true;
+ 			flags.bStorage = true;
+ 			flags.bTransferSrc = true;
+ 			gamescope::OwningRc<CVulkanTexture> image = new CVulkanTexture;
+ 			if ( !image->BInit( width, height, 1, drmFormat, flags ) )
+ 				return nullptr;
+-			if ( GetBackend()->IsSessionBased() && !image->GetBackendFb() )
++			if ( flags.bFlippable && GetBackend()->IsSessionBased() && !image->GetBackendFb() )
+ 				return nullptr;
+ 			m_scanoutImages.push_back( std::move( image ) );
+ 			return m_scanoutImages.back();
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 24 Aug 2026 02:51:31 +0200
+Subject: composite on first frame after sleep
+
+perhaps this fixes the Go 2 HDR after sleep
+---
+ src/Backends/DRMBackend.cpp | 24 ++++++++++++++++++------
+ 1 file changed, 18 insertions(+), 6 deletions(-)
+
+diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
+index 266e74ece0e3..69940b9fa826 100644
+--- a/src/Backends/DRMBackend.cpp
++++ b/src/Backends/DRMBackend.cpp
+@@ -3676,9 +3676,12 @@ namespace gamescope
+ 
+ 			bool bWantsPartialComposite = pFrameInfo->layerCount >= 3 && !kDisablePartialComposition;
+ 
+-			static bool s_bWasFirstFrame = true;
+-			bool bWasFirstFrame = s_bWasFirstFrame;
+-			s_bWasFirstFrame = false;
++			const bool bWasFirstFrame = m_bNeedsFirstFrameComposite.exchange( false );
++			bool bFirstFrameCommitted = false;
++			defer(
++				if ( bWasFirstFrame && !bFirstFrameCommitted )
++					m_bNeedsFirstFrameComposite = true;
++			);
+ 
+ 			bool bDrewCursor = false;
+ 			for ( uint32_t i = 0; i < k_nMaxLayers; i++ )
+@@ -3825,7 +3828,9 @@ namespace gamescope
+ 				if ( pFrameInfo->layerCount == 2 )
+ 					m_nLastSingleOverlayZPos = pFrameInfo->layers[1].zpos;
+ 
+-				return Commit( pFrameInfo );
++				int ret = Commit( pFrameInfo );
++				bFirstFrameCommitted = ret == 0;
++				return ret;
+ 			}
+ 
+ 			// Composition Path
+@@ -4030,15 +4035,21 @@ namespace gamescope
+ 				}
+ 			}
+ 
+-			return Commit( &compositeFrameInfo );
++			ret = Commit( &compositeFrameInfo );
++			bFirstFrameCommitted = ret == 0;
++			return ret;
+ 		}
+ 
+ 		virtual void DirtyState( bool bForce, bool bForceModeset ) override
+ 		{
++			const bool bPaused = !wlsession_active();
++			const bool bWasPaused = g_DRM.paused.exchange( bPaused );
++			if ( bWasPaused && !bPaused )
++				m_bNeedsFirstFrameComposite = true;
++
+ 			if ( bForceModeset )
+ 				g_DRM.needs_modeset = true;
+ 			g_DRM.out_of_date = std::max<int>( g_DRM.out_of_date, bForce ? 2 : 1 );
+-			g_DRM.paused = !wlsession_active();
+ 		}
+ 
+ 		virtual bool PollState() override
+@@ -4255,6 +4266,7 @@ namespace gamescope
+ 		}
+ 
+ 	private:
++		std::atomic<bool> m_bNeedsFirstFrameComposite = true;
+ 		bool m_bWasCompositing = false;
+ 		bool m_bWasPartialCompositing = false;
+ 		int m_nLastSingleOverlayZPos = 0;
