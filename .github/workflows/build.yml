@@ -133,9 +133,13 @@ jobs:
 
       - name: Generate changelog
         run: |
-          skopeo --override-arch amd64 inspect --no-tags \
-            "docker://i.anatase.org/anatase:$LUDOS_CHANNEL" \
-            > previous-channel.json
+          if ! skopeo --override-arch amd64 inspect --no-tags \
+              "docker://i.anatase.org/anatase:$LUDOS_CHANNEL" \
+              > previous-channel.json; then
+            echo "No existing $LUDOS_CHANNEL image; skipping changelog"
+            : > changelog.md
+            exit 0
+          fi
           skopeo inspect --no-tags \
             docker://i.anatase.org/anatase:x86_64 \
             > current-x86_64.json
