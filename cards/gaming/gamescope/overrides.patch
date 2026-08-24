@@ -10758,19 +10758,19 @@ index e8d8f31f0697..49e24cf9d88e 100644
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
-Date: Sun, 16 Aug 2026 16:06:08 +0200
+Date: Mon, 24 Aug 2026 15:57:39 +0200
 Subject: add an additional preference for 120hz
 
 tvs may set 60hz as the default output. This is not optimal, especially if they fail FLR on 60hz or support 120hz
 ---
- src/Backends/DRMBackend.cpp | 9 +++++++++
- 1 file changed, 9 insertions(+)
+ src/Backends/DRMBackend.cpp | 15 +++++++++++++--
+ 1 file changed, 13 insertions(+), 2 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 49e24cf9d88e..c80541c6e925 100644
+index 49e24cf9d88e..ed64ac462302 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
-@@ -2146,6 +2146,15 @@ namespace gamescope
+@@ -2146,13 +2146,24 @@ namespace gamescope
  			if (bGoodRefreshA != bGoodRefreshB)
  				return bGoodRefreshA;
  
@@ -10778,14 +10778,25 @@ index 49e24cf9d88e..c80541c6e925 100644
 +			// if they support 120hz. Prefer 120hz modes if available.
 +			// Still honor preferred mode, above 120hz things might get
 +			// funny, such as 360hz. Leave those for manual override.
++			// Only prefer 120hz if the resolution is high, fixes
++			// SuiPlay 0x1 having a weird 160hz mode at 800p
++			int nAreaA = a.hdisplay * a.vdisplay;
++			int nAreaB = b.hdisplay * b.vdisplay;
 +			bGoodRefreshA = a.vrefresh >= 120;
 +			bGoodRefreshB = b.vrefresh >= 120;
-+			if (bGoodRefreshA != bGoodRefreshB)
-+				return bGoodRefreshA;
++			if (nAreaA > nAreaB && bGoodRefreshA && !bGoodRefreshB)
++				return true;
 +
  			bool bPreferredA = a.type & DRM_MODE_TYPE_PREFERRED;
  			bool bPreferredB = b.type & DRM_MODE_TYPE_PREFERRED;
  			if (bPreferredA != bPreferredB)
+ 				return bPreferredA;
+ 
+-			int nAreaA = a.hdisplay * a.vdisplay;
+-			int nAreaB = b.hdisplay * b.vdisplay;
+ 			if (nAreaA != nAreaB)
+ 				return nAreaA > nAreaB;
+ 
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
@@ -10802,10 +10813,10 @@ Moreover, parts of the metadata block are optional, and gamescope rejects the wh
  2 files changed, 3 insertions(+), 23 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index c80541c6e925..f21a470dba1b 100644
+index ed64ac462302..b69ec9f797ac 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
-@@ -2571,25 +2571,10 @@ namespace gamescope
+@@ -2573,25 +2573,10 @@ namespace gamescope
  			hdr_output_metadata defaultHDRMetadata{};
  			hdr_metadata_infoframe *pInfoframe = &defaultHDRMetadata.hdmi_metadata_type1;
  
@@ -12312,7 +12323,7 @@ Subject: temporarily add gdm just for nvidia to force contiguous allocations
  6 files changed, 263 insertions(+), 10 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index f21a470dba1b..35be9c03f1d6 100644
+index b69ec9f797ac..97d7e068a64e 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -52,6 +52,10 @@
@@ -12387,7 +12398,7 @@ index f21a470dba1b..35be9c03f1d6 100644
  
  
  	// We can't close the DRM FD here, it might still be in use by the
-@@ -3582,7 +3619,9 @@ namespace gamescope
+@@ -3584,7 +3621,9 @@ namespace gamescope
  
  			FrameInfo_t fsrScanoutFrameInfo;
  			const FrameInfo_t::Layer_t &fsrBaseLayer = pFrameInfo->layers[0];
@@ -12397,7 +12408,7 @@ index f21a470dba1b..35be9c03f1d6 100644
  				pFrameInfo->useFSRLayer0 &&
  				pFrameInfo->layerCount > 1 &&
  				!cv_composite_force &&
-@@ -3645,6 +3684,8 @@ namespace gamescope
+@@ -3647,6 +3686,8 @@ namespace gamescope
  
  			bool bNeedsFullComposite = false;
  			bNeedsFullComposite |= cv_composite_force;
@@ -12406,7 +12417,7 @@ index f21a470dba1b..35be9c03f1d6 100644
  			bNeedsFullComposite |= bWasFirstFrame;
  			bNeedsFullComposite |= pFrameInfo->useFSRLayer0;
  			bNeedsFullComposite |= pFrameInfo->useNISLayer0;
-@@ -3961,6 +4002,71 @@ namespace gamescope
+@@ -3963,6 +4004,71 @@ namespace gamescope
  			return drm_fbid_from_dmabuf( &g_DRM, pDmaBuf );
  		}
  
@@ -12878,7 +12889,7 @@ currently, gamescope chooses gpu 0 regardless. Well, what if gpu 0 is not the on
  create mode 160000 subprojects/v4l-utils
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 35be9c03f1d6..ce2c56cd2a51 100644
+index 97d7e068a64e..c9d006d3b57e 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -1008,15 +1008,42 @@ static std::unordered_map<std::string, int> parse_connector_priorities(const cha
@@ -12994,7 +13005,7 @@ index 35be9c03f1d6..ce2c56cd2a51 100644
  		wlsession_close_kms();
  		return -1;
  	}
-@@ -3547,19 +3567,48 @@ namespace gamescope
+@@ -3549,19 +3569,48 @@ namespace gamescope
  
  		virtual bool Init() override
  		{
@@ -13122,158 +13133,87 @@ index 000000000000..1316a80455ef
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
-Date: Sat, 22 Aug 2026 00:29:17 +0200
-Subject: drm: preserve DMA-BUF lifetime when scanout import fail
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Date: Mon, 24 Aug 2026 01:04:31 +0200
+Subject: also blank crtcs on resume
 
-This description is descent:
-
-Some client DMA-BUFs, such as buffers rendered by an NVIDIA offload GPU, can be imported by Gamescope’s Vulkan renderer but not converted into framebuffers by the AMD KMS device.
-Previously, failure to create the DRM framebuffer also discarded the object carrying the client’s release point, potentially signalling buffer release while Vulkan was still using it.
-Introduce a non-scanout framebuffer object that preserves buffer lifetime and release synchronization while returning nullptr from EnsureImported(). This prevents hardware-plane scanout and allows Gamescope to fall back safely to Vulkan composition.
-
-TLDR: you cant scannout an nvidia buffer through an AMD GPU
 ---
- src/Backends/DRMBackend.cpp | 15 ++++++++++++++-
- 1 file changed, 14 insertions(+), 1 deletion(-)
+ src/wlserver.cpp | 24 +++++++++++++++++++-----
+ 1 file changed, 19 insertions(+), 5 deletions(-)
 
-diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index ce2c56cd2a51..e297e44d7fe7 100644
---- a/src/Backends/DRMBackend.cpp
-+++ b/src/Backends/DRMBackend.cpp
-@@ -561,6 +561,15 @@ namespace gamescope
- 	private:
- 		uint32_t m_uFbId = 0;
- 	};
-+
-+	// Client DMA-BUFs can be importable by the Vulkan renderer without being
-+	// importable by the KMS device. Keep the buffer and its release point tied
-+	// to the texture lifetime, but make it explicitly ineligible for scanout.
-+	class CDRMNonScanoutFb final : public CBaseBackendFb
-+	{
-+	public:
-+		IBackendFb *EnsureImported() override { return nullptr; }
-+	};
- }
- 
- uint32_t g_nDRMFormat = DRM_FORMAT_INVALID;
-@@ -4048,7 +4057,11 @@ namespace gamescope
- 
- 		virtual OwningRc<IBackendFb> ImportDmabufToBackend( wlr_dmabuf_attributes *pDmaBuf ) override
- 		{
--			return drm_fbid_from_dmabuf( &g_DRM, pDmaBuf );
-+			OwningRc<IBackendFb> pFb = drm_fbid_from_dmabuf( &g_DRM, pDmaBuf );
-+			if ( !pFb )
-+				pFb = new CDRMNonScanoutFb;
-+
-+			return pFb;
- 		}
- 
- 		virtual bool UsesBackendAllocatedScanout() const override
-
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Antheas Kapenekakis <git@antheas.dev>
-Date: Sat, 22 Aug 2026 01:17:21 +0200
-Subject: force explicit sync on removable gpu
-
-goes easy on the PCIe link, otherwise we might cause crashes
----
- src/Backends/DRMBackend.cpp |  5 ++++-
- src/wlserver.cpp            | 26 +++++++++++++++++++++++++-
- src/wlserver.hpp            |  2 +-
- 3 files changed, 30 insertions(+), 3 deletions(-)
-
-diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index e297e44d7fe7..998478fb1168 100644
---- a/src/Backends/DRMBackend.cpp
-+++ b/src/Backends/DRMBackend.cpp
-@@ -3583,12 +3583,15 @@ namespace gamescope
- 			}
- 
- 			const auto connector_priorities = parse_connector_priorities( g_sOutputName );
--			int kms_fd = wlsession_open_kms( nullptr, get_best_connector_priority_for_fd, &connector_priorities );
-+			bool has_external_gpu = false;
-+			int kms_fd = wlsession_open_kms( nullptr, get_best_connector_priority_for_fd, &connector_priorities, &has_external_gpu );
- 			if ( kms_fd < 0 )
- 			{
- 				fprintf( stderr, "Failed to select KMS device\n" );
- 				return false;
- 			}
-+			if ( has_external_gpu )
-+				cv_drm_debug_disable_explicit_sync = true;
- 
- 			struct stat fd_stat = {};
- 			if ( fstat( kms_fd, &fd_stat ) != 0 )
 diff --git a/src/wlserver.cpp b/src/wlserver.cpp
-index 9f54aac2fdc2..a0cf09123382 100644
+index 9f54aac2fdc2..e20be330240c 100644
 --- a/src/wlserver.cpp
 +++ b/src/wlserver.cpp
-@@ -11,6 +11,8 @@
- #include <xf86drm.h>
- #include <xf86drmMode.h>
- #include <sys/eventfd.h>
-+#include <sys/stat.h>
-+#include <sys/sysmacros.h>
+@@ -1613,6 +1613,8 @@ void wlserver_refresh_cycle( struct wlr_surface *surface, uint64_t refresh_cycle
+ ///////////////////////
  
- #include <linux/input-event-codes.h>
+ #if HAVE_SESSION
++static void blank_unused_kms_devices();
++
+ bool wlsession_active()
+ {
+ 	return wlserver.wlr.session->active;
+@@ -1620,6 +1622,9 @@ bool wlsession_active()
  
-@@ -1771,7 +1773,26 @@ static void blank_kms_device( struct wlr_device *device )
+ static void handle_session_active( struct wl_listener *listener, void *data )
+ {
++	if ( wlserver.wlr.session->active )
++		blank_unused_kms_devices();
++
+ 	GetBackend()->DirtyState( wlserver.wlr.session->active, wlserver.wlr.session->active );
+ 	wl_log.infof( "Session %s", wlserver.wlr.session->active ? "resumed" : "paused" );
+ }
+@@ -1748,6 +1753,8 @@ bool wlsession_init( void ) {
+ 
+ #if HAVE_SESSION
+ 
++static std::vector<struct wlr_device *> s_kmsDevices;
++
+ static void kms_device_handle_change( struct wl_listener *listener, void *data )
+ {
+ 	GetBackend()->DirtyState();
+@@ -1771,6 +1778,15 @@ static void blank_kms_device( struct wlr_device *device )
  	drmModeFreeResources( resources );
  }
  
--int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector selector, const void *userdata ) {
-+static bool kms_device_is_removable( struct wlr_device *device )
++static void blank_unused_kms_devices()
 +{
-+	struct stat fd_stat = {};
-+	if ( fstat( device->fd, &fd_stat ) != 0 )
-+		return false;
-+
-+	char path[64];
-+	snprintf( path, sizeof( path ), "/sys/dev/char/%u:%u/device/removable", major( fd_stat.st_rdev ), minor( fd_stat.st_rdev ) );
-+
-+	char value[16] = {};
-+	int fd = open( path, O_RDONLY | O_CLOEXEC );
-+	if ( fd < 0 )
-+		return false;
-+
-+	ssize_t length = read( fd, value, sizeof( value ) - 1 );
-+	close( fd );
-+	return length >= 9 && !strncmp( value, "removable", 9 );
++	for ( struct wlr_device *device : s_kmsDevices )
++	{
++		if ( device->dev != wlserver.wlr.device->dev )
++			blank_kms_device( device );
++	}
 +}
 +
-+int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector selector, const void *userdata, bool *has_external_gpu ) {
+ int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector selector, const void *userdata ) {
  	if ( device_name != nullptr )
  	{
- 		wlserver.wlr.device = wlr_session_open_file( wlserver.wlr.session, device_name );
-@@ -1783,6 +1804,7 @@ int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector s
+@@ -1783,6 +1799,7 @@ int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector s
  	ssize_t n = wlr_session_find_gpus( wlserver.wlr.session, 8, devices );
  	if ( n < 0 )
  		n = 0;
-+	*has_external_gpu = false;
++	s_kmsDevices.assign( devices, devices + n );
  
  	if ( wlserver.wlr.device == nullptr )
  	{
-@@ -1817,6 +1839,8 @@ int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector s
- 
- 	for ( ssize_t i = 0; i < n; i++ )
- 	{
-+		*has_external_gpu |= n > 1 && kms_device_is_removable( devices[i] );
-+
- 		if ( devices[i]->dev != wlserver.wlr.device->dev )
- 			blank_kms_device( devices[i] );
+@@ -1815,11 +1832,7 @@ int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector s
+ 		}
  	}
-diff --git a/src/wlserver.hpp b/src/wlserver.hpp
-index bb005b9658fc..0cd40596402b 100644
---- a/src/wlserver.hpp
-+++ b/src/wlserver.hpp
-@@ -228,7 +228,7 @@ void xwayland_surface_commit(struct wlr_surface *wlr_surface);
  
- bool wlsession_init( void );
- using wlsession_kms_device_selector = int (*)( int fd, const void *userdata );
--int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector selector, const void *userdata );
-+int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector selector, const void *userdata, bool *has_external_gpu );
- void wlsession_close_kms();
+-	for ( ssize_t i = 0; i < n; i++ )
+-	{
+-		if ( devices[i]->dev != wlserver.wlr.device->dev )
+-			blank_kms_device( devices[i] );
+-	}
++	blank_unused_kms_devices();
  
- bool wlserver_init( void );
+ 	struct wl_listener *listener = new wl_listener();
+ 	listener->notify = kms_device_handle_change;
+@@ -1831,6 +1844,7 @@ int wlsession_open_kms( const char *device_name, wlsession_kms_device_selector s
+ void wlsession_close_kms()
+ {
+ 	wlr_session_close_file( wlserver.wlr.session, wlserver.wlr.device );
++	s_kmsDevices.clear();
+ }
+ 
+ #endif
