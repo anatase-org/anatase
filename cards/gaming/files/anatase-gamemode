@@ -197,12 +197,17 @@ if ! read -r -t 30 response_x_display response_wl_display <> "$socket"; then
     exit 1
 fi
 
-# Use gamemode display for dbus activation
-# mangohud+preflight+steam use normal one
+# Portal-launched applications use the game Xwayland and Gamescope Wayland
+# displays. Publish both standard display variables before the portal services
+# are activated.
 export DISPLAY=":$((${response_x_display#:} + 1))"
-dbus-update-activation-environment --systemd DISPLAY
+export WAYLAND_DISPLAY="$response_wl_display"
+dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY
 
+# MangoApp, preflight, and Steam use the primary Xwayland display. Steam gets
+# the Gamescope Wayland socket through its dedicated environment variable.
 export DISPLAY="$response_x_display"
+unset WAYLAND_DISPLAY
 export GAMESCOPE_WAYLAND_DISPLAY="$response_wl_display"
 
 #

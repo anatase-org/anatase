@@ -42,6 +42,7 @@ systemctl --user stop \
 systemctl --user unset-environment \
     DESKTOP_SESSION \
     DISPLAY \
+    WAYLAND_DISPLAY \
     XDG_CURRENT_DESKTOP \
     XDG_DESKTOP_PORTAL_DIR \
     XDG_SESSION_DESKTOP \
