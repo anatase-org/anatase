@@ -78,6 +78,8 @@ flatpak:
     # use different locations scattered in the filesystem. We can tell
     # users to enable complete home access for that, even if not ideal.
     --filesystem=~/homebrew
+    # Give users a directory for their games
+    --filesystem=~/Games
     --filesystem=xdg-data/Steam:create
     --filesystem=xdg-data/flatpak/exports/share:ro
     --filesystem=xdg-data/flatpak/app:ro
