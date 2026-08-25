@@ -1488,3 +1488,162 @@ index 2ecba2a92997..f2da031b2ec4 100644
  use anyhow::Result;
  use std::fmt::Debug;
  use std::time::SystemTime;
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Tue, 25 Aug 2026 19:29:31 +0200
+Subject: ds_inhibit: Wait for controller input enumeration
+
+---
+ steamos-manager/src/ds_inhibit.rs | 93 ++++++++++++++++++++++++++++---
+ 1 file changed, 85 insertions(+), 8 deletions(-)
+
+diff --git a/steamos-manager/src/ds_inhibit.rs b/steamos-manager/src/ds_inhibit.rs
+index db897ce51c3a..b3c2bcd09e3b 100644
+--- a/steamos-manager/src/ds_inhibit.rs
++++ b/steamos-manager/src/ds_inhibit.rs
+@@ -23,6 +23,12 @@ struct HidNode {
+     id: u32,
+ }
+ 
++enum InhibitStatus {
++    Ready,
++    Pending,
++    Unsupported,
++}
++
+ pub struct Inhibitor {
+     inotify: EventStream<[u8; 512]>,
+     dev_watch: WatchDescriptor,
+@@ -63,16 +69,20 @@ impl HidNode {
+         Ok(entries)
+     }
+ 
+-    async fn can_inhibit(&self) -> bool {
++    async fn inhibit_status(&self) -> InhibitStatus {
+         debug!("Checking if hidraw{} can be inhibited", self.id);
+         let driver = match read_link(self.sys_base().join("driver")).await {
+             Ok(driver) => driver,
++            Err(e) if e.kind() == ErrorKind::NotFound => {
++                debug!("Driver for hidraw{} has not enumerated yet", self.id);
++                return InhibitStatus::Pending;
++            }
+             Err(e) => {
+                 warn!(
+                     "Failed to find associated driver for hidraw{}: {}",
+                     self.id, e
+                 );
+-                return false;
++                return InhibitStatus::Unsupported;
+             }
+         };
+ 
+@@ -81,20 +91,46 @@ impl HidNode {
+             Some("sony" | "playstation")
+         ) {
+             debug!("Not a PlayStation controller");
+-            return false;
++            return InhibitStatus::Unsupported;
+         }
+         let nodes = match self.get_nodes().await {
+             Ok(nodes) => nodes,
++            Err(e) if e.kind() == ErrorKind::NotFound => {
++                debug!("Inputs for hidraw{} have not enumerated yet", self.id);
++                return InhibitStatus::Pending;
++            }
+             Err(e) => {
+                 warn!("Failed to list inputs for hidraw{}: {e}", self.id);
+-                return false;
++                return InhibitStatus::Unsupported;
+             }
+         };
+         if nodes.is_empty() {
+-            debug!("No nodes to inhibit");
+-            return false;
++            debug!("No nodes to inhibit yet");
++            return InhibitStatus::Pending;
++        }
++        InhibitStatus::Ready
++    }
++
++    #[cfg(test)]
++    async fn can_inhibit(&self) -> bool {
++        matches!(self.inhibit_status().await, InhibitStatus::Ready)
++    }
++
++    async fn wait_until_inhibitable(&self) -> bool {
++        const RETRY_DELAY: Duration = Duration::from_millis(250);
++        const RETRIES: usize = 20;
++
++        for retry in 0..=RETRIES {
++            match self.inhibit_status().await {
++                InhibitStatus::Ready => return true,
++                InhibitStatus::Unsupported => return false,
++                InhibitStatus::Pending if retry < RETRIES => sleep(RETRY_DELAY).await,
++                InhibitStatus::Pending => break,
++            }
+         }
+-        true
++
++        debug!("Timed out waiting for hidraw{} to enumerate", self.id);
++        false
+     }
+ 
+     async fn check(&self) -> Result<()> {
+@@ -218,7 +254,7 @@ impl Inhibitor {
+         };
+ 
+         let node = HidNode::new(id);
+-        if !node.can_inhibit().await {
++        if !node.wait_until_inhibitable().await {
+             return Ok(false);
+         }
+         info!("Adding {} to watchlist", path.display());
+@@ -575,6 +611,47 @@ mod test {
+         );
+     }
+ 
++    #[tokio::test]
++    async fn inhibitor_delayed_input_enumeration() {
++        let h = testing::start();
++        let path = h.test.path();
++
++        let hid = HidNode::new(0);
++        let sys_base = hid.sys_base();
++
++        create_dir_all(path.join("dev")).await.expect("dev");
++        write(hid.hidraw(), "").await.expect("hidraw");
++        create_dir_all(&sys_base).await.expect("sysfs device");
++        symlink("playstation", sys_base.join("driver"))
++            .await
++            .expect("driver");
++        create_dir_all(path.join("proc/1/fd")).await.expect("fd");
++        symlink(hid.hidraw(), path.join("proc/1/fd/3"))
++            .await
++            .expect("symlink");
++        write(path.join("proc/1/comm"), "steam\n")
++            .await
++            .expect("comm");
++
++        let input = sys_base.join("input/input0/mouse0");
++        let enumerate = tokio::spawn(async move {
++            sleep(Duration::from_millis(50)).await;
++            create_dir_all(input).await.expect("mouse0");
++        });
++
++        let mut inhibitor = Inhibitor::init().await.expect("init");
++        enumerate.await.expect("enumerate");
++
++        assert_eq!(
++            read_to_string(sys_base.join("input/input0/inhibited"))
++                .await
++                .expect("inhibited"),
++            "1\n"
++        );
++
++        inhibitor.shutdown().await.expect("stop");
++    }
++
+     #[tokio::test]
+     async fn inhibitor_open_close() {
+         let h = testing::start();
