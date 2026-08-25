@@ -7,6 +7,9 @@
 # Disable debug package generation
 %global debug_package %{nil}
 
+%global selinuxtype targeted
+%global selinuxmodulename steamos_manager
+
 Name:           steamos-manager
 Version:        26.3.0
 Release:        1%{?dist}
@@ -16,6 +19,8 @@ License:        MIT
 
 URL:            https://github.com/evlav/steamos-manager/
 Source0:        %{url}/archive/v%{version}/%{name}-%{version}.tar.gz
+Source1:        steamos_manager.te
+Source2:        steamos_manager.fc
 Patch0:         overrides.patch
 
 %global rust_cecd_proxy_ver 0.2.0
@@ -39,6 +44,9 @@ BuildRequires:  cargo-rpm-macros >= 26
 BuildRequires:  cargo
 BuildRequires:  rust-packaging
 BuildRequires:  systemd-rpm-macros
+BuildRequires:  make
+BuildRequires:  selinux-policy
+BuildRequires:  selinux-policy-devel
 BuildRequires:  clang-devel
 BuildRequires:  cmake
 BuildRequires:  rust
@@ -124,13 +132,28 @@ BuildRequires:  (crate(zbus) >= 5.0.0 with crate(zbus) < 6.0.0~)
 BuildRequires:  (crate(zbus/tokio) >= 5.0.0 with crate(zbus/tokio) < 6.0.0~)
 BuildRequires:  (crate(zbus_xml/default) >= 5.0.0 with crate(zbus_xml/default) < 6.0.0~)
 
+Requires:       (%{name}-selinux = %{?epoch:%{epoch}:}%{version}-%{release} if selinux-policy-targeted)
 
 %description
 SteamOS Manager is a system daemon that abstracts Steam's interactions with the
 operating system.
 
+%package selinux
+Summary:        SELinux policy module for %{name}
+BuildArch:      noarch
+
+Requires:       selinux-policy-%{selinuxtype}
+Requires:       libselinux-utils
+Requires:       policycoreutils
+Requires:       policycoreutils-python-utils
+Requires:       selinux-policy-base
+
+%description selinux
+SELinux policy for the SteamOS Manager system daemon.
+
 %prep
 %autosetup -n %{name}-%{version} -p1
+cp %{SOURCE1} %{SOURCE2} .
 mkdir vendor
 tar -xvf %{SOURCE10} -C vendor/
 tar -xvf %{SOURCE11} -C vendor/
@@ -168,6 +191,8 @@ EOF
 %cargo_build -- --package steamos-manager --bin steamos-manager
 %{cargo_license_summary}
 %{cargo_license} > LICENSE.dependencies
+make -f %{_datadir}/selinux/devel/Makefile %{selinuxmodulename}.pp
+bzip2 -9 %{selinuxmodulename}.pp
 
 %install
 # Create the necessary directories
@@ -200,6 +225,10 @@ install -m644 data/user/steamos-manager.service %{buildroot}%{_userunitdir}/
 # Create a symlink for the systemd service
 ln -s ../steamos-manager.service %{buildroot}%{_userunitdir}/gamescope-session-plus.service.wants/steamos-manager.service
 
+# Install the SELinux policy module
+install -D -m0644 %{selinuxmodulename}.pp.bz2 \
+    %{buildroot}%{_datadir}/selinux/packages/%{selinuxtype}/%{selinuxmodulename}.pp.bz2
+
 # Do post-installation
 %post
 %systemd_post steamos-manager.service
@@ -211,6 +240,20 @@ ln -s ../steamos-manager.service %{buildroot}%{_userunitdir}/gamescope-session-p
 # Do after uninstallation
 %postun
 %systemd_postun_with_restart steamos-manager.service
+
+%pre selinux
+%selinux_relabel_pre -s %{selinuxtype}
+
+%post selinux
+%selinux_modules_install -s %{selinuxtype} %{_datadir}/selinux/packages/%{selinuxtype}/%{selinuxmodulename}.pp.bz2
+
+%postun selinux
+if [ $1 -eq 0 ]; then
+    %selinux_modules_uninstall -s %{selinuxtype} %{selinuxmodulename}
+fi
+
+%posttrans selinux
+%selinux_relabel_post -s %{selinuxtype}
 
 %files
 %license %{_datadir}/licenses/%{name}/LICENSE
@@ -236,6 +279,11 @@ ln -s ../steamos-manager.service %{buildroot}%{_userunitdir}/gamescope-session-p
 
 # Symlink for gamescope-session
 %{_userunitdir}/gamescope-session-plus.service.wants/steamos-manager.service
+
+%files selinux
+%license LICENSE
+%{_datadir}/selinux/packages/%{selinuxtype}/%{selinuxmodulename}.pp.*
+%ghost %verify(not md5 size mode mtime) %{_sharedstatedir}/selinux/%{selinuxtype}/active/modules/200/%{selinuxmodulename}
 
 %changelog
 %autochangelog

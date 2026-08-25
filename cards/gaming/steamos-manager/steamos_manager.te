@@ -1,0 +1,19 @@
+policy_module(steamos_manager, 1.0.0)
+
+type steamos_manager_t;
+type steamos_manager_exec_t;
+init_daemon_domain(steamos_manager_t, steamos_manager_exec_t)
+
+# SteamOS Manager performs a broad set of privileged system-management tasks.
+# Keep that existing access while separating it from init_t so device access can
+# be scoped to this service.
+optional_policy(`
+    unconfined_domain(steamos_manager_t)
+')
+
+gen_require(`
+    type usb_device_t;
+')
+
+# ds-inhibitor watches hidraw nodes for Steam opening and closing them.
+allow steamos_manager_t usb_device_t:chr_file { read watch watch_reads };

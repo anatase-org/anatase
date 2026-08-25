@@ -116,8 +116,11 @@ specs:
     files:
       - steamos-manager.spec
       - overrides.patch
+      - steamos_manager.te
+      - steamos_manager.fc
     packages:
       - steamos-manager
+      - steamos-manager-selinux
     patch:
       type: git
       url: https://github.com/evlav/steamos-manager
