@@ -197,12 +197,10 @@ if ! read -r -t 30 response_x_display response_wl_display <> "$socket"; then
     exit 1
 fi
 
-# Portal-launched applications use the game Xwayland and Gamescope Wayland
-# displays. Publish both standard display variables before the portal services
-# are activated.
+# Portal-launched applications use the game Xwayland display. Keep the standard
+# Wayland display empty so activated services do not connect to Gamescope.
 export DISPLAY=":$((${response_x_display#:} + 1))"
-export WAYLAND_DISPLAY="$response_wl_display"
-dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY
+dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY=
 
 # MangoApp, preflight, and Steam use the primary Xwayland display. Steam gets
 # the Gamescope Wayland socket through its dedicated environment variable.
