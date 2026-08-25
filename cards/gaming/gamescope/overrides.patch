@@ -13101,89 +13101,6 @@ index 6f06f14a5b20..01bfc18643f4 100644
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
-Date: Mon, 24 Aug 2026 21:15:38 +0200
-Subject: fix buggy hdr internal displays with heuristic instead
-
----
- src/Backends/DRMBackend.cpp | 13 +++++++++++--
- src/color_helpers.cpp       | 16 ++++++++++++++--
- src/color_helpers.h         |  2 ++
- 3 files changed, 27 insertions(+), 4 deletions(-)
-
-diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index f015cd9a31eb..15a4ba7c8279 100644
---- a/src/Backends/DRMBackend.cpp
-+++ b/src/Backends/DRMBackend.cpp
-@@ -2593,7 +2593,16 @@ namespace gamescope
- 				 pHDRStaticMetadata && pHDRStaticMetadata->eotfs && pHDRStaticMetadata->eotfs->pq )
- 			{
- 				m_Mutable.HDR.bExposeHDRSupport = true;
--				m_Mutable.HDR.eOutputEncodingEOTF = EOTF_PQ;
-+				// Some internal panels advertise BT.2020/PQ while reporting an
-+				// SDR-sized native gamut and do not actually decode PQ correctly.
-+				// Require a coherent wide-gamut EDID before using PQ on an internal
-+				// panel. External sinks remain responsible for interpreting the
-+				// advertised BT.2020/PQ signal.
-+				const bool bTrustPQ = GetScreenType() != GAMESCOPE_SCREEN_TYPE_INTERNAL ||
-+					BIsWideGamut( m_Mutable.DisplayColorimetry );
-+				m_Mutable.HDR.eOutputEncodingEOTF = bTrustPQ ? EOTF_PQ : EOTF_Gamma22;
-+				if ( !bTrustPQ )
-+					drm_log.warnf( "Ignoring incoherent PQ capability on internal connector %s with SDR-gamut primaries.", m_Mutable.szName );
- 				m_Mutable.HDR.uMaxContentLightLevel =
- 					pHDRStaticMetadata->desired_content_max_luminance
- 					? nits_to_u16( pHDRStaticMetadata->desired_content_max_luminance )
-@@ -2997,7 +3006,7 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
- 	{
- 		if ( !cv_drm_debug_disable_output_tf && !bSinglePlane )
- 		{
--			drm->pending.output_tf = g_bOutputHDREnabled
-+			drm->pending.output_tf = frameInfo->outputEncodingEOTF == EOTF_PQ
- 				? AMDGPU_TRANSFER_FUNCTION_PQ_EOTF
- 				: AMDGPU_TRANSFER_FUNCTION_SRGB_EOTF;
- 		}
-diff --git a/src/color_helpers.cpp b/src/color_helpers.cpp
-index 64430a5f0c08..b60b68249326 100644
---- a/src/color_helpers.cpp
-+++ b/src/color_helpers.cpp
-@@ -830,8 +830,20 @@ void calcColorTransform( lut1d_t * pShaper, int nLutSize1d,
- 
- bool BIsWideGamut( const displaycolorimetry_t & nativeDisplayOutput )
- {
--    // Use red as a sentinal for a wide-gamut display
--    return ( nativeDisplayOutput.primaries.r.x > 0.650f && nativeDisplayOutput.primaries.r.y < 0.320f );
-+    auto gamutArea = []( const primaries_t &primaries )
-+    {
-+        const float twiceArea =
-+            primaries.r.x * ( primaries.g.y - primaries.b.y ) +
-+            primaries.g.x * ( primaries.b.y - primaries.r.y ) +
-+            primaries.b.x * ( primaries.r.y - primaries.g.y );
-+        return 0.5f * std::abs( twiceArea );
-+    };
-+
-+    // Coordinate sentinels are sensitive to EDID quantization (for example,
-+    // DCI-P3 red is exactly on y=0.32). Compare the full primary triangle and
-+    // require a meaningful increase over Rec.709 instead.
-+    return gamutArea( nativeDisplayOutput.primaries ) >
-+        gamutArea( displaycolorimetry_709.primaries ) * 1.10f;
- }
- 
- void buildSDRColorimetry( displaycolorimetry_t * pColorimetry, colormapping_t *pMapping,
-diff --git a/src/color_helpers.h b/src/color_helpers.h
-index cefa74e403e8..84d395d83ccf 100644
---- a/src/color_helpers.h
-+++ b/src/color_helpers.h
-@@ -385,6 +385,8 @@ void calcColorTransform( lut1d_t * pShaper, int nLutSize1d,
- // Build colorimetry and a gamut mapping for the given SDR configuration
- // Note: the output colorimetry will use the native display's white point
- // Only the color gamut will change
-+bool BIsWideGamut( const displaycolorimetry_t & nativeDisplayOutput );
-+
- void buildSDRColorimetry( displaycolorimetry_t * pColorimetry, colormapping_t *pMapping,
- 	float flSDRGamutWideness, const displaycolorimetry_t & nativeDisplayOutput );
- 
-
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Antheas Kapenekakis <git@antheas.dev>
 Date: Mon, 24 Aug 2026 22:52:18 +0200
 Subject: add retry for automatic gpu detection
 
@@ -13244,3 +13161,190 @@ index e20be330240c..d64bd605d9c3 100644
  		int best_priority = INT_MAX;
  
  		for ( ssize_t i = 0; i < n; i++ )
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Tue, 25 Aug 2026 02:48:25 +0200
+Subject: add fallback if reaper process is missing
+
+---
+ src/steamcompmgr.cpp | 42 +++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 41 insertions(+), 1 deletion(-)
+
+diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
+index f9e085d82c76..48fd7faa36f7 100644
+--- a/src/steamcompmgr.cpp
++++ b/src/steamcompmgr.cpp
+@@ -46,9 +46,11 @@
+ #include <vector>
+ #include <algorithm>
+ #include <array>
++#include <charconv>
+ #include <iostream>
+ #include <fstream>
+ #include <string>
++#include <string_view>
+ #include <queue>
+ #include <filesystem>
+ #include <variant>
+@@ -4946,16 +4948,54 @@ get_name_from_pid( pid_t pid )
+ 	return procNameStr;
+ }
+ 
++static uint32_t
++get_appid_from_pid_environ( pid_t pid )
++{
++	char filename[256];
++	snprintf( filename, sizeof( filename ), "/proc/%i/environ", pid );
++	std::ifstream proc_environ_file( filename, std::ios::binary );
++
++	if ( !proc_environ_file.is_open() || proc_environ_file.bad() )
++		return 0;
++
++	constexpr std::string_view sSteamAppIdPrefix = "SteamAppId=";
++	std::string variable;
++
++	while ( std::getline( proc_environ_file, variable, '\0' ) )
++	{
++		std::string_view value = variable;
++		if ( !value.starts_with( sSteamAppIdPrefix ) )
++			continue;
++
++		value.remove_prefix( sSteamAppIdPrefix.length() );
++
++		uint32_t unAppId = 0;
++		auto [ ptr, error ] = std::from_chars( value.data(), value.data() + value.length(), unAppId );
++		if ( error == std::errc{} && ptr == value.data() + value.length() && unAppId != 0 )
++			return unAppId;
++	}
++
++	return 0;
++}
++
+ uint32_t
+ get_appid_from_pid( pid_t pid )
+ {
+ 	uint32_t unFoundAppId = 0;
++	uint32_t unEnvironmentAppId = 0;
+ 
+ 	char filename[256];
+ 	pid_t next_pid = pid;
+ 
+ 	while ( 1 )
+ 	{
++		// SteamAppId survives the Flatpak portal subsandbox boundary even though
++		// the game's process ancestry no longer reaches Steam's reaper process.
++		// Keep the nearest non-zero value only as a fallback so the established
++		// reaper-based lookup remains authoritative.
++		if ( unEnvironmentAppId == 0 )
++			unEnvironmentAppId = get_appid_from_pid_environ( next_pid );
++
+ 		snprintf( filename, sizeof( filename ), "/proc/%i/stat", next_pid );
+ 		std::ifstream proc_stat_file( filename );
+ 
+@@ -5035,7 +5075,7 @@ get_appid_from_pid( pid_t pid )
+ 		}
+ 	}
+ 
+-	return unFoundAppId;
++	return unFoundAppId != 0 ? unFoundAppId : unEnvironmentAppId;
+ }
+ 
+ static pid_t
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sat, 30 Aug 2025 15:32:00 +0200
+Subject: fix(hdr): disable PQ on handheld internal displays
+
+For some reason, the PQ transfer function does not work on current
+handhelds. So use gamma 22 instead. This allows us to skip creating
+configs and read the HDR metadata from the displays.
+---
+ src/Backends/DRMBackend.cpp | 8 +++++++-
+ src/backend.h               | 1 +
+ src/main.cpp                | 3 +++
+ src/steamcompmgr.cpp        | 4 ++++
+ 4 files changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
+index f015cd9a31eb..1d86f2ebcace 100644
+--- a/src/Backends/DRMBackend.cpp
++++ b/src/Backends/DRMBackend.cpp
+@@ -2593,7 +2593,13 @@ namespace gamescope
+ 				 pHDRStaticMetadata && pHDRStaticMetadata->eotfs && pHDRStaticMetadata->eotfs->pq )
+ 			{
+ 				m_Mutable.HDR.bExposeHDRSupport = true;
+-				m_Mutable.HDR.eOutputEncodingEOTF = EOTF_PQ;
++				if (disableInternalPq && GetScreenType() == GAMESCOPE_SCREEN_TYPE_INTERNAL)
++					// Current handheld internal displays have issues
++					// with PQ, e.g., Ayaneo 3, Steam Deck etc.
++					// Use Gamma 2.2 as the safest option for now.
++					m_Mutable.HDR.eOutputEncodingEOTF = EOTF_Gamma22;
++				else
++					m_Mutable.HDR.eOutputEncodingEOTF = EOTF_PQ;
+ 				m_Mutable.HDR.uMaxContentLightLevel =
+ 					pHDRStaticMetadata->desired_content_max_luminance
+ 					? nits_to_u16( pHDRStaticMetadata->desired_content_max_luminance )
+diff --git a/src/backend.h b/src/backend.h
+index 277f676a647b..7ffdf9b3f5d2 100644
+--- a/src/backend.h
++++ b/src/backend.h
+@@ -24,6 +24,7 @@ struct wlr_dmabuf_attributes;
+ struct FrameInfo_t;
+ 
+ extern bool steamMode;
++extern bool disableInternalPq;
+ 
+ namespace gamescope
+ {
+diff --git a/src/main.cpp b/src/main.cpp
+index ee221188037c..1835424f62b3 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -143,6 +143,7 @@ const struct option *gamescope_options = (struct option[]){
+ 	{ "hdr-enabled", no_argument, nullptr, 0 },
+ 	{ "hdr-sdr-content-nits", required_argument, nullptr, 0 },
+ 	{ "hdr-itm-enabled", no_argument, nullptr, 0 },
++	{ "hdr-pq-internal-enable", no_argument, nullptr, 0 },
+ 	{ "hdr-itm-sdr-nits", required_argument, nullptr, 0 },
+ 	{ "hdr-itm-target-nits", required_argument, nullptr, 0 },
+ 	{ "hdr-debug-force-support", no_argument, nullptr, 0 },
+@@ -209,6 +210,7 @@ const char usage[] =
+ 	"  --sdr-gamut-wideness           Set the 'wideness' of the gamut for SDR comment. 0 - 1.\n"
+ 	"  --hdr-sdr-content-nits         set the luminance of SDR content in nits. Default: 400 nits.\n"
+ 	"  --hdr-itm-enabled              enable SDR->HDR inverse tone mapping. only works for SDR input.\n"
++	"  --hdr-pq-internal-enable       enable PQ transform even on internal displays (e.g. Legion Go 2)\n"
+ 	"  --hdr-itm-sdr-nits             set the luminance of SDR content in nits used as the input for the inverse tone mapping process.\n"
+ 	"                                 Default: 100 nits, Max: 1000 nits\n"
+ 	"  --hdr-itm-target-nits          set the target luminace of the inverse tone mapping process.\n"
+@@ -622,6 +624,7 @@ static bool IsInDebugSession()
+ #endif
+ 
+ bool steamMode = false;
++bool disableInternalPq = true;
+ bool g_bLaunchMangoapp = false;
+ 
+ static void UpdateCompatEnvVars()
+diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
+index 48fd7faa36f7..f1606a514482 100644
+--- a/src/steamcompmgr.cpp
++++ b/src/steamcompmgr.cpp
+@@ -157,6 +157,8 @@ gamescope_color_mgmt_luts g_ScreenshotColorMgmtLutsHDR[ EOTF_Count ];
+ static lut1d_t g_tmpLut1d;
+ static lut3d_t g_tmpLut3d;
+ 
++extern bool disableInternalPq;
++
+ extern int g_nDynamicRefreshHz;
+ 
+ bool g_bForceHDRSupportDebug = false;
+@@ -8564,6 +8566,8 @@ steamcompmgr_main(int argc, char **argv)
+ 					g_bForceHDR10OutputDebug = true;
+ 				} else if (strcmp(opt_name, "hdr-itm-enabled") == 0 || strcmp(opt_name, "hdr-itm-enable") == 0) {
+ 					g_bHDRItmEnable = true;
++				} else if (strcmp(opt_name, "hdr-pq-internal-enable") == 0) {
++					disableInternalPq = false;
+ 				} else if (strcmp(opt_name, "sdr-gamut-wideness") == 0) {
+ 					g_ColorMgmt.pending.sdrGamutWideness = atof(optarg);
+ 				} else if (strcmp(opt_name, "hdr-sdr-content-nits") == 0) {
