@@ -52,9 +52,9 @@ cards:
   - cards/drivers/nvidia/nvidia
   - cards/drivers/nvidia/nct
   - cards/de/kde
-  - cards/gaming/gamemode
-  - cards/gaming/hhd
   - cards/base/spaces
+  - cards/gaming/hhd
+  - cards/gaming/gamemode
   - cards/base/tweaks
   - cards/base/finalize
 
