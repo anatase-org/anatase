@@ -73,13 +73,9 @@ flatpak:
     --env=SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS=0
     # Our changes
     --filesystem=~/.steam:create
-    # Certain decky plugins need this, there is no security problem
-    # by letting steam mess with it (files are not private). Other plugins
-    # use different locations scattered in the filesystem. We can tell
-    # users to enable complete home access for that, even if not ideal.
-    --filesystem=~/homebrew
-    # Give users a directory for their games
-    --filesystem=~/Games
+    # Let's give up and give them access to home. Too many bug reports
+    # and it is just not worth dealing with.
+    --filesystem=home
     --filesystem=xdg-data/Steam:create
     --filesystem=xdg-data/flatpak/exports/share:ro
     --filesystem=xdg-data/flatpak/app:ro
