@@ -12,6 +12,7 @@ fi
 # Plasma stores the keyboard configuration in kxkbrc, but Gamescope does not
 # read KDE configuration. Translate the enabled layout into the libxkbcommon
 # environment variables Gamescope consumes when it creates its keymap.
+kde_keyboard_layout=
 if command -v kreadconfig6 >/dev/null 2>&1 && \
     [[ $(kreadconfig6 \
         --file kxkbrc \
@@ -22,25 +23,44 @@ if command -v kreadconfig6 >/dev/null 2>&1 && \
         --file kxkbrc \
         --group Layout \
         --key LayoutList)
+fi
 
-    # Avoid replacing libxkbcommon's defaults with an incomplete KDE config.
-    if [[ -n $kde_keyboard_layout ]]; then
-        export XKB_DEFAULT_MODEL="$(kreadconfig6 \
-            --file kxkbrc \
-            --group Layout \
-            --key Model \
-            --default pc104)"
-        export XKB_DEFAULT_LAYOUT="$kde_keyboard_layout"
-        export XKB_DEFAULT_VARIANT="$(kreadconfig6 \
-            --file kxkbrc \
-            --group Layout \
-            --key VariantList)"
-        kde_keyboard_options=$(kreadconfig6 \
-            --file kxkbrc \
-            --group Layout \
-            --key Options)
+# Avoid replacing libxkbcommon's defaults with an incomplete KDE config.
+if [[ -n $kde_keyboard_layout ]]; then
+    export XKB_DEFAULT_MODEL="$(kreadconfig6 \
+        --file kxkbrc \
+        --group Layout \
+        --key Model \
+        --default pc104)"
+    export XKB_DEFAULT_LAYOUT="$kde_keyboard_layout"
+    export XKB_DEFAULT_VARIANT="$(kreadconfig6 \
+        --file kxkbrc \
+        --group Layout \
+        --key VariantList)"
+    kde_keyboard_options=$(kreadconfig6 \
+        --file kxkbrc \
+        --group Layout \
+        --key Options)
+    # KDE's global layout shortcuts are not active outside Plasma.
+    export XKB_DEFAULT_OPTIONS="${kde_keyboard_options:-grp:win_space_toggle}"
+elif command -v busctl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+    # When Plasma has no user override, use systemd-localed's system keymap.
+    system_keyboard_property() {
+        busctl --system --json=short get-property \
+            org.freedesktop.locale1 \
+            /org/freedesktop/locale1 \
+            org.freedesktop.locale1 \
+            "$1" 2>/dev/null | jq -r 'select(.type == "s") | .data'
+    }
+
+    system_keyboard_layout=$(system_keyboard_property X11Layout)
+    if [[ -n $system_keyboard_layout ]]; then
+        export XKB_DEFAULT_MODEL="$(system_keyboard_property X11Model)"
+        export XKB_DEFAULT_LAYOUT="$system_keyboard_layout"
+        export XKB_DEFAULT_VARIANT="$(system_keyboard_property X11Variant)"
+        system_keyboard_options=$(system_keyboard_property X11Options)
         # KDE's global layout shortcuts are not active outside Plasma.
-        export XKB_DEFAULT_OPTIONS="${kde_keyboard_options:-grp:win_space_toggle}"
+        export XKB_DEFAULT_OPTIONS="${system_keyboard_options:-grp:win_space_toggle}"
     fi
 fi
 
