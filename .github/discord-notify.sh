@@ -22,11 +22,34 @@ fi
 
 channel_title="${channel^}"
 timestamp="$(date --utc +'%Y-%m-%dT%H:%M:%SZ')"
-description="[View the full changelog and release details on GitHub]($release_url)"
+title="Anatase $version — $channel_title Release"
+description="[View the release notes]($release_url)"
 role_id="${DISCORD_ROLE_ID:-}"
 
+if [[ "$release_url" == https://updates.anatase.org/* ]]; then
+  if update_html="$(curl \
+      --fail-with-body \
+      --silent \
+      --show-error \
+      --location \
+      --retry 3 \
+      --retry-connrefused \
+      --retry-delay 2 \
+      --retry-max-time 30 \
+      --max-time 30 \
+      "$release_url" 2>/dev/null
+    )" && summary="$(python3 .github/update-summary.py <<< "$update_html")"; then
+    update_title="$(jq -r '.title // empty' <<< "$summary")"
+    update_description="$(jq -r '.description // empty' <<< "$summary")"
+    [[ -n "$update_title" ]] && title="$update_title"
+    [[ -n "$update_description" ]] && description="$update_description"
+  else
+    warn "Could not read the update summary from $release_url; using fallback text"
+  fi
+fi
+
 if ! payload="$(jq -nc \
-    --arg title "Anatase $version — $channel_title Release" \
+    --arg title "$title" \
     --arg release_url "$release_url" \
     --arg description "$description" \
     --arg timestamp "$timestamp" \

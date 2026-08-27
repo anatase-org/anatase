@@ -131,7 +131,6 @@ jobs:
 
       - name: Create GitHub release
         if: ${{ inputs.images }}
-        id: release
         env:
           GH_TOKEN: ${{ github.token }}
           REVISION: ${{ steps.image.outputs.revision }}
@@ -141,14 +140,13 @@ jobs:
             --target "$REVISION" \
             --title "$VERSION: Stable Release" \
             --notes-file changelog.md
-          release_url=$(gh release view "stable-$VERSION" --json url --jq '.url')
-          echo "url=$release_url" >> "$GITHUB_OUTPUT"
 
       - name: Announce release on Discord
         if: ${{ inputs.images }}
         env:
           DISCORD_ROLE_ID: ${{ secrets.DISCORD_ROLE_STABLE }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          RELEASE_URL: ${{ steps.release.outputs.url }}
           VERSION: ${{ steps.image.outputs.version }}
-        run: .github/discord-notify.sh stable "$VERSION" "$RELEASE_URL"
+        run: >-
+          .github/discord-notify.sh stable "$VERSION"
+          "https://updates.anatase.org/$VERSION"
