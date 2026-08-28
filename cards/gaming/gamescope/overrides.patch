@@ -13536,3 +13536,36 @@ index f1606a514482..0412e4d95597 100644
  		{
  			if ( reslistentry.pReleasePoint )
  				pBackendFb->SetReleasePoint( reslistentry.pReleasePoint );
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sat, 29 Aug 2026 01:22:33 +0200
+Subject: replay frames every second if there is a stale frame in vrr
+
+otherwise we can starve the nvidia display engine...
+---
+ src/steamcompmgr.cpp | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
+index 0412e4d95597..6a9fd7466d48 100644
+--- a/src/steamcompmgr.cpp
++++ b/src/steamcompmgr.cpp
+@@ -9430,7 +9430,16 @@ steamcompmgr_main(int argc, char **argv)
+ 
+ 					case FlipType::VRR:
+ 					{
+-						bShouldPaint = hasRepaint;
++						// Some KMS drivers stop producing vblanks when a VRR head is
++						// left without flips for long enough. Represent frames during
++						// a compositor freeze at a 10hz cadence
++						static constexpr uint64_t k_uVRRKeepaliveInterval = 100'000'000;
++						const uint64_t uNow = get_time_in_nanos();
++						const uint64_t uLastVBlank = GetVBlankTimer().GetLastVBlank();
++						const bool bKeepaliveDue = bIsVBlankFromTimer &&
++							uNow >= uLastVBlank + k_uVRRKeepaliveInterval;
++
++						bShouldPaint = hasRepaint || bKeepaliveDue;
+ 
+ 						if ( bIsVBlankFromTimer )
+ 						{
