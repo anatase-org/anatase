@@ -6,8 +6,8 @@ Subject: [NA] add dev script
 ---
  0001-cstdint.patch     |  37 ++++++++++++
  subprojects/.gitignore |   3 +
- sync.sh                | 129 +++++++++++++++++++++++++++++++++++++++++
- 3 files changed, 169 insertions(+)
+ sync.sh                | 124 +++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 164 insertions(+)
  create mode 100644 0001-cstdint.patch
  create mode 100755 sync.sh
 
@@ -68,19 +68,18 @@ index aa2345109697..00e448b6c3d8 100644
 \ No newline at end of file
 diff --git a/sync.sh b/sync.sh
 new file mode 100755
-index 000000000000..7066f2631f2d
+index 000000000000..28fdaa41b778
 --- /dev/null
 +++ b/sync.sh
-@@ -0,0 +1,129 @@
+@@ -0,0 +1,124 @@
 +#!/bin/sh
 +
 +usage() {
-+    echo "Usage: $0 [--user USER] [--appid ID] <host>"
++    echo "Usage: $0 [--appid ID] <host>"
 +}
 +
 +HOST=
 +APPID=
-+SESSION_USER=
 +
 +while [ "$#" -gt 0 ]; do
 +    case "$1" in
@@ -91,15 +90,6 @@ index 000000000000..7066f2631f2d
 +                exit 1
 +            fi
 +            APPID=$2
-+            shift 2
-+            ;;
-+        --user)
-+            if [ "$#" -lt 2 ]; then
-+                echo "--user requires a user name" >&2
-+                usage >&2
-+                exit 1
-+            fi
-+            SESSION_USER=$2
 +            shift 2
 +            ;;
 +        -h|--help)
@@ -144,23 +134,16 @@ index 000000000000..7066f2631f2d
 +ninja -C build/
 +scp build/src/gamescope "${HOST}:gamescope"
 +
-+ssh "$HOST" /bin/bash -s -- "$SESSION_USER" "$APPID" <<'EOF'
-+    requested_user=$1
-+    appid=$2
++ssh "$HOST" /bin/bash -s -- "$APPID" <<'EOF'
++    set -e
++
++    appid=$1
 +
 +    login_config_mounted=
 +    if mountpoint -q /etc/plasmalogin.conf; then
 +        login_config_mounted=1
 +    fi
-+
-+    if [ -n "$requested_user" ]; then
-+        session_user=$requested_user
-+    elif [ -n "$login_config_mounted" ]; then
-+        session_user=$(sed -n 's/^User=//p' /etc/plasmalogin.conf | head -n 1)
-+    fi
-+    if [ -z "$session_user" ]; then
-+        session_user=$(id -un)
-+    fi
++    session_user=$(id -un)
 +
 +    passwd_entry=$(getent passwd "$session_user") || {
 +        echo "Unknown remote user: $session_user" >&2
@@ -174,8 +157,20 @@ index 000000000000..7066f2631f2d
 +    fi
 +
 +    sudo rpm-ostree usroverlay || true
++    if [ -z "$login_config_mounted" ]; then
++        printf '%s\n' \
++            '[Autologin]' \
++            'Relogin=true' \
++            "User=$session_user" \
++            'Session=gamemode.desktop' |
++            sudo tee /run/plasmalogin.conf >/dev/null
++        sudo chcon --reference=/etc/plasmalogin.conf /run/plasmalogin.conf
++        sudo mount --bind /run/plasmalogin.conf /etc/plasmalogin.conf
++    fi
 +    sudo mv ~/gamescope /usr/bin/gamescope
-+    sudo systemctl restart plasmalogin
++    sudo systemctl stop plasmalogin
++    sleep 2
++    sudo systemctl start plasmalogin
 +
 +    if [ -n "$appid" ]; then
 +        attempts=0
@@ -13348,3 +13343,196 @@ index 48fd7faa36f7..f1606a514482 100644
  				} else if (strcmp(opt_name, "sdr-gamut-wideness") == 0) {
  					g_ColorMgmt.pending.sdrGamutWideness = atof(optarg);
  				} else if (strcmp(opt_name, "hdr-sdr-content-nits") == 0) {
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Fri, 28 Aug 2026 23:46:15 +0200
+Subject: sync: retain Vulkan buffer releases until GPU completion
+
+---
+ src/commit.cpp       |  7 +++++++
+ src/commit.h         |  4 +++-
+ src/rendervulkan.cpp | 35 +++++++++++++++++++++++++++++++++++
+ src/rendervulkan.hpp | 11 +++++++++++
+ src/steamcompmgr.cpp | 10 +++++++++-
+ 5 files changed, 65 insertions(+), 2 deletions(-)
+
+diff --git a/src/commit.cpp b/src/commit.cpp
+index b3fcaca24534..4aa56b1897ba 100644
+--- a/src/commit.cpp
++++ b/src/commit.cpp
+@@ -128,6 +128,13 @@ void commit_t::SetFence( int nFence, bool bMangoNudge, CommitDoneList_t *pDoneCo
+     m_pDoneCommits = pDoneCommits;
+ }
+ 
++void commit_t::SetReleasePoint( std::shared_ptr<gamescope::CReleaseTimelinePoint> pReleasePoint )
++{
++	releasePoint = std::move( pReleasePoint );
++	if ( vulkanTex && releasePoint )
++		vulkanTex->AddReleasePoint( releasePoint );
++}
++
+ void calc_scale_factor(float &out_scale_x, float &out_scale_y, float sourceWidth, float sourceHeight);
+ 
+ bool commit_t::ShouldPreemptivelyUpscale()
+diff --git a/src/commit.h b/src/commit.h
+index 0f098a93132f..e807d78d5bba 100644
+--- a/src/commit.h
++++ b/src/commit.h
+@@ -37,9 +37,11 @@ struct commit_t final : public gamescope::RcObject, public gamescope::IWaitable,
+ 	void SetFence( int nFence, bool bMangoNudge, CommitDoneList_t *pDoneCommits );
+ 
+ 	bool ShouldPreemptivelyUpscale();
++	void SetReleasePoint( std::shared_ptr<gamescope::CReleaseTimelinePoint> pReleasePoint );
+ 
+ 	struct wlr_buffer *buf = nullptr;
+ 	gamescope::Rc<CVulkanTexture> vulkanTex;
++	std::shared_ptr<gamescope::CReleaseTimelinePoint> releasePoint;
+ 	std::optional<UpscaledTexture_t> upscaledTexture;
+ 
+ 	gamescope::Rc<CVulkanTexture> GetTexture( GamescopeUpscaleFilter eFilter, GamescopeUpscaleScaler eScaler, GamescopeAppTextureColorspace &colorspace )
+@@ -80,4 +82,4 @@ struct commit_t final : public gamescope::RcObject, public gamescope::IWaitable,
+ 	int m_nCommitFence = -1;
+ 	bool m_bMangoNudge = false;
+ 	CommitDoneList_t *m_pDoneCommits = nullptr; // I hate this
+-};
+\ No newline at end of file
++};
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index 01bfc18643f4..867b44bdf48e 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -1644,6 +1644,7 @@ void CVulkanCmdBuffer::reset()
+ 	vk_check( m_device->vk.ResetCommandBuffer(m_cmdBuffer, 0) );
+ 	m_device->recycleDescriptorSets( m_descriptorSets );
+ 	m_textureRefs.clear();
++	m_releasePointRefs.clear();
+ 	m_textureState.clear();
+ 
+ 	m_ExternalDependencies.clear();
+@@ -1959,6 +1960,7 @@ void CVulkanCmdBuffer::prepareSrcImage(CVulkanTexture *image)
+ 	// no need to reimport if the image didn't change
+ 	if (!result.second)
+ 		return;
++	image->ReferenceReleasePoints( m_releasePointRefs );
+ 	// using the swapchain image as a source without writing to it doesn't make any sense
+ 	assert(image->outputImage() == false);
+ 	result.first->second.needsImport =
+@@ -1972,6 +1974,7 @@ void CVulkanCmdBuffer::prepareDestImage(CVulkanTexture *image)
+ 	// no need to discard if the image is already image/in the correct layout
+ 	if (!result.second)
+ 		return;
++	image->ReferenceReleasePoints( m_releasePointRefs );
+ 	result.first->second.discarded = true;
+ 	result.first->second.needsImport =
+ 		image->queueFamily == external_queue_family( m_device );
+@@ -2895,6 +2898,38 @@ int CVulkanTexture::memoryFence()
+ 	return fence;
+ }
+ 
++void CVulkanTexture::AddReleasePoint( const std::shared_ptr<gamescope::CReleaseTimelinePoint> &pReleasePoint )
++{
++	if ( !pReleasePoint )
++		return;
++
++	std::lock_guard lock( m_ReleasePointMutex );
++	m_ReleasePoints.emplace_back( pReleasePoint );
++	m_bHasReleasePoints.store( true, std::memory_order_release );
++}
++
++void CVulkanTexture::ReferenceReleasePoints( std::vector<std::shared_ptr<gamescope::CReleaseTimelinePoint>> &references )
++{
++	if ( !m_bHasReleasePoints.load( std::memory_order_acquire ) )
++		return;
++
++	std::lock_guard lock( m_ReleasePointMutex );
++	for ( auto it = m_ReleasePoints.begin(); it != m_ReleasePoints.end(); )
++	{
++		if ( std::shared_ptr<gamescope::CReleaseTimelinePoint> pReleasePoint = it->lock() )
++		{
++			references.emplace_back( std::move( pReleasePoint ) );
++			++it;
++		}
++		else
++		{
++			it = m_ReleasePoints.erase( it );
++		}
++	}
++	if ( m_ReleasePoints.empty() )
++		m_bHasReleasePoints.store( false, std::memory_order_release );
++}
++
+ static bool is_image_format_modifier_supported(VkFormat format, uint32_t drmFormat, uint64_t modifier)
+ {
+   VkPhysicalDeviceImageFormatInfo2 imageFormatInfo = {
+diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
+index d6809d2757ec..530d38cdd1ea 100644
+--- a/src/rendervulkan.hpp
++++ b/src/rendervulkan.hpp
+@@ -61,6 +61,7 @@ enum EStreamColorspace : int
+ };
+ 
+ #include <memory>
++#include <mutex>
+ #include <unordered_map>
+ #include <vector>
+ #include <atomic>
+@@ -201,6 +202,8 @@ public:
+ 	}
+ 
+ 	int memoryFence();
++	void AddReleasePoint( const std::shared_ptr<gamescope::CReleaseTimelinePoint> &pReleasePoint );
++	void ReferenceReleasePoints( std::vector<std::shared_ptr<gamescope::CReleaseTimelinePoint>> &references );
+ 
+ 	CVulkanTexture( void );
+ 	~CVulkanTexture( void );
+@@ -249,6 +252,13 @@ private:
+ 	EStreamColorspace m_streamColorspace = k_EStreamColorspace_Unknown;
+ 
+ 	struct wlr_dmabuf_attributes m_dmabuf = {};
++
++	// A memoized DMA-BUF texture may be recommitted with a new explicit-sync
++	// release point. Commits own these points; submitted command buffers take
++	// strong references through this weak association.
++	std::mutex m_ReleasePointMutex;
++	std::vector<std::weak_ptr<gamescope::CReleaseTimelinePoint>> m_ReleasePoints;
++	std::atomic<bool> m_bHasReleasePoints{ false };
+ };
+ 
+ struct vec2_t
+@@ -1062,6 +1072,7 @@ private:
+ 
+ 	// Per Use State
+ 	std::vector<gamescope::Rc<CVulkanTexture>> m_textureRefs;
++	std::vector<std::shared_ptr<gamescope::CReleaseTimelinePoint>> m_releasePointRefs;
+ 	std::unordered_map<CVulkanTexture *, TextureState> m_textureState;
+ 
+ 	// Draw State
+diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
+index f1606a514482..0412e4d95597 100644
+--- a/src/steamcompmgr.cpp
++++ b/src/steamcompmgr.cpp
+@@ -7462,6 +7462,14 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
+ 	int fence = -1;
+ 	if ( newCommit != nullptr )
+ 	{
++		// KMS framebuffers already retain explicit release points for their scanout
++		// lifetime. Vulkan-only imports need the same ownership: keep the point on
++		// the commit and let the consuming AMD command buffer retain it to GPU
++		// completion before NVIDIA may reuse the source image.
++		gamescope::IBackendFb *pBackendFb = newCommit->vulkanTex->GetBackendFb();
++		if ( !pBackendFb && reslistentry.pReleasePoint )
++			newCommit->SetReleasePoint( std::move( reslistentry.pReleasePoint ) );
++
+ 		global_focus_t *pCurrentFocus = GetCurrentFocus();
+ 
+ 		static bool bMangoappSocketDisable = env_to_bool( getenv( "GAMESCOPE_MANGOAPP_SOCKET_DISABLE" ));
+@@ -7566,7 +7574,7 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
+ 			}
+ 		}
+ 
+-		if ( gamescope::IBackendFb *pBackendFb = newCommit->vulkanTex->GetBackendFb() )
++		if ( pBackendFb )
+ 		{
+ 			if ( reslistentry.pReleasePoint )
+ 				pBackendFb->SetReleasePoint( reslistentry.pReleasePoint );
