@@ -13996,3 +13996,26 @@ index 000000000000..cd95b050ffdb
 +    const vec4 color = RWLoadFrameinterpolationOutput(pixel);
 +    StoreFrameinterpolationOutput(pixel, vec4(color.rgb, 1.0));
 +}
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sat, 29 Aug 2026 03:55:30 +0200
+Subject: move hdr-pq-internal in the check before DRM init
+
+---
+ src/main.cpp | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/main.cpp b/src/main.cpp
+index 1835424f62b3..d37f13a45759 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -815,6 +815,8 @@ int main(int argc, char **argv)
+ 					g_bDebugLayers = true;
+ 				} else if (strcmp(opt_name, "disable-color-management") == 0) {
+ 					g_bForceDisableColorMgmt = true;
++				} else if (strcmp(opt_name, "hdr-pq-internal-enable") == 0) {
++					disableInternalPq = false;
+ 				} else if (strcmp(opt_name, "xwayland-count") == 0) {
+ 					g_nXWaylandCount = parse_integer( optarg, opt_name );
+ 				} else if (strcmp(opt_name, "composite-debug") == 0) {
