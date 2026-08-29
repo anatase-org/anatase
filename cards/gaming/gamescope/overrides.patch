@@ -13622,3 +13622,377 @@ index 1d86f2ebcace..8a358f241e42 100644
  			if ( !cv_drm_debug_disable_in_fence_fd && pLayer->acquirePoint )
  			{
  				nFence = pLayer->acquirePoint->CreateSyncFile();
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sat, 29 Aug 2026 02:15:59 +0200
+Subject: steamcompmgr: fall back when preemptive upscale sync import fails
+
+otherwise nvidia crashes when enabling scaling filters
+---
+ src/rendervulkan.cpp | 12 +++++++--
+ src/rendervulkan.hpp |  4 +--
+ src/steamcompmgr.cpp | 62 ++++++++++++++++++++++++--------------------
+ 3 files changed, 46 insertions(+), 32 deletions(-)
+
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index 867b44bdf48e..4345be5b1bc9 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -1569,14 +1569,22 @@ std::shared_ptr<VulkanTimelineSemaphore_t> CVulkanDevice::ImportTimelineSemaphor
+ 	return pSemaphore;
+ }
+ 
+-void CVulkanCmdBuffer::AddDependency( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint )
++bool CVulkanCmdBuffer::AddDependency( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint )
+ {
++	if ( !pTimelineSemaphore )
++		return false;
++
+ 	m_ExternalDependencies.emplace_back( std::move( pTimelineSemaphore ), ulPoint );
++	return true;
+ }
+ 
+-void CVulkanCmdBuffer::AddSignal( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint )
++bool CVulkanCmdBuffer::AddSignal( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint )
+ {
++	if ( !pTimelineSemaphore )
++		return false;
++
+ 	m_ExternalSignals.emplace_back( std::move( pTimelineSemaphore ), ulPoint );
++	return true;
+ }
+ 
+ void CVulkanDevice::wait(uint64_t sequence, bool reset)
+diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
+index 530d38cdd1ea..00a5b9af4962 100644
+--- a/src/rendervulkan.hpp
++++ b/src/rendervulkan.hpp
+@@ -1057,8 +1057,8 @@ public:
+ 	VkQueue queue() { return m_queue; }
+ 	uint32_t queueFamily() { return m_queueFamily; }
+ 
+-	void AddDependency( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint );
+-	void AddSignal( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint );
++	bool AddDependency( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint );
++	bool AddSignal( std::shared_ptr<VulkanTimelineSemaphore_t> pTimelineSemaphore, uint64_t ulPoint );
+ 
+ 	const std::vector<VulkanTimelinePoint_t> &GetExternalDependencies() const { return m_ExternalDependencies; }
+ 	const std::vector<VulkanTimelinePoint_t> &GetExternalSignals() const { return m_ExternalSignals; }
+diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
+index 6a9fd7466d48..92e0870a94c6 100644
+--- a/src/steamcompmgr.cpp
++++ b/src/steamcompmgr.cpp
+@@ -7516,44 +7516,50 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
+ 			TempUpscaleImage_t *pTempImage = GetTempUpscaleImage( g_nOutputWidth, g_nOutputHeight, g_output.uOutputFormat );
+ 			if ( pTempImage )
+ 			{
+-				const uint64_t ulNextReleasePoint = ++pTempImage->ulLastPoint;
++				const uint64_t ulNextReleasePoint = pTempImage->ulLastPoint + 1;
+ 
+ 				std::unique_ptr<CVulkanCmdBuffer> pCommandBuffer = g_device.commandBuffer();
+-				
+-				pCommandBuffer->AddDependency( reslistentry.pAcquirePoint->GetTimeline()->ToVkSemaphore(), reslistentry.pAcquirePoint->GetPoint() );
+-				pCommandBuffer->AddSignal( pTempImage->pReleaseTimeline->ToVkSemaphore(), ulNextReleasePoint );
+-
+-				static std::optional<uint64_t> s_ulLastPreemptiveUpscaleSeqNo;
+-
+-				if ( s_ulLastPreemptiveUpscaleSeqNo )
++				if ( !pCommandBuffer->AddDependency( reslistentry.pAcquirePoint->GetTimeline()->ToVkSemaphore(), reslistentry.pAcquirePoint->GetPoint() ) ||
++				     !pCommandBuffer->AddSignal( pTempImage->pReleaseTimeline->ToVkSemaphore(), ulNextReleasePoint ) )
+ 				{
+-					vulkan_wait( *s_ulLastPreemptiveUpscaleSeqNo, true );
++					bPreemptiveUpscale = false;
+ 				}
++				else
++				{
++					pTempImage->ulLastPoint = ulNextReleasePoint;
+ 
+-				std::optional<uint64_t> seqNo = vulkan_composite( &upscaledFrameInfo, nullptr, false, pTempImage->pTexture, false, std::move( pCommandBuffer ) );
++					static std::optional<uint64_t> s_ulLastPreemptiveUpscaleSeqNo;
+ 
+-				if ( cv_upscale_preemptive_debug_force_sync )
+-				{
+-					vulkan_wait( *seqNo, true );
+-				}
++					if ( s_ulLastPreemptiveUpscaleSeqNo )
++					{
++						vulkan_wait( *s_ulLastPreemptiveUpscaleSeqNo, true );
++					}
+ 
+-				s_ulLastPreemptiveUpscaleSeqNo = seqNo;
++					std::optional<uint64_t> seqNo = vulkan_composite( &upscaledFrameInfo, nullptr, false, pTempImage->pTexture, false, std::move( pCommandBuffer ) );
+ 
+-				newCommit->upscaledTexture = std::optional<UpscaledTexture_t>
+-				{
+-					std::in_place_t{},
+-					g_upscaleFilter,
+-					g_upscaleScaler,
+-					g_nOutputWidth,
+-					g_nOutputHeight,
+-					pTempImage->pTexture,
+-					upscaledFrameInfo.outputEncodingEOTF == EOTF_Gamma22 ? VK_COLOR_SPACE_SRGB_NONLINEAR_KHR : VK_COLOR_SPACE_HDR10_ST2084_EXT,
+-				};
++					if ( cv_upscale_preemptive_debug_force_sync )
++					{
++						vulkan_wait( *seqNo, true );
++					}
+ 
+-				// Manifest a new acquire timeline point with this inline work.
+-				eventFd = gamescope::CAcquireTimelinePoint( pTempImage->pReleaseTimeline, ulNextReleasePoint ).CreateEventFd();
++					s_ulLastPreemptiveUpscaleSeqNo = seqNo;
+ 
+-				//xwm_log.infof( "Pre-emptively upscaling!" );
++					newCommit->upscaledTexture = std::optional<UpscaledTexture_t>
++					{
++						std::in_place_t{},
++						g_upscaleFilter,
++						g_upscaleScaler,
++						g_nOutputWidth,
++						g_nOutputHeight,
++						pTempImage->pTexture,
++						upscaledFrameInfo.outputEncodingEOTF == EOTF_Gamma22 ? VK_COLOR_SPACE_SRGB_NONLINEAR_KHR : VK_COLOR_SPACE_HDR10_ST2084_EXT,
++					};
++
++					// Manifest a new acquire timeline point with this inline work.
++					eventFd = gamescope::CAcquireTimelinePoint( pTempImage->pReleaseTimeline, ulNextReleasePoint ).CreateEventFd();
++
++					//xwm_log.infof( "Pre-emptively upscaling!" );
++				}
+ 			}
+ 			else
+ 			{
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sat, 29 Aug 2026 03:06:40 +0200
+Subject: framegen: fix generated frame presentation
+
+---
+ src/frame_generation_vulkan.cpp               |  6 +-
+ src/meson.build                               | 16 +++++-
+ src/rendervulkan.cpp                          | 53 +++++++++++++++---
+ .../cs_ffx_frameinterpolation_inpainting.comp | 55 +++++++++++++++++++
+ 4 files changed, 119 insertions(+), 11 deletions(-)
+ create mode 100644 src/shaders/cs_ffx_frameinterpolation_inpainting.comp
+
+diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
+index 0a3045c7ae75..9fc401353698 100644
+--- a/src/frame_generation_vulkan.cpp
++++ b/src/frame_generation_vulkan.cpp
+@@ -16,7 +16,7 @@
+ #include "cs_ffx_frameinterpolation_midpoint.h"
+ #include "cs_ffx_frameinterpolation_vector_field.h"
+ #include "ffx_frameinterpolation_compute_inpainting_pyramid_pass.h"
+-#include "ffx_frameinterpolation_inpainting_pass.h"
++#include "cs_ffx_frameinterpolation_inpainting.h"
+ #include "ffx_opticalflow_compute_luminance_pyramid_pass.h"
+ #include "ffx_opticalflow_compute_optical_flow_advanced_pass_v5.h"
+ #include "ffx_opticalflow_compute_scd_divergence_pass.h"
+@@ -647,8 +647,8 @@ namespace
+ 					Binding( 14, D::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ), Binding( 15, D::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ),
+ 					Binding( 16, D::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ), Binding( 1000, D::VK_DESCRIPTOR_TYPE_SAMPLER ),
+ 				} ) &&
+-				CreatePassBindings( inpaintingPass, ffx_frameinterpolation_inpainting_pass,
+-					sizeof( ffx_frameinterpolation_inpainting_pass ), {
++				CreatePassBindings( inpaintingPass, cs_ffx_frameinterpolation_inpainting,
++					sizeof( cs_ffx_frameinterpolation_inpainting ), {
+ 					Binding( 0, D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ), Binding( 1, D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ),
+ 					Binding( 2, D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ), Binding( 3, D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ),
+ 					Binding( 7, D::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ), Binding( 8, D::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ),
+diff --git a/src/meson.build b/src/meson.build
+index 7a723123ecc4..84636c9fec79 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -120,7 +120,6 @@ endforeach
+ ffx_frameinterpolation_shader_names = [
+   'ffx_frameinterpolation_optical_flow_vector_field_pass',
+   'ffx_frameinterpolation_compute_inpainting_pyramid_pass',
+-  'ffx_frameinterpolation_inpainting_pass',
+ ]
+ 
+ foreach shader_name : ffx_frameinterpolation_shader_names
+@@ -139,6 +138,21 @@ foreach shader_name : ffx_frameinterpolation_shader_names
+   )
+ endforeach
+ 
++ffx_inpainting_shader_name = 'cs_ffx_frameinterpolation_inpainting'
++ffx_spirv_shaders += custom_target(
++  ffx_inpainting_shader_name + '.h',
++  output: ffx_inpainting_shader_name + '.h',
++  command: [
++    glsl_compiler,
++    '-V', '--target-env', 'vulkan1.1', '-S', 'comp',
++    '-DFFX_GPU=1', '-DFFX_GLSL=1', '-I' + ffx_gpu_path,
++    meson.current_source_dir() / 'shaders' / (ffx_inpainting_shader_name + '.comp'),
++    '--vn', ffx_inpainting_shader_name, '-o', '@OUTPUT@',
++    '--depfile', '@DEPFILE@', '--quiet',
++  ],
++  depfile: ffx_inpainting_shader_name + '.h.d',
++)
++
+ ffx_midpoint_shader_name = 'cs_ffx_frameinterpolation_midpoint'
+ ffx_spirv_shaders += custom_target(
+   ffx_midpoint_shader_name + '.h',
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index 4345be5b1bc9..94b8bd856477 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -4735,6 +4735,7 @@ namespace
+ 		bool useFSR = false;
+ 		std::shared_ptr<gamescope::CAcquireTimelinePoint> acquirePoint;
+ 		uint64_t outputId = 0;
++		uint64_t submissionSequence = 0;
+ 	};
+ 
+ 	static bool FrameGenerationSupportedFormat( VkFormat format )
+@@ -4975,8 +4976,12 @@ namespace
+ 			}
+ 
+ 			const bool abDuplicate = vulkan_frame_generation_ab_enabled();
++			// Direct output is only final when this texture can itself be presented.
++			// Backend-allocated scanout requires a later sampling/composite pass and
++			// therefore must use the synchronized non-direct path below.
+ 			const bool directOutput =
+ 				!abDuplicate && !fsrEnabled && !ColorspaceIsHDR( realLayer.colorspace ) &&
++				!GetBackend()->UsesBackendAllocatedScanout() &&
+ 				vulkan_frame_generation_direct_output_enabled();
+ 			gamescope::Rc<CVulkanTexture> scanout;
+ 			if ( directOutput )
+@@ -5117,10 +5122,43 @@ namespace
+ 					gamescope::SetFrameGenerationStatus( gamescope::FrameGenerationStatus::UnsupportedGPU );
+ 					return;
+ 				}
+-				const uint64_t completionPoint = ++m_completionPoint;
+-				cmdBuffer->AddSignal( m_completionTimeline->ToVkSemaphore(), completionPoint );
+-				generated.acquirePoint = std::make_shared<gamescope::CAcquireTimelinePoint>(
+-					m_completionTimeline, completionPoint );
++
++				// The FidelityFX passes use their own raw image barriers while the
++				// compositor uses CVulkanCmdBuffer's image-state tracker.  Keeping
++				// interpolation and composition in one command buffer can leave the
++				// midpoint's final storage write invisible to the composite.  Split at
++				// that API boundary and complete interpolation before recording any
++				// compositor work.  Direct output needs no second submission.
++				if ( !directOutput )
++				{
++					const uint64_t completionPoint = ++m_completionPoint;
++					auto compositeCommandBuffer = g_device.commandBuffer();
++					if ( !compositeCommandBuffer->AddSignal(
++							m_completionTimeline->ToVkSemaphore(), completionPoint ) )
++					{
++						gamescope::SetFrameGenerationStatus( gamescope::FrameGenerationStatus::UnsupportedGPU );
++						return;
++					}
++
++					const uint64_t interpolationSequence =
++						g_device.submit( std::move( cmdBuffer ) );
++					vulkan_wait( interpolationSequence, false );
++					cmdBuffer = std::move( compositeCommandBuffer );
++					generated.acquirePoint = std::make_shared<gamescope::CAcquireTimelinePoint>(
++						m_completionTimeline, completionPoint );
++				}
++				else
++				{
++					const uint64_t completionPoint = ++m_completionPoint;
++					if ( !cmdBuffer->AddSignal(
++							m_completionTimeline->ToVkSemaphore(), completionPoint ) )
++					{
++						gamescope::SetFrameGenerationStatus( gamescope::FrameGenerationStatus::UnsupportedGPU );
++						return;
++					}
++					generated.acquirePoint = std::make_shared<gamescope::CAcquireTimelinePoint>(
++						m_completionTimeline, completionPoint );
++				}
+ 
+ 				if ( directOutput )
+ 				{
+@@ -5226,7 +5264,6 @@ namespace
+ 						gamescope::SetFrameGenerationStatus( gamescope::FrameGenerationStatus::UnsupportedGPU );
+ 						return;
+ 					}
+-
+ 					real.layer.tex = realScanout;
+ 					if ( fsrEnabled )
+ 					{
+@@ -5251,6 +5288,7 @@ namespace
+ 			}
+ 
+ 			vulkan_frame_generation_notify_submit( *sequence );
++			generated.submissionSequence = *sequence;
+ 			if ( !m_pipelinePrimed )
+ 			{
+ 				m_queue.push_back( m_previousReal );
+@@ -5372,8 +5410,9 @@ namespace
+ 			if ( m_queue.empty() )
+ 				return;
+ 
+-			if ( m_queue.front().generated && m_queue.front().acquirePoint &&
+-				!m_queue.front().acquirePoint->Wait( 0 ) )
++			if ( m_queue.front().generated &&
++				 m_queue.front().submissionSequence != 0 &&
++				 !g_device.isComplete( m_queue.front().submissionSequence ) )
+ 			{
+ 				m_queue.pop_front();
+ 				m_telemetry.deadlineDroppedFrames++;
+diff --git a/src/shaders/cs_ffx_frameinterpolation_inpainting.comp b/src/shaders/cs_ffx_frameinterpolation_inpainting.comp
+new file mode 100644
+index 000000000000..cd95b050ffdb
+--- /dev/null
++++ b/src/shaders/cs_ffx_frameinterpolation_inpainting.comp
+@@ -0,0 +1,55 @@
++// This file is part of the FidelityFX SDK integration in Gamescope.
++//
++// Copyright (C) 2024 Advanced Micro Devices, Inc.
++// Copyright (C) 2026 Gamescope contributors
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++// SOFTWARE.
++
++#version 450
++
++#extension GL_GOOGLE_include_directive : require
++#extension GL_EXT_samplerless_texture_functions : require
++#extension GL_EXT_shader_image_load_formatted : require
++
++#define FFX_FRAMEINTERPOLATION_BIND_SRV_OPTICAL_FLOW_SCENE_CHANGE_DETECTION 0
++#define FFX_FRAMEINTERPOLATION_BIND_SRV_INPAINTING_PYRAMID                  1
++#define FFX_FRAMEINTERPOLATION_BIND_SRV_PRESENT_BACKBUFFER                  2
++#define FFX_FRAMEINTERPOLATION_BIND_SRV_CURRENT_INTERPOLATION_SOURCE        3
++#define FFX_FRAMEINTERPOLATION_BIND_UAV_OUTPUT                              7
++#define FFX_FRAMEINTERPOLATION_BIND_CB_FRAMEINTERPOLATION                   8
++
++#include "frameinterpolation/ffx_frameinterpolation_callbacks_glsl.h"
++#include "frameinterpolation/ffx_frameinterpolation_common.h"
++#include "frameinterpolation/ffx_frameinterpolation_inpainting.h"
++
++layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
++
++void main()
++{
++    const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
++    computeInpainting(pixel);
++
++    // FidelityFX keeps the inpainting weight in alpha and only replaces it
++    // when a pixel needed inpainting. That mask is internal state, not output
++    // coverage. Direct SDR output otherwise alternates opaque real frames with
++    // generated frames containing a binary transparency mask.
++    memoryBarrierImage();
++    const vec4 color = RWLoadFrameinterpolationOutput(pixel);
++    StoreFrameinterpolationOutput(pixel, vec4(color.rgb, 1.0));
++}
