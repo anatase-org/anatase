@@ -270,14 +270,34 @@ class HostLaunchTests(unittest.TestCase):
                 encoding="utf-8",
             )
             mock.chmod(0o755)
+            virtual_gamepad = base / "virtualgamepadinfo.txt"
+            virtual_gamepad.write_text("virtual gamepad", encoding="utf-8")
             environment = {
-                **os.environ,
-                "PATH": f"{base}:{os.environ['PATH']}",
+                "PATH": f"{base}:/usr/bin",
                 "HOME": str(base / "home"),
                 "XDG_RUNTIME_DIR": str(base / "run"),
                 "SteamAppId": "1234",
                 "SteamGameId": "5678",
+                "SteamOverlayGameId": "9012",
+                "SteamGenericControllers": "0x1234/0xabcd",
+                "SteamVirtualGamepadInfo": str(virtual_gamepad),
                 "STEAM_MULTIPLE_XWAYLANDS": "1",
+                "SDL_GAMECONTROLLER_IGNORE_DEVICES": "0x1234/0xabcd",
+                "XKB_DEFAULT_LAYOUT": "us",
+                "XCURSOR_THEME": "steam",
+                "VKD3D_SWAPCHAIN_LATENCY_FRAMES": "3",
+                "EnableConfiguratorSupport": "4111",
+                "ENABLE_GAMESCOPE_WSI": "1",
+                "GAMESCOPE_DISPLAY_DISABLED": "1",
+                "GAMESCOPE_NV12_COLORSPACE": "BT601",
+                "DISABLE_LAYER_AMD_SWITCHABLE_GRAPHICS_1": "1",
+                "WINEDLLOVERRIDES": "dxgi=n",
+                "vk_xwayland_wait_ready": "false",
+                "SRT_URLOPEN_PREFER_STEAM": "1",
+                "WAYLAND_DISPLAY": "gamescope-0",
+                "GAMESCOPE_WAYLAND_DISPLAY": "gamescope-0",
+                "ENABLE_VK_LAYER_VALVE_steam_overlay_1": "1",
+                "STEAMVIDEOTOKEN": "secret",
             }
             completed = subprocess.run(
                 [
@@ -292,24 +312,97 @@ class HostLaunchTests(unittest.TestCase):
                 text=True,
                 env=environment,
             )
+            output = completed.stdout.splitlines()
             self.assertEqual(
-                completed.stdout.splitlines(),
+                output[:4],
                 [
                     "<--host>",
                     "<--watch-bus>",
                     f"<--directory={base}/home>",
-                    "<--env=SteamAppId=1234>",
-                    "<--env=STEAM_COMPAT_APP_ID=1234>",
-                    "<--env=SteamGameId=5678>",
-                    "<--env=STEAM_MULTIPLE_XWAYLANDS=1>",
+                    "<--env=WAYLAND_DISPLAY=>",
+                ],
+            )
+            for value in (
+                "DISABLE_LAYER_AMD_SWITCHABLE_GRAPHICS_1=1",
+                "ENABLE_GAMESCOPE_WSI=1",
+                "EnableConfiguratorSupport=4111",
+                "GAMESCOPE_DISPLAY_DISABLED=1",
+                "GAMESCOPE_NV12_COLORSPACE=BT601",
+                "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x1234/0xabcd",
+                "SRT_URLOPEN_PREFER_STEAM=1",
+                "STEAM_COMPAT_APP_ID=1234",
+                "STEAM_MULTIPLE_XWAYLANDS=1",
+                "SteamAppId=1234",
+                "SteamGameId=5678",
+                "SteamGenericControllers=0x1234/0xabcd",
+                "SteamOverlayGameId=9012",
+                "VKD3D_SWAPCHAIN_LATENCY_FRAMES=3",
+                "WINEDLLOVERRIDES=dxgi=n",
+                "XCURSOR_THEME=steam",
+                "XKB_DEFAULT_LAYOUT=us",
+                "vk_xwayland_wait_ready=false",
+            ):
+                self.assertIn(f"<--env={value}>", output)
+            for name in (
+                "ENABLE_VK_LAYER_VALVE_steam_overlay_1",
+                "GAMESCOPE_WAYLAND_DISPLAY",
+                "STEAMVIDEOTOKEN",
+            ):
+                self.assertFalse(
+                    any(line.startswith(f"<--env={name}=") for line in output)
+                )
+            self.assertEqual(
+                output[-9:],
+                [
                     f"<{base}/run/anatase-steam/bin/reaper>",
                     "<SteamLaunch>",
                     "<AppId=1234>",
                     "<-->",
                     "</usr/bin/flatpak>",
                     "<run>",
+                    f"<--filesystem={virtual_gamepad}:ro>",
+                    f"<--env=SteamVirtualGamepadInfo={virtual_gamepad}>",
                     "<org.example.App>",
                 ],
+            )
+            self.assertEqual(completed.stderr, "")
+
+    def test_flatpak_non_run_does_not_expose_virtual_gamepad_info(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            mock = base / "flatpak-spawn"
+            mock.write_text(
+                "#!/bin/bash\nprintf '<%s>\\n' \"$@\"\n",
+                encoding="utf-8",
+            )
+            mock.chmod(0o755)
+            virtual_gamepad = base / "virtualgamepadinfo.txt"
+            virtual_gamepad.write_text("virtual gamepad", encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    "/bin/bash",
+                    HRUN_PATH,
+                    "/usr/bin/flatpak",
+                    "info",
+                    "org.example.App",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                env={
+                    "PATH": f"{base}:/usr/bin",
+                    "HOME": str(base / "home"),
+                    "SteamVirtualGamepadInfo": str(virtual_gamepad),
+                },
+            )
+            output = completed.stdout.splitlines()
+            self.assertFalse(
+                any("SteamVirtualGamepadInfo" in line for line in output)
+            )
+            self.assertFalse(any("--filesystem=" in line for line in output))
+            self.assertEqual(
+                output[-3:],
+                ["</usr/bin/flatpak>", "<info>", "<org.example.App>"],
             )
 
     def test_spaces_launch_forwards_ids_without_outer_reaper(self) -> None:
@@ -321,6 +414,8 @@ class HostLaunchTests(unittest.TestCase):
                 encoding="utf-8",
             )
             mock.chmod(0o755)
+            virtual_gamepad = base / "virtualgamepadinfo.txt"
+            virtual_gamepad.write_text("virtual gamepad", encoding="utf-8")
             completed = subprocess.run(
                 [
                     "/bin/bash",
@@ -333,11 +428,11 @@ class HostLaunchTests(unittest.TestCase):
                 capture_output=True,
                 text=True,
                 env={
-                    **os.environ,
-                    "PATH": f"{base}:{os.environ['PATH']}",
+                    "PATH": f"{base}:/usr/bin",
                     "HOME": str(base / "home"),
                     "SteamAppId": "1234",
                     "SteamGameId": "5678",
+                    "SteamVirtualGamepadInfo": str(virtual_gamepad),
                 },
             )
             self.assertEqual(
@@ -346,14 +441,17 @@ class HostLaunchTests(unittest.TestCase):
                     "<--host>",
                     "<--watch-bus>",
                     f"<--directory={base}/home>",
+                    "<--env=WAYLAND_DISPLAY=>",
                     "<--env=SteamAppId=1234>",
-                    "<--env=STEAM_COMPAT_APP_ID=1234>",
                     "<--env=SteamGameId=5678>",
+                    f"<--env=SteamVirtualGamepadInfo={virtual_gamepad}>",
+                    "<--env=STEAM_COMPAT_APP_ID=1234>",
                     "</usr/bin/spaces>",
                     "<enter>",
                     "<arch>",
                 ],
             )
+            self.assertEqual(completed.stderr, "")
 
 
 class ReaperTests(unittest.TestCase):

@@ -1,20 +1,54 @@
 #!/bin/bash
 
-spawn=(flatpak-spawn --host --watch-bus "--directory=$HOME")
-if [[ -n ${SteamAppId:-} ]]; then
-    spawn+=("--env=SteamAppId=$SteamAppId")
-    spawn+=("--env=STEAM_COMPAT_APP_ID=$SteamAppId")
-fi
-if [[ -n ${SteamGameId:-} ]]; then
-    spawn+=("--env=SteamGameId=$SteamGameId")
-fi
-if [[ -n ${STEAM_MULTIPLE_XWAYLANDS:-} ]]; then
-    spawn+=("--env=STEAM_MULTIPLE_XWAYLANDS=$STEAM_MULTIPLE_XWAYLANDS")
+command=("$@")
+target="${command[0]##*/}"
+flatpak_run=false
+if [[ $target == flatpak && ${command[1]:-} == run ]]; then
+    flatpak_run=true
 fi
 
-case "${1##*/}" in
+spawn=(
+    flatpak-spawn
+    --host
+    --watch-bus
+    "--directory=$HOME"
+    --env=WAYLAND_DISPLAY=
+)
+
+while IFS= read -r name; do
+    case "$name" in
+        SteamVirtualGamepadInfo)
+            if [[ -r ${!name} ]]; then
+                if $flatpak_run; then
+                    command=(
+                        "${command[@]:0:2}"
+                        "--filesystem=${!name}:ro"
+                        "--env=$name=${!name}"
+                        "${command[@]:2}"
+                    )
+                elif [[ $target != flatpak ]]; then
+                    spawn+=("--env=$name=${!name}")
+                fi
+            fi
+            ;;
+        Steam*|SDL_*|XKB_DEFAULT_*|XCURSOR_*|VKD3D_*|\
+        STEAM_COMPAT_APP_ID|STEAM_MULTIPLE_XWAYLANDS|\
+        EnableConfiguratorSupport|ENABLE_GAMESCOPE_WSI|\
+        GAMESCOPE_DISPLAY_DISABLED|GAMESCOPE_NV12_COLORSPACE|\
+        DISABLE_LAYER_AMD_SWITCHABLE_GRAPHICS_*|WINEDLLOVERRIDES|\
+        vk_xwayland_wait_ready|SRT_URLOPEN_PREFER_STEAM)
+            spawn+=("--env=$name=${!name}")
+            ;;
+    esac
+done < <(compgen -e | LC_ALL=C sort)
+
+if [[ -n ${SteamAppId:-} && -z ${STEAM_COMPAT_APP_ID:-} ]]; then
+    spawn+=("--env=STEAM_COMPAT_APP_ID=$SteamAppId")
+fi
+
+case "$target" in
     spaces)
-        exec "${spawn[@]}" "$@"
+        exec "${spawn[@]}" "${command[@]}"
         ;;
 esac
 
@@ -22,7 +56,7 @@ if [[ -n ${SteamAppId:-} ]]; then
     runtime_root="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/anatase-steam"
     exec "${spawn[@]}" \
         "$runtime_root/bin/reaper" \
-        SteamLaunch "AppId=$SteamAppId" -- "$@"
+        SteamLaunch "AppId=$SteamAppId" -- "${command[@]}"
 fi
 
-exec "${spawn[@]}" "$@"
+exec "${spawn[@]}" "${command[@]}"
