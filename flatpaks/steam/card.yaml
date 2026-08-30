@@ -97,6 +97,7 @@ files:
   - files/anatase-boot.webm
   - files/anatase-suspend.webm
   - files/registry.vdf
+  - files/org.anatase.Steam.Silent.desktop
 
 build-deps:
   - rpm-build
@@ -145,6 +146,8 @@ postprocess: |-
       app/share/anatase/steam/movies/anatase-suspend.webm
   install -Dm0644 files/registry.vdf \
       app/share/anatase/steam/registry.vdf
+  install -Dm0644 files/org.anatase.Steam.Silent.desktop \
+      app/share/applications/org.anatase.Steam.Silent.desktop
   ln -snf /bin/true app/bin/steamdeps
   if [ -x /usr/bin/cmp ]; then
       cp -f /usr/bin/cmp app/bin/cmp
