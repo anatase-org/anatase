@@ -100,4 +100,20 @@ if mkdir -p \
         >"$anatase_runtime_root/rewrite.log" 2>&1 </dev/null &
 fi
 
-exec /app/bin/steam -steamdeck "$@"
+notification_pid=
+stop_notification_daemon() {
+    [[ -n $notification_pid ]] || return 0
+    kill "$notification_pid" 2>/dev/null || true
+    wait "$notification_pid" 2>/dev/null || true
+    notification_pid=
+}
+trap stop_notification_daemon EXIT
+trap 'exit 143' HUP INT TERM
+
+if [[ ${XDG_SESSION_DESKTOP:-} = gamemode ]] && \
+        command -v steam_notif_daemon >/dev/null 2>&1; then
+    steam_notif_daemon &
+    notification_pid=$!
+fi
+
+/app/bin/steam -steamdeck "$@"

@@ -20,6 +20,7 @@ flatpak:
     --socket=wayland
     --socket=pulseaudio
     --own-name=com.steampowered.*
+    --own-name=org.freedesktop.Notifications
     --filesystem=xdg-music:ro
     --filesystem=xdg-pictures:ro
     --filesystem=xdg-run/app/com.discordapp.Discord:create
@@ -117,6 +118,13 @@ specs:
     upstream:
       type: dist-git
       url: https://github.com/negativo17/steam
+
+  - spec: steam_helpers/steam_notif_daemon.spec
+    packages:
+      x86_64:
+        - steam_notif_daemon
+    files:
+      - steam_notif_daemon.spec
 
 postprocess: |-
   set -eu
