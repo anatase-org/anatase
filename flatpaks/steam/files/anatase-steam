@@ -3,6 +3,11 @@
 anatase_sandbox_data_home="${XDG_DATA_HOME:-$HOME/.var/app/org.anatase.Steam/data}"
 steam_home="$HOME"
 
+# We are in a flatpak, we do not have
+# fusermount setuid, appimage should extract instead
+# hrun is not affected, it does not passthrough the variable
+export APPIMAGE_EXTRACT_AND_RUN=1
+
 flatpak_info=
 for candidate in "${FLATPAK_INFO:-}" /.flatpak-info /run/flatpak-info; do
     [[ -n $candidate ]] || continue
