@@ -119,16 +119,6 @@ Finally, you can `claude --dangerously-skip-permissions` and go to the bathroom 
 
 ## Roadmap
  * Fix remaining bugs through user reports to achieve a stable release
- * Add CEC support for gamemode only
-     * on startup or wake-up, if a TV is connected:
-       * if off, turn it on and switch to output
-       * if on other channel, switch to gamemode output
-     * when entering sleep or shutdown
-       * if the tv was turned on, turn it off
-       * if the channel was switched, switch to the previous channel
-       * on other cases, do nothing
-     * allow the tv remote to navigate the interface via up/down/left/right/ok and back
-     * if possible and intuitive, enable controlling the TV / soundbar audio
  * Achieve SLSA3
    * Port github attestations and use them verify CI images end-to-end
    * Add SBOM support using a custom metadata format to record transient changes (new fedora packages, git+ repo pulls)
