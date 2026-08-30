@@ -8,6 +8,10 @@ steam_home="$HOME"
 # hrun is not affected, it does not passthrough the variable
 export APPIMAGE_EXTRACT_AND_RUN=1
 
+# Give expensive Vulkan pipelines enough time to compile before Fossilize
+# discards the worker and retries its range from the last progress marker.
+export FOSSILIZE_REPLAY_WRAPPER="${FOSSILIZE_REPLAY_WRAPPER:-/app/libexec/anatase-fossilize-replay-wrapper}"
+
 flatpak_info=
 for candidate in "${FLATPAK_INFO:-}" /.flatpak-info /run/flatpak-info; do
     [[ -n $candidate ]] || continue

@@ -1,0 +1,35 @@
+#!/bin/bash
+
+original_app="${FOSSILIZE_REPLAY_WRAPPER_ORIGINAL_APP:-}"
+if [[ -z $original_app || ! -x $original_app ]]; then
+    printf 'anatase-fossilize-replay-wrapper: original replay executable is unavailable\n' >&2
+    exit 127
+fi
+
+# Steam currently gives workers ten seconds without a completed pipeline before
+# Fossilize kills and restarts them. Complex pipelines can legitimately take
+# longer, making the replay repeatedly discard useful compiler work.
+timeout_seconds="${ANATASE_FOSSILIZE_REPLAY_TIMEOUT_SECONDS:-60}"
+case "$timeout_seconds" in
+    ''|*[!0-9]*)
+        printf 'anatase-fossilize-replay-wrapper: invalid timeout %q; using 60 seconds\n' \
+            "$timeout_seconds" >&2
+        timeout_seconds=60
+        ;;
+esac
+
+arguments=()
+while (( $# )); do
+    if [[ $1 == --timeout-seconds && $# -ge 2 ]]; then
+        arguments+=("$1" "$timeout_seconds")
+        shift 2
+    else
+        arguments+=("$1")
+        shift
+    fi
+done
+
+# Fossilize calls this wrapper before parsing its arguments. Clear the hook so
+# executing the original binary does not dispatch straight back to us.
+unset FOSSILIZE_REPLAY_WRAPPER FOSSILIZE_REPLAY_WRAPPER_ORIGINAL_APP
+exec "$original_app" "${arguments[@]}"

@@ -88,11 +88,13 @@ flatpak:
 
 files:
   - files/anatase-steam
+  - files/anatase-fossilize-replay-wrapper
   - files/anatase-steam-applications.py
   - files/hrun
   - files/flatpak
   - files/anatase-steam-reaper.c
   - files/test-anatase-steam-applications.py
+  - files/test-anatase-fossilize-replay-wrapper.py
   - files/dbus-send
   - files/steamos-session-select
   - files/anatase-boot.webm
@@ -161,6 +163,8 @@ postprocess: |-
       cp -f /usr/bin/cmp app/bin/cmp
   fi
   install -Dm0755 files/anatase-steam app/bin/anatase-steam
+  install -Dm0755 files/anatase-fossilize-replay-wrapper \
+      app/libexec/anatase-fossilize-replay-wrapper
   install -Dm0755 files/anatase-steam-applications.py \
       app/libexec/anatase-steam-applications
   install -Dm0755 files/hrun app/bin/hrun
@@ -179,6 +183,7 @@ postprocess: |-
   ln -s /usr/bin/steamos-polkit-helpers/steamos-select-branch app/bin/steamos-select-branch
 
   bash -n app/bin/anatase-steam
+  bash -n app/libexec/anatase-fossilize-replay-wrapper
   bash -n app/bin/hrun
   bash -n app/bin/flatpak
   bash -n app/bin/dbus-send
@@ -187,3 +192,5 @@ postprocess: |-
   ANATASE_STEAM_HRUN=files/hrun \
   ANATASE_STEAM_REAPER=files/anatase-steam-reaper.c \
       python3 files/test-anatase-steam-applications.py
+  ANATASE_FOSSILIZE_REPLAY_WRAPPER=files/anatase-fossilize-replay-wrapper \
+      python3 files/test-anatase-fossilize-replay-wrapper.py
