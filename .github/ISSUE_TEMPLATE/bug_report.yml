@@ -28,7 +28,6 @@ body:
         had to restart the system, select `Logs from: Previous Boot (-1)`. Available in desktop and gamemode.
 
         Scan the QR code and enter it here.
-      render: shell
     validations:
       required: true
 
