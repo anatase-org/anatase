@@ -1,0 +1,55 @@
+name: Bug report
+description: Report a bug or issue
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Anatase.
+
+        Before filing, please read the [docs](https://docs.anatase.org), search for an existing issue, and then update to the latest rolling image. You can update to the rolling image by opening the overlay (Handheld Daemon), selecting `Updates -> System Image -> Change Branch -> Branch to Rolling -> Apply` and rebooting.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Problem
+      description: Briefly describe what goes wrong and when it happens.
+      placeholder: After ..., Anatase ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: system
+    attributes:
+      label: Bug Report Link
+      description: |
+        Add a bug report URL from the overlay (Handheld Daemon), by selecting
+        `Bugreport -> Submit Report`. If your issue involves a crash and you
+        had to restart the system, select `Logs from: Previous Boot (-1)`.
+
+        Scan the QR code and enter it here.
+      render: shell
+    validations:
+      required: true
+
+  - type: dropdown
+    id: regression
+    attributes:
+      label: Did this work in a previous version?
+      options:
+        - "Yes"
+        - "No"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: I have read the [docs](https://docs.anatase.org)
+          required: true
+        - label: I have searched previous issues
+          required: true
+        - label: I have rebased to the latest rolling version, rebooted, and my issue persists
+          required: true
