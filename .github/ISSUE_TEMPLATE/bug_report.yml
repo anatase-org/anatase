@@ -12,20 +12,20 @@ body:
   - type: textarea
     id: summary
     attributes:
-      label: Problem
+      label: Issue
       description: Briefly describe what goes wrong and when it happens.
       placeholder: After ..., Anatase ...
     validations:
       required: true
 
-  - type: textarea
+  - type: input
     id: system
     attributes:
       label: Bug Report Link
       description: |
         Add a bug report URL from the overlay (Handheld Daemon), by selecting
         `Bugreport -> Submit Report`. If your issue involves a crash and you
-        had to restart the system, select `Logs from: Previous Boot (-1)`.
+        had to restart the system, select `Logs from: Previous Boot (-1)`. Available in desktop and gamemode.
 
         Scan the QR code and enter it here.
       render: shell
