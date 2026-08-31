@@ -1,0 +1,31 @@
+# Bluetooth adapters with confirmed wake-from-suspend reports.
+
+# # Foxconn/Hon Hai 0489:e0e2. A Bazzite user confirmed controller wake with
+# # PS4 and PS5 controllers using this device-specific rule.
+# # https://www.reddit.com/r/Bazzite/comments/1h95rua/wake_from_sleep_with_8bitdo/m146s3t/
+# ACTION=="add|change", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", DRIVERS=="usb", ATTR{idVendor}=="0489", ATTR{idProduct}=="e0e2", TEST=="power/wakeup", ATTR{power/wakeup}="enabled"
+
+# # MediaTek MT7922 Bluetooth module 0489:e0d9. Lenovo Legion Go
+# ACTION=="add|change", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", DRIVERS=="usb", ATTR{idVendor}=="0489", ATTR{idProduct}=="e0d9", TEST=="power/wakeup", ATTR{power/wakeup}="enabled"
+
+# # Intel AX210 Bluetooth 8087:0032. Win 5, Aya 3, Aokzoe A1x ...
+# ACTION=="add|change", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", DRIVERS=="usb", ATTR{idVendor}=="8087", ATTR{idProduct}=="0032", TEST=="power/wakeup", ATTR{power/wakeup}="enabled"
+
+# # Intel BE200 Bluetooth 8087:0037. Claw 7 AI
+# ACTION=="add|change", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", DRIVERS=="usb", ATTR{idVendor}=="8087", ATTR{idProduct}=="0037", TEST=="power/wakeup", ATTR{power/wakeup}="enabled"
+
+# Valve Fremont USB puck, internal Neried adapter, and USB controller.
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="28de", ATTR{idProduct}=="1302", TEST=="power/wakeup", ATTR{power/wakeup}="enabled"
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="28de", ATTR{idProduct}=="1304", TEST=="power/wakeup", ATTR{power/wakeup}="enabled"
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="28de", ATTR{idProduct}=="1305", TEST=="power/wakeup", ATTR{power/wakeup}="enabled"
+
+# Known unsafe mappings; do not enable without a device-specific fix.
+#
+# Steam Deck LCD Bluetooth 13d3:3553: Valve traced spontaneous wakeups to this
+# radio even when per-device wake was disabled, then disabled Bluetooth wake.
+# https://github.com/ValveSoftware/SteamOS/issues/2019#issuecomment-3458098482
+#
+# 8BitDo Ultimate C receiver 2dc8:3106: the receiver changes to the 3016 idle
+# device when the controller turns off, waking systems when its root hub is
+# enabled. The receiver itself does not expose power/wakeup.
+# https://www.answeroverflow.com/m/1320873947344015523
