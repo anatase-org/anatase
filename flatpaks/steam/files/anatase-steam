@@ -8,6 +8,11 @@ steam_home="$HOME"
 # hrun is not affected, it does not passthrough the variable
 export APPIMAGE_EXTRACT_AND_RUN=1
 
+# Flatpak's Qt plugin paths can take precedence over plugins bundled by games
+# and cause otherwise self-contained applications to mix incompatible Qt builds.
+# Steam does not use Qt, so do not propagate the runtime's plugin paths to games.
+unset QT_PLUGIN_PATH
+
 # Give expensive Vulkan pipelines enough time to compile before Fossilize
 # discards the worker and retries its range from the last progress marker.
 export FOSSILIZE_REPLAY_WRAPPER="${FOSSILIZE_REPLAY_WRAPPER:-/app/libexec/anatase-fossilize-replay-wrapper}"
