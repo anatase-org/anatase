@@ -14202,3 +14202,35 @@ index 92e0870a94c6..92e81d23b7b6 100644
  }
  
  static pid_t
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 31 Aug 2026 20:46:40 +0200
+Subject: fix key sym lookup in EM
+
+it chose the wrong layout...
+---
+ src/ime.cpp | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/ime.cpp b/src/ime.cpp
+index 80c3307717d8..cdd156723821 100644
+--- a/src/ime.cpp
++++ b/src/ime.cpp
+@@ -316,11 +316,16 @@ static bool try_type_keysym(struct wlserver_input_method *ime, xkb_keysym_t keys
+ 	struct wlr_keyboard *keyboard = ime->manager->server->wlr.virtual_keyboard_device;
+ 
+ 	struct xkb_keymap *keymap = keyboard->keymap;
++	xkb_layout_index_t active_layout = xkb_state_serialize_layout(keyboard->xkb_state, XKB_STATE_LAYOUT_EFFECTIVE);
+ 	xkb_keycode_t min_keycode = xkb_keymap_min_keycode(keymap);
+ 	xkb_keycode_t max_keycode = xkb_keymap_max_keycode(keymap);
+ 	for (xkb_keycode_t keycode = min_keycode; keycode <= max_keycode; keycode++) {
+ 		xkb_layout_index_t num_layouts = xkb_keymap_num_layouts_for_key(keymap, keycode);
+ 		for (xkb_layout_index_t layout = 0; layout < num_layouts; layout++) {
++			if (layout != active_layout) {
++				continue;
++			}
++
+ 			xkb_level_index_t num_levels = xkb_keymap_num_levels_for_key(keymap, keycode, layout);
+ 			for (xkb_level_index_t level = 0; level < num_levels; level++) {
+ 				const xkb_keysym_t *syms = nullptr;
