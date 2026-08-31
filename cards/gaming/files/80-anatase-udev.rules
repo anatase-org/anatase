@@ -29,3 +29,9 @@ ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="28
 # device when the controller turns off, waking systems when its root hub is
 # enabled. The receiver itself does not expose power/wakeup.
 # https://www.answeroverflow.com/m/1320873947344015523
+
+# Linux 7.0 exposes XG Mobile control through the standardized asus-armoury
+# firmware-attributes device. When that device appears, enable the eGPU only if
+# firmware reports that the dock is connected and activation is still disabled.
+# The asus-armoury write validates the connection again and rescans the PCI bus.
+ACTION=="add", SUBSYSTEM=="firmware-attributes", KERNEL=="asus-armoury", ATTR{attributes/egpu_connected/current_value}=="1", ATTR{attributes/egpu_enable/current_value}=="0", ATTR{attributes/egpu_enable/current_value}="1"

@@ -150,7 +150,7 @@ specs:
       name: xdg-desktop-portal-gamescope
 
 files:
-  - files/80-anatase-controller-wakeup.rules
+  - files/80-anatase-udev.rules
   - files/anatase-gamemode
   - files/anatase-gamemode-session
   - files/anatase-gamemode-udiskie.yml
@@ -171,8 +171,8 @@ files:
 postprocess: |
   set -eux
 
-  install -Dm0644 /files/files/80-anatase-controller-wakeup.rules \
-      /etc/udev/rules.d/80-anatase-controller-wakeup.rules
+  install -Dm0644 /files/files/80-anatase-udev.rules \
+      /etc/udev/rules.d/80-anatase-udev.rules
   install -Dm0755 /files/files/anatase-gamemode \
       /usr/libexec/anatase-gamemode
   install -Dm0755 /files/files/anatase-gamemode-session \
@@ -244,7 +244,7 @@ postprocess: |
       /usr/bin/return-to-gamemode \
       /usr/bin/steam
   udevadm verify --resolve-names=never \
-      /etc/udev/rules.d/80-anatase-controller-wakeup.rules
+      /etc/udev/rules.d/80-anatase-udev.rules
   desktop-file-validate /usr/share/applications/gamemode.desktop
   python3 - <<'PY'
   import xml.etree.ElementTree as ET
