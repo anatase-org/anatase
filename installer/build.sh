@@ -5,6 +5,14 @@ set -eux
 command -v liveinst >/dev/null
 command -v slitherer-anaconda >/dev/null
 
+# Disable hhd features that are unavailable in the live installer session. The
+# installed system keeps the normal service environment from the OSTree payload.
+hhd_override=/usr/lib/systemd/system/hhd.service.d/override.conf
+sed -i \
+    -e '/^Environment="HHD_BOOTC=1"$/d' \
+    -e '/^Environment="HHD_GS_AUTOLOGIN=1"$/d' \
+    "${hhd_override}"
+
 # Hide Discover in the live installer session. The installed system keeps the
 # normal KDE defaults from the image that Anaconda deploys.
 install -dm0755 \
