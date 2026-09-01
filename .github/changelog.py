@@ -4,6 +4,7 @@ import argparse
 import json
 import re
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -122,6 +123,20 @@ def commits(previous: dict[str, Any], current: dict[str, Any]) -> str:
     previous_revision = labels(previous)[REVISION_LABEL]
     current_revision = labels(current)[REVISION_LABEL]
     if previous_revision == current_revision:
+        return ""
+
+    ancestry = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", previous_revision, current_revision],
+        capture_output=True,
+        text=True,
+    )
+    if ancestry.returncode != 0:
+        print(
+            "Skipping commit changelog because the previous revision is not "
+            "available in the current commit history: "
+            f"{previous_revision} -> {current_revision}",
+            file=sys.stderr,
+        )
         return ""
 
     result = subprocess.run(
