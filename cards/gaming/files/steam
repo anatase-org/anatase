@@ -1,5 +1,4 @@
 #!/usr/bin/bash
 
-# Faugus checks for a host Steam executable before enabling Steam shortcuts.
-echo "Install Steam from Discover!"
-exit 0
+# Provide the conventional host command expected by launchers such as Faugus.
+exec /usr/bin/flatpak run org.anatase.Steam "$@"
