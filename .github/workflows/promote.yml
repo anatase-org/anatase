@@ -136,10 +136,30 @@ jobs:
           REVISION: ${{ steps.image.outputs.revision }}
           VERSION: ${{ steps.image.outputs.version }}
         run: |
+          update_url="https://updates.anatase.org/$VERSION"
+          update_html=$(curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --location \
+            --retry 3 \
+            --retry-connrefused \
+            --retry-delay 2 \
+            --retry-max-time 30 \
+            --max-time 30 \
+            "$update_url")
+          summary=$(python3 .github/update-summary.py <<< "$update_html")
+          update_title=$(jq -er '.title | select(length > 0)' <<< "$summary")
+          update_preamble=$(jq -er '.description | select(length > 0)' <<< "$summary")
+
+          printf '%s\n\nFull Changelog: %s\n\n## Changelog\n\n' \
+            "$update_preamble" "$update_url" > release-notes.md
+          cat changelog.md >> release-notes.md
+
           gh release create "stable-$VERSION" \
             --target "$REVISION" \
-            --title "$VERSION: Stable Release" \
-            --notes-file changelog.md
+            --title "$update_title" \
+            --notes-file release-notes.md
 
       - name: Announce release on Discord
         if: ${{ inputs.images }}
