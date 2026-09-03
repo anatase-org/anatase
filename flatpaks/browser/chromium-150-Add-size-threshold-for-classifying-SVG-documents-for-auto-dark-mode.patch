@@ -1,0 +1,372 @@
+commit b5934b11cfc2948f8b97ebb0997aab5f77e2fe2c
+Author: Prashant Nevase <pnevase@microsoft.com>
+Date:   Mon Jul 13 04:10:00 2026 -0700
+
+    Add size threshold for classifying SVG documents for auto dark mode.
+    
+    Large standalone SVG documents are treated as content (illustrations/
+    photos) and left untouched by auto dark mode, while small ones like
+    icons are considered for auto dark mode.
+    
+    Nested SVGs are handled via a stack of auto dark mode paused states on
+    GraphicsContext, managed by ScopedAutoDarkModeState. An icon-sized
+    inner SVG re-enables inversion even inside a paused (large) container,
+    and the outer state is restored on scope exit. Images remain gated by
+    their own size classification rather than the paused state.
+    
+    Bug: 449909524
+    Change-Id: Ifd8b68ec9a30ad66c116cf41d510eead499d3bd6
+    Reviewed-on: https://chromium-review.googlesource.com/c/chromium/src/+/8036120
+    Reviewed-by: Stephen Chenney <schenney@chromium.org>
+    Commit-Queue: Prashant Nevase <pnevase@microsoft.com>
+    Cr-Commit-Position: refs/heads/main@{#1661044}
+
+diff --git a/third_party/blink/renderer/core/paint/paint_auto_dark_mode.cc b/third_party/blink/renderer/core/paint/paint_auto_dark_mode.cc
+index 658f6a4e4f6f..e4b5a8155148 100644
+--- a/third_party/blink/renderer/core/paint/paint_auto_dark_mode.cc
++++ b/third_party/blink/renderer/core/paint/paint_auto_dark_mode.cc
+@@ -69,6 +69,25 @@ ImageAutoDarkMode ImageClassifierHelper::GetImageAutoDarkMode(
+       GetImageTypeWithZoom(layout_zoom, dest_rect, src_rect));
+ }
+ 
++// static
++DarkModeFilter::ImageType ImageClassifierHelper::GetSVGDocumentType(
++    LocalFrame& local_frame,
++    const gfx::Rect& size) {
++  // |size| includes the layout zoom factor (page zoom and DSF). Undo it so the
++  // size threshold matches bitmap images, whose classification is unaffected by
++  // page zoom and DSF.
++  const float layout_zoom = local_frame.LayoutZoomFactor();
++  const float unzoomed_width =
++      layout_zoom > 0.f ? size.width() / layout_zoom : size.width();
++  const float unzoomed_height =
++      layout_zoom > 0.f ? size.height() / layout_zoom : size.height();
++  if (unzoomed_width <= kMaxImageLength && unzoomed_height <= kMaxImageLength) {
++    return DarkModeFilter::ImageType::kIcon;
++  }
++
++  return DarkModeFilter::ImageType::kPhoto;
++}
++
+ // static
+ DarkModeFilter::ImageType ImageClassifierHelper::GetImageTypeForTesting(
+     const gfx::RectF& dest_rect,
+diff --git a/third_party/blink/renderer/core/paint/paint_auto_dark_mode.h b/third_party/blink/renderer/core/paint/paint_auto_dark_mode.h
+index afd57eee2b45..a21d1472cde6 100644
+--- a/third_party/blink/renderer/core/paint/paint_auto_dark_mode.h
++++ b/third_party/blink/renderer/core/paint/paint_auto_dark_mode.h
+@@ -39,6 +39,10 @@ class ImageClassifierHelper {
+       DarkModeFilter::ElementRole role =
+           DarkModeFilter::ElementRole::kBackground);
+ 
++  CORE_EXPORT static DarkModeFilter::ImageType GetSVGDocumentType(
++      LocalFrame& local_frame,
++      const gfx::Rect& size);
++
+   CORE_EXPORT static DarkModeFilter::ImageType GetImageTypeForTesting(
+       const gfx::RectF& dest_rect,
+       const gfx::RectF& src_rect,
+diff --git a/third_party/blink/renderer/core/paint/paint_auto_dark_mode_test.cc b/third_party/blink/renderer/core/paint/paint_auto_dark_mode_test.cc
+index cf05ea1a9e8a..337aff8fe996 100644
+--- a/third_party/blink/renderer/core/paint/paint_auto_dark_mode_test.cc
++++ b/third_party/blink/renderer/core/paint/paint_auto_dark_mode_test.cc
+@@ -4,8 +4,13 @@
+ 
+ #include "third_party/blink/renderer/core/paint/paint_auto_dark_mode.h"
+ 
++#include <memory>
++
+ #include "testing/gtest/include/gtest/gtest.h"
++#include "third_party/blink/renderer/core/frame/local_frame.h"
++#include "third_party/blink/renderer/core/testing/dummy_page_holder.h"
+ #include "third_party/blink/renderer/platform/graphics/dark_mode_settings.h"
++#include "third_party/blink/renderer/platform/testing/task_environment.h"
+ #include "ui/gfx/geometry/rect.h"
+ 
+ namespace blink {
+@@ -72,6 +77,18 @@ class PaintAutoDarkModeTest : public testing::Test {
+         ImageClassifierHelper::GetImageTypeForTesting(dest_rect, src_rect,
+                                                       layout_zoom)));
+   }
++
++  DarkModeFilter::ImageType GetSVGDocumentType(float layout_zoom,
++                                               const gfx::Rect& size) {
++    LocalFrame& frame = page_holder_->GetFrame();
++    frame.SetLayoutZoomFactor(layout_zoom);
++    return ImageClassifierHelper::GetSVGDocumentType(frame, size);
++  }
++
++ private:
++  test::TaskEnvironment task_environment_;
++  std::unique_ptr<DummyPageHolder> page_holder_ =
++      std::make_unique<DummyPageHolder>(gfx::Size(800, 600));
+ };
+ 
+ TEST_F(PaintAutoDarkModeTest, ShouldApplyFilterToImage) {
+@@ -154,4 +171,30 @@ TEST_F(PaintAutoDarkModeTest,
+   TestApplyFilterToImageIrrespectiveOfPageZoom(screen_info);
+ }
+ 
++TEST_F(PaintAutoDarkModeTest, SVGDocumentImage) {
++  // Both dimensions are at or below the icon threshold (kMaxImageLength == 64).
++  EXPECT_EQ(DarkModeFilter::ImageType::kIcon,
++            GetSVGDocumentType(1.0f, gfx::Rect(50, 50)));
++
++  // Either dimension above the threshold classifies the document as a photo.
++  EXPECT_EQ(DarkModeFilter::ImageType::kPhoto,
++            GetSVGDocumentType(1.0f, gfx::Rect(200, 200)));
++  // Only the width exceeds the threshold.
++  EXPECT_EQ(DarkModeFilter::ImageType::kPhoto,
++            GetSVGDocumentType(1.0f, gfx::Rect(100, 50)));
++  // Only the height exceeds the threshold.
++  EXPECT_EQ(DarkModeFilter::ImageType::kPhoto,
++            GetSVGDocumentType(1.0f, gfx::Rect(50, 100)));
++
++  // A 40x40 CSS-sized SVG scaled up by a 5x layout zoom is still an icon after
++  // the zoom is undone.
++  EXPECT_EQ(DarkModeFilter::ImageType::kIcon,
++            GetSVGDocumentType(5.0f, gfx::Rect(200, 200)));
++
++  // A 400x400 CSS-sized SVG scaled down by a 0.25x layout zoom is still a photo
++  // after the zoom is undone.
++  EXPECT_EQ(DarkModeFilter::ImageType::kPhoto,
++            GetSVGDocumentType(0.25f, gfx::Rect(100, 100)));
++}
++
+ }  // namespace blink
+diff --git a/third_party/blink/renderer/core/paint/svg_root_painter.cc b/third_party/blink/renderer/core/paint/svg_root_painter.cc
+index 146400e96a69..a93e9e8a96ab 100644
+--- a/third_party/blink/renderer/core/paint/svg_root_painter.cc
++++ b/third_party/blink/renderer/core/paint/svg_root_painter.cc
+@@ -4,12 +4,17 @@
+ 
+ #include "third_party/blink/renderer/core/paint/svg_root_painter.h"
+ 
++#include <optional>
++
++#include "third_party/blink/renderer/core/frame/local_frame.h"
+ #include "third_party/blink/renderer/core/layout/svg/layout_svg_foreign_object.h"
+ #include "third_party/blink/renderer/core/layout/svg/layout_svg_root.h"
++#include "third_party/blink/renderer/core/paint/paint_auto_dark_mode.h"
+ #include "third_party/blink/renderer/core/paint/paint_info.h"
+ #include "third_party/blink/renderer/core/paint/paint_layer.h"
+ #include "third_party/blink/renderer/core/paint/paint_layer_painter.h"
+ #include "third_party/blink/renderer/core/svg/svg_svg_element.h"
++#include "third_party/blink/renderer/platform/graphics/graphics_context.h"
+ #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
+ 
+ namespace blink {
+@@ -64,8 +69,10 @@ AffineTransform SVGRootPainter::TransformToPixelSnappedBorderBox(
+ void SVGRootPainter::PaintReplaced(const PaintInfo& paint_info,
+                                    const PhysicalOffset& paint_offset) {
+   // An empty viewport disables rendering.
+-  if (PixelSnappedSize(paint_offset).IsEmpty())
++  const gfx::Rect snapped_size = PixelSnappedSize(paint_offset);
++  if (snapped_size.IsEmpty()) {
+     return;
++  }
+ 
+   // An empty viewBox also disables rendering.
+   // (http://www.w3.org/TR/SVG/coords.html#ViewBoxAttribute)
+@@ -78,6 +85,23 @@ void SVGRootPainter::PaintReplaced(const PaintInfo& paint_info,
+     return;
+   }
+ 
++  std::optional<GraphicsContext::ScopedAutoDarkModeState> dark_mode_state;
++  if (layout_svg_root_.StyleRef().ForceDark()) {
++    // Only treat icon/separator-sized SVG documents as candidates for dark
++    // mode inversion. Larger SVGs are likely content (illustrations/photos)
++    // and should not be force-darkened. This mirrors the size-based image
++    // classification used for bitmaps (kMaxImageLength). SVGs can be nested,
++    // so pause this SVG's dark mode state while painting its children; the
++    // scoper restores the outer state when it goes out of scope. This lets an
++    // icon-sized SVG embedded inside a larger (paused) SVG re-enable inversion
++    // for itself.
++    const bool pause_dark_mode =
++        ImageClassifierHelper::GetSVGDocumentType(*layout_svg_root_.GetFrame(),
++                                                  snapped_size) !=
++        DarkModeFilter::ImageType::kIcon;
++    dark_mode_state.emplace(paint_info.context, pause_dark_mode);
++  }
++
+   for (LayoutObject* child = layout_svg_root_.FirstChild(); child;
+        child = child->NextSibling()) {
+     if (auto* foreign_object = DynamicTo<LayoutSVGForeignObject>(child)) {
+diff --git a/third_party/blink/renderer/platform/graphics/graphics_context.cc b/third_party/blink/renderer/platform/graphics/graphics_context.cc
+index 92d59af081ed..df395fc243fe 100644
+--- a/third_party/blink/renderer/platform/graphics/graphics_context.cc
++++ b/third_party/blink/renderer/platform/graphics/graphics_context.cc
+@@ -77,7 +77,7 @@ namespace {
+ SkColor4f DarkModeColor(GraphicsContext& context,
+                         const SkColor4f& color,
+                         const AutoDarkMode& auto_dark_mode) {
+-  if (auto_dark_mode.enabled) {
++  if (auto_dark_mode.enabled && !context.IsAutoDarkModePaused()) {
+     return context.GetDarkModeFilter()->InvertColorIfNeeded(
+         color, auto_dark_mode.role,
+         SkColor4f::FromColor(auto_dark_mode.contrast_color));
+@@ -189,7 +189,7 @@ class GraphicsContext::DarkModeFlags final {
+   DarkModeFlags(GraphicsContext* context,
+                 const AutoDarkMode& auto_dark_mode,
+                 const cc::PaintFlags& flags) {
+-    if (auto_dark_mode.enabled) {
++    if (auto_dark_mode.enabled && !context->IsAutoDarkModePaused()) {
+       dark_mode_flags_ = context->GetDarkModeFilter()->ApplyToFlagsIfNeeded(
+           flags, auto_dark_mode.role,
+           SkColor4f::FromColor(auto_dark_mode.contrast_color));
+@@ -248,6 +248,9 @@ DarkModeFilter* GraphicsContext::GetDarkModeFilterForImage(
+     const ImageAutoDarkMode& auto_dark_mode) {
+   if (!auto_dark_mode.enabled)
+     return nullptr;
++  // Images are gated by their own size classification, not by the context's
++  // auto dark mode paused state, so an icon-sized image is still inverted even
++  // while dark mode is paused for its container.
+   DarkModeFilter* dark_mode_filter = GetDarkModeFilter();
+   if (!dark_mode_filter->ShouldApplyFilterToImage(auto_dark_mode.image_type))
+     return nullptr;
+diff --git a/third_party/blink/renderer/platform/graphics/graphics_context.h b/third_party/blink/renderer/platform/graphics/graphics_context.h
+index 046098e79578..f072e24b1e22 100644
+--- a/third_party/blink/renderer/platform/graphics/graphics_context.h
++++ b/third_party/blink/renderer/platform/graphics/graphics_context.h
+@@ -213,6 +213,34 @@ class PLATFORM_EXPORT GraphicsContext {
+   DarkModeFilter* GetDarkModeFilterForImage(
+       const ImageAutoDarkMode& auto_dark_mode);
+ 
++  // Pushes a dark mode inversion pause state on construction and pops it on
++  // destruction, guaranteeing pushes and pops are always balanced. See the
++  // comment on IsAutoDarkModePaused() for the semantics of the pause states.
++  class ScopedAutoDarkModeState {
++    STACK_ALLOCATED();
++
++   public:
++    ScopedAutoDarkModeState(GraphicsContext& context, bool paused)
++        : context_(context) {
++      context_.PushAutoDarkModeState(paused);
++    }
++    ScopedAutoDarkModeState(const ScopedAutoDarkModeState&) = delete;
++    ScopedAutoDarkModeState& operator=(const ScopedAutoDarkModeState&) = delete;
++    ~ScopedAutoDarkModeState() { context_.PopAutoDarkModeState(); }
++
++   private:
++    GraphicsContext& context_;
++  };
++
++  // Dark mode color/flags inversion pause state. While the latest pushed state
++  // is true, inversion is paused regardless of the per-draw |enabled| flag.
++  // Nested scopes can override the pause state of their ancestors: the pushed
++  // state applies until it is popped, after which the previous state takes
++  // effect again. Use ScopedAutoDarkModeState to manage the states.
++  bool IsAutoDarkModePaused() const {
++    return !auto_dark_mode_states_.empty() && auto_dark_mode_states_.back();
++  }
++
+   void SetDarkModeFilterForTest(std::unique_ptr<DarkModeFilter>);
+ 
+   // ---------- State management methods -----------------
+@@ -511,6 +539,16 @@ class PLATFORM_EXPORT GraphicsContext {
+     return paint_state_;
+   }
+ 
++  // Managed exclusively through ScopedAutoDarkModeState to keep pushes and pops
++  // balanced.
++  void PushAutoDarkModeState(bool paused) {
++    auto_dark_mode_states_.push_back(paused);
++  }
++  void PopAutoDarkModeState() {
++    DCHECK(!auto_dark_mode_states_.empty());
++    auto_dark_mode_states_.pop_back();
++  }
++
+   template <typename DrawTextFunc>
+   void DrawTextPasses(const DrawTextFunc&);
+ 
+@@ -571,6 +609,7 @@ class PLATFORM_EXPORT GraphicsContext {
+ 
+   std::unique_ptr<DarkModeFilter> dark_mode_filter_;
+ 
++  Vector<bool> auto_dark_mode_states_;
+   bool printing_ = false;
+   bool printing_internal_headers_and_footers_ = false;
+   bool in_drawing_recorder_ = false;
+diff --git a/third_party/blink/renderer/platform/graphics/graphics_context_test.cc b/third_party/blink/renderer/platform/graphics/graphics_context_test.cc
+index d09676bb92ad..e8504cb54106 100644
+--- a/third_party/blink/renderer/platform/graphics/graphics_context_test.cc
++++ b/third_party/blink/renderer/platform/graphics/graphics_context_test.cc
+@@ -198,5 +198,77 @@ TEST_F(GraphicsContextDarkModeTest, InvertLightnessLAB) {
+   EXPECT_EQ(0xff7f7f7f, bitmap_.getColor(3, 0));
+ }
+ 
++TEST_F(GraphicsContextDarkModeTest, ScopedAutoDarkModeStatePaused) {
++  PaintController paint_controller;
++  GraphicsContext context(paint_controller);
++  DarkModeSettings settings;
++  context.SetDarkModeFilterForTest(std::make_unique<DarkModeFilter>(settings));
++  AutoDarkMode auto_dark_mode(DarkModeFilter::ElementRole::kBackground,
++                              /*enabled=*/true);
++
++  EXPECT_FALSE(context.IsAutoDarkModePaused());
++
++  context.BeginRecording();
++  {
++    // Pausing suppresses inversion, so black stays black.
++    GraphicsContext::ScopedAutoDarkModeState paused(context, /*paused=*/true);
++    EXPECT_TRUE(context.IsAutoDarkModePaused());
++    context.FillRect(gfx::RectF(0, 0, 1, 1), Color::kBlack, auto_dark_mode);
++
++    {
++      // A nested scope overrides the ancestor, re-enabling inversion so black
++      // becomes white.
++      GraphicsContext::ScopedAutoDarkModeState resumed(context,
++                                                       /*paused=*/false);
++      EXPECT_FALSE(context.IsAutoDarkModePaused());
++      context.FillRect(gfx::RectF(1, 0, 1, 1), Color::kBlack, auto_dark_mode);
++    }
++
++    // The outer paused state is restored when the nested scope exits.
++    EXPECT_TRUE(context.IsAutoDarkModePaused());
++  }
++
++  // Back to the default (not paused) state after all scopes exit; inversion
++  // applies again, so black becomes white.
++  EXPECT_FALSE(context.IsAutoDarkModePaused());
++  context.FillRect(gfx::RectF(2, 0, 1, 1), Color::kBlack, auto_dark_mode);
++
++  canvas_->drawPicture(context.EndRecording());
++
++  EXPECT_EQ(SK_ColorBLACK, bitmap_.getColor(0, 0));
++  EXPECT_EQ(SK_ColorWHITE, bitmap_.getColor(1, 0));
++  EXPECT_EQ(SK_ColorWHITE, bitmap_.getColor(2, 0));
++}
++
++TEST_F(GraphicsContextDarkModeTest,
++       BitmapImageIgnoresAutoDarkModePausedStates) {
++  PaintController paint_controller;
++  GraphicsContext context(paint_controller);
++  DarkModeSettings settings;
++  context.SetDarkModeFilterForTest(std::make_unique<DarkModeFilter>(settings));
++
++  ImageAutoDarkMode icon(DarkModeFilter::ElementRole::kBackground,
++                         /*enabled=*/true, DarkModeFilter::ImageType::kIcon);
++  ImageAutoDarkMode photo(DarkModeFilter::ElementRole::kBackground,
++                          /*enabled=*/true, DarkModeFilter::ImageType::kPhoto);
++
++  // Not paused: icons are inverted, photos are not.
++  EXPECT_FALSE(context.IsAutoDarkModePaused());
++  EXPECT_NE(nullptr, context.GetDarkModeFilterForImage(icon));
++  EXPECT_EQ(nullptr, context.GetDarkModeFilterForImage(photo));
++
++  {
++    // Paused: the icon is still inverted, and the photo is still untouched.
++    GraphicsContext::ScopedAutoDarkModeState paused(context, /*paused=*/true);
++    EXPECT_TRUE(context.IsAutoDarkModePaused());
++    EXPECT_NE(nullptr, context.GetDarkModeFilterForImage(icon));
++    EXPECT_EQ(nullptr, context.GetDarkModeFilterForImage(photo));
++  }
++
++  // A disabled image auto dark mode never returns a filter.
++  EXPECT_EQ(nullptr,
++            context.GetDarkModeFilterForImage(ImageAutoDarkMode::Disabled()));
++}
++
+ }  // namespace
+ }  // namespace blink

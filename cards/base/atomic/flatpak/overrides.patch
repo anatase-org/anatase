@@ -37,7 +37,7 @@ index 56ce95734a26..0bf7874d4f3e 100644
  
  typedef enum {
 diff --git a/common/flatpak-context.c b/common/flatpak-context.c
-index 60f42d2cea3f..521d9b2d327c 100644
+index def68fd24a75..2cf8664a8df0 100644
 --- a/common/flatpak-context.c
 +++ b/common/flatpak-context.c
 @@ -67,6 +67,7 @@ const char *flatpak_context_sockets[] = {
@@ -49,7 +49,7 @@ index 60f42d2cea3f..521d9b2d327c 100644
  };
  
 diff --git a/common/flatpak-run-sockets.c b/common/flatpak-run-sockets.c
-index f9d0547c468d..2d8e91e16a76 100644
+index 6580e3970a02..fc51c063ee63 100644
 --- a/common/flatpak-run-sockets.c
 +++ b/common/flatpak-run-sockets.c
 @@ -179,6 +179,7 @@ flatpak_run_add_socket_args_environment (FlatpakBwrap         *bwrap,
@@ -132,10 +132,10 @@ index 90931c2ea267..b6f2ca1d53cf 100644
                            "--tmpfs", "/tmp/.X11-unix",
                            NULL);
 diff --git a/portal/flatpak-portal.c b/portal/flatpak-portal.c
-index e06783f808c1..3d8b266c5c1f 100644
+index 03ba05aef9ea..1bfbb2c4fac4 100644
 --- a/portal/flatpak-portal.c
 +++ b/portal/flatpak-portal.c
-@@ -967,13 +967,16 @@ handle_spawn (PortalFlatpak         *object,
+@@ -971,13 +971,16 @@ handle_spawn (PortalFlatpak         *object,
          {
            if (sockets != NULL && g_strv_contains ((const char * const *) sockets, "wayland"))
              g_ptr_array_add (flatpak_argv, g_strdup ("--socket=wayland"));
@@ -153,116 +153,3 @@ index e06783f808c1..3d8b266c5c1f 100644
              g_ptr_array_add (flatpak_argv, g_strdup ("--share=ipc"));
          }
        if (sandbox_flags & FLATPAK_SPAWN_SANDBOX_FLAGS_SHARE_SOUND)
-
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Antheas Kapenekakis <git@antheas.dev>
-Date: Sat, 28 Jun 2025 23:04:30 +0200
-Subject: add --socket=wayland-passthrough for Wayland
-
-The security context of Wayland can cause DRM leasing to fail when it
-comes to using VR devices, and gamescope communication to fail to its
-wayland socket to fail. Therefore, add an insecure mode to allow
-disabling the security context. In addition, while in that context,
-avoid renaming the socket if possible.
----
- common/flatpak-context-private.h     | 1 +
- common/flatpak-context.c             | 1 +
- common/flatpak-run-sockets.c         | 7 +++++--
- common/flatpak-run-wayland-private.h | 3 ++-
- common/flatpak-run-wayland.c         | 8 +++++---
- 5 files changed, 14 insertions(+), 6 deletions(-)
-
-diff --git a/common/flatpak-context-private.h b/common/flatpak-context-private.h
-index 0bf7874d4f3e..84398fea365e 100644
---- a/common/flatpak-context-private.h
-+++ b/common/flatpak-context-private.h
-@@ -62,6 +62,7 @@ typedef enum {
-   FLATPAK_CONTEXT_SOCKET_GPG_AGENT   = 1 << 9,
-   FLATPAK_CONTEXT_SOCKET_INHERIT_WAYLAND_SOCKET = 1 << 10,
-   FLATPAK_CONTEXT_SOCKET_X11_UNRESTRICTED       = 1 << 11,
-+  FLATPAK_CONTEXT_SOCKET_WAYLAND_INSECURE       = 1 << 12,
- } FlatpakContextSockets;
- 
- typedef enum {
-diff --git a/common/flatpak-context.c b/common/flatpak-context.c
-index 521d9b2d327c..898faff8899f 100644
---- a/common/flatpak-context.c
-+++ b/common/flatpak-context.c
-@@ -68,6 +68,7 @@ const char *flatpak_context_sockets[] = {
-   "gpg-agent",
-   "inherit-wayland-socket",
-   "x11-passthrough",
-+  "wayland-passthrough",
-   NULL
- };
- 
-diff --git a/common/flatpak-run-sockets.c b/common/flatpak-run-sockets.c
-index 2d8e91e16a76..266a99aeec7e 100644
---- a/common/flatpak-run-sockets.c
-+++ b/common/flatpak-run-sockets.c
-@@ -180,13 +180,16 @@ flatpak_run_add_socket_args_environment (FlatpakBwrap         *bwrap,
-   gboolean inherit_wayland_socket;
-   gboolean allow_x11;
-   gboolean unrestricted_x11;
-+  gboolean insecure_wayland;
- 
--  allow_wayland = (sockets & FLATPAK_CONTEXT_SOCKET_WAYLAND) != 0;
-+  insecure_wayland = (sockets & FLATPAK_CONTEXT_SOCKET_WAYLAND_INSECURE) != 0;
-+  allow_wayland = insecure_wayland || (sockets & FLATPAK_CONTEXT_SOCKET_WAYLAND) != 0;
-   inherit_wayland_socket = (sockets & FLATPAK_CONTEXT_SOCKET_INHERIT_WAYLAND_SOCKET) != 0;
-   flatpak_run_add_wayland_args (bwrap,
-                                 app_id, instance_id,
-                                 allow_wayland,
--                                inherit_wayland_socket);
-+                                inherit_wayland_socket,
-+                                insecure_wayland);
- 
-   unrestricted_x11 = (sockets & FLATPAK_CONTEXT_SOCKET_X11_UNRESTRICTED) != 0;
-   allow_x11 = unrestricted_x11 || (sockets & FLATPAK_CONTEXT_SOCKET_X11) != 0;
-diff --git a/common/flatpak-run-wayland-private.h b/common/flatpak-run-wayland-private.h
-index 047c57b437d2..ba70064b443b 100644
---- a/common/flatpak-run-wayland-private.h
-+++ b/common/flatpak-run-wayland-private.h
-@@ -33,7 +33,8 @@ flatpak_run_add_wayland_args (FlatpakBwrap *bwrap,
-                               const char   *app_id,
-                               const char   *instance_id,
-                               gboolean      allowed,
--                              gboolean      inherit_wayland_socket);
-+                              gboolean      inherit_wayland_socket,
-+                              gboolean      insecure);
- 
- gboolean
- flatpak_run_has_wayland (void);
-diff --git a/common/flatpak-run-wayland.c b/common/flatpak-run-wayland.c
-index c8d2b8ff9b63..6b2383e49ee7 100644
---- a/common/flatpak-run-wayland.c
-+++ b/common/flatpak-run-wayland.c
-@@ -265,7 +265,8 @@ flatpak_run_add_wayland_args (FlatpakBwrap *bwrap,
-                               const char   *app_id,
-                               const char   *instance_id,
-                               gboolean      allowed,
--                              gboolean      inherit_wayland_socket)
-+                              gboolean      inherit_wayland_socket,
-+                              gboolean      insecure)
- {
-   const char *wayland_display;
-   g_autofree char *wayland_socket = NULL;
-@@ -291,7 +292,8 @@ flatpak_run_add_wayland_args (FlatpakBwrap *bwrap,
-   wayland_display = get_wayland_display_name ();
- 
- #ifdef ENABLE_WAYLAND_SECURITY_CONTEXT
--  if (flatpak_run_create_wayland_security_context (bwrap, app_id, instance_id,
-+  if (!insecure &&
-+      flatpak_run_create_wayland_security_context (bwrap, app_id, instance_id,
-                                                    wayland_display,
-                                                    &security_context_available,
-                                                    &wayland_socket))
-@@ -313,7 +315,7 @@ flatpak_run_add_wayland_args (FlatpakBwrap *bwrap,
-       wayland_socket = get_wayland_socket_path (wayland_display);
-     }
- 
--  if (!g_str_has_prefix (wayland_display, "wayland-") ||
-+  if ((!insecure && !g_str_has_prefix (wayland_display, "wayland-")) ||
-       strchr (wayland_display, '/') != NULL)
-     {
-       g_debug ("Not preserving WAYLAND_DISPLAY=\"%s\"", wayland_display);

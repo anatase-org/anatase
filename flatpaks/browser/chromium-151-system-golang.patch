@@ -1,0 +1,15 @@
+Replace bundle golang with system golang
+
+diff -up chromium-151.0.7922.47/third_party/dawn/tools/generate-sources-gn.py.me chromium-151.0.7922.47/third_party/dawn/tools/generate-sources-gn.py
+--- chromium-151.0.7922.47/third_party/dawn/tools/generate-sources-gn.py.me	2026-07-27 18:03:28.552230049 +0200
++++ chromium-151.0.7922.47/third_party/dawn/tools/generate-sources-gn.py	2026-07-27 18:04:21.360395992 +0200
+@@ -40,8 +40,7 @@ from tools.python import cipd_deps
+ 
+ 
+ def main() -> int:
+-    go_binary = os.path.join(DAWN_ROOT, 'tools', 'golang',
+-                             cipd_deps.get_cipd_platform(), 'bin', 'go')
++    go_binary = "go"
+     if sys.platform == 'win32':
+         go_binary += '.exe'
+ 

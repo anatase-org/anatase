@@ -1,0 +1,54 @@
+diff -up chromium-152.0.7977.75/chrome/test/BUILD.gn.me chromium-152.0.7977.75/chrome/test/BUILD.gn
+--- chromium-152.0.7977.75/chrome/test/BUILD.gn.me	2026-09-02 17:07:32.105877798 +0700
++++ chromium-152.0.7977.75/chrome/test/BUILD.gn	2026-09-02 17:06:28.862176940 +0700
+@@ -8451,7 +8458,7 @@ if (!is_android) {
+         "//testing/gtest",
+         "//third_party/hunspell",
+         "//third_party/icu",
+-        "//third_party/libpng:libpng_for_testonly",
++        "//third_party/libpng",
+         "//ui/base:test_support",
+         "//ui/events:test_support",
+         "//ui/ozone",
+@@ -8840,7 +8847,7 @@ if (!is_android && !is_chromeos_device)
+       "//testing/gtest",
+       "//third_party/hunspell",
+       "//third_party/icu",
+-      "//third_party/libpng:libpng_for_testonly",
++      "//third_party/libpng",
+       "//ui/base:base_interactive_ui_tests",
+       "//ui/base:ozone_buildflags",
+       "//ui/base:test_support",
+@@ -9776,7 +9783,7 @@ if (!is_android) {
+       "//testing/gtest",
+       "//third_party/hunspell",
+       "//third_party/icu",
+-      "//third_party/libpng:libpng_for_testonly",
++      "//third_party/libpng",
+       "//ui/base:test_support",
+       "//ui/resources:ui_test_pak",
+       "//ui/views",
+diff -up chromium-152.0.7977.75/tools/imagediff/BUILD.gn.me chromium-152.0.7977.75/tools/imagediff/BUILD.gn
+--- chromium-152.0.7977.75/tools/imagediff/BUILD.gn.me	2026-09-02 17:07:50.950086627 +0700
++++ chromium-152.0.7977.75/tools/imagediff/BUILD.gn	2026-09-02 17:10:02.754225724 +0700
+@@ -48,7 +48,7 @@ if (current_toolchain == imagediff_toolc
+     deps = [
+       "//base",
+       "//build/win:default_exe_manifest",
+-      "//third_party/libpng:libpng_for_testonly",
++      "//third_party/libpng",
+       "//third_party/zlib",
+     ]
+   }
+diff -up chromium-152.0.7977.75/ui/gfx/BUILD.gn.me chromium-152.0.7977.75/ui/gfx/BUILD.gn
+--- chromium-152.0.7977.75/ui/gfx/BUILD.gn.me	2026-09-02 17:10:35.639911698 +0700
++++ chromium-152.0.7977.75/ui/gfx/BUILD.gn	2026-09-02 17:10:45.586021920 +0700
+@@ -897,7 +897,7 @@ test("gfx_unittests") {
+     "//skia:skcms",
+     "//testing/gtest",
+     "//third_party/icu:icuuc",
+-    "//third_party/libpng:libpng_for_testonly",
++    "//third_party/libpng",
+     "//third_party/zlib",
+     "//ui/base",
+     "//ui/gfx/animation",

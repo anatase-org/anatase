@@ -1,0 +1,33 @@
+From e322356cd1b5fae4fb71ff61b248fcb352d189cb Mon Sep 17 00:00:00 2001
+From: Antonio Rojas <arojas@archlinux.org>
+Date: Fri, 21 Aug 2026 11:55:20 +0000
+Subject: [PATCH] Initialize m_pasteAnnotation
+
+BUG: 524527
+
+
+(cherry picked from commit 32544042498b9f7f899aa29bb0211dc4ac2ab7c9)
+
+32544042 Initialize m_pasteAnnotation
+
+Co-authored-by: Antonio Rojas <arojas@archlinux.org>
+---
+ part/part.cpp | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/part/part.cpp b/part/part.cpp
+index f354c5e5b..d5cef64e9 100644
+--- a/part/part.cpp
++++ b/part/part.cpp
+@@ -761,6 +761,8 @@ void Part::setupViewerActions()
+     m_exportAsText = nullptr;
+     m_exportAsDocArchive = nullptr;
+ 
++    m_pasteAnnotation = nullptr;
++
+ #if HAVE_PURPOSE
+     m_share = nullptr;
+     m_shareMenu = nullptr;
+-- 
+GitLab
+

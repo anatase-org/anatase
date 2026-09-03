@@ -1,0 +1,29 @@
+Fix FTBFS with ffmpeg-5.x
+../../media/ffmpeg/ffmpeg_common.cc:911:16: error: use of undeclared identifier 'AV_SPHERICAL_HALF_EQUIRECTANGULAR'; did you mean 'AV_SPHERICAL_EQUIRECTANGULAR'?
+  911 |           case AV_SPHERICAL_HALF_EQUIRECTANGULAR:
+      |                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      |                AV_SPHERICAL_EQUIRECTANGULAR
+/usr/include/ffmpeg/libavutil/spherical.h:56:5: note: 'AV_SPHERICAL_EQUIRECTANGULAR' declared here
+   56 |     AV_SPHERICAL_EQUIRECTANGULAR,
+      |     ^
+../../media/ffmpeg/ffmpeg_common.cc:911:16: error: duplicate case value 'AV_SPHERICAL_EQUIRECTANGULAR'
+  911 |           case AV_SPHERICAL_HALF_EQUIRECTANGULAR:
+      |                ^
+../../media/ffmpeg/ffmpeg_common.cc:908:16: note: previous case defined here
+  908 |           case AV_SPHERICAL_EQUIRECTANGULAR:
+
+diff -up chromium-151.0.7922.71/media/ffmpeg/ffmpeg_common.cc.me chromium-151.0.7922.71/media/ffmpeg/ffmpeg_common.cc
+--- chromium-151.0.7922.71/media/ffmpeg/ffmpeg_common.cc.me	2026-08-01 07:16:39.987060192 -0400
++++ chromium-151.0.7922.71/media/ffmpeg/ffmpeg_common.cc	2026-08-01 07:25:18.201727436 -0400
+@@ -908,9 +908,11 @@ bool AVStreamToVideoDecoderConfig(const
+           case AV_SPHERICAL_EQUIRECTANGULAR:
+             spatial_format.projection_type = VideoProjectionType::kEquirect360;
+             break;
++	#ifdef AV_SPHERICAL_HALF_EQUIRECTANGULAR
+           case AV_SPHERICAL_HALF_EQUIRECTANGULAR:
+             spatial_format.projection_type = VideoProjectionType::kEquirect180;
+             break;
++	#endif
+           case AV_SPHERICAL_EQUIRECTANGULAR_TILE: {
+             const uint32_t kEquirect180Threshold = 0x30000000;
+             if (spherical->bound_left >= kEquirect180Threshold &&

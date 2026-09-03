@@ -12,7 +12,7 @@
 %bcond malcontent %[!0%{?rhel}]
 
 Name:           flatpak
-Version:        1.18.0
+Version:        1.19.0
 Release:        %autorelease
 Summary:        Application deployment framework for desktop apps
 
@@ -21,6 +21,11 @@ URL:            https://flatpak.org/
 Source0:        https://github.com/flatpak/flatpak/releases/download/%{version}/%{name}-%{version}.tar.xz
 
 Patch0:         overrides.patch
+
+# https://github.com/flatpak/flatpak/pull/6785
+Patch:          fd-conflation.patch
+# https://github.com/flatpak/flatpak/pull/6787
+Patch:          eagain.patch
 
 # ostree not on i686 for RHEL 10
 # https://github.com/containers/composefs/pull/229#issuecomment-1838735764

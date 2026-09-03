@@ -1,0 +1,12 @@
+diff -up chromium-151.0.7922.47/tools/metrics/BUILD.gn.me chromium-151.0.7922.47/tools/metrics/BUILD.gn
+--- chromium-151.0.7922.47/tools/metrics/BUILD.gn.me	2026-07-27 17:51:17.673099530 +0200
++++ chromium-151.0.7922.47/tools/metrics/BUILD.gn	2026-07-27 17:52:04.590805146 +0200
+@@ -11,7 +11,7 @@ import("//tools/metrics/histograms/histo
+ # dirmd doesn't work in non-git checkout.
+ # TODO(crbug.com/329080012): Remove this once dirmd works in non-git
+ # checkouts.
+-if (path_exists("//.git")) {
++if (generate_location_tags) {
+   action("histograms_xml") {
+     script = "histograms/merge_xml.py"
+     output = "$root_out_dir/histograms.xml"

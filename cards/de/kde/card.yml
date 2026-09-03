@@ -160,6 +160,7 @@ specs:
   - spec: kwin/kwin.spec
     files:
       - .gitignore
+      - 2d0613acd044544e79b034b1cbc248664edf2884.patch
       - kwin.spec
       - overrides.patch
     packages:

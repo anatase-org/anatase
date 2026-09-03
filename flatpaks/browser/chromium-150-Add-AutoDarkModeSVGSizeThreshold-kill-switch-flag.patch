@@ -1,0 +1,192 @@
+commit 8e40af083e562d3f19580d1a2dc850ae0aa9f644
+Author: Philip Rogers <pdr@chromium.org>
+Date:   Fri Jul 17 13:12:46 2026 -0700
+
+    Add AutoDarkModeSVGSizeThreshold kill switch flag
+    
+    This patch adds an enabled-by-default feature flag for the code in
+    https://crrev.com/b5934b11cfc2948f8b97ebb0997aab5f77e2fe2c, for the
+    unlikely case that it causes a regression and needs to be disabled.
+    
+    Bug: 449909524
+    Change-Id: I778bca57df58313439199d411cfa7e84c7b2c340
+    Reviewed-on: https://chromium-review.googlesource.com/c/chromium/src/+/8119730
+    Auto-Submit: Philip Rogers <pdr@chromium.org>
+    Reviewed-by: Stephen Chenney <schenney@chromium.org>
+    Commit-Queue: Philip Rogers <pdr@chromium.org>
+    Cr-Commit-Position: refs/heads/main@{#1664135}
+
+diff --git a/third_party/blink/renderer/core/paint/paint_auto_dark_mode.cc b/third_party/blink/renderer/core/paint/paint_auto_dark_mode.cc
+index e4b5a8155148..b2808a39d166 100644
+--- a/third_party/blink/renderer/core/paint/paint_auto_dark_mode.cc
++++ b/third_party/blink/renderer/core/paint/paint_auto_dark_mode.cc
+@@ -5,6 +5,7 @@
+ #include "third_party/blink/renderer/core/paint/paint_auto_dark_mode.h"
+ 
+ #include "third_party/blink/renderer/core/frame/local_frame.h"
++#include "third_party/blink/renderer/platform/runtime_enabled_features.h"
+ #include "ui/gfx/geometry/rect.h"
+ #include "ui/gfx/geometry/rect_conversions.h"
+ 
+@@ -73,6 +74,10 @@ ImageAutoDarkMode ImageClassifierHelper::GetImageAutoDarkMode(
+ DarkModeFilter::ImageType ImageClassifierHelper::GetSVGDocumentType(
+     LocalFrame& local_frame,
+     const gfx::Rect& size) {
++  if (!RuntimeEnabledFeatures::AutoDarkModeSVGSizeThresholdEnabled()) {
++    return DarkModeFilter::ImageType::kIcon;
++  }
++
+   // |size| includes the layout zoom factor (page zoom and DSF). Undo it so the
+   // size threshold matches bitmap images, whose classification is unaffected by
+   // page zoom and DSF.
+diff --git a/third_party/blink/renderer/core/paint/paint_auto_dark_mode_test.cc b/third_party/blink/renderer/core/paint/paint_auto_dark_mode_test.cc
+index 337aff8fe996..7ad9a5030c92 100644
+--- a/third_party/blink/renderer/core/paint/paint_auto_dark_mode_test.cc
++++ b/third_party/blink/renderer/core/paint/paint_auto_dark_mode_test.cc
+@@ -10,6 +10,7 @@
+ #include "third_party/blink/renderer/core/frame/local_frame.h"
+ #include "third_party/blink/renderer/core/testing/dummy_page_holder.h"
+ #include "third_party/blink/renderer/platform/graphics/dark_mode_settings.h"
++#include "third_party/blink/renderer/platform/testing/runtime_enabled_features_test_helpers.h"
+ #include "third_party/blink/renderer/platform/testing/task_environment.h"
+ #include "ui/gfx/geometry/rect.h"
+ 
+@@ -172,29 +173,45 @@ TEST_F(PaintAutoDarkModeTest,
+ }
+ 
+ TEST_F(PaintAutoDarkModeTest, SVGDocumentImage) {
+-  // Both dimensions are at or below the icon threshold (kMaxImageLength == 64).
+-  EXPECT_EQ(DarkModeFilter::ImageType::kIcon,
+-            GetSVGDocumentType(1.0f, gfx::Rect(50, 50)));
+-
+-  // Either dimension above the threshold classifies the document as a photo.
+-  EXPECT_EQ(DarkModeFilter::ImageType::kPhoto,
+-            GetSVGDocumentType(1.0f, gfx::Rect(200, 200)));
+-  // Only the width exceeds the threshold.
+-  EXPECT_EQ(DarkModeFilter::ImageType::kPhoto,
+-            GetSVGDocumentType(1.0f, gfx::Rect(100, 50)));
+-  // Only the height exceeds the threshold.
+-  EXPECT_EQ(DarkModeFilter::ImageType::kPhoto,
+-            GetSVGDocumentType(1.0f, gfx::Rect(50, 100)));
+-
+-  // A 40x40 CSS-sized SVG scaled up by a 5x layout zoom is still an icon after
+-  // the zoom is undone.
+-  EXPECT_EQ(DarkModeFilter::ImageType::kIcon,
+-            GetSVGDocumentType(5.0f, gfx::Rect(200, 200)));
+-
+-  // A 400x400 CSS-sized SVG scaled down by a 0.25x layout zoom is still a photo
+-  // after the zoom is undone.
+-  EXPECT_EQ(DarkModeFilter::ImageType::kPhoto,
+-            GetSVGDocumentType(0.25f, gfx::Rect(100, 100)));
++  {
++    ScopedAutoDarkModeSVGSizeThresholdForTest size_threshold(true);
++
++    // Both dimensions are at or below the icon threshold (kMaxImageLength ==
++    // 64).
++    EXPECT_EQ(DarkModeFilter::ImageType::kIcon,
++              GetSVGDocumentType(1.0f, gfx::Rect(50, 50)));
++
++    // Either dimension above the threshold classifies the document as a photo.
++    EXPECT_EQ(DarkModeFilter::ImageType::kPhoto,
++              GetSVGDocumentType(1.0f, gfx::Rect(200, 200)));
++    // Only the width exceeds the threshold.
++    EXPECT_EQ(DarkModeFilter::ImageType::kPhoto,
++              GetSVGDocumentType(1.0f, gfx::Rect(100, 50)));
++    // Only the height exceeds the threshold.
++    EXPECT_EQ(DarkModeFilter::ImageType::kPhoto,
++              GetSVGDocumentType(1.0f, gfx::Rect(50, 100)));
++
++    // A 40x40 CSS-sized SVG scaled up by a 5x layout zoom is still an icon
++    // after the zoom is undone.
++    EXPECT_EQ(DarkModeFilter::ImageType::kIcon,
++              GetSVGDocumentType(5.0f, gfx::Rect(200, 200)));
++
++    // A 400x400 CSS-sized SVG scaled down by a 0.25x layout zoom is still a
++    // photo after the zoom is undone.
++    EXPECT_EQ(DarkModeFilter::ImageType::kPhoto,
++              GetSVGDocumentType(0.25f, gfx::Rect(100, 100)));
++  }
++
++  {
++    ScopedAutoDarkModeSVGSizeThresholdForTest size_threshold(false);
++
++    // When AutoDarkModeSVGSizeThreshold is disabled, all SVG documents are
++    // classified as icons so that auto dark mode inversion is not paused.
++    EXPECT_EQ(DarkModeFilter::ImageType::kIcon,
++              GetSVGDocumentType(1.0f, gfx::Rect(50, 50)));
++    EXPECT_EQ(DarkModeFilter::ImageType::kIcon,
++              GetSVGDocumentType(1.0f, gfx::Rect(200, 200)));
++  }
+ }
+ 
+ }  // namespace blink
+diff --git a/third_party/blink/renderer/core/paint/svg_root_painter.cc b/third_party/blink/renderer/core/paint/svg_root_painter.cc
+index a93e9e8a96ab..c4d2487d8d63 100644
+--- a/third_party/blink/renderer/core/paint/svg_root_painter.cc
++++ b/third_party/blink/renderer/core/paint/svg_root_painter.cc
+@@ -86,7 +86,8 @@ void SVGRootPainter::PaintReplaced(const PaintInfo& paint_info,
+   }
+ 
+   std::optional<GraphicsContext::ScopedAutoDarkModeState> dark_mode_state;
+-  if (layout_svg_root_.StyleRef().ForceDark()) {
++  if (RuntimeEnabledFeatures::AutoDarkModeSVGSizeThresholdEnabled() &&
++      layout_svg_root_.StyleRef().ForceDark()) {
+     // Only treat icon/separator-sized SVG documents as candidates for dark
+     // mode inversion. Larger SVGs are likely content (illustrations/photos)
+     // and should not be force-darkened. This mirrors the size-based image
+diff --git a/third_party/blink/renderer/platform/graphics/graphics_context.cc b/third_party/blink/renderer/platform/graphics/graphics_context.cc
+index df395fc243fe..b71c211b3811 100644
+--- a/third_party/blink/renderer/platform/graphics/graphics_context.cc
++++ b/third_party/blink/renderer/platform/graphics/graphics_context.cc
+@@ -51,6 +51,7 @@
+ #include "third_party/blink/renderer/platform/graphics/platform_focus_ring.h"
+ #include "third_party/blink/renderer/platform/graphics/skia/skia_utils.h"
+ #include "third_party/blink/renderer/platform/instrumentation/tracing/trace_event.h"
++#include "third_party/blink/renderer/platform/runtime_enabled_features.h"
+ #include "third_party/blink/renderer/platform/text/text_run.h"
+ #include "third_party/blink/renderer/platform/transforms/affine_transform.h"
+ #include "third_party/blink/renderer/platform/weborigin/kurl.h"
+@@ -257,6 +258,13 @@ DarkModeFilter* GraphicsContext::GetDarkModeFilterForImage(
+   return dark_mode_filter;
+ }
+ 
++bool GraphicsContext::IsAutoDarkModePaused() const {
++  if (!RuntimeEnabledFeatures::AutoDarkModeSVGSizeThresholdEnabled()) {
++    return false;
++  }
++  return !auto_dark_mode_states_.empty() && auto_dark_mode_states_.back();
++}
++
+ void GraphicsContext::SetDarkModeFilterForTest(
+     std::unique_ptr<DarkModeFilter> dark_mode_filter) {
+   dark_mode_filter_ = std::move(dark_mode_filter);
+diff --git a/third_party/blink/renderer/platform/graphics/graphics_context.h b/third_party/blink/renderer/platform/graphics/graphics_context.h
+index f072e24b1e22..c39ec8626e8c 100644
+--- a/third_party/blink/renderer/platform/graphics/graphics_context.h
++++ b/third_party/blink/renderer/platform/graphics/graphics_context.h
+@@ -237,9 +237,7 @@ class PLATFORM_EXPORT GraphicsContext {
+   // Nested scopes can override the pause state of their ancestors: the pushed
+   // state applies until it is popped, after which the previous state takes
+   // effect again. Use ScopedAutoDarkModeState to manage the states.
+-  bool IsAutoDarkModePaused() const {
+-    return !auto_dark_mode_states_.empty() && auto_dark_mode_states_.back();
+-  }
++  bool IsAutoDarkModePaused() const;
+ 
+   void SetDarkModeFilterForTest(std::unique_ptr<DarkModeFilter>);
+ 
+diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.json5
+index 56a9ba93183d..1896e311f7d9 100644
+--- a/third_party/blink/renderer/platform/runtime_enabled_features.json5
++++ b/third_party/blink/renderer/platform/runtime_enabled_features.json5
+@@ -773,6 +773,10 @@
+       name: "AutoDarkModeSkipImages",
+       base_feature: "none",
+     },
++    {
++      name: "AutoDarkModeSVGSizeThreshold",
++      status: "stable",
++    },
+     {
+       name: "Autofill",
+       public: true,

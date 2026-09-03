@@ -8,7 +8,7 @@ Subject: rename back to --json-fd
  1 file changed, 6 insertions(+), 3 deletions(-)
 
 diff --git a/crates/lib/src/cli.rs b/crates/lib/src/cli.rs
-index 51ba36415012..3f0425e37c47 100644
+index c749b1199178..da8a66d47af9 100644
 --- a/crates/lib/src/cli.rs
 +++ b/crates/lib/src/cli.rs
 @@ -67,16 +67,19 @@ pub(crate) struct ProgressOptions {
@@ -109,7 +109,7 @@ index ff96de69239b..93673eae3e9a 100644
  
  # Run this to also take over the functionality of `ostree container` for example.
 diff --git a/crates/cli/Cargo.toml b/crates/cli/Cargo.toml
-index bdc0423adeae..79bce716b844 100644
+index 2cfba548b6b4..08ae3be21d29 100644
 --- a/crates/cli/Cargo.toml
 +++ b/crates/cli/Cargo.toml
 @@ -25,5 +25,8 @@ log = { workspace = true }

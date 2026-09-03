@@ -5,4 +5,4 @@ kde/kcolorpicker:
 kde/kimageannotator:
   upstream-sha: d01bef3febfa0e654cd7c71b4dc4bcacabab8bfb
 kde/gwenview:
-  upstream-sha: 1c8d445c718b969b1a232e4c753e883cf8029c6d
+  upstream-sha: a74e97e4cba1d9fa22b5988189b2852ef361b0e8

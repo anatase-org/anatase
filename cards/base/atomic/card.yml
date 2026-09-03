@@ -64,6 +64,8 @@ specs:
   - spec: flatpak/flatpak.spec
     files:
       - overrides.patch
+      - fd-conflation.patch
+      - eagain.patch
     packages:
       - flatpak
       - flatpak-libs

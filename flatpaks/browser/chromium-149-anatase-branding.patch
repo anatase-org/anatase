@@ -388,10 +388,10 @@
  };
 --- a/chrome/browser/ui/views/user_education/browser_ntp_promos.cc
 +++ b/chrome/browser/ui/views/user_education/browser_ntp_promos.cc
-@@ -141,10 +141,10 @@
+@@ -139,10 +139,10 @@
 -  registry.AddPromo(NtpPromoSpecification(
 -      kNtpCustomizationPromoId,
--      NtpPromoContent("palette", IDS_NTP_CUSTOMIZATION_PROMO,
+-      NtpPromoContent("palette-custom", IDS_NTP_CUSTOMIZATION_PROMO,
 -                      IDS_NTP_CUSTOMIZATION_PROMO),
 -      base::BindRepeating(&CheckCustomizationPromoEligibility),
 -      /*show_callback=*/base::DoNothing(),
@@ -401,7 +401,7 @@
 -                               "Promotes customization of the New Tab Page")));
 +  // registry.AddPromo(NtpPromoSpecification(
 +  //     kNtpCustomizationPromoId,
-+  //     NtpPromoContent("palette", IDS_NTP_CUSTOMIZATION_PROMO,
++  //     NtpPromoContent("palette-custom", IDS_NTP_CUSTOMIZATION_PROMO,
 +  //                     IDS_NTP_CUSTOMIZATION_PROMO),
 +  //     base::BindRepeating(&CheckCustomizationPromoEligibility),
 +  //     /*show_callback=*/base::DoNothing(),
