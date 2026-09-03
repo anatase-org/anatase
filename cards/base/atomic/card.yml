@@ -64,8 +64,6 @@ specs:
   - spec: flatpak/flatpak.spec
     files:
       - overrides.patch
-      - fd-conflation.patch
-      - eagain.patch
     packages:
       - flatpak
       - flatpak-libs
@@ -74,7 +72,7 @@ specs:
     upstream:
       type: dist-git
       url: https://src.fedoraproject.org/rpms/flatpak
-      branch: rawhide
+      branch: f$releasever
     patch:
       type: git
       url: https://github.com/flatpak/flatpak

@@ -37,7 +37,7 @@ index 56ce95734a26..0bf7874d4f3e 100644
  
  typedef enum {
 diff --git a/common/flatpak-context.c b/common/flatpak-context.c
-index def68fd24a75..2cf8664a8df0 100644
+index 0a35a41ca4cf..af98128f5de3 100644
 --- a/common/flatpak-context.c
 +++ b/common/flatpak-context.c
 @@ -67,6 +67,7 @@ const char *flatpak_context_sockets[] = {
@@ -49,7 +49,7 @@ index def68fd24a75..2cf8664a8df0 100644
  };
  
 diff --git a/common/flatpak-run-sockets.c b/common/flatpak-run-sockets.c
-index 6580e3970a02..fc51c063ee63 100644
+index f9d0547c468d..2d8e91e16a76 100644
 --- a/common/flatpak-run-sockets.c
 +++ b/common/flatpak-run-sockets.c
 @@ -179,6 +179,7 @@ flatpak_run_add_socket_args_environment (FlatpakBwrap         *bwrap,
@@ -132,10 +132,10 @@ index 90931c2ea267..b6f2ca1d53cf 100644
                            "--tmpfs", "/tmp/.X11-unix",
                            NULL);
 diff --git a/portal/flatpak-portal.c b/portal/flatpak-portal.c
-index 03ba05aef9ea..1bfbb2c4fac4 100644
+index 3bd68e2847c2..fba770927d3d 100644
 --- a/portal/flatpak-portal.c
 +++ b/portal/flatpak-portal.c
-@@ -971,13 +971,16 @@ handle_spawn (PortalFlatpak         *object,
+@@ -968,13 +968,16 @@ handle_spawn (PortalFlatpak         *object,
          {
            if (sockets != NULL && g_strv_contains ((const char * const *) sockets, "wayland"))
              g_ptr_array_add (flatpak_argv, g_strdup ("--socket=wayland"));
@@ -180,10 +180,10 @@ index 96a794574e4f..155ba94efd46 100644
      "share/metainfo",                     /* Copy appdata/metainfo files */
      NULL,
 diff --git a/common/flatpak-context.c b/common/flatpak-context.c
-index 2cf8664a8df0..8ff017f29c81 100644
+index af98128f5de3..bbc9ac786bd4 100644
 --- a/common/flatpak-context.c
 +++ b/common/flatpak-context.c
-@@ -4405,6 +4405,10 @@ flatpak_context_get_allowed_exports (FlatpakContext *context,
+@@ -4360,6 +4360,10 @@ flatpak_context_get_allowed_exports (FlatpakContext *context,
      {
        g_ptr_array_add (allowed_extensions, g_strdup (".desktop"));
      }
@@ -195,10 +195,10 @@ index 2cf8664a8df0..8ff017f29c81 100644
      {
        g_ptr_array_add (allowed_extensions, g_strdup (".xml"));
 diff --git a/common/flatpak-dir.c b/common/flatpak-dir.c
-index b071b1fab6d2..9aa9652cdf38 100644
+index c05961c6d421..680becfa37cf 100644
 --- a/common/flatpak-dir.c
 +++ b/common/flatpak-dir.c
-@@ -9013,6 +9013,7 @@ flatpak_export_dir (GFile        *source,
+@@ -9058,6 +9058,7 @@ flatpak_export_dir (GFile        *source,
      "share/dbus-1/services",               "../../..",
      "share/gnome-shell/search-providers",  "../../..",
      "share/krunner/dbusplugins",           "../../..",
@@ -241,10 +241,10 @@ index 21f7d5bd5e48..adec709608d7 100755
  cp $(dirname $0)/org.test.Hello.png ${DIR}/files/share/icons/hicolor/64x64/apps/${APP_ID}.png
  cp $(dirname $0)/org.test.Hello.png ${DIR}/files/share/icons/hicolor/64x64/apps/dont-export.png
 diff --git a/tests/test-run.sh b/tests/test-run.sh
-index 726184413d98..179a05f06a5c 100644
+index cbe0cda3be4b..ca5d557b08c2 100644
 --- a/tests/test-run.sh
 +++ b/tests/test-run.sh
-@@ -52,6 +52,9 @@ assert_has_file $FL_DIR/exports/share/gnome-shell/search-providers/org.test.Hell
+@@ -50,6 +50,9 @@ assert_has_file $FL_DIR/exports/share/gnome-shell/search-providers/org.test.Hell
  assert_file_has_content $FL_DIR/exports/share/gnome-shell/search-providers/org.test.Hello.search-provider.ini "^DefaultDisabled=true$"
  assert_has_file $FL_DIR/exports/share/krunner/dbusplugins/org.test.Hello.desktop
  assert_file_has_content $FL_DIR/exports/share/krunner/dbusplugins/org.test.Hello.desktop "^X-KDE-PluginInfo-EnabledByDefault=false$"
@@ -281,10 +281,10 @@ index 155ba94efd46..ae9cbf653ba4 100644
      "share/metainfo",                     /* Copy appdata/metainfo files */
      NULL,
 diff --git a/common/flatpak-context.c b/common/flatpak-context.c
-index 8ff017f29c81..0ca617b55d63 100644
+index bbc9ac786bd4..c8a2fa65317a 100644
 --- a/common/flatpak-context.c
 +++ b/common/flatpak-context.c
-@@ -4409,6 +4409,10 @@ flatpak_context_get_allowed_exports (FlatpakContext *context,
+@@ -4364,6 +4364,10 @@ flatpak_context_get_allowed_exports (FlatpakContext *context,
      {
        g_ptr_array_add (allowed_extensions, g_strdup (".desktop"));
      }
@@ -296,10 +296,10 @@ index 8ff017f29c81..0ca617b55d63 100644
      {
        g_ptr_array_add (allowed_extensions, g_strdup (".xml"));
 diff --git a/common/flatpak-dir.c b/common/flatpak-dir.c
-index 9aa9652cdf38..34fa3f4a1702 100644
+index 680becfa37cf..cfd47b649526 100644
 --- a/common/flatpak-dir.c
 +++ b/common/flatpak-dir.c
-@@ -9014,6 +9014,7 @@ flatpak_export_dir (GFile        *source,
+@@ -9059,6 +9059,7 @@ flatpak_export_dir (GFile        *source,
      "share/gnome-shell/search-providers",  "../../..",
      "share/krunner/dbusplugins",           "../../..",
      "share/kio/servicemenus",              "../../..",
@@ -330,10 +330,10 @@ index adec709608d7..20c84b4b29e9 100755
  cp $(dirname $0)/org.test.Hello.png ${DIR}/files/share/icons/hicolor/64x64/apps/${APP_ID}.png
  cp $(dirname $0)/org.test.Hello.png ${DIR}/files/share/icons/hicolor/64x64/apps/dont-export.png
 diff --git a/tests/test-run.sh b/tests/test-run.sh
-index 179a05f06a5c..253f46b2e0c8 100644
+index ca5d557b08c2..1b1e44148a69 100644
 --- a/tests/test-run.sh
 +++ b/tests/test-run.sh
-@@ -55,6 +55,8 @@ assert_file_has_content $FL_DIR/exports/share/krunner/dbusplugins/org.test.Hello
+@@ -53,6 +53,8 @@ assert_file_has_content $FL_DIR/exports/share/krunner/dbusplugins/org.test.Hello
  assert_has_file $FL_DIR/exports/share/kio/servicemenus/org.test.Hello.desktop
  assert_file_has_content $FL_DIR/exports/share/kio/servicemenus/org.test.Hello.desktop "^Exec=.*flatpak run --branch=stable --arch=$ARCH --command=hello\.sh --file-forwarding org\.test\.Hello --service-menu @@ %F @@$"
  assert_not_has_file $FL_DIR/exports/share/kio/servicemenus/dont-export.desktop
