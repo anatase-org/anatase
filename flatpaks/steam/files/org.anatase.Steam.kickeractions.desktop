@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Service
+Actions=addToSteam;
+X-KDE-ExcludeAppIds=org.anatase.Steam;org.anatase.Steam.Silent;
+
+[Desktop Action addToSteam]
+Name=Add to Steam
+Icon=org.anatase.Steam
+Exec=anatase-add-to-steam %u

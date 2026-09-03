@@ -197,12 +197,12 @@ class ApplicationCatalogTests(unittest.TestCase):
             self.assertNotIn("Path", entry)
             self.assertEqual(
                 entry["Exec"],
-                "/app/bin/hrun "
+                "hrun "
                 "/usr/bin/flatpak run org.example.App %U",
             )
             self.assertEqual(
                 example["Desktop Action New"]["Exec"],
-                "/app/bin/hrun "
+                "hrun "
                 "/usr/bin/flatpak run org.example.App --new-window %U",
             )
             copied_user_icon = Path(entry["Icon"])
@@ -212,7 +212,7 @@ class ApplicationCatalogTests(unittest.TestCase):
             runtime = parse_desktop(root / "applications/runtime.desktop")
             self.assertEqual(
                 runtime["Desktop Entry"]["Exec"],
-                "/app/bin/hrun /usr/bin/runtime %F",
+                "hrun /usr/bin/runtime %F",
             )
             self.assertEqual(
                 runtime["Desktop Entry"]["DBusActivatable"], "false"
@@ -226,7 +226,7 @@ class ApplicationCatalogTests(unittest.TestCase):
             spaces = parse_desktop(root / "applications/spaces-app.desktop")
             self.assertTrue(
                 spaces["Desktop Entry"]["Exec"].startswith(
-                    "/app/bin/hrun /usr/bin/spaces "
+                    "hrun /usr/bin/spaces "
                 )
             )
             self.assertEqual(
@@ -237,14 +237,14 @@ class ApplicationCatalogTests(unittest.TestCase):
             system = parse_desktop(root / "applications/system.desktop")
             self.assertEqual(
                 system["Desktop Entry"]["Exec"],
-                "/app/bin/hrun /usr/bin/system-application",
+                "hrun /usr/bin/system-application",
             )
             development = parse_desktop(
                 root / "applications/development.desktop"
             )
             self.assertEqual(
                 development["Desktop Entry"]["Exec"],
-                "/app/bin/hrun /usr/bin/development-application",
+                "hrun /usr/bin/development-application",
             )
 
             for desktop_id in (*excluded, "missing-exec.desktop"):

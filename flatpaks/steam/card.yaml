@@ -90,10 +90,12 @@ files:
   - files/anatase-steam
   - files/anatase-fossilize-replay-wrapper
   - files/anatase-steam-applications.py
+  - files/anatase-add-to-steam
   - files/hrun
   - files/flatpak
   - files/anatase-steam-reaper.c
   - files/test-anatase-steam-applications.py
+  - files/test-anatase-add-to-steam.py
   - files/test-anatase-fossilize-replay-wrapper.py
   - files/dbus-send
   - files/steamos-session-select
@@ -101,6 +103,7 @@ files:
   - files/anatase-suspend.webm
   - files/registry.vdf
   - files/org.anatase.Steam.Silent.desktop
+  - files/org.anatase.Steam.kickeractions.desktop
 
 build-deps:
   - rpm-build
@@ -167,6 +170,10 @@ postprocess: |-
       app/libexec/anatase-fossilize-replay-wrapper
   install -Dm0755 files/anatase-steam-applications.py \
       app/libexec/anatase-steam-applications
+  install -Dm0755 files/anatase-add-to-steam \
+      app/bin/anatase-add-to-steam
+  install -Dm0644 files/org.anatase.Steam.kickeractions.desktop \
+      app/share/plasma/kickeractions/org.anatase.Steam.desktop
   install -Dm0755 files/hrun app/bin/hrun
   install -Dm0755 files/flatpak app/bin/flatpak
   cc -O2 -Wall -Wextra -Werror \
@@ -183,6 +190,7 @@ postprocess: |-
   ln -s /usr/bin/steamos-polkit-helpers/steamos-select-branch app/bin/steamos-select-branch
 
   bash -n app/bin/anatase-steam
+  bash -n app/bin/anatase-add-to-steam
   bash -n app/libexec/anatase-fossilize-replay-wrapper
   bash -n app/bin/hrun
   bash -n app/bin/flatpak
@@ -194,3 +202,5 @@ postprocess: |-
       python3 files/test-anatase-steam-applications.py
   ANATASE_FOSSILIZE_REPLAY_WRAPPER=files/anatase-fossilize-replay-wrapper \
       python3 files/test-anatase-fossilize-replay-wrapper.py
+  ANATASE_ADD_TO_STEAM=files/anatase-add-to-steam \
+      python3 files/test-anatase-add-to-steam.py

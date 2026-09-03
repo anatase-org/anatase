@@ -17,6 +17,8 @@ flatpak:
     --filesystem=xdg-config/kdeglobals:ro
     --talk-name=org.kde.kconfig.notify
     --talk-name=org.kde.KGlobalSettings
+    --talk-name=org.kde.kuiserver
+    --talk-name=org.kde.JobViewServer
 
 build-deps:
   - rpm-build
@@ -24,6 +26,10 @@ build-deps:
   - redhat-rpm-config
   - flatpak-rpm-macros
   - ccache
+
+files:
+  - app/share/kio/servicemenus/org.anatase.ArchiveManager.compress.desktop::kde/files/org.anatase.ArchiveManager.compress.desktop
+  - app/share/kio/servicemenus/org.anatase.ArchiveManager.extract.desktop::kde/files/org.anatase.ArchiveManager.extract.desktop
 
 specs:
   - spec: kde/ark/ark.spec

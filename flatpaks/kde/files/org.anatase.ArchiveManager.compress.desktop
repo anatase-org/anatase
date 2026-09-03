@@ -1,0 +1,26 @@
+[Desktop Entry]
+Type=Service
+MimeType=all/all;
+Actions=compressHereAsTar;compressHereAsZip;compressTo;
+X-KDE-Protocols=file
+X-KDE-Require=Write
+#X-KDE-Submenu=Compress
+X-KDE-Priority=TopLevel
+
+[Desktop Action compressHereAsTar]
+Name=Compress here as TAR.GZ
+Icon=archive-insert
+Exec=ark --changetofirstpath --add --autofilename tar.gz %F
+X-Flatpak-RunOptions=no-documents-portal;
+
+[Desktop Action compressHereAsZip]
+Name=Compress here as ZIP
+Icon=archive-insert
+Exec=ark --changetofirstpath --add --autofilename zip %F
+X-Flatpak-RunOptions=no-documents-portal;
+
+[Desktop Action compressTo]
+Name=Compress to…
+Icon=archive-insert
+Exec=ark --add --changetofirstpath --dialog %F
+X-Flatpak-RunOptions=no-documents-portal;

@@ -153,3 +153,192 @@ index 03ba05aef9ea..1bfbb2c4fac4 100644
              g_ptr_array_add (flatpak_argv, g_strdup ("--share=ipc"));
          }
        if (sandbox_flags & FLATPAK_SPAWN_SANDBOX_FLAGS_SHARE_SOUND)
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Thu, 3 Sep 2026 21:56:11 +0200
+Subject: Export KDE file manager service menus
+
+---
+ app/flatpak-builtins-build-finish.c |  1 +
+ common/flatpak-context.c            |  4 ++++
+ common/flatpak-dir.c                |  1 +
+ tests/make-test-app.sh              | 23 +++++++++++++++++++++++
+ tests/test-run.sh                   |  3 +++
+ 5 files changed, 32 insertions(+)
+
+diff --git a/app/flatpak-builtins-build-finish.c b/app/flatpak-builtins-build-finish.c
+index 96a794574e4f..155ba94efd46 100644
+--- a/app/flatpak-builtins-build-finish.c
++++ b/app/flatpak-builtins-build-finish.c
+@@ -237,6 +237,7 @@ collect_exports (GFile          *base,
+     "share/dbus-1/services",              /* D-Bus service files */
+     "share/gnome-shell/search-providers", /* Search providers */
+     "share/krunner/dbusplugins",          /* KDE krunner DBus plugins */
++    "share/kio/servicemenus",             /* KDE file manager service menus */
+     "share/appdata",                      /* Copy appdata/metainfo files (legacy path) */
+     "share/metainfo",                     /* Copy appdata/metainfo files */
+     NULL,
+diff --git a/common/flatpak-context.c b/common/flatpak-context.c
+index 2cf8664a8df0..8ff017f29c81 100644
+--- a/common/flatpak-context.c
++++ b/common/flatpak-context.c
+@@ -4405,6 +4405,10 @@ flatpak_context_get_allowed_exports (FlatpakContext *context,
+     {
+       g_ptr_array_add (allowed_extensions, g_strdup (".desktop"));
+     }
++  else if (strcmp (source_path, "share/kio/servicemenus") == 0)
++    {
++      g_ptr_array_add (allowed_extensions, g_strdup (".desktop"));
++    }
+   else if (strcmp (source_path, "share/mime/packages") == 0)
+     {
+       g_ptr_array_add (allowed_extensions, g_strdup (".xml"));
+diff --git a/common/flatpak-dir.c b/common/flatpak-dir.c
+index b071b1fab6d2..9aa9652cdf38 100644
+--- a/common/flatpak-dir.c
++++ b/common/flatpak-dir.c
+@@ -9013,6 +9013,7 @@ flatpak_export_dir (GFile        *source,
+     "share/dbus-1/services",               "../../..",
+     "share/gnome-shell/search-providers",  "../../..",
+     "share/krunner/dbusplugins",           "../../..",
++    "share/kio/servicemenus",              "../../..",
+     "share/mime/packages",                 "../../..",
+     "share/metainfo",                      "../..",
+     "bin",                                 "..",
+diff --git a/tests/make-test-app.sh b/tests/make-test-app.sh
+index 21f7d5bd5e48..adec709608d7 100755
+--- a/tests/make-test-app.sh
++++ b/tests/make-test-app.sh
+@@ -128,6 +128,29 @@ X-Plasma-DBusRunner-Service=org.test.Hello.KRunner
+ X-Plasma-DBusRunner-Path=/org/test/Hello/KRunner
+ EOF
+ 
++mkdir -p ${DIR}/files/share/kio/servicemenus
++cat > ${DIR}/files/share/kio/servicemenus/org.test.Hello.desktop <<EOF
++[Desktop Entry]
++Type=Service
++MimeType=text/plain;
++Actions=hello;
++X-KDE-Priority=TopLevel
++
++[Desktop Action hello]
++Name=Say hello
++Exec=hello.sh --service-menu %F
++EOF
++cat > ${DIR}/files/share/kio/servicemenus/dont-export.desktop <<EOF
++[Desktop Entry]
++Type=Service
++MimeType=text/plain;
++Actions=hello;
++
++[Desktop Action hello]
++Name=Do not export
++Exec=hello.sh %F
++EOF
++
+ mkdir -p ${DIR}/files/share/icons/hicolor/64x64/apps
+ cp $(dirname $0)/org.test.Hello.png ${DIR}/files/share/icons/hicolor/64x64/apps/${APP_ID}.png
+ cp $(dirname $0)/org.test.Hello.png ${DIR}/files/share/icons/hicolor/64x64/apps/dont-export.png
+diff --git a/tests/test-run.sh b/tests/test-run.sh
+index 726184413d98..179a05f06a5c 100644
+--- a/tests/test-run.sh
++++ b/tests/test-run.sh
+@@ -52,6 +52,9 @@ assert_has_file $FL_DIR/exports/share/gnome-shell/search-providers/org.test.Hell
+ assert_file_has_content $FL_DIR/exports/share/gnome-shell/search-providers/org.test.Hello.search-provider.ini "^DefaultDisabled=true$"
+ assert_has_file $FL_DIR/exports/share/krunner/dbusplugins/org.test.Hello.desktop
+ assert_file_has_content $FL_DIR/exports/share/krunner/dbusplugins/org.test.Hello.desktop "^X-KDE-PluginInfo-EnabledByDefault=false$"
++assert_has_file $FL_DIR/exports/share/kio/servicemenus/org.test.Hello.desktop
++assert_file_has_content $FL_DIR/exports/share/kio/servicemenus/org.test.Hello.desktop "^Exec=.*flatpak run --branch=stable --arch=$ARCH --command=hello\.sh --file-forwarding org\.test\.Hello --service-menu @@ %F @@$"
++assert_not_has_file $FL_DIR/exports/share/kio/servicemenus/dont-export.desktop
+ assert_has_file $FL_DIR/exports/share/icons/hicolor/64x64/apps/org.test.Hello.png
+ assert_not_has_file $FL_DIR/exports/share/icons/hicolor/64x64/apps/dont-export.png
+ assert_has_file $FL_DIR/exports/share/icons/HighContrast/64x64/apps/org.test.Hello.png
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Thu, 3 Sep 2026 22:00:42 +0200
+Subject: Export Plasma application launcher actions
+
+---
+ app/flatpak-builtins-build-finish.c |  1 +
+ common/flatpak-context.c            |  4 ++++
+ common/flatpak-dir.c                |  1 +
+ tests/make-test-app.sh              | 11 +++++++++++
+ tests/test-run.sh                   |  2 ++
+ 5 files changed, 19 insertions(+)
+
+diff --git a/app/flatpak-builtins-build-finish.c b/app/flatpak-builtins-build-finish.c
+index 155ba94efd46..ae9cbf653ba4 100644
+--- a/app/flatpak-builtins-build-finish.c
++++ b/app/flatpak-builtins-build-finish.c
+@@ -238,6 +238,7 @@ collect_exports (GFile          *base,
+     "share/gnome-shell/search-providers", /* Search providers */
+     "share/krunner/dbusplugins",          /* KDE krunner DBus plugins */
+     "share/kio/servicemenus",             /* KDE file manager service menus */
++    "share/plasma/kickeractions",          /* Plasma application launcher actions */
+     "share/appdata",                      /* Copy appdata/metainfo files (legacy path) */
+     "share/metainfo",                     /* Copy appdata/metainfo files */
+     NULL,
+diff --git a/common/flatpak-context.c b/common/flatpak-context.c
+index 8ff017f29c81..0ca617b55d63 100644
+--- a/common/flatpak-context.c
++++ b/common/flatpak-context.c
+@@ -4409,6 +4409,10 @@ flatpak_context_get_allowed_exports (FlatpakContext *context,
+     {
+       g_ptr_array_add (allowed_extensions, g_strdup (".desktop"));
+     }
++  else if (strcmp (source_path, "share/plasma/kickeractions") == 0)
++    {
++      g_ptr_array_add (allowed_extensions, g_strdup (".desktop"));
++    }
+   else if (strcmp (source_path, "share/mime/packages") == 0)
+     {
+       g_ptr_array_add (allowed_extensions, g_strdup (".xml"));
+diff --git a/common/flatpak-dir.c b/common/flatpak-dir.c
+index 9aa9652cdf38..34fa3f4a1702 100644
+--- a/common/flatpak-dir.c
++++ b/common/flatpak-dir.c
+@@ -9014,6 +9014,7 @@ flatpak_export_dir (GFile        *source,
+     "share/gnome-shell/search-providers",  "../../..",
+     "share/krunner/dbusplugins",           "../../..",
+     "share/kio/servicemenus",              "../../..",
++    "share/plasma/kickeractions",           "../../..",
+     "share/mime/packages",                 "../../..",
+     "share/metainfo",                      "../..",
+     "bin",                                 "..",
+diff --git a/tests/make-test-app.sh b/tests/make-test-app.sh
+index adec709608d7..20c84b4b29e9 100755
+--- a/tests/make-test-app.sh
++++ b/tests/make-test-app.sh
+@@ -151,6 +151,17 @@ Name=Do not export
+ Exec=hello.sh %F
+ EOF
+ 
++mkdir -p ${DIR}/files/share/plasma/kickeractions
++cat > ${DIR}/files/share/plasma/kickeractions/org.test.Hello.desktop <<EOF
++[Desktop Entry]
++Type=Service
++Actions=hello;
++
++[Desktop Action hello]
++Name=Say hello
++Exec=hello.sh --launcher-action %u
++EOF
++
+ mkdir -p ${DIR}/files/share/icons/hicolor/64x64/apps
+ cp $(dirname $0)/org.test.Hello.png ${DIR}/files/share/icons/hicolor/64x64/apps/${APP_ID}.png
+ cp $(dirname $0)/org.test.Hello.png ${DIR}/files/share/icons/hicolor/64x64/apps/dont-export.png
+diff --git a/tests/test-run.sh b/tests/test-run.sh
+index 179a05f06a5c..253f46b2e0c8 100644
+--- a/tests/test-run.sh
++++ b/tests/test-run.sh
+@@ -55,6 +55,8 @@ assert_file_has_content $FL_DIR/exports/share/krunner/dbusplugins/org.test.Hello
+ assert_has_file $FL_DIR/exports/share/kio/servicemenus/org.test.Hello.desktop
+ assert_file_has_content $FL_DIR/exports/share/kio/servicemenus/org.test.Hello.desktop "^Exec=.*flatpak run --branch=stable --arch=$ARCH --command=hello\.sh --file-forwarding org\.test\.Hello --service-menu @@ %F @@$"
+ assert_not_has_file $FL_DIR/exports/share/kio/servicemenus/dont-export.desktop
++assert_has_file $FL_DIR/exports/share/plasma/kickeractions/org.test.Hello.desktop
++assert_file_has_content $FL_DIR/exports/share/plasma/kickeractions/org.test.Hello.desktop "^Exec=.*flatpak run --branch=stable --arch=$ARCH --command=hello\.sh --file-forwarding org\.test\.Hello --launcher-action @@u %u @@$"
+ assert_has_file $FL_DIR/exports/share/icons/hicolor/64x64/apps/org.test.Hello.png
+ assert_not_has_file $FL_DIR/exports/share/icons/hicolor/64x64/apps/dont-export.png
+ assert_has_file $FL_DIR/exports/share/icons/HighContrast/64x64/apps/org.test.Hello.png

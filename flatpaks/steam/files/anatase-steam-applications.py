@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-HOST_LAUNCH = "/app/bin/hrun"
+HOST_LAUNCH = "hrun"
 IMAGE_EXTENSIONS = {".png", ".svg"}
 
 

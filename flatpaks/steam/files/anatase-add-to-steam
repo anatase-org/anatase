@@ -1,0 +1,73 @@
+#!/bin/bash
+
+set -euo pipefail
+
+steam_command="${ANATASE_STEAM_COMMAND:-/app/bin/anatase-steam}"
+marker="${ANATASE_ADD_TO_STEAM_MARKER:-/tmp/addnonsteamgamefile}"
+
+if (( $# != 1 )); then
+    echo "usage: anatase-add-to-steam DESKTOP-FILE" >&2
+    exit 2
+fi
+
+runtime_root="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/anatase-steam"
+shortcut_directory="$runtime_root/add-to-steam"
+mkdir -p -- "$shortcut_directory"
+chmod 0700 -- "$shortcut_directory"
+
+encoded_path="$(
+    python3 - "$1" "$shortcut_directory" <<'PY'
+import pathlib
+import sys
+import urllib.parse
+
+argument = sys.argv[1]
+shortcut_directory = pathlib.Path(sys.argv[2])
+uri = urllib.parse.urlsplit(argument)
+if uri.scheme:
+    if uri.scheme != "file" or uri.netloc not in ("", "localhost"):
+        raise SystemExit("anatase-add-to-steam: expected a local desktop file")
+    if uri.query or uri.fragment:
+        raise SystemExit("anatase-add-to-steam: desktop-file URI must not contain a query or fragment")
+    path = urllib.parse.unquote(uri.path)
+else:
+    path = argument
+
+source = pathlib.Path(path)
+if not source.is_absolute():
+    raise SystemExit("anatase-add-to-steam: expected an absolute desktop-file path")
+if source.suffix != ".desktop" or not source.is_file():
+    raise SystemExit("anatase-add-to-steam: path does not identify a desktop file")
+
+lines = source.read_text(encoding="utf-8").splitlines(keepends=True)
+in_desktop_entry = False
+rewritten = False
+for index, line in enumerate(lines):
+    header = line.strip()
+    if header == "[Desktop Entry]":
+        in_desktop_entry = True
+        continue
+    if header.startswith("[") and header.endswith("]"):
+        in_desktop_entry = False
+        continue
+    if in_desktop_entry and line.startswith("Exec="):
+        command = line.removeprefix("Exec=")
+        if not command.startswith("hrun "):
+            lines[index] = f"Exec=hrun {command}"
+        rewritten = True
+        break
+
+if not rewritten:
+    raise SystemExit("anatase-add-to-steam: desktop file has no Exec target")
+
+destination = shortcut_directory / source.name
+destination.write_text("".join(lines), encoding="utf-8")
+destination.chmod(0o600)
+print(urllib.parse.quote_plus(str(destination)))
+PY
+)"
+
+# Match SteamOS's launcher action. Steam checks this marker while handling the
+# addnonsteamgame URI.
+touch -- "$marker"
+exec "$steam_command" "steam://addnonsteamgame/${encoded_path}"
