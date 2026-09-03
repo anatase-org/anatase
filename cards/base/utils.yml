@@ -78,6 +78,11 @@ packages:
   # Multi-gpu
   - switcheroo-control
 
+  # Iphone mounting
+  - libimobiledevice-utils
+  - ifuse
+  - usbmuxd
+
 postprocess: |
   set -eux
 
