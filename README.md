@@ -46,9 +46,6 @@ Then, plug it in to your computer and start it. Installation is simple.
 > [!WARNING]
 > NVIDIA GPUs from GTX 1000 generation and older (such as GTX 1080) are not currently supported.
 
-> [!WARNING]
-> Anatase has recently gone public. Please be patient and report any issues you find. In 1-3 months, it should be stable for daily use as 90% of the fixes that were developed on Bazzite, well, by the main author here, are ported already. But during the refactoring, some things might have been missed.
-
 ### Secure boot
 
 If you wish to keep secure boot enabled, you will be faced with:
