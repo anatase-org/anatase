@@ -62,7 +62,7 @@ fi
 
 # Install Anatase's Steam Game Mode startup and suspend overrides.
 # If Decky Animation Changer is installed ignore.
-animation_changer="$HOME/homebrew/plugins/SDH-AnimationChanger/main.py"
+animation_changer="$steam_home/homebrew/plugins/SDH-AnimationChanger/main.py"
 if [[ ! -f $animation_changer ]]; then
     boot_movie=/app/share/anatase/steam/movies/anatase-boot.webm
     suspend_movie=/app/share/anatase/steam/movies/anatase-suspend.webm
