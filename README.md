@@ -115,7 +115,6 @@ Finally, you can `claude --dangerously-skip-permissions` and go to the bathroom 
 *Spaces has not undergone a formal security review, so installing malware is unwise.
 
 ## Roadmap
- * Fix remaining bugs through user reports to achieve a stable release
  * Achieve SLSA3
    * Port github attestations and use them verify CI images end-to-end
    * Add SBOM support using a custom metadata format to record transient changes (new fedora packages, git+ repo pulls)
