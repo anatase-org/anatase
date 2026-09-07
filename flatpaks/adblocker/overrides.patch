@@ -8,10 +8,10 @@ Subject: Build only enabled MV3 rulesets
  1 file changed, 2 insertions(+), 14 deletions(-)
 
 diff --git a/platform/mv3/make-rulesets.js b/platform/mv3/make-rulesets.js
-index 7f90ecb97921..ce5113720397 100644
+index ea8cab872..cdb420a14 100644
 --- a/platform/mv3/make-rulesets.js
 +++ b/platform/mv3/make-rulesets.js
-@@ -263,20 +263,7 @@ async function fetchListFromCache(assetDetails) {
+@@ -266,20 +266,7 @@ async function fetchListFromCache(assetDetails) {
          return content;
      }
  
@@ -22,7 +22,7 @@ index 7f90ecb97921..ce5113720397 100644
 -    };
 -
 -    const text = await fetchList(context, assetDetails);
--    writeFile(`${cacheDir}/${fname}`, text);
+-    writeFile(`${cacheDir}/${platform}/${fname}`, text);
 -
 -    if ( Boolean(text) === false ) {
 -        throw 'Filter list should not be empty';
@@ -33,7 +33,7 @@ index 7f90ecb97921..ce5113720397 100644
  }
  
  /******************************************************************************/
-@@ -1148,6 +1135,7 @@ async function main() {
+@@ -1183,6 +1170,7 @@ async function main() {
      );
  
      for ( const ruleset of rulesets ) {
@@ -124,7 +124,7 @@ Subject: update name
  73 files changed, 209 insertions(+), 209 deletions(-)
 
 diff --git a/platform/mv3/chromium/manifest.json b/platform/mv3/chromium/manifest.json
-index 0995341e2fdb..53b7845d7f6b 100644
+index 0995341e2..53b7845d7 100644
 --- a/platform/mv3/chromium/manifest.json
 +++ b/platform/mv3/chromium/manifest.json
 @@ -7,7 +7,7 @@
@@ -137,7 +137,7 @@ index 0995341e2fdb..53b7845d7f6b 100644
        "service_worker": "/js/background.js",
        "type": "module"
 diff --git a/platform/mv3/extension/_locales/ar/messages.json b/platform/mv3/extension/_locales/ar/messages.json
-index 357b8cf9f02d..c8538e88f168 100644
+index 56944a216..d4cda2752 100644
 --- a/platform/mv3/extension/_locales/ar/messages.json
 +++ b/platform/mv3/extension/_locales/ar/messages.json
 @@ -1,6 +1,6 @@
@@ -148,15 +148,15 @@ index 357b8cf9f02d..c8538e88f168 100644
      "description": "extension name."
    },
    "extShortDesc": {
-@@ -447,4 +447,4 @@
-     "message": "اختر تصفية أدناه لتمييز العناصر المطابقة في صفحة الويب. انقر على سلة المهملات لإزالة التصفية.",
+@@ -459,4 +459,4 @@
+     "message": "اختر خيار تصفية أدناه لتمييز العناصر المطابقة في صفحة الويب.\n انقر على سلة المهملات لإزالة خيار التصفية.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/az/messages.json b/platform/mv3/extension/_locales/az/messages.json
-index 6c42bd194bec..f623bec45fc7 100644
+index 6008907d4..32036cf56 100644
 --- a/platform/mv3/extension/_locales/az/messages.json
 +++ b/platform/mv3/extension/_locales/az/messages.json
 @@ -1,6 +1,6 @@
@@ -176,7 +176,7 @@ index 6c42bd194bec..f623bec45fc7 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Vebsəhifədə uyğun gələn elementləri vurğulamaq üçün aşağıdan bir filtr seçin. Filtri silmək üçün çöp qutusuna klikləyin.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -184,7 +184,7 @@ index 6c42bd194bec..f623bec45fc7 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/be/messages.json b/platform/mv3/extension/_locales/be/messages.json
-index ce5fbf6fe5b1..1bb47dcd70e3 100644
+index b1ed64782..182900fb9 100644
 --- a/platform/mv3/extension/_locales/be/messages.json
 +++ b/platform/mv3/extension/_locales/be/messages.json
 @@ -1,6 +1,6 @@
@@ -204,7 +204,7 @@ index ce5fbf6fe5b1..1bb47dcd70e3 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Выберыце фільтр ніжэй, каб вылучыць адпаведныя элементы на старонцы. Націсніце на кошык, каб выдаліць фільтр.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -212,7 +212,7 @@ index ce5fbf6fe5b1..1bb47dcd70e3 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/bg/messages.json b/platform/mv3/extension/_locales/bg/messages.json
-index c0a02c789b8d..9595149142e8 100644
+index b31e44694..415482fb9 100644
 --- a/platform/mv3/extension/_locales/bg/messages.json
 +++ b/platform/mv3/extension/_locales/bg/messages.json
 @@ -1,6 +1,6 @@
@@ -232,7 +232,7 @@ index c0a02c789b8d..9595149142e8 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Изберете филтър по-долу, за да маркирате съвпадащите елементи в уеб страницата. Кликнете върху кошчето, за да премахнете филтъра.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -240,7 +240,7 @@ index c0a02c789b8d..9595149142e8 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/bn/messages.json b/platform/mv3/extension/_locales/bn/messages.json
-index 3c45063ead49..01b99173bdce 100644
+index 7b9566f85..0eead5ca3 100644
 --- a/platform/mv3/extension/_locales/bn/messages.json
 +++ b/platform/mv3/extension/_locales/bn/messages.json
 @@ -1,6 +1,6 @@
@@ -260,15 +260,15 @@ index 3c45063ead49..01b99173bdce 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "ওয়েব পৃষ্ঠায় মিলে যাওয়া উপাদানগুলি হাইলাইট করতে নিচের একটি ফিল্টার নির্বাচন করুন। একটি ফিল্টার সরাতে ট্র্যাশ ক্যানে ক্লিক করুন।",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/br_FR/messages.json b/platform/mv3/extension/_locales/br_FR/messages.json
-index d442774d0ccc..f1f2420e95bd 100644
+index a5653fffd..90a775824 100644
 --- a/platform/mv3/extension/_locales/br_FR/messages.json
 +++ b/platform/mv3/extension/_locales/br_FR/messages.json
 @@ -1,6 +1,6 @@
@@ -288,7 +288,7 @@ index d442774d0ccc..f1f2420e95bd 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Diuzit ur sil amañ-dindan evit sklêrijennañ an elfennoù kendere er bajenn web. Klikit ar pod-lastez evit lemel ur sil.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -296,7 +296,7 @@ index d442774d0ccc..f1f2420e95bd 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/bs/messages.json b/platform/mv3/extension/_locales/bs/messages.json
-index 192e5682f41f..1dcf604a4e19 100644
+index 18d30d264..897b69482 100644
 --- a/platform/mv3/extension/_locales/bs/messages.json
 +++ b/platform/mv3/extension/_locales/bs/messages.json
 @@ -1,6 +1,6 @@
@@ -316,7 +316,7 @@ index 192e5682f41f..1dcf604a4e19 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Odaberite filter ispod da biste istaknuli odgovarajuće elemente na web stranici. Kliknite na kantu za smeće da biste uklonili filter.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -324,7 +324,7 @@ index 192e5682f41f..1dcf604a4e19 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/ca/messages.json b/platform/mv3/extension/_locales/ca/messages.json
-index d185d30a6d8b..0ce476700aa4 100644
+index 13f0ff744..19444eb5d 100644
 --- a/platform/mv3/extension/_locales/ca/messages.json
 +++ b/platform/mv3/extension/_locales/ca/messages.json
 @@ -1,6 +1,6 @@
@@ -344,7 +344,7 @@ index d185d30a6d8b..0ce476700aa4 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Seleccioneu un filtre a continuació per a ressaltar els elements coincidents de la pàgina web. Feu clic a la paperera per a eliminar un filtre.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -352,7 +352,7 @@ index d185d30a6d8b..0ce476700aa4 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/cs/messages.json b/platform/mv3/extension/_locales/cs/messages.json
-index cc3babacb9c3..c7950297d646 100644
+index e098d7bf9..008f84d2a 100644
 --- a/platform/mv3/extension/_locales/cs/messages.json
 +++ b/platform/mv3/extension/_locales/cs/messages.json
 @@ -1,6 +1,6 @@
@@ -363,7 +363,7 @@ index cc3babacb9c3..c7950297d646 100644
      "description": "extension name."
    },
    "extShortDesc": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Výběrem níže uvedeného filtru zvýrazníte odpovídající prvky na webové stránce. Klepnutím na koš filtr odeberete.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -371,7 +371,7 @@ index cc3babacb9c3..c7950297d646 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/cv/messages.json b/platform/mv3/extension/_locales/cv/messages.json
-index b74f4f971b24..da1fffc7fb44 100644
+index 61c922e16..8251fff71 100644
 --- a/platform/mv3/extension/_locales/cv/messages.json
 +++ b/platform/mv3/extension/_locales/cv/messages.json
 @@ -1,6 +1,6 @@
@@ -391,7 +391,7 @@ index b74f4f971b24..da1fffc7fb44 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -399,7 +399,7 @@ index b74f4f971b24..da1fffc7fb44 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/cy/messages.json b/platform/mv3/extension/_locales/cy/messages.json
-index 1c157f84889a..c50ea12867e5 100644
+index dc6890669..93a089024 100644
 --- a/platform/mv3/extension/_locales/cy/messages.json
 +++ b/platform/mv3/extension/_locales/cy/messages.json
 @@ -1,6 +1,6 @@
@@ -419,15 +419,15 @@ index 1c157f84889a..c50ea12867e5 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "Dewiswch hidl isod i amlygu elfennau sy'n cyfateb yn y dudalen we. Cliciwch y bin sbwriel i dynnu hidl.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/da/messages.json b/platform/mv3/extension/_locales/da/messages.json
-index 6e1dc7977c4c..fce5e4ea07c5 100644
+index 3d48be14e..d74df335f 100644
 --- a/platform/mv3/extension/_locales/da/messages.json
 +++ b/platform/mv3/extension/_locales/da/messages.json
 @@ -1,6 +1,6 @@
@@ -447,7 +447,7 @@ index 6e1dc7977c4c..fce5e4ea07c5 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Vælg et filter nedenfor for at fremhæve matchende elementer på websiden. Klik på papirkurven for at fjerne et filter.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -455,7 +455,7 @@ index 6e1dc7977c4c..fce5e4ea07c5 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/de/messages.json b/platform/mv3/extension/_locales/de/messages.json
-index fcbeca703d3f..bdb0206b4ad7 100644
+index 7021c6c61..30147d2b3 100644
 --- a/platform/mv3/extension/_locales/de/messages.json
 +++ b/platform/mv3/extension/_locales/de/messages.json
 @@ -1,6 +1,6 @@
@@ -475,7 +475,7 @@ index fcbeca703d3f..bdb0206b4ad7 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Das Auswählen eines unten stehenden Filters hebt übereinstimmende Elemente auf der Webseite hervor. Auf den Mülleimer klicken, um einen Filter zu entfernen.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -483,7 +483,7 @@ index fcbeca703d3f..bdb0206b4ad7 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/el/messages.json b/platform/mv3/extension/_locales/el/messages.json
-index e82892b24c69..c07fe7667b79 100644
+index 2fe24a838..5613adb0d 100644
 --- a/platform/mv3/extension/_locales/el/messages.json
 +++ b/platform/mv3/extension/_locales/el/messages.json
 @@ -1,6 +1,6 @@
@@ -503,7 +503,7 @@ index e82892b24c69..c07fe7667b79 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Επιλέξτε ένα φίλτρο παρακάτω για να επισημάνετε τα στοιχεία που αντιστοιχούν στην ιστοσελίδα. Κάντε κλικ στον κάδο απορριμμάτων για να αφαιρέσετε ένα φίλτρο.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -511,7 +511,7 @@ index e82892b24c69..c07fe7667b79 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/en/messages.json b/platform/mv3/extension/_locales/en/messages.json
-index ce4ca9c1642a..da1fffc7fb44 100644
+index df73d7ab8..8251fff71 100644
 --- a/platform/mv3/extension/_locales/en/messages.json
 +++ b/platform/mv3/extension/_locales/en/messages.json
 @@ -1,6 +1,6 @@
@@ -531,7 +531,7 @@ index ce4ca9c1642a..da1fffc7fb44 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -244,12 +244,12 @@
+@@ -252,12 +252,12 @@
      "description": "This describes the 'complete' filtering mode"
    },
    "noFilteringModeDescription": {
@@ -548,7 +548,7 @@ index ce4ca9c1642a..da1fffc7fb44 100644
    },
    "behaviorSectionLabel": {
      "message": "Behavior",
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -556,7 +556,7 @@ index ce4ca9c1642a..da1fffc7fb44 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/en_GB/messages.json b/platform/mv3/extension/_locales/en_GB/messages.json
-index 574e711c8f97..19a947735bed 100644
+index ce0a26c2f..1f745ef56 100644
 --- a/platform/mv3/extension/_locales/en_GB/messages.json
 +++ b/platform/mv3/extension/_locales/en_GB/messages.json
 @@ -1,6 +1,6 @@
@@ -576,7 +576,7 @@ index 574e711c8f97..19a947735bed 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Select a filter below to highlight matching elements in the webpage. Click the dustbin to remove a filter.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -584,7 +584,7 @@ index 574e711c8f97..19a947735bed 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/eo/messages.json b/platform/mv3/extension/_locales/eo/messages.json
-index da33dccf051d..0f4e24f0d7a4 100644
+index cd50d410b..da8b6d138 100644
 --- a/platform/mv3/extension/_locales/eo/messages.json
 +++ b/platform/mv3/extension/_locales/eo/messages.json
 @@ -1,6 +1,6 @@
@@ -604,7 +604,7 @@ index da33dccf051d..0f4e24f0d7a4 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Elektu filtrilon suban por lumigi kongruajn elementojn en la retejo. Alklaku la rubujon por forigi filtrilon.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -612,7 +612,7 @@ index da33dccf051d..0f4e24f0d7a4 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/es/messages.json b/platform/mv3/extension/_locales/es/messages.json
-index b08fe0897ef4..6702c227a07a 100644
+index 733bb1306..5d62b0a1b 100644
 --- a/platform/mv3/extension/_locales/es/messages.json
 +++ b/platform/mv3/extension/_locales/es/messages.json
 @@ -1,6 +1,6 @@
@@ -632,7 +632,7 @@ index b08fe0897ef4..6702c227a07a 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Selecciona un filtro abajo para resaltar los elementos coincidentes en la página web. Haz clic en la papelera para eliminar un filtro.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -640,7 +640,7 @@ index b08fe0897ef4..6702c227a07a 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/et/messages.json b/platform/mv3/extension/_locales/et/messages.json
-index 9863c2e15934..b438f5ae9688 100644
+index a22823faf..8a7793be5 100644
 --- a/platform/mv3/extension/_locales/et/messages.json
 +++ b/platform/mv3/extension/_locales/et/messages.json
 @@ -1,6 +1,6 @@
@@ -660,7 +660,7 @@ index 9863c2e15934..b438f5ae9688 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Valige allolev filter, et tõsta esile veebilehel kattuvad elemendid. Filtri eemaldamiseks klõpsake prügikasti.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -668,7 +668,7 @@ index 9863c2e15934..b438f5ae9688 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/eu/messages.json b/platform/mv3/extension/_locales/eu/messages.json
-index 758ece65af61..61963ac6f9ed 100644
+index 224b809a3..6a9309e2f 100644
 --- a/platform/mv3/extension/_locales/eu/messages.json
 +++ b/platform/mv3/extension/_locales/eu/messages.json
 @@ -1,6 +1,6 @@
@@ -679,15 +679,15 @@ index 758ece65af61..61963ac6f9ed 100644
      "description": "extension name."
    },
    "extShortDesc": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "Hautatu beheko iragazki bat web orrian bat datozen elementuak nabarmentzeko. Egin klik zakarrontzian iragazki bat kentzeko.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/fa/messages.json b/platform/mv3/extension/_locales/fa/messages.json
-index 6af8f8a461f4..4cd57707b1eb 100644
+index b17aa4f57..4f9749857 100644
 --- a/platform/mv3/extension/_locales/fa/messages.json
 +++ b/platform/mv3/extension/_locales/fa/messages.json
 @@ -1,6 +1,6 @@
@@ -702,20 +702,20 @@ index 6af8f8a461f4..4cd57707b1eb 100644
      "description": "Appears aside each filter list in the _3rd-party filters_ pane"
    },
    "dashboardName": {
--    "message": "uBO Lite — Dashboard",
-+    "message": "Anatase Adblocker — Dashboard",
+-    "message": "uBO Lite - داشبورد",
++    "message": "Anatase Adblocker - داشبورد",
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "یک فیلتر را در زیر انتخاب کنید تا عناصر منطبق در صفحه وب برجسته شوند. روی سطل زباله کلیک کنید تا یک فیلتر حذف شود.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/fi/messages.json b/platform/mv3/extension/_locales/fi/messages.json
-index 8d05b0d67737..e7e037caad30 100644
+index b0822be45..60523c52e 100644
 --- a/platform/mv3/extension/_locales/fi/messages.json
 +++ b/platform/mv3/extension/_locales/fi/messages.json
 @@ -1,6 +1,6 @@
@@ -735,7 +735,7 @@ index 8d05b0d67737..e7e037caad30 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Valitse alta suodatin korostaaksesi verkkosivulta sitä vastaavat elementit. Poista suodatin klikkamalla roskakoria.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -743,7 +743,7 @@ index 8d05b0d67737..e7e037caad30 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/fil/messages.json b/platform/mv3/extension/_locales/fil/messages.json
-index 8231458f9a2b..5c1623bf2fba 100644
+index cb80fb29d..0a8332d38 100644
 --- a/platform/mv3/extension/_locales/fil/messages.json
 +++ b/platform/mv3/extension/_locales/fil/messages.json
 @@ -1,6 +1,6 @@
@@ -763,7 +763,7 @@ index 8231458f9a2b..5c1623bf2fba 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -771,7 +771,7 @@ index 8231458f9a2b..5c1623bf2fba 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/fr/messages.json b/platform/mv3/extension/_locales/fr/messages.json
-index 91310eccb049..87d346370a0a 100644
+index ae9e77634..75e20c84c 100644
 --- a/platform/mv3/extension/_locales/fr/messages.json
 +++ b/platform/mv3/extension/_locales/fr/messages.json
 @@ -1,6 +1,6 @@
@@ -791,7 +791,7 @@ index 91310eccb049..87d346370a0a 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Choisissez un filtre ci-dessous pour surligner les éléments correspondants dans la page Web. Cliquez sur l'icône de poubelle pour supprimer un filtre.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -799,7 +799,7 @@ index 91310eccb049..87d346370a0a 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/fy/messages.json b/platform/mv3/extension/_locales/fy/messages.json
-index e6e7dc191258..94c90e4d7bff 100644
+index 9367bbe1e..b7b373b62 100644
 --- a/platform/mv3/extension/_locales/fy/messages.json
 +++ b/platform/mv3/extension/_locales/fy/messages.json
 @@ -1,6 +1,6 @@
@@ -810,7 +810,7 @@ index e6e7dc191258..94c90e4d7bff 100644
      "description": "extension name."
    },
    "extShortDesc": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Selektearje hjirûnder in filter om oerienkommende eleminten yn de webside te markearjen. Klik op it jiskefet om in filter fuort te smiten.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -818,7 +818,7 @@ index e6e7dc191258..94c90e4d7bff 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/gl/messages.json b/platform/mv3/extension/_locales/gl/messages.json
-index 1e859d2b9b9b..37f55859d08f 100644
+index ab74ce0fe..a4e70a0fa 100644
 --- a/platform/mv3/extension/_locales/gl/messages.json
 +++ b/platform/mv3/extension/_locales/gl/messages.json
 @@ -1,6 +1,6 @@
@@ -838,7 +838,7 @@ index 1e859d2b9b9b..37f55859d08f 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Escolle un filtro para destacar os elementos que representa na páxina web. Preme no caldeiro do lixo para eliminar un filtro.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -846,7 +846,7 @@ index 1e859d2b9b9b..37f55859d08f 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/gu/messages.json b/platform/mv3/extension/_locales/gu/messages.json
-index b74f4f971b24..da1fffc7fb44 100644
+index ea08b7d23..12a57d25d 100644
 --- a/platform/mv3/extension/_locales/gu/messages.json
 +++ b/platform/mv3/extension/_locales/gu/messages.json
 @@ -1,6 +1,6 @@
@@ -861,20 +861,20 @@ index b74f4f971b24..da1fffc7fb44 100644
      "description": "Appears aside each filter list in the _3rd-party filters_ pane"
    },
    "dashboardName": {
--    "message": "uBO Lite — Dashboard",
-+    "message": "Anatase Adblocker — Dashboard",
+-    "message": "uBO Lite — ડેશબોર્ડ",
++    "message": "Anatase Adblocker — ડેશબોર્ડ",
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "વેબ પેજમાં મેળ ખાતા તત્વોને હાઇલાઇટ કરવા નીચે ફિલ્ટર પસંદ કરો. ફિલ્ટર દૂર કરવા કચરાપેટી પર ક્લિક કરો.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/he/messages.json b/platform/mv3/extension/_locales/he/messages.json
-index f4f94573e220..37a5010886dc 100644
+index 4c7f10c4d..12dd68e0e 100644
 --- a/platform/mv3/extension/_locales/he/messages.json
 +++ b/platform/mv3/extension/_locales/he/messages.json
 @@ -1,6 +1,6 @@
@@ -885,7 +885,7 @@ index f4f94573e220..37a5010886dc 100644
      "description": "extension name."
    },
    "extShortDesc": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "בחרו את המסנן למטה להצגת הרכיבים התואמים בדף האינטרנט. לחצו על פח האשפה למחיקת המסנן.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -893,7 +893,7 @@ index f4f94573e220..37a5010886dc 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/hi/messages.json b/platform/mv3/extension/_locales/hi/messages.json
-index 4ec54205ecb0..3280c2591c54 100644
+index 2530bdabd..7c50850f5 100644
 --- a/platform/mv3/extension/_locales/hi/messages.json
 +++ b/platform/mv3/extension/_locales/hi/messages.json
 @@ -1,6 +1,6 @@
@@ -913,15 +913,15 @@ index 4ec54205ecb0..3280c2591c54 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "वेब पृष्ठ में मिलान तत्वों को हाइलाइट करने के लिए नीचे एक फ़िल्टर चुनें। फ़िल्टर हटाने के लिए कूड़ेदान पर क्लिक करें।",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/hr/messages.json b/platform/mv3/extension/_locales/hr/messages.json
-index 9d0a20fe6c3f..ba7357f1fcf5 100644
+index 2c5a76891..4dfe0885a 100644
 --- a/platform/mv3/extension/_locales/hr/messages.json
 +++ b/platform/mv3/extension/_locales/hr/messages.json
 @@ -1,6 +1,6 @@
@@ -941,7 +941,7 @@ index 9d0a20fe6c3f..ba7357f1fcf5 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Odaberite filter u nastavku kako biste istaknuli odgovarajuće elemente na web stranici. Kliknite koš za smeće kako biste uklonili filter.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -949,7 +949,7 @@ index 9d0a20fe6c3f..ba7357f1fcf5 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/hu/messages.json b/platform/mv3/extension/_locales/hu/messages.json
-index 8e320fa7b1a8..5118d3cf1df1 100644
+index 84eb31db8..b015eea50 100644
 --- a/platform/mv3/extension/_locales/hu/messages.json
 +++ b/platform/mv3/extension/_locales/hu/messages.json
 @@ -1,6 +1,6 @@
@@ -969,7 +969,7 @@ index 8e320fa7b1a8..5118d3cf1df1 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Válasszon alább egy szűrőt, hogy kiemelje az egyező elemeket a weboldalon. Kattintson a kuka ikonra egy szűrő eltávolításához.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -977,7 +977,7 @@ index 8e320fa7b1a8..5118d3cf1df1 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/hy/messages.json b/platform/mv3/extension/_locales/hy/messages.json
-index 875cbd6a8c7a..609e55e2ee91 100644
+index 106fc7da5..1ee2a16a3 100644
 --- a/platform/mv3/extension/_locales/hy/messages.json
 +++ b/platform/mv3/extension/_locales/hy/messages.json
 @@ -1,6 +1,6 @@
@@ -997,15 +997,15 @@ index 875cbd6a8c7a..609e55e2ee91 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "Ընտրեք ներքևում գտնվող զտիչը՝ վեբ էջում համապատասխան տարրերն ընդգծելու համար։ Սեղմեք աղբարկղի պատկերակը՝ զտիչը հեռացնելու համար։",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/id/messages.json b/platform/mv3/extension/_locales/id/messages.json
-index 8a5eb5184793..5d7525de2c9a 100644
+index dc25b8c93..8eaf7be95 100644
 --- a/platform/mv3/extension/_locales/id/messages.json
 +++ b/platform/mv3/extension/_locales/id/messages.json
 @@ -1,6 +1,6 @@
@@ -1025,7 +1025,7 @@ index 8a5eb5184793..5d7525de2c9a 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Pilih filter di bawah ini untuk menyorot elemen yang cocok di halaman web. Klik ikon tempat sampah untuk menghapus filter.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1033,7 +1033,7 @@ index 8a5eb5184793..5d7525de2c9a 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/it/messages.json b/platform/mv3/extension/_locales/it/messages.json
-index d72a00931616..4e3c17bf4c47 100644
+index eea5126fb..af448ac8b 100644
 --- a/platform/mv3/extension/_locales/it/messages.json
 +++ b/platform/mv3/extension/_locales/it/messages.json
 @@ -1,6 +1,6 @@
@@ -1053,7 +1053,7 @@ index d72a00931616..4e3c17bf4c47 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Seleziona un filtro per evidenziare gli elementi corrispondenti nella pagina web. Clicca il cestino per rimuovere un filtro.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1061,7 +1061,7 @@ index d72a00931616..4e3c17bf4c47 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/ja/messages.json b/platform/mv3/extension/_locales/ja/messages.json
-index ffee91678df5..8904533b864d 100644
+index e918a9204..c5024ee0a 100644
 --- a/platform/mv3/extension/_locales/ja/messages.json
 +++ b/platform/mv3/extension/_locales/ja/messages.json
 @@ -1,6 +1,6 @@
@@ -1081,7 +1081,7 @@ index ffee91678df5..8904533b864d 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "下のフィルターを選択すると、ウェブページ内の一致する要素がハイライトされます。フィルタを削除するには、ゴミ箱をクリックしてください。",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1089,7 +1089,7 @@ index ffee91678df5..8904533b864d 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/ka/messages.json b/platform/mv3/extension/_locales/ka/messages.json
-index 49b287db3dcd..7153446cf920 100644
+index 91bd9b092..626794176 100644
 --- a/platform/mv3/extension/_locales/ka/messages.json
 +++ b/platform/mv3/extension/_locales/ka/messages.json
 @@ -1,6 +1,6 @@
@@ -1109,7 +1109,7 @@ index 49b287db3dcd..7153446cf920 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "აირჩიეთ ქვემოთ ფილტრი შესაბამისი ნაწილების მოსანიშნად ვებგვერდზე. დაწკაპეთ სანაგვე ყუთი ფილტრის მოსაცილებლად.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1117,7 +1117,7 @@ index 49b287db3dcd..7153446cf920 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/kk/messages.json b/platform/mv3/extension/_locales/kk/messages.json
-index e031ff507623..abe5a8e22bb8 100644
+index fe6256604..b4fc732d5 100644
 --- a/platform/mv3/extension/_locales/kk/messages.json
 +++ b/platform/mv3/extension/_locales/kk/messages.json
 @@ -1,6 +1,6 @@
@@ -1137,7 +1137,7 @@ index e031ff507623..abe5a8e22bb8 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Веб-беттегі сәйкес элементтерді түспен ерекшелеу үшін төмендегі сүзгіні таңдаңыз. Сүзгіні өшіру үшін қоқыс шелегін шертіңіз.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1145,7 +1145,7 @@ index e031ff507623..abe5a8e22bb8 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/kn/messages.json b/platform/mv3/extension/_locales/kn/messages.json
-index 9765a2893e08..18e33fd3569c 100644
+index fb6a282b5..74ad5c255 100644
 --- a/platform/mv3/extension/_locales/kn/messages.json
 +++ b/platform/mv3/extension/_locales/kn/messages.json
 @@ -1,6 +1,6 @@
@@ -1156,15 +1156,15 @@ index 9765a2893e08..18e33fd3569c 100644
      "description": "extension name."
    },
    "extShortDesc": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "ವೆಬ್ ಪುಟದಲ್ಲಿ ಹೊಂದಾಣಿಕೆಯ ಅಂಶಗಳನ್ನು ಹೈಲೈಟ್ ಮಾಡಲು ಕೆಳಗಿನ ಶೋಧಕವನ್ನು ಆಯ್ಕೆಮಾಡಿ. ಶೋಧಕವನ್ನು ತೆಗೆದುಹಾಕಲು ಕಸದ ಬುಟ್ಟಿಯ ಮೇಲೆ ಕ್ಲಿಕ್ ಮಾಡಿ.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/ko/messages.json b/platform/mv3/extension/_locales/ko/messages.json
-index 1ad56b57331c..525cb544766f 100644
+index 3f389cad1..03d11a460 100644
 --- a/platform/mv3/extension/_locales/ko/messages.json
 +++ b/platform/mv3/extension/_locales/ko/messages.json
 @@ -1,6 +1,6 @@
@@ -1184,7 +1184,7 @@ index 1ad56b57331c..525cb544766f 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "아래의 필터를 선택하면 웹페이지의 일치하는 요소가 강조 표시됩니다. 필터를 삭제하려면 휴지통을 클릭합니다.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1192,7 +1192,7 @@ index 1ad56b57331c..525cb544766f 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/lt/messages.json b/platform/mv3/extension/_locales/lt/messages.json
-index a783678a7fbe..4d0b223020a6 100644
+index f62681d2b..e878673f5 100644
 --- a/platform/mv3/extension/_locales/lt/messages.json
 +++ b/platform/mv3/extension/_locales/lt/messages.json
 @@ -1,6 +1,6 @@
@@ -1212,15 +1212,15 @@ index a783678a7fbe..4d0b223020a6 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "Pasirinkite filtrą žemiau, kad paryškintumėte atitinkančius elementus tinklalapyje. Spustelėkite šiukšliadėžę, kad pašalintumėte filtrą.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/lv/messages.json b/platform/mv3/extension/_locales/lv/messages.json
-index b13753d6350c..543379f4247a 100644
+index 66b96d7d2..fe0a433ad 100644
 --- a/platform/mv3/extension/_locales/lv/messages.json
 +++ b/platform/mv3/extension/_locales/lv/messages.json
 @@ -1,6 +1,6 @@
@@ -1240,7 +1240,7 @@ index b13753d6350c..543379f4247a 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Zemāk jāatlasa atlasītājs, lai tīmekļa lapā izceltu atbilstošos elementus. Klikšķināt uz atkritnes, lai noņemtu aizturētāju.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1248,7 +1248,7 @@ index b13753d6350c..543379f4247a 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/mk/messages.json b/platform/mv3/extension/_locales/mk/messages.json
-index 04d75725a251..e048a17ae8cf 100644
+index 09a38512e..fae249f41 100644
 --- a/platform/mv3/extension/_locales/mk/messages.json
 +++ b/platform/mv3/extension/_locales/mk/messages.json
 @@ -1,6 +1,6 @@
@@ -1268,15 +1268,15 @@ index 04d75725a251..e048a17ae8cf 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "Изберете филтер подолу за да ги означите соодветните елементи на веб-страницата. Кликнете на кантата за отстранување на филтер.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/ml/messages.json b/platform/mv3/extension/_locales/ml/messages.json
-index 0d9e4378326a..077ad3d75376 100644
+index a8ee09625..cc4e1f4e8 100644
 --- a/platform/mv3/extension/_locales/ml/messages.json
 +++ b/platform/mv3/extension/_locales/ml/messages.json
 @@ -1,6 +1,6 @@
@@ -1287,15 +1287,15 @@ index 0d9e4378326a..077ad3d75376 100644
      "description": "extension name."
    },
    "extShortDesc": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "വെബ് പേജിലെ പൊരുത്തപ്പെടുന്ന മൂലകങ്ങൾ ഹൈലൈറ്റ് ചെയ്യാൻ ചുവടെയുള്ള ഒരു ഫിൽട്ടർ തിരഞ്ഞെടുക്കുക. ഒരു ഫിൽട്ടർ നീക്കം ചെയ്യാൻ ട്രാഷ് ഐക്കൺ ക്ലിക്ക് ചെയ്യുക.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/mr/messages.json b/platform/mv3/extension/_locales/mr/messages.json
-index 65519057ab85..704068167ea9 100644
+index ad62e720b..4cc837a0c 100644
 --- a/platform/mv3/extension/_locales/mr/messages.json
 +++ b/platform/mv3/extension/_locales/mr/messages.json
 @@ -1,6 +1,6 @@
@@ -1310,20 +1310,20 @@ index 65519057ab85..704068167ea9 100644
      "description": "Appears aside each filter list in the _3rd-party filters_ pane"
    },
    "dashboardName": {
--    "message": "uBO Lite — Dashboard",
-+    "message": "Anatase Adblocker — Dashboard",
+-    "message": "uBO Lite — डॅशबोर्ड",
++    "message": "Anatase Adblocker — डॅशबोर्ड",
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "वेब पृष्ठावर जुळणारे एलिमेंट हायलाइट करण्यासाठी खालील फिल्टर निवडा. फिल्टर काढण्यासाठी कचरापेटीवर क्लिक करा.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/ms/messages.json b/platform/mv3/extension/_locales/ms/messages.json
-index 738ec8d4d5a8..d642b52e24f8 100644
+index d7f7b71ed..00989873c 100644
 --- a/platform/mv3/extension/_locales/ms/messages.json
 +++ b/platform/mv3/extension/_locales/ms/messages.json
 @@ -1,6 +1,6 @@
@@ -1343,15 +1343,15 @@ index 738ec8d4d5a8..d642b52e24f8 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "Pilih penapis di bawah untuk menyerlahkan elemen yang sepadan dalam laman web. Klik tong sampah untuk mengalih keluar penapis.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/nb/messages.json b/platform/mv3/extension/_locales/nb/messages.json
-index 920ca1542cba..00df7fd08e49 100644
+index 7cfb709a0..d10b34e3d 100644
 --- a/platform/mv3/extension/_locales/nb/messages.json
 +++ b/platform/mv3/extension/_locales/nb/messages.json
 @@ -1,6 +1,6 @@
@@ -1371,7 +1371,7 @@ index 920ca1542cba..00df7fd08e49 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Velg et filter nedenfor for å fremheve samsvarende elementer på nettsiden. Klikk på papirkurven for å fjerne et filter.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1379,7 +1379,7 @@ index 920ca1542cba..00df7fd08e49 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/nl/messages.json b/platform/mv3/extension/_locales/nl/messages.json
-index 8f75638f39ca..67063ae29621 100644
+index 37fc31c63..36357646a 100644
 --- a/platform/mv3/extension/_locales/nl/messages.json
 +++ b/platform/mv3/extension/_locales/nl/messages.json
 @@ -1,6 +1,6 @@
@@ -1390,7 +1390,7 @@ index 8f75638f39ca..67063ae29621 100644
      "description": "extension name."
    },
    "extShortDesc": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Selecteer hieronder een filter om overeenkomende elementen in de webpagina te markeren. Klik op de prullenbak om een filter te verwijderen.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1398,7 +1398,7 @@ index 8f75638f39ca..67063ae29621 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/oc/messages.json b/platform/mv3/extension/_locales/oc/messages.json
-index 6160fdf7a4c2..8b531f67db12 100644
+index 020106137..890ef77d6 100644
 --- a/platform/mv3/extension/_locales/oc/messages.json
 +++ b/platform/mv3/extension/_locales/oc/messages.json
 @@ -1,6 +1,6 @@
@@ -1413,20 +1413,20 @@ index 6160fdf7a4c2..8b531f67db12 100644
      "description": "Appears aside each filter list in the _3rd-party filters_ pane"
    },
    "dashboardName": {
--    "message": "uBO Lite — Dashboard",
-+    "message": "Anatase Adblocker — Dashboard",
+-    "message": "uBO Lite — Tablèu de bòrd",
++    "message": "Anatase Adblocker — Tablèu de bòrd",
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "Seleccionar un filtre çai-jos per metre en relèu los elements correspondents dins la pagina web. Clicar sus la corbèla per suprimir un filtre.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/pa/messages.json b/platform/mv3/extension/_locales/pa/messages.json
-index e9b3e7a84fa1..8563d7757cce 100644
+index 4d402ddcd..f4b9f54f7 100644
 --- a/platform/mv3/extension/_locales/pa/messages.json
 +++ b/platform/mv3/extension/_locales/pa/messages.json
 @@ -1,6 +1,6 @@
@@ -1446,15 +1446,15 @@ index e9b3e7a84fa1..8563d7757cce 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "ਵੈੱਬ ਪੰਨੇ ਵਿੱਚ ਮੇਲ ਖਾਂਦੇ ਤੱਤਾਂ ਨੂੰ ਉਜਾਗਰ ਕਰਨ ਲਈ ਹੇਠਾਂ ਇੱਕ ਫਿਲਟਰ ਚੁਣੋ। ਇੱਕ ਫਿਲਟਰ ਨੂੰ ਹਟਾਉਣ ਲਈ ਰੱਦੀ ਵਾਲੇ ਡੱਬੇ 'ਤੇ ਕਲਿੱਕ ਕਰੋ।",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/pl/messages.json b/platform/mv3/extension/_locales/pl/messages.json
-index 4a07f450fe65..546657547490 100644
+index 9b015ab65..e50bc842c 100644
 --- a/platform/mv3/extension/_locales/pl/messages.json
 +++ b/platform/mv3/extension/_locales/pl/messages.json
 @@ -1,6 +1,6 @@
@@ -1474,7 +1474,7 @@ index 4a07f450fe65..546657547490 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Wybierz filtr poniżej, aby wyróżnić pasujące elementy na stronie internetowej. Kliknij kosz, aby usunąć filtr.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1482,7 +1482,7 @@ index 4a07f450fe65..546657547490 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/pt_BR/messages.json b/platform/mv3/extension/_locales/pt_BR/messages.json
-index 09a8213ea029..7b1a1dbfc7b5 100644
+index 2ab7c7375..697597ba0 100644
 --- a/platform/mv3/extension/_locales/pt_BR/messages.json
 +++ b/platform/mv3/extension/_locales/pt_BR/messages.json
 @@ -1,6 +1,6 @@
@@ -1502,7 +1502,7 @@ index 09a8213ea029..7b1a1dbfc7b5 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Selecione um filtro abaixo para destacar os elementos correspondentes na página. Clique na lixeira para remover um filtro.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1510,7 +1510,7 @@ index 09a8213ea029..7b1a1dbfc7b5 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/pt_PT/messages.json b/platform/mv3/extension/_locales/pt_PT/messages.json
-index 4877347c7738..c0da47c9ff65 100644
+index a0c644563..a24ce4144 100644
 --- a/platform/mv3/extension/_locales/pt_PT/messages.json
 +++ b/platform/mv3/extension/_locales/pt_PT/messages.json
 @@ -1,6 +1,6 @@
@@ -1530,7 +1530,7 @@ index 4877347c7738..c0da47c9ff65 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Selecione um filtro abaixo para destacar os elementos correspondentes na página web. Clique no caixote do lixo para remover um filtro.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1538,7 +1538,7 @@ index 4877347c7738..c0da47c9ff65 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/ro/messages.json b/platform/mv3/extension/_locales/ro/messages.json
-index 8b2759d72f1a..03126ef8e1ef 100644
+index 8443da5b7..9976c1a6f 100644
 --- a/platform/mv3/extension/_locales/ro/messages.json
 +++ b/platform/mv3/extension/_locales/ro/messages.json
 @@ -1,6 +1,6 @@
@@ -1558,7 +1558,7 @@ index 8b2759d72f1a..03126ef8e1ef 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Alege un filtru de mai jos pentru a evidenția elementele cu potriviri în pagina web. Clic pe [Coș de gunoi] pentru a îndepărta un filtru.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1566,7 +1566,7 @@ index 8b2759d72f1a..03126ef8e1ef 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/ru/messages.json b/platform/mv3/extension/_locales/ru/messages.json
-index 7fa268745653..967e33c3a237 100644
+index 91a75e429..bb9f40ac6 100644
 --- a/platform/mv3/extension/_locales/ru/messages.json
 +++ b/platform/mv3/extension/_locales/ru/messages.json
 @@ -1,6 +1,6 @@
@@ -1586,7 +1586,7 @@ index 7fa268745653..967e33c3a237 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Выберите фильтр ниже, чтобы подсветить соответствующие элементы на странице. Нажмите на корзину для удаления фильтра.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1594,7 +1594,7 @@ index 7fa268745653..967e33c3a237 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/si/messages.json b/platform/mv3/extension/_locales/si/messages.json
-index 52932767d015..eaa8c92efa25 100644
+index 4bda33dd4..dc6088a29 100644
 --- a/platform/mv3/extension/_locales/si/messages.json
 +++ b/platform/mv3/extension/_locales/si/messages.json
 @@ -1,6 +1,6 @@
@@ -1605,15 +1605,15 @@ index 52932767d015..eaa8c92efa25 100644
      "description": "extension name."
    },
    "extShortDesc": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "වෙබ් පිටුවේ ගැලපෙන මූලද්‍රව්‍ය උද්දීපනය කිරීමට පහත පෙරහනක් තෝරන්න. පෙරහනක් ඉවත් කිරීමට කුණු කූඩය ක්ලික් කරන්න.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/sk/messages.json b/platform/mv3/extension/_locales/sk/messages.json
-index 916ffbc04ea7..63bef386889e 100644
+index 18d594bbd..acbbcc9ac 100644
 --- a/platform/mv3/extension/_locales/sk/messages.json
 +++ b/platform/mv3/extension/_locales/sk/messages.json
 @@ -1,6 +1,6 @@
@@ -1633,7 +1633,7 @@ index 916ffbc04ea7..63bef386889e 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Vyberte filter na zvýraznenie zodpovedajúcich prvkov na webovej stránke. Ak chcete filter odstrániť, kliknite na kôš.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1641,7 +1641,7 @@ index 916ffbc04ea7..63bef386889e 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/sl/messages.json b/platform/mv3/extension/_locales/sl/messages.json
-index 88bc96483c9c..f4e254cb34e6 100644
+index f6b39ba84..b462cde75 100644
 --- a/platform/mv3/extension/_locales/sl/messages.json
 +++ b/platform/mv3/extension/_locales/sl/messages.json
 @@ -1,6 +1,6 @@
@@ -1656,20 +1656,20 @@ index 88bc96483c9c..f4e254cb34e6 100644
      "description": "Appears aside each filter list in the _3rd-party filters_ pane"
    },
    "dashboardName": {
--    "message": "uBO Lite — Dashboard",
-+    "message": "Anatase Adblocker — Dashboard",
+-    "message": "uBO Lite — Nadzorna plošča",
++    "message": "Anatase Adblocker — Nadzorna plošča",
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "Spodaj izberite filter, da označite ustrezne elemente na spletni strani. Kliknite koš za odstranitev filtra.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/so/messages.json b/platform/mv3/extension/_locales/so/messages.json
-index a4cedf9573e8..9309cf241eac 100644
+index c9d496119..3311ac655 100644
 --- a/platform/mv3/extension/_locales/so/messages.json
 +++ b/platform/mv3/extension/_locales/so/messages.json
 @@ -1,6 +1,6 @@
@@ -1689,15 +1689,15 @@ index a4cedf9573e8..9309cf241eac 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "Dooro shaandho hoose si aad u iftiimiso qaybaha u dhigma ee bogga websaydhka. Guji qashinka si aad uga saarto shaandho.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/sq/messages.json b/platform/mv3/extension/_locales/sq/messages.json
-index 4fc93c4fc3ad..2a28723e7d32 100644
+index 34207fe51..6b87c6e20 100644
 --- a/platform/mv3/extension/_locales/sq/messages.json
 +++ b/platform/mv3/extension/_locales/sq/messages.json
 @@ -1,6 +1,6 @@
@@ -1717,7 +1717,7 @@ index 4fc93c4fc3ad..2a28723e7d32 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Zgjidhni ndër filtrat më poshtë për të parë elementin që i korrespondon në faqe. Filtrat hiqen duke klikuar koshin.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1725,7 +1725,7 @@ index 4fc93c4fc3ad..2a28723e7d32 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/sr/messages.json b/platform/mv3/extension/_locales/sr/messages.json
-index bdc9b62606d6..be62040207d0 100644
+index 88c997e31..76db688e3 100644
 --- a/platform/mv3/extension/_locales/sr/messages.json
 +++ b/platform/mv3/extension/_locales/sr/messages.json
 @@ -1,6 +1,6 @@
@@ -1745,7 +1745,7 @@ index bdc9b62606d6..be62040207d0 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Изаберите филтер испод да бисте истакли одговарајуће елементе на веб страници. Кликните на канту за смеће да бисте уклонили филтер.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1753,7 +1753,7 @@ index bdc9b62606d6..be62040207d0 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/sv/messages.json b/platform/mv3/extension/_locales/sv/messages.json
-index 6264d2de370b..5911284c5b2a 100644
+index e9bb43ec4..c6abf9e2d 100644
 --- a/platform/mv3/extension/_locales/sv/messages.json
 +++ b/platform/mv3/extension/_locales/sv/messages.json
 @@ -1,6 +1,6 @@
@@ -1773,7 +1773,7 @@ index 6264d2de370b..5911284c5b2a 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Välj ett filter nedan för att markera matchande element på webbsidan. Klicka på papperskorgen för att ta bort ett filter.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1781,7 +1781,7 @@ index 6264d2de370b..5911284c5b2a 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/sw/messages.json b/platform/mv3/extension/_locales/sw/messages.json
-index 89d66fb3bb45..f9a49a3c8658 100644
+index c13f98f71..81eebb27d 100644
 --- a/platform/mv3/extension/_locales/sw/messages.json
 +++ b/platform/mv3/extension/_locales/sw/messages.json
 @@ -1,6 +1,6 @@
@@ -1796,20 +1796,20 @@ index 89d66fb3bb45..f9a49a3c8658 100644
      "description": "Appears aside each filter list in the _3rd-party filters_ pane"
    },
    "dashboardName": {
--    "message": "uBO Lite — Dashboard",
-+    "message": "Anatase Adblocker — Dashboard",
+-    "message": "uBO Lite — Dashibodi",
++    "message": "Anatase Adblocker — Dashibodi",
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "Chagua kichujio hapa chini ili kuangazia vipengele vinavyolingana kwenye ukurasa wa wavuti. Bonyeza pipa la taka ili kuondoa kichujio.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/ta/messages.json b/platform/mv3/extension/_locales/ta/messages.json
-index 0b353fb60926..492d9248a459 100644
+index 21f51c357..7b6caa623 100644
 --- a/platform/mv3/extension/_locales/ta/messages.json
 +++ b/platform/mv3/extension/_locales/ta/messages.json
 @@ -1,6 +1,6 @@
@@ -1824,20 +1824,20 @@ index 0b353fb60926..492d9248a459 100644
      "description": "Appears aside each filter list in the _3rd-party filters_ pane"
    },
    "dashboardName": {
--    "message": "uBO Lite — Dashboard",
-+    "message": "Anatase Adblocker — Dashboard",
+-    "message": "uBO Lite — டாஷ்போர்டு",
++    "message": "Anatase Adblocker — டாஷ்போர்டு",
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "இணையப் பக்கத்தில் பொருந்தும் உறுப்புகளை முன்னிலைப்படுத்த கீழே உள்ள ஒரு வடிப்பானைத் தேர்ந்தெடுக்கவும். ஒரு வடிப்பானை அகற்ற குப்பைத் தொட்டியைக் கிளிக் செய்யவும்.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/te/messages.json b/platform/mv3/extension/_locales/te/messages.json
-index 608faee95758..b848c254ec69 100644
+index e25460e43..6100e08f8 100644
 --- a/platform/mv3/extension/_locales/te/messages.json
 +++ b/platform/mv3/extension/_locales/te/messages.json
 @@ -1,6 +1,6 @@
@@ -1852,20 +1852,20 @@ index 608faee95758..b848c254ec69 100644
      "description": "Appears aside each filter list in the _3rd-party filters_ pane"
    },
    "dashboardName": {
--    "message": "uBO Lite — Dashboard",
-+    "message": "Anatase Adblocker — Dashboard",
+-    "message": "uBO Lite — డాష్‌బోర్డ్",
++    "message": "Anatase Adblocker — డాష్‌బోర్డ్",
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "వెబ్ పేజీలో సరిపోలే మూలకాలను హైలైట్ చేయడానికి క్రింద ఒక ఫిల్టర్‌ను ఎంచుకోండి. ఫిల్టర్‌ను తొలగించడానికి చెత్త డబ్బాపై క్లిక్ చేయండి.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/th/messages.json b/platform/mv3/extension/_locales/th/messages.json
-index 46291095e6bf..935f3e55f1b1 100644
+index f1e107bf9..c9a995bf6 100644
 --- a/platform/mv3/extension/_locales/th/messages.json
 +++ b/platform/mv3/extension/_locales/th/messages.json
 @@ -1,6 +1,6 @@
@@ -1885,7 +1885,7 @@ index 46291095e6bf..935f3e55f1b1 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "เลือกตัวกรองด้านล่างเพื่อไฮไลต์องค์ประกอบที่ตรงกันในหน้าเว็บ คลิกที่ไอคอนถังขยะเพื่อลบตัวกรอง",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1893,7 +1893,7 @@ index 46291095e6bf..935f3e55f1b1 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/tr/messages.json b/platform/mv3/extension/_locales/tr/messages.json
-index cd4b5e74364e..b7108af58068 100644
+index 383093729..db057d4df 100644
 --- a/platform/mv3/extension/_locales/tr/messages.json
 +++ b/platform/mv3/extension/_locales/tr/messages.json
 @@ -1,6 +1,6 @@
@@ -1913,7 +1913,7 @@ index cd4b5e74364e..b7108af58068 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Web sayfasındaki eşleşen öğeleri vurgulamak için aşağıdan bir filtre seçin. Bir filtreyi kaldırmak için çöp kutusuna tıklayın.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1921,7 +1921,7 @@ index cd4b5e74364e..b7108af58068 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/uk/messages.json b/platform/mv3/extension/_locales/uk/messages.json
-index 9d611a56dfeb..d709ff08dd38 100644
+index 734343493..663da05ad 100644
 --- a/platform/mv3/extension/_locales/uk/messages.json
 +++ b/platform/mv3/extension/_locales/uk/messages.json
 @@ -1,6 +1,6 @@
@@ -1941,7 +1941,7 @@ index 9d611a56dfeb..d709ff08dd38 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Виберіть фільтр нижче, щоб підсвітити відповідні елементи на сторінці. Натисніть на кошик для видалення фільтра.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1949,7 +1949,7 @@ index 9d611a56dfeb..d709ff08dd38 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/ur/messages.json b/platform/mv3/extension/_locales/ur/messages.json
-index 933a642d189b..3263241b4c06 100644
+index 24f0abfed..148256991 100644
 --- a/platform/mv3/extension/_locales/ur/messages.json
 +++ b/platform/mv3/extension/_locales/ur/messages.json
 @@ -1,6 +1,6 @@
@@ -1960,15 +1960,15 @@ index 933a642d189b..3263241b4c06 100644
      "description": "extension name."
    },
    "extShortDesc": {
-@@ -447,4 +447,4 @@
-     "message": "Select a filter below to highlight matching elements in the web page. Click the trash can to remove a filter.",
+@@ -459,4 +459,4 @@
+     "message": "ویب صفحے میں مماثل عناصر کو نمایاں کرنے کے لیے نیچے دیے گئے فلٹر کو منتخب کریں۔ فلٹر کو ہٹانے کے لیے کوڑے دان پر کلک کریں۔",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
 -}
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/vi/messages.json b/platform/mv3/extension/_locales/vi/messages.json
-index ca2997d12364..d6b57919bcd3 100644
+index eb111095d..bd069dcc8 100644
 --- a/platform/mv3/extension/_locales/vi/messages.json
 +++ b/platform/mv3/extension/_locales/vi/messages.json
 @@ -1,6 +1,6 @@
@@ -1988,7 +1988,7 @@ index ca2997d12364..d6b57919bcd3 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "Chọn một bộ lọc bên dưới để đánh dấu các phần tử phù hợp trong trang web. Nhấp vào thùng rác để xóa bộ lọc.",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -1996,7 +1996,7 @@ index ca2997d12364..d6b57919bcd3 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/zh_CN/messages.json b/platform/mv3/extension/_locales/zh_CN/messages.json
-index a18a367c9b22..1fd82856ec19 100644
+index 309342e09..83f995c9b 100644
 --- a/platform/mv3/extension/_locales/zh_CN/messages.json
 +++ b/platform/mv3/extension/_locales/zh_CN/messages.json
 @@ -1,6 +1,6 @@
@@ -2016,7 +2016,7 @@ index a18a367c9b22..1fd82856ec19 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "选择下面的过滤器以突出显示网页中匹配的元素。点击垃圾桶可移除过滤器。",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -2024,7 +2024,7 @@ index a18a367c9b22..1fd82856ec19 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/_locales/zh_TW/messages.json b/platform/mv3/extension/_locales/zh_TW/messages.json
-index d2fc4019ca39..5f6e921a2e04 100644
+index 4806cc07f..154f80950 100644
 --- a/platform/mv3/extension/_locales/zh_TW/messages.json
 +++ b/platform/mv3/extension/_locales/zh_TW/messages.json
 @@ -1,6 +1,6 @@
@@ -2044,7 +2044,7 @@ index d2fc4019ca39..5f6e921a2e04 100644
      "description": "English: uBO Lite — Dashboard"
    },
    "settingsPageName": {
-@@ -447,4 +447,4 @@
+@@ -459,4 +459,4 @@
      "message": "選取下方的過濾器，以突顯網頁中符合條件的元素。按一下回收桶可移除過濾器。",
      "description": "Summary description on how to use the tool to remove custom filters"
    }
@@ -2052,10 +2052,10 @@ index d2fc4019ca39..5f6e921a2e04 100644
 +}
 \ No newline at end of file
 diff --git a/platform/mv3/extension/dashboard.html b/platform/mv3/extension/dashboard.html
-index 6b5fc33bf53f..654c473bb26d 100644
+index 8b5fcecac..281651a81 100644
 --- a/platform/mv3/extension/dashboard.html
 +++ b/platform/mv3/extension/dashboard.html
-@@ -168,7 +168,7 @@
+@@ -169,7 +169,7 @@
      <div class="body">
          <div id="aboutNameVer" class="li"></div>
          <div class="liul">
@@ -2063,7 +2063,7 @@ index 6b5fc33bf53f..654c473bb26d 100644
 +            <div class="li">Based on uBlock Origin Lite. Copyright (C) Anatase 2026 & Raymond Hill 2014-present</div>
          </div>
          <div class="li"><a href="https://github.com/uBlockOrigin/uBOL-home/wiki/Privacy-policy" data-i18n="aboutPrivacyPolicy"></a></div>
-         <div class="li"><a href="https://github.com/uBlockOrigin/uBOL-home/releases" data-i18n="aboutChangelog"></a></div>
+         <div class="li"><a href="https://github.com/uBlockOrigin/uBOL-home/wiki" data-i18n="aboutDocumentation"></a></div>
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
@@ -2075,7 +2075,7 @@ Subject: be responsible and remove report an issue for now
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/platform/mv3/extension/popup.html b/platform/mv3/extension/popup.html
-index e648a0124919..76befe43cbd0 100644
+index e648a0124..76befe43c 100644
 --- a/platform/mv3/extension/popup.html
 +++ b/platform/mv3/extension/popup.html
 @@ -42,10 +42,10 @@
@@ -2102,7 +2102,7 @@ Subject: update colors to anatase
  1 file changed, 41 insertions(+), 41 deletions(-)
 
 diff --git a/src/css/themes/default.css b/src/css/themes/default.css
-index c78b4a255c51..bb39c7e35484 100644
+index c78b4a255..bb39c7e35 100644
 --- a/src/css/themes/default.css
 +++ b/src/css/themes/default.css
 @@ -101,25 +101,25 @@

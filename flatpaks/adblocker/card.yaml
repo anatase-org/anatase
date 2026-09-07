@@ -26,7 +26,7 @@ prepare: |
   #
   # Prepare ublock source
   #
-  UBLOCK_REF="1.72.0"
+  UBLOCK_REF="1.74.0"
   WEEK_MINUTES="$(( ($(date -u +%u) - 1) * 1440 + $(date -u +%-H) * 60 + $(date -u +%-M) ))"
   PACKAGE_VERSION="${version}.${WEEK_MINUTES}"
   SOURCE="uBlock-source.tar.gz"
@@ -95,7 +95,7 @@ specs:
     patch:
       type: git
       url: https://github.com/gorhill/uBlock.git
-      ref: 1.72.0
+      ref: 1.74.0
       file: overrides.patch
     packages:
       - anatase-browser-adblocker

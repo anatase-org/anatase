@@ -163,8 +163,8 @@ cp platform/mv3/extension/lib/s14e-serializer/s14e-serializer.js \
 
 ruleset_cache="$PWD/dist/build/mv3-data"
 rm -rf "$ruleset_cache"
-mkdir -p "$ruleset_cache"
-cp rulesets/* "$ruleset_cache"/
+mkdir -p "$ruleset_cache/$platform"
+cp rulesets/* "$ruleset_cache/$platform"/
 
 ubol_build_dir="$PWD/dist/build/mv3-nodejs"
 rm -rf "$ubol_build_dir"
@@ -173,7 +173,9 @@ mkdir -p "$ubol_build_dir"
 cp platform/mv3/*.json "$ubol_build_dir"/
 cp platform/mv3/*.js "$ubol_build_dir"/
 cp platform/mv3/*.mjs "$ubol_build_dir"/
+cp platform/mv3/extension/js/ubo-parser.js "$ubol_build_dir"/js/
 cp platform/mv3/extension/js/utils.js "$ubol_build_dir"/js/
+cp src/lib/punycode.js "$ubol_build_dir"/js/
 cp -R src/lib/regexanalyzer "$ubol_build_dir"/js/
 cp -R src/js/resources "$ubol_build_dir"/js/
 cp -R platform/mv3/scriptlets "$ubol_build_dir"/
