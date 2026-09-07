@@ -15,6 +15,7 @@ build-deps:
   - git-core
   - gzip
   - jq
+  - openssl
   - rpm-build
   - rpmdevtools
   - redhat-rpm-config
@@ -33,6 +34,7 @@ prepare: |
   SOURCE_CACHE="uBlock-source-${UBLOCK_REF}.tar.gz"
   SOURCE_DIR="uBlock-source"
   RULESETS="rulesets-${PACKAGE_VERSION}.tar.gz"
+  RULESETS_CACHE="rulesets-${UBLOCK_REF}-${PACKAGE_VERSION}-trusted-v1.tar.gz"
 
   sed -i -E "0,/^Version:[[:space:]]*.*/s//Version:        ${PACKAGE_VERSION}/" adblocker.spec
   mkdir -p /cache/artifacts
@@ -54,8 +56,8 @@ prepare: |
     cp -f "$SOURCE" "/cache/artifacts/${SOURCE_CACHE}"
   fi
 
-  if [ -f "/cache/artifacts/${RULESETS}" ]; then
-    cp -f "/cache/artifacts/${RULESETS}" .
+  if [ -f "/cache/artifacts/${RULESETS_CACHE}" ]; then
+    cp -f "/cache/artifacts/${RULESETS_CACHE}" "$RULESETS"
     exit 0
   fi
 
@@ -68,24 +70,36 @@ prepare: |
   #
 
   rm -rf rulesets
-  mkdir -p rulesets
+  mkdir -p rulesets/chromium
+  # The compiler must use the same secret to recognize our trust markers.
+  secret="$(openssl rand -hex 8)"
+  printf '%s' "$secret" > rulesets/secret.txt
   jq -c '.[] | select(.enabled == true) | select(((.excludedPlatforms // []) | index("chromium")) | not)' \
     "$SOURCE_DIR/platform/mv3/rulesets.json" |
   while IFS= read -r ruleset; do
     id="$(printf '%s\n' "$ruleset" | jq -r '.id')"
+    trusted="$(printf '%s\n' "$ruleset" | jq -r '.trusted == true')"
     urls="$(printf '%s\n' "$ruleset" | jq -r '.urls[]?')"
     if [ -z "$urls" ]; then
       continue
     fi
-    : > "rulesets/$id"
+    : > "rulesets/chromium/$id"
     printf '%s\n' "$urls" |
     while IFS= read -r url; do
-      curl -fL --retry 3 --retry-delay 2 "$url" >> "rulesets/$id"
-      printf '\n' >> "rulesets/$id"
+      # Match upstream fetchList's trusted asset / trusted URL checks.
+      url_trusted="$trusted"
+      case "$url" in
+        https://ublockorigin.github.io/uAssets/filters/*) url_trusted=true ;;
+      esac
+      if [ "$url_trusted" = true ]; then
+        printf '!#trusted on %s\n' "$secret" >> "rulesets/chromium/$id"
+      fi
+      curl -fL --retry 3 --retry-delay 2 "$url" >> "rulesets/chromium/$id"
+      printf '\n!#trusted off %s\n' "$secret" >> "rulesets/chromium/$id"
     done
   done
   tar -czf "$RULESETS" rulesets
-  cp -f "$RULESETS" /cache/artifacts/
+  cp -f "$RULESETS" "/cache/artifacts/${RULESETS_CACHE}"
   rm -rf "$SOURCE_DIR" rulesets
 
 specs:

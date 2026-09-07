@@ -164,7 +164,8 @@ cp platform/mv3/extension/lib/s14e-serializer/s14e-serializer.js \
 ruleset_cache="$PWD/dist/build/mv3-data"
 rm -rf "$ruleset_cache"
 mkdir -p "$ruleset_cache/$platform"
-cp rulesets/* "$ruleset_cache/$platform"/
+# Preserve the loader's trust-marker secret alongside its platform cache.
+cp -R rulesets/. "$ruleset_cache"/
 
 ubol_build_dir="$PWD/dist/build/mv3-nodejs"
 rm -rf "$ubol_build_dir"
