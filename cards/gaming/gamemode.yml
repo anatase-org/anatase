@@ -26,6 +26,8 @@ packages:
   # Base gcc deps, required by steam bootstrap
   - libnsl
   - libnsl.i686
+  # Steam's 32-bit client loads libnm for Game Mode Wi-Fi control.
+  - NetworkManager-libnm.i686
   # Mangohud lib32 deps
   - fmt.i686
   - spdlog.i686
