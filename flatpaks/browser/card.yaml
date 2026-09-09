@@ -120,10 +120,13 @@ postprocess: |-
 
   desktop_file="app/share/applications/chromium-browser.desktop"
   if [ -f "$desktop_file" ]; then
+      # GLib requires StartupNotify to forward the portal's activation token.
       sed -i \
           -e '/^Name\[/d' \
           -e 's|^Name=.*|Name=Anatase Browser|' \
           -e 's|^Icon=.*|Icon=chromium-browser|' \
+          -e '/^StartupNotify=/d' \
+          -e '/^\[Desktop Entry\]$/a StartupNotify=true' \
           "$desktop_file"
   fi
 
