@@ -6,7 +6,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 
 INFO_LABEL = "org.anatase.ludos.info"
@@ -17,14 +17,14 @@ SOURCE_LABEL = "org.opencontainers.image.source"
 FEDORA_RELEASE = re.compile(r"\.fc\d+")
 GIT_HASH = re.compile(r"(\+git\.\d+\.g)([0-9a-f]{5})[0-9a-f]+")
 MAJOR_PACKAGES = {
-    "Kernel": "kernel-core",
-    "Firmware": "atheros-firmware",
-    "Mesa": "mesa-filesystem",
-    "Nvidia": "nvidia-driver",
-    "Gamescope": "gamescope",
-    "KDE": "plasma-desktop",
-    "HHD": "hhd",
-    "Spaces": "spaces",
+    "Kernel": ("kernel-core", "kernel-common"),
+    "Firmware": ("atheros-firmware",),
+    "Mesa": ("mesa-filesystem",),
+    "Nvidia": ("nvidia-driver",),
+    "Gamescope": ("gamescope",),
+    "KDE": ("plasma-desktop",),
+    "HHD": ("hhd",),
+    "Spaces": ("spaces",),
 }
 
 
@@ -65,28 +65,92 @@ def format_version(previous: str | None, current: str | None) -> str:
     return f"{previous} ➡️ {current}"
 
 
+def major_package_version(
+    package_versions: dict[str, str], package_names: tuple[str, ...]
+) -> str | None:
+    return next(
+        (package_versions[name] for name in package_names if name in package_versions),
+        None,
+    )
+
+
 def major_packages(previous: dict[str, str], current: dict[str, str]) -> str:
     rows = []
-    for display_name, package_name in MAJOR_PACKAGES.items():
-        if package_name not in previous and package_name not in current:
+    for display_name, package_names in MAJOR_PACKAGES.items():
+        old = major_package_version(previous, package_names)
+        new = major_package_version(current, package_names)
+        if old is None and new is None:
             continue
-        rows.append(
-            f"| **{display_name}** | "
-            f"{format_version(previous.get(package_name), current.get(package_name))} |"
-        )
+        rows.append(f"| **{display_name}** | {format_version(old, new)} |")
 
     if not rows:
         return ""
     return "### Major packages\n\n| Name | Version |\n| --- | --- |\n" + "\n".join(rows)
 
 
-def package_changes(previous: dict[str, str], current: dict[str, str]) -> str:
+def major_packages_for_images(
+    images: Sequence[tuple[str, dict[str, Any] | None, dict[str, Any]]],
+) -> str:
+    package_sets = [
+        (
+            name,
+            packages(previous) if previous is not None else {},
+            packages(current),
+        )
+        for name, previous, current in images
+    ]
+    rows = []
+    for display_name, package_names in MAJOR_PACKAGES.items():
+        if not any(
+            major_package_version(previous, package_names) is not None
+            or major_package_version(current, package_names) is not None
+            for _name, previous, current in package_sets
+        ):
+            continue
+        image_versions = [
+            (
+                name,
+                format_version(
+                    major_package_version(previous, package_names),
+                    major_package_version(current, package_names),
+                ),
+            )
+            for name, previous, current in package_sets
+        ]
+        versions = {value for _name, value in image_versions}
+        if len(versions) == 1:
+            value = image_versions[0][1]
+        else:
+            value = "<br>".join(
+                f"**{name}:** {image_version or 'Not installed'}"
+                for name, image_version in image_versions
+            )
+        rows.append(f"| **{display_name}** | {value} |")
+
+    if not rows:
+        return ""
+    return (
+        "### Major packages\n\n"
+        "| Name | Version |\n"
+        "| --- | --- |\n"
+        + "\n".join(rows)
+    )
+
+
+def package_changes(
+    previous: dict[str, str], current: dict[str, str], heading: str = "Packages"
+) -> str:
     rows = []
     seen_versions: set[tuple[str | None, str | None]] = set()
+    major_package_names = {
+        package_name
+        for package_names in MAJOR_PACKAGES.values()
+        for package_name in package_names
+    }
     major_versions = {
         versions.get(package_name)
         for versions in (previous, current)
-        for package_name in MAJOR_PACKAGES.values()
+        for package_name in major_package_names
     } - {None}
 
     for name in sorted(previous.keys() | current.keys()):
@@ -94,7 +158,7 @@ def package_changes(previous: dict[str, str], current: dict[str, str]) -> str:
         new = current.get(name)
         change = (old, new)
 
-        if old == new or name in MAJOR_PACKAGES.values():
+        if old == new or name in major_package_names:
             continue
         if old in major_versions or new in major_versions:
             continue
@@ -112,11 +176,28 @@ def package_changes(previous: dict[str, str], current: dict[str, str]) -> str:
     if not rows:
         return ""
     return (
-        "### Packages\n\n"
+        f"### {heading}\n\n"
         "| | Name | Previous | New |\n"
         "| --- | --- | --- | --- |\n"
         + "\n".join(rows)
     )
+
+
+def package_changes_for_images(
+    images: Sequence[tuple[str, dict[str, Any] | None, dict[str, Any]]],
+) -> str:
+    sections = []
+    for name, previous, current in images:
+        if previous is None:
+            continue
+        changes = package_changes(
+            packages(previous),
+            packages(current),
+            heading=f"Packages ({name})",
+        )
+        if changes:
+            sections.append(changes)
+    return "\n\n".join(sections)
 
 
 def commits(previous: dict[str, Any], current: dict[str, Any]) -> str:
@@ -174,20 +255,24 @@ def commits(previous: dict[str, Any], current: dict[str, Any]) -> str:
 
 
 def changelog(
-    previous: dict[str, Any], current: dict[str, Any], channel: str | None = None
+    previous: dict[str, Any],
+    current: dict[str, Any],
+    channel: str | None = None,
+    *,
+    image_name: str = "Image",
+    additional_images: Sequence[tuple[str, dict[str, Any] | None, dict[str, Any]]] = (),
 ) -> str:
     previous_version = version(previous)
-    previous_packages = packages(previous)
-    current_packages = packages(current)
+    images = ((image_name, previous, current), *additional_images)
 
     sections = [
         (
             f"From previous {f'`{channel.lower()}` ' if channel else ''}version "
             f"`{previous_version}` there are the following changes. Only one package name is shown for each version."
         ),
-        major_packages(previous_packages, current_packages),
+        major_packages_for_images(images),
         commits(previous, current),
-        package_changes(previous_packages, current_packages),
+        package_changes_for_images(images),
     ]
     return "\n\n".join(section for section in sections if section) + "\n"
 
@@ -198,12 +283,40 @@ def main() -> None:
     )
     parser.add_argument("previous", type=Path, help="Previous manifest JSON")
     parser.add_argument("current", type=Path, help="Current manifest JSON")
+    parser.add_argument(
+        "--image-name",
+        default="Image",
+        help="Name shown for the positional manifest pair",
+    )
+    parser.add_argument(
+        "--image",
+        action="append",
+        nargs=3,
+        default=[],
+        metavar=("NAME", "PREVIOUS", "CURRENT"),
+        help=(
+            "Additional named image pair. Use '-' for PREVIOUS when that image "
+            "did not exist in the previous release."
+        ),
+    )
     parser.add_argument("--channel", help="Release channel shown in the introduction")
     args = parser.parse_args()
 
+    additional_images = tuple(
+        (
+            name,
+            None if previous == "-" else load_manifest(Path(previous)),
+            load_manifest(Path(current)),
+        )
+        for name, previous, current in args.image
+    )
     print(
         changelog(
-            load_manifest(args.previous), load_manifest(args.current), args.channel
+            load_manifest(args.previous),
+            load_manifest(args.current),
+            args.channel,
+            image_name=args.image_name,
+            additional_images=additional_images,
         ),
         end="",
     )

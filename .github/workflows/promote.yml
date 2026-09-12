@@ -68,6 +68,17 @@ jobs:
           skopeo --override-arch amd64 inspect --no-tags \
             docker://i.anatase.org/anatase:rolling \
             > current-rolling.json
+          previous_aarch64=-
+          if skopeo --override-arch arm64 inspect --no-tags \
+              docker://i.anatase.org/anatase:stable \
+              > previous-stable-aarch64.json; then
+            previous_aarch64=previous-stable-aarch64.json
+          else
+            echo "No previous stable aarch64 image; omitting its package comparison"
+          fi
+          skopeo --override-arch arm64 inspect --no-tags \
+            docker://i.anatase.org/anatase:rolling \
+            > current-rolling-aarch64.json
 
           version=$(jq -r \
             '.Labels["org.opencontainers.image.version"] // empty' \
@@ -82,6 +93,8 @@ jobs:
 
           venv/bin/python .github/changelog.py \
             previous-stable.json current-rolling.json \
+            --image-name x86_64 \
+            --image aarch64 "$previous_aarch64" current-rolling-aarch64.json \
             --channel stable > changelog.md
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "revision=$revision" >> "$GITHUB_OUTPUT"

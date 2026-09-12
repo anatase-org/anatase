@@ -131,8 +131,21 @@ jobs:
           skopeo inspect --no-tags \
             "docker://i.anatase.org/anatase:${LUDOS_INTERIM_PREFIX}x86_64" \
             > current-x86_64.json
+          previous_aarch64=-
+          if skopeo --override-arch arm64 inspect --no-tags \
+              "docker://i.anatase.org/anatase:$LUDOS_CHANNEL" \
+              > previous-aarch64.json; then
+            previous_aarch64=previous-aarch64.json
+          else
+            echo "No previous $LUDOS_CHANNEL aarch64 image; omitting its package comparison"
+          fi
+          skopeo inspect --no-tags \
+            "docker://i.anatase.org/anatase:${LUDOS_INTERIM_PREFIX}aarch64" \
+            > current-aarch64.json
           venv/bin/python .github/changelog.py \
             previous-channel.json current-x86_64.json \
+            --image-name x86_64 \
+            --image aarch64 "$previous_aarch64" current-aarch64.json \
             --channel "$LUDOS_CHANNEL" > changelog.md
 
       - name: Publish OCI image index
