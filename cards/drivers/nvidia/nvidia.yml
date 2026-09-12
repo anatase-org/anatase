@@ -48,18 +48,19 @@ packages:
   - libselinux-utils
 
   # 32-bit driver compatibility libraries
-  - egl-gbm.i686
-  - egl-wayland2.i686
-  - egl-x11.i686
-  - libX11.i686
-  - libXext.i686
-  - libglvnd.i686
-  - libglvnd-egl.i686
-  - libglvnd-gles.i686
-  - libglvnd-glx.i686
-  - libglvnd-opengl.i686
-  - libvdpau.i686
-  - vulkan-loader.i686
+  - x86_64:
+    - egl-gbm.i686
+    - egl-wayland2.i686
+    - egl-x11.i686
+    - libX11.i686
+    - libXext.i686
+    - libglvnd.i686
+    - libglvnd-egl.i686
+    - libglvnd-gles.i686
+    - libglvnd-glx.i686
+    - libglvnd-opengl.i686
+    - libvdpau.i686
+    - vulkan-loader.i686
 
 build-deps:
   - bash
@@ -154,22 +155,14 @@ specs:
 
   - spec: nvidia-driver/nvidia-driver.spec
     packages:
-      aarch64:
-        - nvidia-driver
-        - nvidia-driver-libs
-        - nvidia-driver-cuda
-        - nvidia-driver-cuda-libs
-        - nvidia-driver-common
-        - libnvidia-fbc
-        - xorg-x11-nvidia
-      x86_64:
-        - nvidia-driver
-        - nvidia-driver-libs
-        - nvidia-driver-cuda
-        - nvidia-driver-cuda-libs
-        - nvidia-driver-common
-        - libnvidia-fbc
-        - xorg-x11-nvidia
+      - nvidia-driver
+      - nvidia-driver-libs
+      - nvidia-driver-cuda
+      - nvidia-driver-cuda-libs
+      - nvidia-driver-common
+      - libnvidia-fbc
+      - xorg-x11-nvidia
+      - x86_64:
         - nvidia-driver-libs.i686
         - nvidia-driver-cuda-libs.i686
         - nvidia-driver-common.i686

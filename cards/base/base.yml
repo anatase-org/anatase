@@ -167,15 +167,16 @@ packages:
   # Hardware support
   - b43-fwcutter
   - b43-openfwwf
-  - intel-lpmd
-  - libva-intel-media-driver
-  - microcode_ctl
   - pciutils
   - prefixdevname
   - thermald
   - usb_modeswitch
   - usbutils
   - alsa-sof-firmware
+  - x86_64:
+    - intel-lpmd
+    - libva-intel-media-driver
+    - microcode_ctl
 
   # Boot and splash
   - plymouth

@@ -25,13 +25,14 @@ packages:
   - xcb-util-errors
   # Base gcc deps, required by steam bootstrap
   - libnsl
-  - libnsl.i686
-  # Steam's 32-bit client loads libnm for Game Mode Wi-Fi control.
-  - NetworkManager-libnm.i686
-  # Mangohud lib32 deps
-  - fmt.i686
-  - spdlog.i686
-  - libxkbcommon.i686
+  - x86_64:
+    - libnsl.i686
+    # Steam's 32-bit client loads libnm for Game Mode Wi-Fi control.
+    - NetworkManager-libnm.i686
+    # Mangohud lib32 deps
+    - fmt.i686
+    - spdlog.i686
+    - libxkbcommon.i686
   # Host D-Bus service used by the Steam Flatpak for battery information.
   - upower
   # Automount
@@ -70,7 +71,8 @@ specs:
       - stb.pc
     packages:
       - gamescope
-      - gamescope.i686
+      - x86_64:
+        - gamescope.i686
     upstream:
       type: dist-git
       url: https://src.fedoraproject.org/rpms/gamescope
@@ -87,7 +89,8 @@ specs:
       - overrides.patch
     packages:
       - mangohud
-      - mangohud.i686
+      - x86_64:
+        - mangohud.i686
     upstream:
       type: dist-git
       url: https://src.fedoraproject.org/rpms/mangohud

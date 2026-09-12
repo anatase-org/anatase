@@ -2,18 +2,23 @@ version: 1
 
 packages:
     - mtools
-
-oci:
     - efibootmgr
     # Fedora shims
-    - shim-ia32
-    - shim-x64
+    - x86_64:
+        - shim-ia32
+        - shim-x64
+      aarch64:
+        - shim-aa64
+oci:
     # Our grub + fwupd efi
     - oci: sb-efi
       packages:
         - fwupd-efi
-        - grub2-efi-ia32
-        - grub2-efi-x64
+        - x86_64:
+            - grub2-efi-ia32
+            - grub2-efi-x64
+          aarch64:
+            - grub2-efi-aa64
         - grub2-common
         - grub2-tools
         - grub2-tools-minimal

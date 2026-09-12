@@ -73,7 +73,8 @@ packages:
   - qemu-guest-agent
   - spice-vdagent
   - spice-webdavd
-  - virtualbox-guest-additions
+  - x86_64:
+    - virtualbox-guest-additions
 
   # Multi-gpu
   - switcheroo-control
