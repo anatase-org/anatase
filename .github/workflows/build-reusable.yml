@@ -30,6 +30,7 @@ permissions:
 env:
   ARCH: ${{ inputs.arch }}
   LUDOS_CHANNEL: ${{ github.ref_name == 'testing' && 'testing' || 'rolling' }}
+  LUDOS_INTERIM_PREFIX: ${{ github.ref_name == 'testing' && 'testing-' || '' }}
   OCI_ARCH: ${{ inputs.arch == 'aarch64' && 'arm64' || 'amd64' }}
 
 concurrency:
@@ -357,7 +358,7 @@ jobs:
             echo "No matching $OCI_ARCH stable manifest; exporting without a previous manifest"
           fi
           venv/bin/ludos ci upload "${{ matrix.image.id }}" \
-            --tag "$ARCH" "${previous[@]}"
+            --tag "${LUDOS_INTERIM_PREFIX}${ARCH}" "${previous[@]}"
 
   flatpaks:
     name: Flatpaks

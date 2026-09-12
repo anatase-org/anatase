@@ -30,6 +30,7 @@ permissions:
 
 env:
   LUDOS_CHANNEL: ${{ github.ref_name == 'testing' && 'testing' || 'rolling' }}
+  LUDOS_INTERIM_PREFIX: ${{ github.ref_name == 'testing' && 'testing-' || '' }}
 
 concurrency:
   group: build-${{ github.ref_name == 'testing' && 'testing' || 'rolling' }}
@@ -95,23 +96,25 @@ jobs:
       - name: Resolve image version
         id: image
         run: |
+          x86_tag="${LUDOS_INTERIM_PREFIX}x86_64"
+          arm_tag="${LUDOS_INTERIM_PREFIX}aarch64"
           version=$(skopeo inspect --no-tags \
-            docker://i.anatase.org/anatase:x86_64 \
+            "docker://i.anatase.org/anatase:$x86_tag" \
             | jq -r '.Labels["org.opencontainers.image.version"] // empty')
           if [[ -z "$version" ]]; then
-            echo "x86_64 image has no version label" >&2
+            echo "$x86_tag image has no version label" >&2
             exit 1
           fi
 
           arm_version=$(skopeo inspect --no-tags \
-            docker://i.anatase.org/anatase:aarch64 \
+            "docker://i.anatase.org/anatase:$arm_tag" \
             | jq -r '.Labels["org.opencontainers.image.version"] // empty')
           if [[ -z "$arm_version" ]]; then
-            echo "aarch64 image has no version label" >&2
+            echo "$arm_tag image has no version label" >&2
             exit 1
           fi
           if [[ "$arm_version" != "$version" ]]; then
-            echo "Architecture image versions differ: x86_64=$version aarch64=$arm_version" >&2
+            echo "Architecture image versions differ: $x86_tag=$version $arm_tag=$arm_version" >&2
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -126,7 +129,7 @@ jobs:
             exit 0
           fi
           skopeo inspect --no-tags \
-            docker://i.anatase.org/anatase:x86_64 \
+            "docker://i.anatase.org/anatase:${LUDOS_INTERIM_PREFIX}x86_64" \
             > current-x86_64.json
           venv/bin/python .github/changelog.py \
             previous-channel.json current-x86_64.json \
@@ -140,7 +143,10 @@ jobs:
           LUDOS_COSIGN_KEY: ${{ secrets.LUDOS_COSIGN_KEY }}
           LUDOS_COSIGN_CERT: ${{ secrets.LUDOS_COSIGN_CERT }}
         run: |
-          sources=(--source-tag x86_64 --source-tag aarch64)
+          sources=(
+            --source-tag "${LUDOS_INTERIM_PREFIX}x86_64"
+            --source-tag "${LUDOS_INTERIM_PREFIX}aarch64"
+          )
           tags=(--tag "$LUDOS_CHANNEL")
           if [[ "$LUDOS_CHANNEL" == "rolling" ]]; then
             tags+=(--tag latest)
