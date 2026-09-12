@@ -8,7 +8,10 @@ packages:
 oci:
     - oci: kernel
       packages:
-        - kernel-core
+        - x86_64:
+            - kernel-core
+          aarch64:
+            - kernel-uki-dtbloader
         - kernel-modules
         - kernel-modules-core
         - kernel-modules-extra
@@ -21,6 +24,11 @@ oci:
 
 postprocess: |
     set -eux
+
+    for dtbloader in /usr/lib/modules/*/vmlinuz-dtbloader.efi; do
+        [ -e "${dtbloader}" ] || continue
+        ln "${dtbloader}" "${dtbloader%/vmlinuz-dtbloader.efi}/vmlinuz"
+    done
 
     install -dm0755 /usr/lib/dracut/dracut.conf.d
 
