@@ -1,12 +1,12 @@
 plasma-setup:
-  upstream-sha: b912d84866cb2236b473abb639aab4a3482ed2db
-  patch-sha: b3b8648bf0fdd0fb9b0335d5e15aa55124a07c85
+  upstream-sha: c78852f0d147e3e0f09dc53cc053115e338d863a
+  patch-sha: 6089b09b2c4f9b95f58da5c7f2a2d65faf9ba7bd
 kwin:
-  patch-sha: 8438567a741826da8b7536a8b10eb3af8fc8820d
-  upstream-sha: 08334a4212c2e408045c144276520542cb682705
+  patch-sha: ab7df7ccb7c6af20f4b279cd6220f7cd3d2267d7
+  upstream-sha: 0b84e2e267a40c8a9de2a891fd08d581e12dc096
 plasma-mobile:
-  patch-sha: f2558e003b79b3c4dfd9476487422d258a19b61b
-  upstream-sha: cf8955ab2e16d6ca7ae265d1e11f66994b33efbf
+  patch-sha: 10773c81e36b322f307737391f836126d1115277
+  upstream-sha: 9ab8b8ffdf941aab55c5f3a7e9418d8e83cd7696
 plasma-login-manager:
-  patch-sha: 2c1ee2de10d5a1489a8b1d78e8fa759e7bd15737
-  upstream-sha: 2419348da91e33577a7e808c9dbb916b0c4bfd87
+  patch-sha: e63894e7923db053413915ea582db2757303ca8f
+  upstream-sha: f2e2d40bca2cbf4334610bd4df285dfa82c73762

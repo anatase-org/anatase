@@ -119,7 +119,7 @@ Subject: make controller presses translate to enter to attempt a login
  create mode 100644 src/frontend/greeter/controllerinput.h
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 52af3b61b437..b03e19e22845 100644
+index 160989f6f8f6..35fc0eeb9d01 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -58,6 +58,8 @@ pkg_check_modules(SYSTEMD REQUIRED "systemd")
