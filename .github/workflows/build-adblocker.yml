@@ -21,6 +21,7 @@ jobs:
       matrix:
         arch:
           - x86_64
+          - aarch64
     env:
       ARCH: ${{ matrix.arch }}
       OCI_ARCH: ${{ matrix.arch == 'aarch64' && 'arm64' || 'amd64' }}

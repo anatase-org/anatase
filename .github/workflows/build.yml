@@ -10,11 +10,6 @@ on:
         required: false
         type: boolean
         default: false
-    #   arm:
-    #     description: Build the ARM image
-    #     required: false
-    #     type: boolean
-    #     default: false
   push:
     branches:
       - main
@@ -50,31 +45,31 @@ jobs:
       release_outputs: ${{ github.event_name != 'schedule' }}
     secrets: inherit
 
-  # arm:
-  #   name: Build aarch64
-  #   if: ${{ inputs.arm }}
-  #   uses: ./.github/workflows/build-reusable.yml
-  #   with:
-  #     arch: aarch64
-  #   secrets: inherit
+  arm:
+    name: Build aarch64
+    uses: ./.github/workflows/build-reusable.yml
+    with:
+      arch: aarch64
+      refresh_cache: ${{ github.event_name == 'workflow_dispatch' && inputs.refresh_cache || false }}
+      release_outputs: ${{ github.event_name != 'schedule' }}
+    secrets: inherit
 
   publish:
     name: Publish multi-platform image
     environment: prod
     needs:
       - x86
-      # - arm
+      - arm
     if: >-
       ${{
         (!cancelled()) &&
         github.event_name != 'schedule' &&
         needs.x86.result == 'success' &&
-        needs.x86.outputs.images != '[]'
+        needs.arm.result == 'success' &&
+        needs.x86.outputs.images != '[]' &&
+        needs.arm.outputs.images != '[]'
         }}
     runs-on: ubuntu-26.04
-        # Add this later
-        # &&
-        # (needs.arm.result == 'success' || needs.arm.result == 'skipped')
 
     steps:
       - name: Checkout
@@ -99,8 +94,6 @@ jobs:
 
       - name: Resolve image version
         id: image
-        env:
-          ARM_ENABLED: ${{ inputs.arm }}
         run: |
           version=$(skopeo inspect --no-tags \
             docker://i.anatase.org/anatase:x86_64 \
@@ -110,26 +103,18 @@ jobs:
             exit 1
           fi
 
-          include_arm=false
-          if arm_info=$(skopeo inspect --no-tags \
-              docker://i.anatase.org/anatase:aarch64 2>/dev/null); then
-            include_arm=true
-            arm_version=$(jq -r \
-              '.Labels["org.opencontainers.image.version"] // empty' \
-              <<< "$arm_info")
-          elif [[ "$ARM_ENABLED" == "true" ]]; then
-            echo "The requested aarch64 image was not published" >&2
+          arm_version=$(skopeo inspect --no-tags \
+            docker://i.anatase.org/anatase:aarch64 \
+            | jq -r '.Labels["org.opencontainers.image.version"] // empty')
+          if [[ -z "$arm_version" ]]; then
+            echo "aarch64 image has no version label" >&2
             exit 1
           fi
-
-          if [[ "$ARM_ENABLED" == "true" ]]; then
-            if [[ "$arm_version" != "$version" ]]; then
-              echo "Architecture image versions differ: x86_64=$version aarch64=$arm_version" >&2
-              exit 1
-            fi
+          if [[ "$arm_version" != "$version" ]]; then
+            echo "Architecture image versions differ: x86_64=$version aarch64=$arm_version" >&2
+            exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "include_arm=$include_arm" >> "$GITHUB_OUTPUT"
 
       - name: Generate changelog
         run: |
@@ -149,18 +134,14 @@ jobs:
 
       - name: Publish OCI image index
         env:
-          INCLUDE_ARM: ${{ steps.image.outputs.include_arm }}
           LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
           LUDOS_S3_KEY: ${{ secrets.LUDOS_S3_KEY }}
           LUDOS_S3_SECRET: ${{ secrets.LUDOS_S3_SECRET }}
           LUDOS_COSIGN_KEY: ${{ secrets.LUDOS_COSIGN_KEY }}
           LUDOS_COSIGN_CERT: ${{ secrets.LUDOS_COSIGN_CERT }}
         run: |
-          sources=(--source-tag x86_64)
+          sources=(--source-tag x86_64 --source-tag aarch64)
           tags=(--tag "$LUDOS_CHANNEL")
-          if [[ "$INCLUDE_ARM" == "true" ]]; then
-            sources+=(--source-tag aarch64)
-          fi
           if [[ "$LUDOS_CHANNEL" == "rolling" ]]; then
             tags+=(--tag latest)
           fi

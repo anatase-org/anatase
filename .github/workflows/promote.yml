@@ -110,8 +110,8 @@ jobs:
               --flatpaks
               --refresh
               --arch x86_64
+              --arch aarch64
               )
-              # --arch aarch64 # lets skip you for now, until builds start
           fi
           venv/bin/ludos ci promote "${args[@]}"
 
