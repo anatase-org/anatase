@@ -114,20 +114,19 @@ build-deps:
 specs:
   - spec: steam.spec
     packages:
-      x86_64:
-        - steam
+      - steam
     files:
       - steam.spec
       - steam-makefile.patch
       - steam-no-icon-on-desktop.patch
+      - steam-arm64-bootstrap.patch
     upstream:
       type: dist-git
       url: https://github.com/negativo17/steam
 
   - spec: steam_helpers/steam_notif_daemon.spec
     packages:
-      x86_64:
-        - steam_notif_daemon
+      - steam_notif_daemon
     files:
       - steam_notif_daemon.spec
 

@@ -1,0 +1,61 @@
+--- a/bin_steam.sh
++++ b/bin_steam.sh
+@@ -116,9 +116,10 @@
+ 
+ function detect_platform()
+ {
+-	# Maybe be smarter someday
+-	# Right now this is the only platform we have a bootstrap for, so hard-code it.
+-	echo ubuntu12_32
++	case "$(uname -m)" in
++		aarch64) echo linuxarm64 ;;
++		*) echo ubuntu12_32 ;;
++	esac
+ }
+ 
+ function setup_variables()
+@@ -138,6 +139,9 @@
+ 	LAUNCHSTEAMDIR="$(readlink -e -q "$STEAMDATALINK" || true)"
+ 	# Normally 'ubuntu12_32'
+ 	LAUNCHSTEAMPLATFORM="$(detect_platform)"
++	if [ "$LAUNCHSTEAMPLATFORM" = linuxarm64 ]; then
++		STEAMBOOTSTRAP=steamrtarm64/steam
++	fi
+ 	# Often in /usr/lib/steam
+ 	LAUNCHSTEAMBOOTSTRAPFILE="$bootstrapdir/bootstraplinux_$LAUNCHSTEAMPLATFORM.tar.xz"
+ 	if [ ! -f "$LAUNCHSTEAMBOOTSTRAPFILE" ]; then
+@@ -203,7 +207,7 @@
+	# this script we assume that ~/.steam/steam and ~/.steam/root
+ 	# are the same: they only differ in developer use-cases which
+ 	# also bypass this script
+-	local srt="${STEAM_RUNTIME_SCOUT:-"$data/ubuntu12_32/steam-runtime"}"
++	local srt="${STEAM_RUNTIME_SCOUT:-"$data/$LAUNCHSTEAMPLATFORM/steam-runtime"}"
+ 	local argv="$2"
+ 
+ 	if [[ -n "$data" && -x "$data/$STEAMBOOTSTRAP" ]]; then
+@@ -217,6 +221,10 @@
+ 
+ function forward_command_line()
+ {
++	if [ "$LAUNCHSTEAMPLATFORM" = linuxarm64 ]; then
++		return 1
++	fi
++
+ 	if ! [ -p "$STEAMCONFIG/steam.pipe" ]; then
+ 		return 1
+ 	fi
+@@ -282,6 +290,13 @@
+ fi
+ 
+ # go to the install directory and run the client
+-cd "$LAUNCHSTEAMDIR"
++if [ "$LAUNCHSTEAMPLATFORM" = linuxarm64 ]; then
++	ln -fns "$LAUNCHSTEAMDIR" "$STEAMCONFIG/root"
++	ln -fns "$LAUNCHSTEAMDIR/linuxarm64" "$STEAMCONFIG/sdkarm64"
++	export LD_LIBRARY_PATH="$LAUNCHSTEAMDIR/steamrtarm64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
++	cd "$LAUNCHSTEAMDIR/steamrtarm64"
++else
++	cd "$LAUNCHSTEAMDIR"
++fi
+ 
+ exec "$LAUNCHSTEAMDIR/$STEAMBOOTSTRAP" ${log_opened+-srt-logger-opened} "$@"
