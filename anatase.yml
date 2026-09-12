@@ -79,8 +79,8 @@ flatpaks:
   - flatpaks/kcalc
   - flatpaks/okular
   - flatpaks/steam
-  - flatpaks/browser
-  - flatpaks/adblocker
+  # - flatpaks/browser
+  # - flatpaks/adblocker
 
 installer:
   ostree: True
