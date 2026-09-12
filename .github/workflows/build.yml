@@ -32,7 +32,7 @@ env:
   LUDOS_CHANNEL: ${{ github.ref_name == 'testing' && 'testing' || 'rolling' }}
 
 concurrency:
-  group: build
+  group: build-${{ github.ref_name == 'testing' && 'testing' || 'rolling' }}
   queue: single
 
 jobs:

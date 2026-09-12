@@ -33,7 +33,7 @@ env:
   OCI_ARCH: ${{ inputs.arch == 'aarch64' && 'arm64' || 'amd64' }}
 
 concurrency:
-  group: anatase-build-${{ inputs.arch }}
+  group: anatase-build-${{ github.ref_name == 'testing' && 'testing' || 'rolling' }}-${{ inputs.arch }}
   cancel-in-progress: true
 
 jobs:
