@@ -17,14 +17,15 @@ oci:
         - x86_64:
             - grub2-efi-ia32
             - grub2-efi-x64
+            - grub2-pc
+            - grub2-pc-modules
           aarch64:
             - grub2-efi-aa64
+            - grub2-efi-aa64-modules
         - grub2-common
         - grub2-tools
         - grub2-tools-minimal
         - grub2-tools-extra
-        - grub2-pc
-        - grub2-pc-modules
 files:
     - grub_boot_minimal.cfg
     - grub_boot_otheros.cfg
