@@ -96,9 +96,9 @@ installer:
         - org.anatase.TextEditor
         - org.anatase.Calculator
         - org.anatase.DocumentViewer
-        # Codecs, sigh, but this is for end users
-        - org.anatase.Browser
-        - org.anatase.Browser.Adblocker
+        - x86_64:
+          - org.anatase.Browser
+          - org.anatase.Browser.Adblocker
       installer:
 
   files:
