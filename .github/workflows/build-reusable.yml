@@ -88,11 +88,15 @@ jobs:
           REFRESH_CACHE: ${{ inputs.refresh_cache }}
         run: |
           # Derive dist from previous
-          venv/bin/ludos ci env anatase.yml \
-            "i.anatase.org/anatase:${LUDOS_CHANNEL}" --arch amd64
-          if [[ "$LUDOS_CHANNEL" == "testing" ]]; then
-            echo "prefix=${LUDOS_CHANNEL}-" >> .env
+          env_args=(
+            anatase.yml
+            "i.anatase.org/anatase:${LUDOS_CHANNEL}"
+            --arch amd64
+          )
+          if [[ -n "$LUDOS_INTERIM_PREFIX" ]]; then
+            env_args+=(--prefix "$LUDOS_INTERIM_PREFIX")
           fi
+          venv/bin/ludos ci env "${env_args[@]}"
           args=(anatase.yml)
           if [[ "$REFRESH_CACHE" == "true" ]]; then
             args+=(--recreate)

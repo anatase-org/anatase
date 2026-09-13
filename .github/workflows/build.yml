@@ -193,9 +193,6 @@ jobs:
         run: |
           channel_title="${LUDOS_CHANNEL^}"
           release_tag="$VERSION"
-          if [[ "$LUDOS_CHANNEL" == "testing" ]]; then
-            release_tag="testing-$VERSION"
-          fi
           gh release create "$release_tag" \
             --target "$GITHUB_SHA" \
             --title "$VERSION: $channel_title Release" \
