@@ -196,3 +196,58 @@ ovmf_select_firmware() {
         fi
     fi
 }
+
+arm_secure_boot_cache_assets() {
+    local output_dir="${cache_dir}/edk2-aarch64"
+    local image=${ARM_FIRMWARE_IMAGE:-localhost/images:anatase}
+
+    if ! command -v podman >/dev/null 2>&1; then
+        printf 'Secure Boot capable AArch64 firmware was not found, and podman is unavailable to fetch it.\n' >&2
+        return 1
+    fi
+    if ! podman image exists "${image}"; then
+        image=registry.fedoraproject.org/fedora:44
+    fi
+
+    mkdir -p "${output_dir}"
+    printf '==> Fetching Secure Boot capable AArch64 firmware from Fedora\n'
+    podman run --rm \
+        --volume "${output_dir}:/output:Z" \
+        "${image}" \
+        bash -ceu '
+            dnf -y install edk2-aarch64 >/dev/null
+            install -m 0644 \
+                /usr/share/edk2/aarch64/QEMU_EFI.qemuvars.fd \
+                /output/QEMU_EFI.qemuvars.fd
+            install -m 0644 \
+                /usr/share/edk2/aarch64/vars.secboot.json \
+                /output/vars.secboot.json
+        '
+}
+
+arm_secure_boot_select_firmware() {
+    local requested_code=${1:-}
+    local requested_template=${2:-}
+    local directory
+
+    arm_secure_boot_code=${requested_code}
+    arm_secure_boot_template=${requested_template}
+
+    if [[ -n "${arm_secure_boot_code}" || -n "${arm_secure_boot_template}" ]]; then
+        return
+    fi
+
+    for directory in \
+        /usr/share/edk2/aarch64 \
+        "${cache_dir}/edk2-aarch64"; do
+        if [[ -s "${directory}/QEMU_EFI.qemuvars.fd" && -s "${directory}/vars.secboot.json" ]]; then
+            arm_secure_boot_code="${directory}/QEMU_EFI.qemuvars.fd"
+            arm_secure_boot_template="${directory}/vars.secboot.json"
+            return
+        fi
+    done
+
+    arm_secure_boot_cache_assets
+    arm_secure_boot_code="${cache_dir}/edk2-aarch64/QEMU_EFI.qemuvars.fd"
+    arm_secure_boot_template="${cache_dir}/edk2-aarch64/vars.secboot.json"
+}

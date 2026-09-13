@@ -11,14 +11,11 @@ VM_MEMORY=${VM_MEMORY:-8192}
 VM_CPUS=${VM_CPUS:-4}
 VM_SSH_PORT=${VM_SSH_PORT:-2222}
 BIOS=${BIOS:-0}
-VM_SECURE_BOOT=${VM_SECURE_BOOT:-1}
-QEMU_BIN=${QEMU_BIN:-qemu-system-x86_64}
 QEMU_DISPLAY=${QEMU_DISPLAY:-gtk}
 QEMU_VGA=${QEMU_VGA:-virtio}
 QEMU_GL=${QEMU_GL:-1}
 QEMU_GPU_HOSTMEM=${QEMU_GPU_HOSTMEM:-1G}
 QEMU_VENUS=${QEMU_VENUS:-1}
-QEMU_MACHINE=${QEMU_MACHINE:-q35}
 VM_KERNEL_ARGS=${VM_KERNEL_ARGS:-}
 VM_OSTREE_SHARE=${VM_OSTREE_SHARE:-1}
 VM_OSTREE_MOUNT_TAG=${VM_OSTREE_MOUNT_TAG:-anatase-ostree}
@@ -27,15 +24,11 @@ VM_OSTREE_MOUNT_POINT=${VM_OSTREE_MOUNT_POINT:-/run/anatase/ostree}
 cache_dir="${repo_root}/cache"
 ostree_dir="${cache_dir}/ostree"
 disk="${cache_dir}/vm.raw"
-ovmf_vars_was_explicit=0
-if [[ -n "${VM_OVMF_VARS:-}" ]]; then
-    ovmf_vars_was_explicit=1
-    ovmf_vars=${VM_OVMF_VARS}
-elif [[ "${VM_SECURE_BOOT}" == "1" ]]; then
-    ovmf_vars="${cache_dir}/vm-ovmf-ms-vars.fd"
-else
-    ovmf_vars="${cache_dir}/vm-ovmf-vars.fd"
-fi
+arm=0
+
+usage() {
+    printf 'Usage: %s [--arm]\n' "$0" >&2
+}
 
 log() {
     printf '==> %s\n' "$*"
@@ -73,12 +66,20 @@ display_with_gl() {
 
 qemu_graphics_args() {
     if [[ "${QEMU_GL}" == "1" && "${QEMU_VGA}" == "virtio" ]]; then
-        local device="virtio-vga-gl,blob=on,hostmem=${QEMU_GPU_HOSTMEM}"
+        local device
+        if [[ "${arm}" == "1" ]]; then
+            device="virtio-gpu-gl-pci,blob=on,hostmem=${QEMU_GPU_HOSTMEM}"
+        else
+            device="virtio-vga-gl,blob=on,hostmem=${QEMU_GPU_HOSTMEM}"
+        fi
         if [[ "${QEMU_VENUS}" == "1" ]]; then
             device+=",venus=on"
         fi
         printf '%s\n' -device "${device}"
         printf '%s\n' -display "$(display_with_gl "${QEMU_DISPLAY}")"
+    elif [[ "${arm}" == "1" && "${QEMU_VGA}" == "virtio" ]]; then
+        printf '%s\n' -device virtio-gpu-pci
+        printf '%s\n' -display "${QEMU_DISPLAY}"
     else
         printf '%s\n' -vga "${QEMU_VGA}"
         printf '%s\n' -display "${QEMU_DISPLAY}"
@@ -148,6 +149,61 @@ append_vm_kernel_args() {
     done
 }
 
+while (($#)); do
+    case "$1" in
+        --arm)
+            arm=1
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            printf 'Unsupported option: %s\n' "$1" >&2
+            usage
+            exit 2
+            ;;
+    esac
+    shift
+done
+
+if [[ "${arm}" == "1" ]]; then
+    VM_SECURE_BOOT=${VM_SECURE_BOOT:-1}
+    QEMU_BIN=${QEMU_BIN:-qemu-system-aarch64}
+    QEMU_ACCEL=${QEMU_ACCEL:-tcg}
+    QEMU_CPU=${QEMU_CPU:-max}
+    QEMU_MACHINE=${QEMU_MACHINE:-virt}
+    if [[ "${VM_SECURE_BOOT}" == "1" ]]; then
+        arm_secure_boot_select_firmware "${QEMU_OVMF_CODE:-}" "${QEMU_OVMF_VARS_TEMPLATE:-}"
+        QEMU_OVMF_CODE=${arm_secure_boot_code}
+        QEMU_OVMF_VARS_TEMPLATE=${arm_secure_boot_template}
+        default_ovmf_vars="${cache_dir}/vm-aarch64-secureboot-vars.json"
+    else
+        QEMU_OVMF_CODE=${QEMU_OVMF_CODE:-/usr/share/edk2/aarch64/QEMU_EFI.fd}
+        QEMU_OVMF_VARS_TEMPLATE=${QEMU_OVMF_VARS_TEMPLATE:-/usr/share/edk2/aarch64/QEMU_VARS.fd}
+        default_ovmf_vars="${cache_dir}/vm-aarch64-ovmf-vars.fd"
+    fi
+else
+    VM_SECURE_BOOT=${VM_SECURE_BOOT:-1}
+    QEMU_BIN=${QEMU_BIN:-qemu-system-x86_64}
+    QEMU_ACCEL=${QEMU_ACCEL:-kvm}
+    QEMU_CPU=${QEMU_CPU:-host}
+    QEMU_MACHINE=${QEMU_MACHINE:-q35}
+    if [[ "${VM_SECURE_BOOT}" == "1" ]]; then
+        default_ovmf_vars="${cache_dir}/vm-ovmf-ms-vars.fd"
+    else
+        default_ovmf_vars="${cache_dir}/vm-ovmf-vars.fd"
+    fi
+fi
+
+ovmf_vars_was_explicit=0
+if [[ -n "${VM_OVMF_VARS:-}" ]]; then
+    ovmf_vars_was_explicit=1
+    ovmf_vars=${VM_OVMF_VARS}
+else
+    ovmf_vars=${default_ovmf_vars}
+fi
+
 require_command "${QEMU_BIN}"
 
 if [[ ! -e "${disk}" ]]; then
@@ -161,8 +217,8 @@ append_vm_kernel_args
 mapfile -t graphics_args < <(qemu_graphics_args)
 
 qemu_args=(
-    -enable-kvm
-    -cpu host
+    -accel "${QEMU_ACCEL}"
+    -cpu "${QEMU_CPU}"
     -m "${VM_MEMORY}"
     -smp "${VM_CPUS}"
     -drive "file=${disk},format=raw,if=virtio"
@@ -184,7 +240,29 @@ fi
 
 case "${BIOS}" in
     0)
-        ovmf_select_firmware "${VM_SECURE_BOOT}" "${QEMU_OVMF_CODE:-}" "${QEMU_OVMF_VARS_TEMPLATE:-}"
+        if [[ "${arm}" == "1" && "${VM_SECURE_BOOT}" == "1" ]]; then
+            if [[ ! -s "${QEMU_OVMF_CODE}" ]]; then
+                printf 'Secure Boot capable AArch64 firmware not found: %s\n' "${QEMU_OVMF_CODE}" >&2
+                exit 1
+            fi
+            if [[ ! -s "${QEMU_OVMF_VARS_TEMPLATE}" ]]; then
+                printf 'Enrolled AArch64 UEFI vars template not found: %s\n' "${QEMU_OVMF_VARS_TEMPLATE}" >&2
+                exit 1
+            fi
+            mkdir -p "$(dirname -- "${ovmf_vars}")"
+            if [[ ! -e "${ovmf_vars}" ]]; then
+                log "Creating enrolled AArch64 UEFI variables store: ${ovmf_vars}"
+                cp "${QEMU_OVMF_VARS_TEMPLATE}" "${ovmf_vars}"
+            fi
+            qemu_args=(
+                -machine "${QEMU_MACHINE}"
+                -bios "${QEMU_OVMF_CODE}"
+                -device "uefi-vars-sysbus,jsonfile=${ovmf_vars}"
+                "${qemu_args[@]}"
+            )
+            firmware="uefi secureboot"
+        else
+            ovmf_select_firmware "${VM_SECURE_BOOT}" "${QEMU_OVMF_CODE:-}" "${QEMU_OVMF_VARS_TEMPLATE:-}"
 
         if [[ ! -f "${ovmf_code}" ]]; then
             if [[ "${VM_SECURE_BOOT}" == "1" ]]; then
@@ -221,13 +299,22 @@ case "${BIOS}" in
         require_matching_ovmf_flash
 
         if [[ "${VM_SECURE_BOOT}" == "1" ]]; then
-            qemu_args=(
-                -machine "$(machine_with_smm "${QEMU_MACHINE}")"
-                -global driver=cfi.pflash01,property=secure,value=on
-                -drive "if=pflash,format=raw,unit=0,readonly=on,file=${ovmf_code}"
-                -drive "if=pflash,format=raw,unit=1,file=${ovmf_vars}"
-                "${qemu_args[@]}"
-            )
+            if [[ "${arm}" == "1" ]]; then
+                qemu_args=(
+                    -machine "${QEMU_MACHINE}"
+                    -drive "if=pflash,format=raw,unit=0,readonly=on,file=${ovmf_code}"
+                    -drive "if=pflash,format=raw,unit=1,file=${ovmf_vars}"
+                    "${qemu_args[@]}"
+                )
+            else
+                qemu_args=(
+                    -machine "$(machine_with_smm "${QEMU_MACHINE}")"
+                    -global driver=cfi.pflash01,property=secure,value=on
+                    -drive "if=pflash,format=raw,unit=0,readonly=on,file=${ovmf_code}"
+                    -drive "if=pflash,format=raw,unit=1,file=${ovmf_vars}"
+                    "${qemu_args[@]}"
+                )
+            fi
             firmware="uefi secureboot"
         elif [[ "${VM_SECURE_BOOT}" == "0" ]]; then
             qemu_args=(
@@ -241,9 +328,14 @@ case "${BIOS}" in
             printf 'Unsupported VM_SECURE_BOOT value: %s\n' "${VM_SECURE_BOOT}" >&2
             printf 'Use VM_SECURE_BOOT=1 for Secure Boot or VM_SECURE_BOOT=0 for unenrolled UEFI.\n' >&2
             exit 1
+            fi
         fi
         ;;
     1)
+        if [[ "${arm}" == "1" ]]; then
+            printf 'Legacy BIOS is not supported for ARM VMs; use BIOS=0.\n' >&2
+            exit 1
+        fi
         firmware=bios
         ;;
     *)
