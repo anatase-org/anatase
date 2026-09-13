@@ -111,10 +111,20 @@ trap 'umount "$target_efi"' EXIT
 install -m0644 /usr/lib/ludos/efi/ANATASE-KEY-ENROLLME.der "$target_efi/"
 read -r efi_parent efi_part < <(lsblk --nodeps -nro PKNAME,PARTN "$efi_device")
 [ -n "$efi_parent" ] && [ -n "$efi_part" ]
-[ -f "$target_efi/EFI/anatase/shimx64.efi" ]
+installer_arch="$(uname -m)"
+case "$installer_arch" in
+    x86_64) shim_filename=shimx64.efi ;;
+    aarch64) shim_filename=shimaa64.efi ;;
+    *)
+        echo "unsupported installer architecture: $installer_arch" >&2
+        exit 1
+        ;;
+esac
+[ -f "$target_efi/EFI/anatase/$shim_filename" ]
+printf -v efi_loader '\\EFI\\anatase\\%s' "$shim_filename"
 command -v efibootmgr >/dev/null
 efibootmgr --create --disk "/dev/$efi_parent" --part "$efi_part" \
-    --loader '\EFI\anatase\shimx64.efi' --label Anatase
+    --loader "$efi_loader" --label Anatase
 %end
 
 #
