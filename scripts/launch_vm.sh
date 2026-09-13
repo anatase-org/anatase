@@ -168,7 +168,7 @@ while (($#)); do
 done
 
 if [[ "${arm}" == "1" ]]; then
-    VM_SECURE_BOOT=${VM_SECURE_BOOT:-1}
+    VM_SECURE_BOOT=${VM_SECURE_BOOT:-0}
     QEMU_BIN=${QEMU_BIN:-qemu-system-aarch64}
     QEMU_ACCEL=${QEMU_ACCEL:-tcg}
     QEMU_CPU=${QEMU_CPU:-max}
@@ -215,6 +215,14 @@ fi
 append_vm_kernel_args
 
 mapfile -t graphics_args < <(qemu_graphics_args)
+input_args=()
+if [[ "${arm}" == "1" ]]; then
+    input_args=(
+        -device qemu-xhci
+        -device usb-kbd
+        -device usb-tablet
+    )
+fi
 
 qemu_args=(
     -accel "${QEMU_ACCEL}"
@@ -224,6 +232,7 @@ qemu_args=(
     -drive "file=${disk},format=raw,if=virtio"
     -netdev "user,id=net0,hostfwd=tcp::${VM_SSH_PORT}-:22"
     -device virtio-net-pci,netdev=net0
+    "${input_args[@]}"
     "${graphics_args[@]}"
     -serial mon:stdio
 )

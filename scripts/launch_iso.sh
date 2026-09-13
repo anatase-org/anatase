@@ -203,7 +203,7 @@ if [[ -z "${iso_arg}" ]]; then
 fi
 
 if [[ "${arm}" == "1" ]]; then
-    VM_SECURE_BOOT=${VM_SECURE_BOOT:-1}
+    VM_SECURE_BOOT=${VM_SECURE_BOOT:-0}
     QEMU_BIN=${QEMU_BIN:-qemu-system-aarch64}
     QEMU_ACCEL=${QEMU_ACCEL:-tcg}
     QEMU_CPU=${QEMU_CPU:-max}
@@ -275,8 +275,15 @@ esac
 
 mapfile -t graphics_args < <(qemu_graphics_args)
 boot_args=()
+input_args=()
 if [[ "${arm}" != "1" ]]; then
     boot_args=(-boot order=d,once=d)
+else
+    input_args=(
+        -device qemu-xhci
+        -device usb-kbd
+        -device usb-tablet
+    )
 fi
 
 qemu_args=(
@@ -292,6 +299,7 @@ qemu_args=(
     "${boot_args[@]}"
     -netdev user,id=net0
     -device virtio-net-pci,netdev=net0
+    "${input_args[@]}"
     "${graphics_args[@]}"
     -serial mon:stdio
 )
