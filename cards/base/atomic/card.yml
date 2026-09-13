@@ -31,6 +31,7 @@ packages:
     - dosfstools
     - mtools
     - erofs-utils
+    - fakeroot
 
     # Flatpak runtime libraries
     - libcxx # chromium qt theme
