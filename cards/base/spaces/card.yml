@@ -32,7 +32,6 @@ build-deps:
   - systemd-rpm-macros
 
 packages:
-  - arch-install-scripts
   - container-selinux
   - debootstrap
   - dnf5
@@ -51,6 +50,9 @@ packages:
   - systemd
   - systemd-container
   - xdg-dbus-proxy
+  # Arch is only supported on x86
+  - x86_64:
+    - arch-install-scripts
 
 files:
   - config.json
