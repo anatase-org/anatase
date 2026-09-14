@@ -11,6 +11,15 @@ ovmf_vars_is_4m() {
 ovmf_vars_matches_code() {
     local code=$1
     local vars=$2
+    local arm=${3:-0}
+
+    if [[ "${arm}" == "1" ]]; then
+        # QEMU virt has two 64 MiB flash banks, unlike x86 OVMF.
+        [[ -f "${code}" && -f "${vars}" ]] &&
+            (($(file_size "${code}") == 64 * 1024 * 1024 &&
+              $(file_size "${vars}") == 64 * 1024 * 1024))
+        return
+    fi
 
     if ovmf_code_is_4m "${code}"; then
         ovmf_vars_is_4m "${vars}"
@@ -24,8 +33,6 @@ ovmf_pair_candidates() {
 
     if [[ "${secure_boot}" == "1" ]]; then
         cat <<EOF
-${cache_dir}/ovmf-ms/OVMF_CODE_4M.ms.fd|${cache_dir}/ovmf-ms/OVMF_VARS_4M.ms.fd
-${cache_dir}/ovmf-ms/OVMF_CODE_4M.secboot.fd|${cache_dir}/ovmf-ms/OVMF_VARS_4M.secboot.fd
 /usr/share/OVMF/OVMF_CODE_4M.ms.fd|/usr/share/OVMF/OVMF_VARS_4M.ms.fd
 /usr/share/OVMF/OVMF_CODE_4M.secboot.fd|/usr/share/OVMF/OVMF_VARS_4M.secboot.fd
 /usr/share/edk2/x64/OVMF_CODE.secboot.4m.fd|/usr/share/edk2/x64/OVMF_VARS.ms.4m.fd
@@ -34,7 +41,6 @@ ${cache_dir}/ovmf-ms/OVMF_CODE_4M.secboot.fd|${cache_dir}/ovmf-ms/OVMF_VARS_4M.s
 /usr/share/OVMF/OVMF_CODE.secboot.fd|/usr/share/OVMF/OVMF_VARS.secboot.fd
 /usr/share/edk2/ovmf/OVMF_CODE.secboot.fd|/usr/share/edk2/ovmf/OVMF_VARS.ms.fd
 /usr/share/edk2/ovmf/OVMF_CODE.secboot.fd|/usr/share/edk2/ovmf/OVMF_VARS.secboot.fd
-/usr/share/edk2-ovmf-fedora/edk2/ovmf/OVMF_CODE.secboot.fd|/usr/share/edk2-ovmf-fedora/edk2/ovmf/OVMF_VARS.secboot.fd
 EOF
     else
         cat <<EOF
@@ -42,7 +48,6 @@ EOF
 /usr/share/OVMF/OVMF_CODE_4M.fd|/usr/share/OVMF/OVMF_VARS_4M.fd
 /usr/share/edk2/ovmf/OVMF_CODE.fd|/usr/share/edk2/ovmf/OVMF_VARS.fd
 /usr/share/OVMF/OVMF_CODE.fd|/usr/share/OVMF/OVMF_VARS.fd
-/usr/share/edk2-ovmf-fedora/edk2/ovmf/OVMF_CODE.fd|/usr/share/edk2-ovmf-fedora/edk2/ovmf/OVMF_VARS.fd
 EOF
     fi
 }
@@ -54,8 +59,6 @@ ovmf_template_candidates_for_code() {
     if ovmf_code_is_4m "${code}"; then
         if [[ "${secure_boot}" == "1" ]]; then
             cat <<EOF
-${cache_dir}/ovmf-ms/OVMF_VARS_4M.ms.fd
-${cache_dir}/ovmf-ms/OVMF_VARS_4M.secboot.fd
 /usr/share/OVMF/OVMF_VARS_4M.ms.fd
 /usr/share/OVMF/OVMF_VARS_4M.secboot.fd
 /usr/share/edk2/x64/OVMF_VARS.ms.4m.fd
@@ -74,13 +77,11 @@ EOF
 /usr/share/OVMF/OVMF_VARS.secboot.fd
 /usr/share/edk2/ovmf/OVMF_VARS.ms.fd
 /usr/share/edk2/ovmf/OVMF_VARS.secboot.fd
-/usr/share/edk2-ovmf-fedora/edk2/ovmf/OVMF_VARS.secboot.fd
 EOF
         else
             cat <<EOF
 /usr/share/edk2/ovmf/OVMF_VARS.fd
 /usr/share/OVMF/OVMF_VARS.fd
-/usr/share/edk2-ovmf-fedora/edk2/ovmf/OVMF_VARS.fd
 EOF
         fi
     fi
@@ -93,8 +94,6 @@ ovmf_code_candidates_for_template() {
     if ovmf_vars_is_4m "${template}"; then
         if [[ "${secure_boot}" == "1" ]]; then
             cat <<EOF
-${cache_dir}/ovmf-ms/OVMF_CODE_4M.ms.fd
-${cache_dir}/ovmf-ms/OVMF_CODE_4M.secboot.fd
 /usr/share/OVMF/OVMF_CODE_4M.ms.fd
 /usr/share/OVMF/OVMF_CODE_4M.secboot.fd
 /usr/share/edk2/x64/OVMF_CODE.secboot.4m.fd
@@ -111,13 +110,11 @@ EOF
 /usr/share/OVMF/OVMF_CODE.ms.fd
 /usr/share/OVMF/OVMF_CODE.secboot.fd
 /usr/share/edk2/ovmf/OVMF_CODE.secboot.fd
-/usr/share/edk2-ovmf-fedora/edk2/ovmf/OVMF_CODE.secboot.fd
 EOF
         else
             cat <<EOF
 /usr/share/edk2/ovmf/OVMF_CODE.fd
 /usr/share/OVMF/OVMF_CODE.fd
-/usr/share/edk2-ovmf-fedora/edk2/ovmf/OVMF_CODE.fd
 EOF
         fi
     fi
@@ -195,59 +192,4 @@ ovmf_select_firmware() {
             ovmf_template=${pair#*|}
         fi
     fi
-}
-
-arm_secure_boot_cache_assets() {
-    local output_dir="${cache_dir}/edk2-aarch64"
-    local image=${ARM_FIRMWARE_IMAGE:-localhost/images:anatase}
-
-    if ! command -v podman >/dev/null 2>&1; then
-        printf 'Secure Boot capable AArch64 firmware was not found, and podman is unavailable to fetch it.\n' >&2
-        return 1
-    fi
-    if ! podman image exists "${image}"; then
-        image=registry.fedoraproject.org/fedora:44
-    fi
-
-    mkdir -p "${output_dir}"
-    printf '==> Fetching Secure Boot capable AArch64 firmware from Fedora\n'
-    podman run --rm \
-        --volume "${output_dir}:/output:Z" \
-        "${image}" \
-        bash -ceu '
-            dnf -y install edk2-aarch64 >/dev/null
-            install -m 0644 \
-                /usr/share/edk2/aarch64/QEMU_EFI.qemuvars.fd \
-                /output/QEMU_EFI.qemuvars.fd
-            install -m 0644 \
-                /usr/share/edk2/aarch64/vars.secboot.json \
-                /output/vars.secboot.json
-        '
-}
-
-arm_secure_boot_select_firmware() {
-    local requested_code=${1:-}
-    local requested_template=${2:-}
-    local directory
-
-    arm_secure_boot_code=${requested_code}
-    arm_secure_boot_template=${requested_template}
-
-    if [[ -n "${arm_secure_boot_code}" || -n "${arm_secure_boot_template}" ]]; then
-        return
-    fi
-
-    for directory in \
-        /usr/share/edk2/aarch64 \
-        "${cache_dir}/edk2-aarch64"; do
-        if [[ -s "${directory}/QEMU_EFI.qemuvars.fd" && -s "${directory}/vars.secboot.json" ]]; then
-            arm_secure_boot_code="${directory}/QEMU_EFI.qemuvars.fd"
-            arm_secure_boot_template="${directory}/vars.secboot.json"
-            return
-        fi
-    done
-
-    arm_secure_boot_cache_assets
-    arm_secure_boot_code="${cache_dir}/edk2-aarch64/QEMU_EFI.qemuvars.fd"
-    arm_secure_boot_template="${cache_dir}/edk2-aarch64/vars.secboot.json"
 }

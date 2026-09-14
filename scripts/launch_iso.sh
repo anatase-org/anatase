@@ -160,8 +160,10 @@ require_matching_ovmf_flash() {
     code_size=$(file_size "${ovmf_code}")
     vars_size=$(file_size "${ovmf_vars}")
 
-    if ! ovmf_vars_matches_code "${ovmf_code}" "${ovmf_vars}"; then
-        if ((code_size > 3 * 1024 * 1024 && vars_size < 512 * 1024)); then
+    if ! ovmf_vars_matches_code "${ovmf_code}" "${ovmf_vars}" "${arm}"; then
+        if [[ "${arm}" == "1" ]]; then
+            printf 'AArch64 pflash code and variables images must each be 64 MiB: %s, %s\n' "${ovmf_code}" "${ovmf_vars}" >&2
+        elif ((code_size > 3 * 1024 * 1024 && vars_size < 512 * 1024)); then
             printf 'OVMF vars store is too small for the selected 4M OVMF code image: %s\n' "${ovmf_vars}" >&2
             printf 'Use a matching 4M variables template, for example OVMF_VARS_4M.ms.fd.\n' >&2
         else
@@ -209,13 +211,12 @@ if [[ "${arm}" == "1" ]]; then
     QEMU_CPU=${QEMU_CPU:-max}
     QEMU_MACHINE=${QEMU_MACHINE:-virt}
     if [[ "${VM_SECURE_BOOT}" == "1" ]]; then
-        arm_secure_boot_select_firmware "${QEMU_OVMF_CODE:-}" "${QEMU_OVMF_VARS_TEMPLATE:-}"
-        QEMU_OVMF_CODE=${arm_secure_boot_code}
-        QEMU_OVMF_VARS_TEMPLATE=${arm_secure_boot_template}
+        QEMU_OVMF_CODE=${QEMU_OVMF_CODE:-/usr/share/edk2/aarch64/QEMU_EFI.qemuvars.fd}
+        QEMU_OVMF_VARS_TEMPLATE=${QEMU_OVMF_VARS_TEMPLATE:-/usr/share/edk2/aarch64/vars.secboot.json}
         default_ovmf_vars="${cache_dir}/vm-aarch64-secureboot-vars.json"
     else
-        QEMU_OVMF_CODE=${QEMU_OVMF_CODE:-/usr/share/edk2/aarch64/QEMU_EFI.fd}
-        QEMU_OVMF_VARS_TEMPLATE=${QEMU_OVMF_VARS_TEMPLATE:-/usr/share/edk2/aarch64/QEMU_VARS.fd}
+        QEMU_OVMF_CODE=${QEMU_OVMF_CODE:-/usr/share/edk2/aarch64/QEMU_EFI-pflash.raw}
+        QEMU_OVMF_VARS_TEMPLATE=${QEMU_OVMF_VARS_TEMPLATE:-/usr/share/edk2/aarch64/vars-template-pflash.raw}
         default_ovmf_vars="${cache_dir}/vm-aarch64-ovmf-vars.fd"
     fi
 else
@@ -352,12 +353,12 @@ case "${BIOS}" in
             fi
             exit 1
         fi
-        if ! ovmf_vars_matches_code "${ovmf_code}" "${ovmf_template}"; then
+        if ! ovmf_vars_matches_code "${ovmf_code}" "${ovmf_template}" "${arm}"; then
             printf 'OVMF vars template does not match the selected OVMF code image: %s\n' "${ovmf_template}" >&2
             exit 1
         fi
 
-        if [[ -e "${ovmf_vars}" ]] && ! ovmf_vars_matches_code "${ovmf_code}" "${ovmf_vars}"; then
+        if [[ -e "${ovmf_vars}" ]] && ! ovmf_vars_matches_code "${ovmf_code}" "${ovmf_vars}" "${arm}"; then
             if [[ "${ovmf_vars_was_explicit}" == "1" ]]; then
                 require_matching_ovmf_flash
             fi
