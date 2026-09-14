@@ -16,13 +16,10 @@ specs:
       - linux-firmware.spec
     packages:
       - amd-gpu-firmware
-      - amd-ucode-firmware
       - atheros-firmware
       - brcmfmac-firmware
       - cirrus-audio-firmware
-      - intel-audio-firmware
       - intel-gpu-firmware
-      - intel-vsc-firmware
       - iwlegacy-firmware
       - iwlwifi-dvm-firmware
       - iwlwifi-mld-firmware
@@ -36,6 +33,12 @@ specs:
       - qcom-wwan-firmware
       - realtek-firmware
       - tiwilink-firmware
+      - x86_64:
+          - amd-ucode-firmware
+          - intel-audio-firmware
+          - intel-vsc-firmware
+        aarch64:
+          - qcom-firmware
     upstream:
       type: dist-git
       url: https://src.fedoraproject.org/rpms/linux-firmware
