@@ -9,6 +9,7 @@ build-deps:
   - rpmdevtools
 
 packages:
+  - fuse
   - hidapi
   - python3-evdev
   - python3-markdown-it-py
