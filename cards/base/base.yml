@@ -175,7 +175,6 @@ packages:
   - alsa-sof-firmware
   - x86_64:
     - intel-lpmd
-    - libva-intel-media-driver
     - microcode_ctl
 
   # Boot and splash

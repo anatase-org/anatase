@@ -43,6 +43,7 @@ cards:
   - cards/base/firmware
   - cards/drivers/mesa # mesa is required by base packages
   - cards/drivers/mesa/lib32
+  - cards/drivers/intel
   - cards/base/identity # fedora-logos is pulled by base
   - cards/base/base
   - cards/base/grub

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2018 Nicolas Chauvet <kwizart@gmail.com> -->
+<component type="driver">
+  <id>intel-media-driver</id>
+  <name>The Intel Media Driver for VAAPI</name>
+  <summary>Intel Media Driver to support hardware decode, encode and video processing.</summary>
+  <description>
+    <p>
+    The Intel Media Driver for VAAPI is a VA-API (Video Acceleration API)
+user mode driver supporting hardware accelerated decoding, encoding,
+and video post processing for GEN based graphics hardware.
+    </p>
+  </description>
+  <translation/>
+  <url type="homepage">https://github.com/intel/media-driver</url>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>BSD-3-Clause AND MIT</project_license>
+  <developer_name>Intel Corporation</developer_name>
+  <keywords>
+    <keyword>Intel</keyword>
+    <keyword>driver</keyword>
+    <keyword>VA-API</keyword>
+    <keyword>vaapi</keyword>
+    <keyword>HW</keyword>
+    <keyword>Media</keyword>
+    <keyword>Video</keyword>
+    <keyword>Decode</keyword>
+    <keyword>Encode</keyword>
+    <keyword>vp8</keyword>
+    <keyword>vp9</keyword>
+    <keyword>av1</keyword>
+  </keywords>
+  <url type="bugtracker">https://github.com/intel/media-driver/issues</url>
+  <update_contact>frantisekz@fedoraproject.org</update_contact>
+</component>
