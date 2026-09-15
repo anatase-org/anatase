@@ -90,9 +90,12 @@ export CXXFLAGS="%{optflags} -D_FILE_OFFSET_BITS=64"
   -DLIBVA_DRIVERS_PATH=%{_libdir}/dri \
   -DBUILD_CMRTLIB=ON \
   -DMEDIA_BUILD_FATAL_WARNINGS=OFF \
+  -DCMAKE_VERBOSE_MAKEFILE:BOOL=OFF \
   -G Ninja
 
-%cmake_build
+# Huge compiler command lines can stall the build while Ludos renders output.
+# Keep RPM's parallel job count, without the verbose output in %%cmake_build.
+%{__cmake} --build "%{__cmake_builddir}" %{?_smp_mflags}
 
 %install
 %cmake_install
