@@ -1,5 +1,6 @@
 #!/bin/bash
 
+anatase_sandbox_config_home="${XDG_CONFIG_HOME:-$HOME/.var/app/org.anatase.Steam/config}"
 anatase_sandbox_data_home="${XDG_DATA_HOME:-$HOME/.var/app/org.anatase.Steam/data}"
 steam_home="$HOME"
 
@@ -46,10 +47,64 @@ if has_filesystem '~/.steam:create' && has_filesystem 'xdg-data/Steam:create'; t
         /*) steam_data_home=$host_xdg_data_home ;;
         *) steam_data_home="$host_home/.local/share" ;;
     esac
-    if mkdir -p "$host_home/.steam" "$steam_data_home/Steam" 2>/dev/null \
+    # Steam Auto-Cloud's LinuxHome root expands paths such as
+    # .config/StardewValley relative to HOME, while games commonly resolve the
+    # same path through XDG_CONFIG_HOME. Flatpak points XDG_CONFIG_HOME at the
+    # app-private config directory even when the app can access the host home,
+    # so force both interpretations to agree.
+    steam_config_home="$host_home/.config"
+    if mkdir -p \
+            "$host_home/.steam" \
+            "$steam_config_home" \
+            "$steam_data_home/Steam" 2>/dev/null \
             && [[ -w $host_home/.steam ]] \
+            && [[ -w $steam_config_home ]] \
             && [[ -w $steam_data_home/Steam ]]; then
+
+        # Preserve config and saves written by older Anatase builds. Keep an
+        # existing host entry active and copy a conflicting private entry next
+        # to it as .bak instead of merging or replacing either copy.
+        migration_marker="$anatase_sandbox_data_home/.anatase-config-home-migrated"
+        if [[ $anatase_sandbox_config_home != "$steam_config_home" ]] \
+                && [[ -d $anatase_sandbox_config_home ]] \
+                && [[ ! -e $migration_marker ]]; then
+            migration_complete=true
+            shopt -s dotglob nullglob
+            for source in "$anatase_sandbox_config_home"/*; do
+                name="${source##*/}"
+                [[ $name = .* ]] && continue
+                case "$name" in
+                    QtProject.conf|dconf|glib-2.0|kdeglobals|pulse|\
+                    user-dirs.dirs|user-dirs.locale)
+                        continue
+                        ;;
+                esac
+                destination="$steam_config_home/$name"
+                if [[ -e $destination ]] && [[ $source -ef $destination ]]; then
+                    continue
+                fi
+                if [[ ! -e $destination ]] && [[ ! -L $destination ]]; then
+                    cp -a -- "$source" "$destination" \
+                        || migration_complete=false
+                    continue
+                fi
+                backup="$destination.bak"
+                suffix=1
+                while [[ -e $backup ]] || [[ -L $backup ]]; do
+                    backup="$destination.bak.$suffix"
+                    ((suffix += 1))
+                done
+                cp -a -- "$source" "$backup" || migration_complete=false
+            done
+            shopt -u dotglob nullglob
+            if $migration_complete \
+                    && mkdir -p "$anatase_sandbox_data_home" 2>/dev/null; then
+                touch "$migration_marker" 2>/dev/null || true
+            fi
+        fi
+
         steam_home="$host_home"
+        export XDG_CONFIG_HOME="$steam_config_home"
         export XDG_DATA_HOME="$steam_data_home"
     fi
 fi
