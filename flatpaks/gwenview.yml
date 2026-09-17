@@ -19,6 +19,7 @@ flatpak:
     --socket=pulseaudio
     --socket=wayland
     --filesystem=xdg-config/kdeglobals:ro
+    --system-talk-name=org.freedesktop.UDisks2
     --talk-name=org.kde.kconfig.notify
     --talk-name=org.kde.KGlobalSettings
 
