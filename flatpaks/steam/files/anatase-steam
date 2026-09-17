@@ -84,8 +84,14 @@ if has_filesystem '~/.steam:create' && has_filesystem 'xdg-data/Steam:create'; t
                     continue
                 fi
                 if [[ ! -e $destination ]] && [[ ! -L $destination ]]; then
-                    cp -a -- "$source" "$destination" \
-                        || migration_complete=false
+                    if cp -a -- "$source" "$destination"; then
+                        printf 'anatase-steam: migrated config %q -> %q\n' \
+                            "$source" "$destination" >&2
+                    else
+                        printf 'anatase-steam: failed to migrate config %q -> %q\n' \
+                            "$source" "$destination" >&2
+                        migration_complete=false
+                    fi
                     continue
                 fi
                 backup="$destination.bak"
@@ -94,7 +100,14 @@ if has_filesystem '~/.steam:create' && has_filesystem 'xdg-data/Steam:create'; t
                     backup="$destination.bak.$suffix"
                     ((suffix += 1))
                 done
-                cp -a -- "$source" "$backup" || migration_complete=false
+                if cp -a -- "$source" "$backup"; then
+                    printf 'anatase-steam: migrated config %q -> %q\n' \
+                        "$source" "$backup" >&2
+                else
+                    printf 'anatase-steam: failed to migrate config %q -> %q\n' \
+                        "$source" "$backup" >&2
+                    migration_complete=false
+                fi
             done
             shopt -u dotglob nullglob
             if $migration_complete \
