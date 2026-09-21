@@ -2,6 +2,7 @@
   "homepage": "https://google.com",
   "homepage_is_newtabpage": true,
   "distribution": {
+     "require_eula": false,
      "alternate_shortcut_text": false,
      "oem_bubble": false,
      "chrome_shortcut_icon_index": 0,
