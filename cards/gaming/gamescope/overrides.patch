@@ -13,7 +13,7 @@ Subject: [NA] add dev script
 
 diff --git a/0001-cstdint.patch b/0001-cstdint.patch
 new file mode 100644
-index 000000000000..5b4351521b45
+index 00000000..5b435152
 --- /dev/null
 +++ b/0001-cstdint.patch
 @@ -0,0 +1,37 @@
@@ -55,7 +55,7 @@ index 000000000000..5b4351521b45
 +2.41.0
 +
 diff --git a/subprojects/.gitignore b/subprojects/.gitignore
-index aa2345109697..00e448b6c3d8 100644
+index aa234510..00e448b6 100644
 --- a/subprojects/.gitignore
 +++ b/subprojects/.gitignore
 @@ -1,3 +1,6 @@
@@ -68,7 +68,7 @@ index aa2345109697..00e448b6c3d8 100644
 \ No newline at end of file
 diff --git a/sync.sh b/sync.sh
 new file mode 100755
-index 000000000000..d5a0286a390b
+index 00000000..d5a0286a
 --- /dev/null
 +++ b/sync.sh
 @@ -0,0 +1,140 @@
@@ -224,7 +224,7 @@ Subject: build: tolerate warnings from pinned wlroots
  2 files changed, 8 insertions(+), 1 deletion(-)
 
 diff --git a/meson.build b/meson.build
-index 5e5bd4cdc7c4..4888b9c42817 100644
+index 5e5bd4cd..4888b9c4 100644
 --- a/meson.build
 +++ b/meson.build
 @@ -19,6 +19,11 @@ add_project_arguments([
@@ -240,7 +240,7 @@ index 5e5bd4cdc7c4..4888b9c42817 100644
  
  data_dir = get_option('datadir')
 diff --git a/src/meson.build b/src/meson.build
-index 8512bf573137..1a462a3719a7 100644
+index 8512bf57..1a462a37 100644
 --- a/src/meson.build
 +++ b/src/meson.build
 @@ -28,7 +28,9 @@ wlroots_dep = dependency(
@@ -272,7 +272,7 @@ Co-authored-by: Antheas Kapenekakis <git@antheas.dev>
  3 files changed, 36 insertions(+), 1 deletion(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 0749d46ba425..26fb628207b4 100644
+index 0749d46b..26fb6282 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -2401,8 +2401,10 @@ namespace gamescope
@@ -288,7 +288,7 @@ index 0749d46ba425..26fb628207b4 100644
  					const drmModeModeInfo *pPreferredMode = find_mode( m_pConnector.get(), 0, 0, 0 );
  
 diff --git a/src/main.cpp b/src/main.cpp
-index 1397028e7f4c..3a8250680615 100644
+index 1397028e..3a825068 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -136,6 +136,7 @@ const struct option *gamescope_options = (struct option[]){
@@ -351,7 +351,7 @@ index 1397028e7f4c..3a8250680615 100644
  						   strcmp(opt_name, "fsr-sharpness") == 0) {
  					g_upscaleFilterSharpness = parse_integer( optarg, opt_name );
 diff --git a/src/main.hpp b/src/main.hpp
-index 2e6fb833af12..390c04a63ecd 100644
+index 2e6fb833..390c04a6 100644
 --- a/src/main.hpp
 +++ b/src/main.hpp
 @@ -3,6 +3,7 @@
@@ -385,7 +385,7 @@ Suggested-by: Antheas Kapenekakis <git@antheas.dev>
  1 file changed, 22 insertions(+), 1 deletion(-)
 
 diff --git a/src/wlserver.cpp b/src/wlserver.cpp
-index 6088a7f8049c..46729cf82fb8 100644
+index 6088a7f8..46729cf8 100644
 --- a/src/wlserver.cpp
 +++ b/src/wlserver.cpp
 @@ -296,6 +296,9 @@ static void wlserver_handle_modifiers(struct wl_listener *listener, void *data)
@@ -446,7 +446,7 @@ custom modeline generation has been provided.
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 26fb628207b4..ac795b89fc3e 100644
+index 26fb6282..ac795b89 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -2317,7 +2317,9 @@ namespace gamescope
@@ -472,7 +472,7 @@ Subject: fix(battery): run at half hz while at steamUI with atom
  2 files changed, 43 insertions(+), 10 deletions(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index d98222fa1f3d..0dcd11314f51 100644
+index d98222fa..0dcd1131 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -173,6 +173,8 @@ uint32_t g_reshade_technique_idx = 0;
@@ -627,7 +627,7 @@ index d98222fa1f3d..0dcd11314f51 100644
  		const bool bVRR = GetBackend()->GetCurrentConnector() && GetBackend()->GetCurrentConnector()->IsVRRActive();
  		if ( bVRR )
 diff --git a/src/xwayland_ctx.hpp b/src/xwayland_ctx.hpp
-index 5c8809f9224d..e1c07c0a81e4 100644
+index 5c8809f9..e1c07c0a 100644
 --- a/src/xwayland_ctx.hpp
 +++ b/src/xwayland_ctx.hpp
 @@ -257,6 +257,7 @@ struct xwayland_ctx_t final : public gamescope::IWaitable
@@ -658,7 +658,7 @@ Co-developed-by: Antheas Kapenekakis <git@antheas.dev>
  create mode 100644 src/shaders/cs_rotation.comp
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index ac795b89fc3e..4be93345d45f 100644
+index ac795b89..4be93345 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -1886,7 +1886,7 @@ LiftoffStateCacheEntry FrameInfoToLiftoffStateCacheEntry( struct drm_t *drm, con
@@ -765,7 +765,7 @@ index ac795b89fc3e..4be93345d45f 100644
  			m_bWasCompositing = true;
  
 diff --git a/src/main.cpp b/src/main.cpp
-index 3a8250680615..93a40dd44088 100644
+index 3a825068..93a40dd4 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -365,6 +365,8 @@ static gamescope::GamescopeModeGeneration parse_gamescope_mode_generation( const
@@ -778,7 +778,7 @@ index 3a8250680615..93a40dd44088 100644
  static GamescopePanelOrientation force_orientation(const char *str)
  {
 diff --git a/src/main.hpp b/src/main.hpp
-index 390c04a63ecd..bde82c7c4e70 100644
+index 390c04a6..bde82c7c 100644
 --- a/src/main.hpp
 +++ b/src/main.hpp
 @@ -22,6 +22,7 @@ extern bool g_bForceRelativeMouse;
@@ -790,7 +790,7 @@ index 390c04a63ecd..bde82c7c4e70 100644
  extern bool g_bFullscreen;
  
 diff --git a/src/meson.build b/src/meson.build
-index 1a462a3719a7..d0bbddd13ce6 100644
+index 1a462a37..d0bbddd1 100644
 --- a/src/meson.build
 +++ b/src/meson.build
 @@ -72,6 +72,7 @@ shader_src = [
@@ -802,7 +802,7 @@ index 1a462a3719a7..d0bbddd13ce6 100644
  
  spirv_shaders = glsl_generator.process(shader_src)
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index 45196571b50f..f954df3c564d 100644
+index 45196571..f954df3c 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -48,6 +48,7 @@
@@ -1040,7 +1040,7 @@ index 45196571b50f..f954df3c564d 100644
  
  	if ( pPipewireTexture != nullptr )
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index a2f9975464b0..944ecd78f780 100644
+index a2f99754..944ecd78 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -408,7 +408,7 @@ gamescope::OwningRc<CVulkanTexture> vulkan_create_texture_from_dmabuf( struct wl
@@ -1072,7 +1072,7 @@ index a2f9975464b0..944ecd78f780 100644
  };
 diff --git a/src/shaders/cs_rotation.comp b/src/shaders/cs_rotation.comp
 new file mode 100644
-index 000000000000..1a47fd505748
+index 00000000..1a47fd50
 --- /dev/null
 +++ b/src/shaders/cs_rotation.comp
 @@ -0,0 +1,53 @@
@@ -1130,7 +1130,7 @@ index 000000000000..1a47fd505748
 +    imageStore(dst, rotatedCoord, outputValue);
 +}
 diff --git a/src/wlserver.cpp b/src/wlserver.cpp
-index 46729cf82fb8..2868cd0206a2 100644
+index 46729cf8..2868cd02 100644
 --- a/src/wlserver.cpp
 +++ b/src/wlserver.cpp
 @@ -2876,6 +2876,11 @@ static void apply_touchscreen_orientation(GamescopePanelOrientation orientation,
@@ -1159,7 +1159,7 @@ see: https://github.com/ValveSoftware/gamescope/pull/1671
  1 file changed, 19 insertions(+), 1 deletion(-)
 
 diff --git a/layer/VkLayer_FROG_gamescope_wsi.cpp b/layer/VkLayer_FROG_gamescope_wsi.cpp
-index a13acc7c1db0..9c5b184fcc15 100644
+index a13acc7c..9c5b184f 100644
 --- a/layer/VkLayer_FROG_gamescope_wsi.cpp
 +++ b/layer/VkLayer_FROG_gamescope_wsi.cpp
 @@ -183,6 +183,16 @@ namespace GamescopeWSILayer {
@@ -1216,7 +1216,7 @@ Subject: feat(display): add asus z13
 
 diff --git a/scripts/00-gamescope/displays/asus.z13.lcd.lua b/scripts/00-gamescope/displays/asus.z13.lcd.lua
 new file mode 100644
-index 000000000000..891f1ea9ca6f
+index 00000000..891f1ea9
 --- /dev/null
 +++ b/scripts/00-gamescope/displays/asus.z13.lcd.lua
 @@ -0,0 +1,57 @@
@@ -1292,7 +1292,7 @@ Subject: feat(display): consider vporch to avoid timing issues
  4 files changed, 11 insertions(+), 5 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 4be93345d45f..34630b3163a6 100644
+index 4be93345..34630b31 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -213,6 +213,11 @@ namespace gamescope
@@ -1318,7 +1318,7 @@ index 4be93345d45f..34630b3163a6 100644
  
  	switch ( drm->pConnector->GetCurrentOrientation() )
 diff --git a/src/main.cpp b/src/main.cpp
-index 93a40dd44088..ee221188037c 100644
+index 93a40dd4..ee221188 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -299,6 +299,7 @@ int g_nNestedDisplayIndex = 0;
@@ -1330,7 +1330,7 @@ index 93a40dd44088..ee221188037c 100644
  
  bool g_bFullscreen = false;
 diff --git a/src/main.hpp b/src/main.hpp
-index bde82c7c4e70..b462a14c0ea3 100644
+index bde82c7c..b462a14c 100644
 --- a/src/main.hpp
 +++ b/src/main.hpp
 @@ -20,6 +20,7 @@ extern uint32_t g_nOutputWidth;
@@ -1342,7 +1342,7 @@ index bde82c7c4e70..b462a14c0ea3 100644
  extern bool g_bForceInternal;
  extern bool g_bEnableDRMRotationShader;
 diff --git a/src/vblankmanager.cpp b/src/vblankmanager.cpp
-index f036d000a8e2..e388374c98ba 100644
+index f036d000..e388374c 100644
 --- a/src/vblankmanager.cpp
 +++ b/src/vblankmanager.cpp
 @@ -95,8 +95,6 @@ namespace gamescope
@@ -1376,7 +1376,7 @@ Subject: feat: add Legion Go S display with all framerates
  1 file changed, 42 insertions(+), 29 deletions(-)
 
 diff --git a/scripts/00-gamescope/displays/lenovo.legiongos.lcd.lua b/scripts/00-gamescope/displays/lenovo.legiongos.lcd.lua
-index 32f776c17f3d..057850f374f8 100644
+index 32f776c1..057850f3 100644
 --- a/scripts/00-gamescope/displays/lenovo.legiongos.lcd.lua
 +++ b/scripts/00-gamescope/displays/lenovo.legiongos.lcd.lua
 @@ -1,44 +1,58 @@
@@ -1487,7 +1487,7 @@ Subject: feat: add DPMS support through an Atom
  4 files changed, 32 insertions(+), 4 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 34630b3163a6..b1df90b3ec38 100644
+index 34630b31..b1df90b3 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -2881,6 +2881,9 @@ int drm_prepare( struct drm_t *drm, bool async, const struct FrameInfo_t *frameI
@@ -1534,7 +1534,7 @@ index 34630b3163a6..b1df90b3ec38 100644
  
  			if ( bNeedsFullComposite )
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index 944ecd78f780..28fe8065b3ea 100644
+index 944ecd78..28fe8065 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -292,6 +292,8 @@ struct FrameInfo_t
@@ -1547,7 +1547,7 @@ index 944ecd78f780..28fe8065b3ea 100644
  	struct Layer_t
  	{
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 0dcd11314f51..fe0120b04adc 100644
+index 0dcd1131..fe0120b0 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -175,6 +175,8 @@ bool g_bSteamIsActiveWindow = false;
@@ -1613,7 +1613,7 @@ index 0dcd11314f51..fe0120b04adc 100644
  			}
  		}
 diff --git a/src/xwayland_ctx.hpp b/src/xwayland_ctx.hpp
-index e1c07c0a81e4..79c4f1859699 100644
+index e1c07c0a..79c4f185 100644
 --- a/src/xwayland_ctx.hpp
 +++ b/src/xwayland_ctx.hpp
 @@ -258,6 +258,7 @@ struct xwayland_ctx_t final : public gamescope::IWaitable
@@ -1635,7 +1635,7 @@ Subject: update misyltoad urls
  1 file changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/.gitmodules b/.gitmodules
-index ec7d4e430ee8..17ba783f809b 100644
+index ec7d4e43..17ba783f 100644
 --- a/.gitmodules
 +++ b/.gitmodules
 @@ -1,12 +1,12 @@
@@ -1676,7 +1676,7 @@ the FDs in the OnPollIn handlers to prevent this.
  1 file changed, 6 insertions(+)
 
 diff --git a/src/waitable.h b/src/waitable.h
-index 30edf8f52deb..36ac61ee7233 100644
+index 30edf8f5..36ac61ee 100644
 --- a/src/waitable.h
 +++ b/src/waitable.h
 @@ -182,6 +182,11 @@ namespace gamescope
@@ -1710,7 +1710,7 @@ Subject: fix(intel): allow night mode and color adjustment via compositing
  1 file changed, 11 insertions(+)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index b1df90b3ec38..ac171992f3d4 100644
+index b1df90b3..ac171992 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -3546,6 +3546,17 @@ namespace gamescope
@@ -1749,7 +1749,7 @@ there are no edge cases where only subproperties are supported.
  1 file changed, 32 insertions(+), 8 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index ac171992f3d4..8fade6191029 100644
+index ac171992..8fade619 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -567,6 +567,7 @@ extern std::string g_reshade_effect;
@@ -1868,7 +1868,7 @@ Subject: remove zotac zone config (too many panel variants)
 
 diff --git a/scripts/00-gamescope/displays/zotac.zone.oled.lua b/scripts/00-gamescope/displays/zotac.zone.oled.lua
 deleted file mode 100644
-index f800fc7eee6f..000000000000
+index f800fc7e..00000000
 --- a/scripts/00-gamescope/displays/zotac.zone.oled.lua
 +++ /dev/null
 @@ -1,56 +0,0 @@
@@ -1949,7 +1949,7 @@ user exits it.
  2 files changed, 53 insertions(+), 26 deletions(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index fe0120b04adc..2bb27b393816 100644
+index fe0120b0..2bb27b39 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -888,6 +888,7 @@ global_focus_t *GetCurrentFocus()
@@ -2070,7 +2070,7 @@ index fe0120b04adc..2bb27b393816 100644
  #if HAVE_PIPEWIRE
  			nudge_pipewire();
 diff --git a/src/steamcompmgr_shared.hpp b/src/steamcompmgr_shared.hpp
-index 36a99d44e558..7be906206cd2 100644
+index 36a99d44..7be90620 100644
 --- a/src/steamcompmgr_shared.hpp
 +++ b/src/steamcompmgr_shared.hpp
 @@ -149,6 +149,7 @@ struct steamcompmgr_win_t {
@@ -2092,7 +2092,7 @@ Subject: fix: prevent crashing if display is not connected
  1 file changed, 3 insertions(+), 4 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 8fade6191029..a46585e0f2f6 100644
+index 8fade619..a46585e0 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -712,12 +712,11 @@ static uint32_t pick_plane_format( const struct wlr_drm_format_set *formats, uin
@@ -2122,7 +2122,7 @@ Subject: fix(display): report minimum 8-inch display height
  1 file changed, 9 insertions(+)
 
 diff --git a/src/wlserver.cpp b/src/wlserver.cpp
-index 2868cd0206a2..096870593935 100644
+index 2868cd02..09687059 100644
 --- a/src/wlserver.cpp
 +++ b/src/wlserver.cpp
 @@ -1619,7 +1619,16 @@ void wlserver_set_output_info( const wlserver_output_info *info )
@@ -2179,7 +2179,7 @@ Fixes: a563226d431d ("steamcompmgr: do not forcefully snap focus windows to (0, 
  2 files changed, 108 insertions(+), 8 deletions(-)
 
 diff --git a/layer/VkLayer_FROG_gamescope_wsi.cpp b/layer/VkLayer_FROG_gamescope_wsi.cpp
-index 9c5b184fcc15..bbe445890a74 100644
+index 9c5b184f..bbe44589 100644
 --- a/layer/VkLayer_FROG_gamescope_wsi.cpp
 +++ b/layer/VkLayer_FROG_gamescope_wsi.cpp
 @@ -438,20 +438,53 @@ namespace GamescopeWSILayer {
@@ -2303,7 +2303,7 @@ index 9c5b184fcc15..bbe445890a74 100644
              if (canBypass) {
                if (!(gamescopeSurface->flags & GamescopeLayerClient::Flag::NoSuboptimal))
 diff --git a/layer/xcb_helpers.hpp b/layer/xcb_helpers.hpp
-index 8fac5635b3a9..51e1f227b14f 100644
+index 8fac5635..51e1f227 100644
 --- a/layer/xcb_helpers.hpp
 +++ b/layer/xcb_helpers.hpp
 @@ -59,6 +59,61 @@ namespace xcb {
@@ -2379,7 +2379,7 @@ Subject: rendervulkan: fix compositor specialization constant mapping
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index f954df3c564d..f49416f59c18 100644
+index f954df3c..f49416f5 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -1118,7 +1118,7 @@ VkPipeline CVulkanDevice::compilePipeline(uint32_t layerCount, uint32_t ycbcrMas
@@ -2405,7 +2405,7 @@ Subject: rendervulkan: specialize FSR RCAS for simple SDR output
  4 files changed, 70 insertions(+), 12 deletions(-)
 
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index f49416f59c18..d61964cb8d70 100644
+index f49416f5..d61964cb 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -1082,9 +1082,9 @@ VkSampler CVulkanDevice::sampler( SamplerState key )
@@ -2543,7 +2543,7 @@ index f49416f59c18..d61964cb8d70 100644
  		cmdBuffer->bindTexture(0, g_output.tmpOutput);
  		cmdBuffer->setTextureSrgb(0, true);
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index 28fe8065b3ea..48c383e27253 100644
+index 28fe8065..48c383e2 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -614,6 +614,7 @@ struct PipelineInfo_t
@@ -2591,7 +2591,7 @@ index 28fe8065b3ea..48c383e27253 100644
  
  	VkDevice m_device = nullptr;
 diff --git a/src/shaders/cs_composite_rcas.comp b/src/shaders/cs_composite_rcas.comp
-index 20cad5517949..4cfa1f7e4bdd 100644
+index 20cad551..4cfa1f7e 100644
 --- a/src/shaders/cs_composite_rcas.comp
 +++ b/src/shaders/cs_composite_rcas.comp
 @@ -53,6 +53,12 @@ void rcasComposite(uvec2 pos)
@@ -2613,7 +2613,7 @@ index 20cad5517949..4cfa1f7e4bdd 100644
  }
 -
 diff --git a/src/shaders/descriptor_set.h b/src/shaders/descriptor_set.h
-index f2b8527c892a..723e964f4ed2 100644
+index f2b8527c..723e964f 100644
 --- a/src/shaders/descriptor_set.h
 +++ b/src/shaders/descriptor_set.h
 @@ -7,6 +7,7 @@ layout(constant_id = 3) const int  c_blur_layer_count = 0;
@@ -2642,7 +2642,7 @@ Subject: rendervulkan: add FP16 FSR RCAS for SDR output
  create mode 100644 src/shaders/cs_composite_rcas_fp16.comp
 
 diff --git a/src/meson.build b/src/meson.build
-index d0bbddd13ce6..22ff8a97e111 100644
+index d0bbddd1..22ff8a97 100644
 --- a/src/meson.build
 +++ b/src/meson.build
 @@ -66,6 +66,7 @@ shader_src = [
@@ -2654,7 +2654,7 @@ index d0bbddd13ce6..22ff8a97e111 100644
    'shaders/cs_easu_fp16.comp',
    'shaders/cs_gaussian_blur_horizontal.comp',
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index d61964cb8d70..09434fedaca9 100644
+index d61964cb..09434fed 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -42,6 +42,7 @@
@@ -2750,7 +2750,7 @@ index d61964cb8d70..09434fedaca9 100644
  		cmdBuffer->bindTexture(0, g_output.tmpOutput);
  		cmdBuffer->setTextureSrgb(0, true);
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index 48c383e27253..5547ec3a261d 100644
+index 48c383e2..5547ec3a 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -562,6 +562,7 @@ enum ShaderType {
@@ -2778,7 +2778,7 @@ index 48c383e27253..5547ec3a261d 100644
  	bool m_bSupportsModifiers = false;
  	bool m_bInitialized = false;
 diff --git a/src/shaders/cs_composite_rcas.comp b/src/shaders/cs_composite_rcas.comp
-index 4cfa1f7e4bdd..4954e6d14ec0 100644
+index 4cfa1f7e..4954e6d1 100644
 --- a/src/shaders/cs_composite_rcas.comp
 +++ b/src/shaders/cs_composite_rcas.comp
 @@ -3,114 +3,4 @@
@@ -2899,7 +2899,7 @@ index 4cfa1f7e4bdd..4954e6d14ec0 100644
 +#include "cs_composite_rcas_common.h"
 diff --git a/src/shaders/cs_composite_rcas_common.h b/src/shaders/cs_composite_rcas_common.h
 new file mode 100644
-index 000000000000..edb689199986
+index 00000000..edb68919
 --- /dev/null
 +++ b/src/shaders/cs_composite_rcas_common.h
 @@ -0,0 +1,130 @@
@@ -3035,7 +3035,7 @@ index 000000000000..edb689199986
 +}
 diff --git a/src/shaders/cs_composite_rcas_fp16.comp b/src/shaders/cs_composite_rcas_fp16.comp
 new file mode 100644
-index 000000000000..1dcd2a1db090
+index 00000000..1dcd2a1d
 --- /dev/null
 +++ b/src/shaders/cs_composite_rcas_fp16.comp
 @@ -0,0 +1,8 @@
@@ -3058,7 +3058,7 @@ Subject: drm: scan out FSR base plane when possible
  1 file changed, 59 insertions(+), 1 deletion(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index a46585e0f2f6..367176c8b21d 100644
+index a46585e0..367176c8 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -3548,6 +3548,65 @@ namespace gamescope
@@ -3156,7 +3156,7 @@ Subject: protocol: expose fixed x2 frame generation controls
  create mode 100644 tests/test_frame_generation_config.cpp
 
 diff --git a/meson.build b/meson.build
-index 4888b9c42817..923fa95c310e 100644
+index 4888b9c4..923fa95c 100644
 --- a/meson.build
 +++ b/meson.build
 @@ -110,6 +110,10 @@ if get_option('enable_gamescope')
@@ -3171,7 +3171,7 @@ index 4888b9c42817..923fa95c310e 100644
  meson.add_install_script('default_extras_install.sh')
  
 diff --git a/protocol/gamescope-control.xml b/protocol/gamescope-control.xml
-index 42fc9666e22c..92abb297df55 100644
+index 42fc9666..92abb297 100644
 --- a/protocol/gamescope-control.xml
 +++ b/protocol/gamescope-control.xml
 @@ -29,7 +29,7 @@
@@ -3207,7 +3207,7 @@ index 42fc9666e22c..92abb297df55 100644
  </protocol>
 diff --git a/src/frame_generation_config.cpp b/src/frame_generation_config.cpp
 new file mode 100644
-index 000000000000..5b1671d2553e
+index 00000000..5b1671d2
 --- /dev/null
 +++ b/src/frame_generation_config.cpp
 @@ -0,0 +1,74 @@
@@ -3287,7 +3287,7 @@ index 000000000000..5b1671d2553e
 +}
 diff --git a/src/frame_generation_config.hpp b/src/frame_generation_config.hpp
 new file mode 100644
-index 000000000000..52df51f3db09
+index 00000000..52df51f3
 --- /dev/null
 +++ b/src/frame_generation_config.hpp
 @@ -0,0 +1,33 @@
@@ -3325,7 +3325,7 @@ index 000000000000..52df51f3db09
 +	uint64_t GetFrameGenerationStateSerial();
 +}
 diff --git a/src/meson.build b/src/meson.build
-index 22ff8a97e111..07e25f4b39e8 100644
+index 22ff8a97..07e25f4b 100644
 --- a/src/meson.build
 +++ b/src/meson.build
 @@ -109,6 +109,7 @@ src = [
@@ -3337,7 +3337,7 @@ index 22ff8a97e111..07e25f4b39e8 100644
    'main.cpp',
    'edid.cpp',
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 2bb27b393816..d0081ffcab6d 100644
+index 2bb27b39..d0081ffc 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -85,6 +85,7 @@
@@ -3396,7 +3396,7 @@ index 2bb27b393816..d0081ffcab6d 100644
  		if ( std::optional<gamescope::VBlankTime> pendingVBlank = GetVBlankTimer().ProcessVBlank() )
  		{
 diff --git a/src/wlserver.cpp b/src/wlserver.cpp
-index 096870593935..e6f43501119d 100644
+index 09687059..e6f43501 100644
 --- a/src/wlserver.cpp
 +++ b/src/wlserver.cpp
 @@ -62,6 +62,7 @@
@@ -3447,7 +3447,7 @@ index 096870593935..e6f43501119d 100644
  }
  
 diff --git a/src/xwayland_ctx.hpp b/src/xwayland_ctx.hpp
-index 79c4f1859699..7bb473a464cb 100644
+index 79c4f185..7bb473a4 100644
 --- a/src/xwayland_ctx.hpp
 +++ b/src/xwayland_ctx.hpp
 @@ -169,6 +169,9 @@ struct xwayland_ctx_t final : public gamescope::IWaitable
@@ -3462,7 +3462,7 @@ index 79c4f1859699..7bb473a464cb 100644
  		Atom gamescopeBlurRadius;
 diff --git a/tests/meson.build b/tests/meson.build
 new file mode 100644
-index 000000000000..99fa5f345769
+index 00000000..99fa5f34
 --- /dev/null
 +++ b/tests/meson.build
 @@ -0,0 +1,27 @@
@@ -3495,7 +3495,7 @@ index 000000000000..99fa5f345769
 +endif
 diff --git a/tests/test_frame_generation_config.cpp b/tests/test_frame_generation_config.cpp
 new file mode 100644
-index 000000000000..448c4bf03da1
+index 00000000..448c4bf0
 --- /dev/null
 +++ b/tests/test_frame_generation_config.cpp
 @@ -0,0 +1,42 @@
@@ -3559,7 +3559,7 @@ Subject: build: add FidelityFX optical flow and interpolation shaders
  create mode 160000 subprojects/FidelityFX-SDK
 
 diff --git a/.gitmodules b/.gitmodules
-index 17ba783f809b..5e227d84d706 100644
+index 17ba783f..5e227d84 100644
 --- a/.gitmodules
 +++ b/.gitmodules
 @@ -19,3 +19,6 @@
@@ -3570,7 +3570,7 @@ index 17ba783f809b..5e227d84d706 100644
 +	path = subprojects/FidelityFX-SDK
 +	url = https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK
 diff --git a/src/meson.build b/src/meson.build
-index 07e25f4b39e8..91910870ba38 100644
+index 07e25f4b..91910870 100644
 --- a/src/meson.build
 +++ b/src/meson.build
 @@ -78,6 +78,76 @@ shader_src = [
@@ -3660,7 +3660,7 @@ index 07e25f4b39e8..91910870ba38 100644
  
 diff --git a/src/shaders/README.fidelityfx.md b/src/shaders/README.fidelityfx.md
 new file mode 100644
-index 000000000000..028695ccd6c8
+index 00000000..028695cc
 --- /dev/null
 +++ b/src/shaders/README.fidelityfx.md
 @@ -0,0 +1,18 @@
@@ -3684,7 +3684,7 @@ index 000000000000..028695ccd6c8
 +original copyright notices.
 diff --git a/src/shaders/cs_ffx_frameinterpolation_midpoint.comp b/src/shaders/cs_ffx_frameinterpolation_midpoint.comp
 new file mode 100644
-index 000000000000..71043f22e25a
+index 00000000..71043f22
 --- /dev/null
 +++ b/src/shaders/cs_ffx_frameinterpolation_midpoint.comp
 @@ -0,0 +1,101 @@
@@ -3791,7 +3791,7 @@ index 000000000000..71043f22e25a
 +}
 diff --git a/subprojects/FidelityFX-SDK b/subprojects/FidelityFX-SDK
 new file mode 160000
-index 000000000000..c6efa6bf7f20
+index 00000000..c6efa6bf
 --- /dev/null
 +++ b/subprojects/FidelityFX-SDK
 @@ -0,0 +1 @@
@@ -3816,7 +3816,7 @@ Subject: rendervulkan: integrate FidelityFX Optical Flow v5
 
 diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
 new file mode 100644
-index 000000000000..c5d4abb9e5c3
+index 00000000..c5d4abb9
 --- /dev/null
 +++ b/src/frame_generation_vulkan.cpp
 @@ -0,0 +1,724 @@
@@ -4546,7 +4546,7 @@ index 000000000000..c5d4abb9e5c3
 +}
 diff --git a/src/frame_generation_vulkan.hpp b/src/frame_generation_vulkan.hpp
 new file mode 100644
-index 000000000000..a66b375e2060
+index 00000000..a66b375e
 --- /dev/null
 +++ b/src/frame_generation_vulkan.hpp
 @@ -0,0 +1,20 @@
@@ -4571,7 +4571,7 @@ index 000000000000..a66b375e2060
 +bool vulkan_frame_generation_work_complete();
 +void vulkan_frame_generation_reset_optical_flow();
 diff --git a/src/meson.build b/src/meson.build
-index 91910870ba38..bc2734d6daab 100644
+index 91910870..bc2734d6 100644
 --- a/src/meson.build
 +++ b/src/meson.build
 @@ -148,6 +148,21 @@ ffx_spirv_shaders += custom_target(
@@ -4605,7 +4605,7 @@ index 91910870ba38..bc2734d6daab 100644
    'main.cpp',
    'edid.cpp',
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index 09434fedaca9..f55962710168 100644
+index 09434fed..f5596271 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -1515,6 +1515,15 @@ void CVulkanDevice::wait(uint64_t sequence, bool reset)
@@ -4625,7 +4625,7 @@ index 09434fedaca9..f55962710168 100644
  {
  	wait(m_submissionSeqNo, reset);
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index 5547ec3a261d..2a9f72d5dcf6 100644
+index 5547ec3a..2a9f72d5 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -725,6 +725,7 @@ static inline uint32_t div_roundup(uint32_t x, uint32_t y)
@@ -4668,7 +4668,7 @@ index 5547ec3a261d..2a9f72d5dcf6 100644
  			fprintf(stderr, "Exceeded uploadBufferData\n");
 diff --git a/src/shaders/cs_ffx_opticalflow_prepare_luma_scaled.comp b/src/shaders/cs_ffx_opticalflow_prepare_luma_scaled.comp
 new file mode 100644
-index 000000000000..c1706451bf2b
+index 00000000..c1706451
 --- /dev/null
 +++ b/src/shaders/cs_ffx_opticalflow_prepare_luma_scaled.comp
 @@ -0,0 +1,78 @@
@@ -4768,7 +4768,7 @@ Subject: rendervulkan: add optical-flow-only FidelityFX interpolation
  create mode 100644 src/shaders/cs_ffx_frameinterpolation_vector_field.comp
 
 diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
-index c5d4abb9e5c3..df6073d1623d 100644
+index c5d4abb9..df6073d1 100644
 --- a/src/frame_generation_vulkan.cpp
 +++ b/src/frame_generation_vulkan.cpp
 @@ -11,6 +11,10 @@
@@ -5428,7 +5428,7 @@ index c5d4abb9e5c3..df6073d1623d 100644
 +	return cv_frame_generation_ab;
 +}
 diff --git a/src/frame_generation_vulkan.hpp b/src/frame_generation_vulkan.hpp
-index a66b375e2060..95de4f5a2b9c 100644
+index a66b375e..95de4f5a 100644
 --- a/src/frame_generation_vulkan.hpp
 +++ b/src/frame_generation_vulkan.hpp
 @@ -13,8 +13,18 @@ bool vulkan_frame_generation_record_optical_flow(
@@ -5451,7 +5451,7 @@ index a66b375e2060..95de4f5a2b9c 100644
  void vulkan_frame_generation_reset_optical_flow();
 +bool vulkan_frame_generation_ab_enabled();
 diff --git a/src/meson.build b/src/meson.build
-index bc2734d6daab..6bcd95713bbe 100644
+index bc2734d6..6bcd9571 100644
 --- a/src/meson.build
 +++ b/src/meson.build
 @@ -163,6 +163,21 @@ ffx_spirv_shaders += custom_target(
@@ -5477,7 +5477,7 @@ index bc2734d6daab..6bcd95713bbe 100644
    'reshade/source/effect_codegen_spirv.cpp',
    'reshade/source/effect_expression.cpp',
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index f55962710168..f9be6ad24229 100644
+index f5596271..f9be6ad2 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -538,6 +538,8 @@ bool CVulkanDevice::createDevice()
@@ -5504,7 +5504,7 @@ index f55962710168..f9be6ad24229 100644
  	VkDeviceCreateInfo deviceCreateInfo = {
  		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index 2a9f72d5dcf6..72ae49dc2be6 100644
+index 2a9f72d5..72ae49dc 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -819,6 +819,8 @@ public:
@@ -5526,7 +5526,7 @@ index 2a9f72d5dcf6..72ae49dc2be6 100644
  	bool m_bHasDrmPrimaryDevId = false;
  	bool m_bSupportsModifiers = false;
 diff --git a/src/shaders/cs_ffx_frameinterpolation_midpoint.comp b/src/shaders/cs_ffx_frameinterpolation_midpoint.comp
-index 71043f22e25a..7eec13953835 100644
+index 71043f22..7eec1395 100644
 --- a/src/shaders/cs_ffx_frameinterpolation_midpoint.comp
 +++ b/src/shaders/cs_ffx_frameinterpolation_midpoint.comp
 @@ -73,6 +73,15 @@ void main()
@@ -5547,7 +5547,7 @@ index 71043f22e25a..7eec13953835 100644
      const vec2 previousUv = uv + field.fMotionVector;
 diff --git a/src/shaders/cs_ffx_frameinterpolation_vector_field.comp b/src/shaders/cs_ffx_frameinterpolation_vector_field.comp
 new file mode 100644
-index 000000000000..8022d669a26a
+index 00000000..8022d669
 --- /dev/null
 +++ b/src/shaders/cs_ffx_frameinterpolation_vector_field.comp
 @@ -0,0 +1,37 @@
@@ -5612,7 +5612,7 @@ Subject: steamcompmgr: pace pre-FSR x2 frame generation with direct scanout
  create mode 100644 src/frame_generation_pacing.hpp
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 367176c8b21d..fa925c7c4f43 100644
+index 367176c8..fa925c7c 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -140,6 +140,7 @@ struct drm_t {
@@ -5685,7 +5685,7 @@ index 367176c8b21d..fa925c7c4f43 100644
  			{
  				drm_log.errorf_errno( "flip error" );
 diff --git a/src/Timeline.cpp b/src/Timeline.cpp
-index ec9a46197e6e..0abab64ffa22 100644
+index ec9a4619..0abab64f 100644
 --- a/src/Timeline.cpp
 +++ b/src/Timeline.cpp
 @@ -77,6 +77,36 @@ namespace gamescope
@@ -5726,7 +5726,7 @@ index ec9a46197e6e..0abab64ffa22 100644
      CTimelinePoint<Type>::~CTimelinePoint()
      {
 diff --git a/src/Timeline.h b/src/Timeline.h
-index 54611a0d3142..ba499d6da0a5 100644
+index 54611a0d..ba499d6d 100644
 --- a/src/Timeline.h
 +++ b/src/Timeline.h
 @@ -75,6 +75,7 @@ namespace gamescope
@@ -5738,7 +5738,7 @@ index 54611a0d3142..ba499d6da0a5 100644
  
          std::shared_ptr<CTimeline> m_pTimeline;
 diff --git a/src/frame_generation_config.cpp b/src/frame_generation_config.cpp
-index 5b1671d2553e..dac88cc03150 100644
+index 5b1671d2..dac88cc0 100644
 --- a/src/frame_generation_config.cpp
 +++ b/src/frame_generation_config.cpp
 @@ -9,6 +9,7 @@ namespace gamescope
@@ -5778,7 +5778,7 @@ index 5b1671d2553e..dac88cc03150 100644
  	{
  		return s_frameGenerationStateSerial.load( std::memory_order_acquire );
 diff --git a/src/frame_generation_config.hpp b/src/frame_generation_config.hpp
-index 52df51f3db09..c418259165ee 100644
+index 52df51f3..c4182591 100644
 --- a/src/frame_generation_config.hpp
 +++ b/src/frame_generation_config.hpp
 @@ -29,5 +29,6 @@ namespace gamescope
@@ -5790,7 +5790,7 @@ index 52df51f3db09..c418259165ee 100644
  }
 diff --git a/src/frame_generation_pacing.hpp b/src/frame_generation_pacing.hpp
 new file mode 100644
-index 000000000000..471ad9c90606
+index 00000000..471ad9c9
 --- /dev/null
 +++ b/src/frame_generation_pacing.hpp
 @@ -0,0 +1,56 @@
@@ -5851,7 +5851,7 @@ index 000000000000..471ad9c90606
 +	}
 +}
 diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
-index df6073d1623d..2a8dd72b331b 100644
+index df6073d1..2a8dd72b 100644
 --- a/src/frame_generation_vulkan.cpp
 +++ b/src/frame_generation_vulkan.cpp
 @@ -300,6 +300,8 @@ namespace
@@ -6122,7 +6122,7 @@ index df6073d1623d..2a8dd72b331b 100644
 +	return GetOpticalFlowContext().SceneCutCopies();
 +}
 diff --git a/src/frame_generation_vulkan.hpp b/src/frame_generation_vulkan.hpp
-index 95de4f5a2b9c..bc20bf5a3d2b 100644
+index 95de4f5a..bc20bf5a 100644
 --- a/src/frame_generation_vulkan.hpp
 +++ b/src/frame_generation_vulkan.hpp
 @@ -10,12 +10,14 @@
@@ -6151,7 +6151,7 @@ index 95de4f5a2b9c..bc20bf5a3d2b 100644
 +FrameGenerationGpuTimings vulkan_frame_generation_get_gpu_timings();
 +uint64_t vulkan_frame_generation_get_scene_cut_copy_count();
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index f9be6ad24229..45132cd92c7c 100644
+index f9be6ad2..45132cd9 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -9,6 +9,7 @@
@@ -6713,7 +6713,7 @@ index f9be6ad24229..45132cd92c7c 100644
  {
  	return g_device.wait( ulSeqNo, bReset );
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index 72ae49dc2be6..ae9f8b7bc555 100644
+index 72ae49dc..ae9f8b7b 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -16,6 +16,7 @@
@@ -6815,7 +6815,7 @@ index 72ae49dc2be6..ae9f8b7bc555 100644
  	VK_FUNC(GetSwapchainImagesKHR) \
  	VK_FUNC(MapMemory) \
 diff --git a/src/shaders/cs_ffx_frameinterpolation_midpoint.comp b/src/shaders/cs_ffx_frameinterpolation_midpoint.comp
-index 7eec13953835..efc1dee0e170 100644
+index 7eec1395..efc1dee0 100644
 --- a/src/shaders/cs_ffx_frameinterpolation_midpoint.comp
 +++ b/src/shaders/cs_ffx_frameinterpolation_midpoint.comp
 @@ -39,6 +39,11 @@
@@ -6873,7 +6873,7 @@ index 7eec13953835..efc1dee0e170 100644
      float blend = 0.5;
      if (!previousValid && currentValid)
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index d0081ffcab6d..859fdd21e71f 100644
+index d0081ffc..859fdd21 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -86,6 +86,7 @@
@@ -7316,7 +7316,7 @@ index d0081ffcab6d..859fdd21e71f 100644
  		}
  
 diff --git a/tests/test_frame_generation_config.cpp b/tests/test_frame_generation_config.cpp
-index 448c4bf03da1..601cdea58d83 100644
+index 448c4bf0..601cdea5 100644
 --- a/tests/test_frame_generation_config.cpp
 +++ b/tests/test_frame_generation_config.cpp
 @@ -1,4 +1,5 @@
@@ -7407,7 +7407,7 @@ Subject: framegen: add tests and telemetry
 
 diff --git a/scripts/framegen-headless-smoke.sh b/scripts/framegen-headless-smoke.sh
 new file mode 100755
-index 000000000000..04c5c3523989
+index 00000000..04c5c352
 --- /dev/null
 +++ b/scripts/framegen-headless-smoke.sh
 @@ -0,0 +1,31 @@
@@ -7443,7 +7443,7 @@ index 000000000000..04c5c3523989
 +kill -0 "$gamescope_pid"
 +echo "headless frame-generation smoke session stayed alive"
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 859fdd21e71f..ffa334f7536f 100644
+index 859fdd21..ffa334f7 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -2527,6 +2527,30 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
@@ -7507,7 +7507,7 @@ Subject: rendervulkan: correct screen-space GUI during frame generation
  create mode 100644 src/shaders/cs_ffx_frameinterpolation_gui_mask.comp
 
 diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
-index 2a8dd72b331b..f221b447fda7 100644
+index 2a8dd72b..f221b447 100644
 --- a/src/frame_generation_vulkan.cpp
 +++ b/src/frame_generation_vulkan.cpp
 @@ -11,6 +11,7 @@
@@ -7697,7 +7697,7 @@ index 2a8dd72b331b..f221b447fda7 100644
  		uint32_t transferFunction = 0;
  		FrameGenerationGpuTimings timings;
 diff --git a/src/meson.build b/src/meson.build
-index 6bcd95713bbe..2a3ff708cbf2 100644
+index 6bcd9571..2a3ff708 100644
 --- a/src/meson.build
 +++ b/src/meson.build
 @@ -148,6 +148,21 @@ ffx_spirv_shaders += custom_target(
@@ -7724,7 +7724,7 @@ index 6bcd95713bbe..2a3ff708cbf2 100644
    ffx_scaled_luma_shader_name + '.h',
 diff --git a/src/shaders/cs_ffx_frameinterpolation_gui_mask.comp b/src/shaders/cs_ffx_frameinterpolation_gui_mask.comp
 new file mode 100644
-index 000000000000..6ca1904df886
+index 00000000..6ca1904d
 --- /dev/null
 +++ b/src/shaders/cs_ffx_frameinterpolation_gui_mask.comp
 @@ -0,0 +1,129 @@
@@ -7858,7 +7858,7 @@ index 000000000000..6ca1904df886
 +    imageStore(rw_current_gui_mask, pixel, vec4(currentHistory, 0.0, 0.0, 0.0));
 +}
 diff --git a/src/shaders/cs_ffx_frameinterpolation_midpoint.comp b/src/shaders/cs_ffx_frameinterpolation_midpoint.comp
-index efc1dee0e170..91c9bd7df90a 100644
+index efc1dee0..91c9bd7d 100644
 --- a/src/shaders/cs_ffx_frameinterpolation_midpoint.comp
 +++ b/src/shaders/cs_ffx_frameinterpolation_midpoint.comp
 @@ -44,9 +44,15 @@ layout(std430, binding = 7) buffer FrameGenerationTelemetry
@@ -7960,7 +7960,7 @@ Subject: framegen: fix FSR pacing and flicker
  5 files changed, 232 insertions(+), 17 deletions(-)
 
 diff --git a/src/frame_generation_pacing.hpp b/src/frame_generation_pacing.hpp
-index 471ad9c90606..b85ae7201531 100644
+index 471ad9c9..b85ae720 100644
 --- a/src/frame_generation_pacing.hpp
 +++ b/src/frame_generation_pacing.hpp
 @@ -31,6 +31,14 @@ namespace gamescope
@@ -7993,7 +7993,7 @@ index 471ad9c90606..b85ae7201531 100644
  		uint64_t previousDeadline, uint64_t now, uint64_t interval )
  	{
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index 45132cd92c7c..e2806f70f3a4 100644
+index 45132cd9..e2806f70 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -4439,6 +4439,8 @@ namespace
@@ -8256,7 +8256,7 @@ index 45132cd92c7c..e2806f70f3a4 100644
  {
  	return s_frameGenerationPacingContext.LastPresentedGenerated();
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index ae9f8b7bc555..adc70cab300a 100644
+index ae9f8b7b..adc70cab 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -421,6 +421,9 @@ void vulkan_frame_generation_apply( FrameInfo_t *frameInfo,
@@ -8270,7 +8270,7 @@ index ae9f8b7bc555..adc70cab300a 100644
  void vulkan_frame_generation_reset();
  
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index ffa334f7536f..42b3ec0be490 100644
+index ffa334f7..42b3ec0b 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -1050,6 +1050,19 @@ window_is_steam( steamcompmgr_win_t *w )
@@ -8399,7 +8399,7 @@ index ffa334f7536f..42b3ec0be490 100644
  
  			//if ( GetBackend()->IsVisible() )
 diff --git a/tests/test_frame_generation_config.cpp b/tests/test_frame_generation_config.cpp
-index 601cdea58d83..3073d912c3c5 100644
+index 601cdea5..3073d912 100644
 --- a/tests/test_frame_generation_config.cpp
 +++ b/tests/test_frame_generation_config.cpp
 @@ -66,12 +66,18 @@ int main()
@@ -8453,7 +8453,7 @@ Subject: mangoapp: report frame generation output timing
  7 files changed, 98 insertions(+), 18 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index fa925c7c4f43..e941a0e26c84 100644
+index fa925c7c..e941a0e2 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -562,6 +562,7 @@ extern bool g_bDebugLayers;
@@ -8492,7 +8492,7 @@ index fa925c7c4f43..e941a0e26c84 100644
  			drm_log.debugf("flip commit %" PRIu64, (uint64_t)GetCurrentConnector()->PresentationFeedback().m_uQueuedPresents);
  			gpuvis_trace_printf( "flip commit %" PRIu64, (uint64_t)GetCurrentConnector()->PresentationFeedback().m_uQueuedPresents );
 diff --git a/src/Backends/SDLBackend.cpp b/src/Backends/SDLBackend.cpp
-index 87bde7e2f13b..1b95c9fe5cb6 100644
+index 87bde7e2..1b95c9fe 100644
 --- a/src/Backends/SDLBackend.cpp
 +++ b/src/Backends/SDLBackend.cpp
 @@ -345,7 +345,7 @@ namespace gamescope
@@ -8505,7 +8505,7 @@ index 87bde7e2f13b..1b95c9fe5cb6 100644
  		// TODO: Hook up PresentationFeedback.
  
 diff --git a/src/mangoapp.cpp b/src/mangoapp.cpp
-index 16e1feb09907..166d24cd674e 100644
+index 16e1feb0..166d24cd 100644
 --- a/src/mangoapp.cpp
 +++ b/src/mangoapp.cpp
 @@ -32,6 +32,8 @@ struct mangoapp_msg_v1 {
@@ -8620,7 +8620,7 @@ index 16e1feb09907..166d24cd674e 100644
 +	}
  }
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index e2806f70f3a4..c9766024a8bd 100644
+index e2806f70..c9766024 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -2950,9 +2950,10 @@ bool acquire_next_image( void )
@@ -8750,7 +8750,7 @@ index e2806f70f3a4..c9766024a8bd 100644
  		uint32_t m_width = 0;
  		uint32_t m_height = 0;
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index adc70cab300a..37a4abcf92be 100644
+index adc70cab..37a4abcf 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -291,6 +291,7 @@ struct FrameInfo_t
@@ -8771,7 +8771,7 @@ index adc70cab300a..37a4abcf92be 100644
  void vulkan_garbage_collect( void );
  bool vulkan_remake_swapchain( void );
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 42b3ec0be490..813ec1c59a91 100644
+index 42b3ec0b..813ec1c5 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -1056,7 +1056,7 @@ steamcompmgr_window_allows_frame_generation( steamcompmgr_win_t *w )
@@ -8784,7 +8784,7 @@ index 42b3ec0be490..813ec1c59a91 100644
  	const global_focus_t *focus = GetCurrentFocus();
  	return gamescope::GetFrameGenerationConfig().enabled && focus &&
 diff --git a/src/steamcompmgr.hpp b/src/steamcompmgr.hpp
-index 6734c15aceab..edc7a9811b45 100644
+index 6734c15a..edc7a981 100644
 --- a/src/steamcompmgr.hpp
 +++ b/src/steamcompmgr.hpp
 @@ -137,6 +137,7 @@ void nudge_steamcompmgr( void );
@@ -8811,7 +8811,7 @@ Subject: rendervulkan: accelerate optical flow SAD
  create mode 100644 src/shaders/cs_ffx_opticalflow_compute_optical_flow_dot.comp
 
 diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
-index f221b447fda7..f3b7c2ff1b46 100644
+index f221b447..f3b7c2ff 100644
 --- a/src/frame_generation_vulkan.cpp
 +++ b/src/frame_generation_vulkan.cpp
 @@ -11,6 +11,7 @@
@@ -8887,7 +8887,7 @@ index f221b447fda7..f3b7c2ff1b46 100644
  					  Storage( resources->flow[a][level] ), Storage( resources->scdOutput ), levelConstants }, searchX, searchY ) )
  					return false;
 diff --git a/src/meson.build b/src/meson.build
-index 2a3ff708cbf2..eb793c3429db 100644
+index 2a3ff708..eb793c34 100644
 --- a/src/meson.build
 +++ b/src/meson.build
 @@ -178,6 +178,21 @@ ffx_spirv_shaders += custom_target(
@@ -8913,7 +8913,7 @@ index 2a3ff708cbf2..eb793c3429db 100644
  ffx_spirv_shaders += custom_target(
    ffx_vector_field_shader_name + '.h',
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index c9766024a8bd..7e3ac3c85557 100644
+index c9766024..7e3ac3c8 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -532,8 +532,12 @@ bool CVulkanDevice::createDevice()
@@ -8965,7 +8965,7 @@ index c9766024a8bd..7e3ac3c85557 100644
  		.timelineSemaphore = VK_TRUE,
  	};
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index 37a4abcf92be..30fb951ce5d0 100644
+index 37a4abcf..30fb951c 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -863,6 +863,7 @@ public:
@@ -8986,7 +8986,7 @@ index 37a4abcf92be..30fb951ce5d0 100644
  	uint32_t m_uVendorID = 0;
 diff --git a/src/shaders/cs_ffx_opticalflow_compute_optical_flow_dot.comp b/src/shaders/cs_ffx_opticalflow_compute_optical_flow_dot.comp
 new file mode 100644
-index 000000000000..b993ebed61e8
+index 00000000..b993ebed
 --- /dev/null
 +++ b/src/shaders/cs_ffx_opticalflow_compute_optical_flow_dot.comp
 @@ -0,0 +1,173 @@
@@ -9174,7 +9174,7 @@ Subject: BufferMemo: allow retained textures during buffer teardown
  1 file changed, 7 insertions(+), 1 deletion(-)
 
 diff --git a/src/BufferMemo.cpp b/src/BufferMemo.cpp
-index bd892c484ab5..97f182167548 100644
+index bd892c48..97f18216 100644
 --- a/src/BufferMemo.cpp
 +++ b/src/BufferMemo.cpp
 @@ -31,7 +31,13 @@ namespace gamescope
@@ -9203,7 +9203,7 @@ Subject: steamcompmgr: pace overlays during frame generation
  1 file changed, 42 insertions(+), 8 deletions(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 813ec1c59a91..61678f48093d 100644
+index 813ec1c5..61678f48 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -1056,6 +1056,20 @@ steamcompmgr_window_allows_frame_generation( steamcompmgr_win_t *w )
@@ -9341,7 +9341,7 @@ Subject: framegen: trace source starvation and queue pacing
  3 files changed, 76 insertions(+), 2 deletions(-)
 
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index 7e3ac3c85557..a4a7ecc4b5b8 100644
+index 7e3ac3c8..a4a7ecc4 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -4468,6 +4468,7 @@ namespace
@@ -9447,7 +9447,7 @@ index 7e3ac3c85557..a4a7ecc4b5b8 100644
  {
  	return g_device.wait( ulSeqNo, bReset );
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index 30fb951ce5d0..d7d8b6b0ee17 100644
+index 30fb951c..d7d8b6b0 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -441,15 +441,27 @@ struct FrameGenerationGpuTimings
@@ -9479,7 +9479,7 @@ index 30fb951ce5d0..d7d8b6b0ee17 100644
  gamescope::Rc<CVulkanTexture> vulkan_get_last_output_image( bool partial, bool defer );
  gamescope::Rc<CVulkanTexture> vulkan_acquire_screenshot_texture(uint32_t width, uint32_t height, bool exportable, uint32_t drmFormat, EStreamColorspace colorspace = k_EStreamColorspace_Unknown);
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 61678f48093d..24eb8ba258e7 100644
+index 61678f48..24eb8ba2 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -2566,10 +2566,20 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
@@ -9560,7 +9560,7 @@ Subject: framegen: report per-pass GPU timings
  3 files changed, 86 insertions(+), 15 deletions(-)
 
 diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
-index f3b7c2ff1b46..d29f7c44e223 100644
+index f3b7c2ff..d29f7c44 100644
 --- a/src/frame_generation_vulkan.cpp
 +++ b/src/frame_generation_vulkan.cpp
 @@ -50,6 +50,18 @@ namespace
@@ -9765,7 +9765,7 @@ index f3b7c2ff1b46..d29f7c44e223 100644
  			const uint32_t resourceSceneCutCopies =
  				*static_cast<const uint32_t *>( resources->telemetryCounters.mapped );
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index d7d8b6b0ee17..c0ece3055b2a 100644
+index d7d8b6b0..c0ece305 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -430,6 +430,17 @@ void vulkan_frame_generation_reset();
@@ -9787,7 +9787,7 @@ index d7d8b6b0ee17..c0ece3055b2a 100644
  	double searchAndFilterMilliseconds = 0.0;
  	double vectorFieldMilliseconds = 0.0;
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 24eb8ba258e7..0be44a433aca 100644
+index 24eb8ba2..0be44a43 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -2566,6 +2566,17 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
@@ -9822,7 +9822,7 @@ Subject: framegen: lower default optical flow scale to 75 percent
  4 files changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/src/frame_generation_config.hpp b/src/frame_generation_config.hpp
-index c418259165ee..403b4bbcddeb 100644
+index c4182591..403b4bbc 100644
 --- a/src/frame_generation_config.hpp
 +++ b/src/frame_generation_config.hpp
 @@ -20,7 +20,7 @@ namespace gamescope
@@ -9835,7 +9835,7 @@ index c418259165ee..403b4bbcddeb 100644
  	};
  
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index c0ece3055b2a..dd2b718516eb 100644
+index c0ece305..dd2b7185 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -466,7 +466,7 @@ struct FrameGenerationTelemetry
@@ -9848,7 +9848,7 @@ index c0ece3055b2a..dd2b718516eb 100644
  	uint32_t outputCadenceHz = 0;
  };
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 0be44a433aca..c2bb884b68d1 100644
+index 0be44a43..c2bb884b 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -6219,7 +6219,7 @@ handle_property_notify(xwayland_ctx_t *ctx, XPropertyEvent *ev)
@@ -9861,7 +9861,7 @@ index 0be44a433aca..c2bb884b68d1 100644
  	}
  	if ( ev->atom == ctx->atoms.gamescopeXWaylandModeControl )
 diff --git a/tests/test_frame_generation_config.cpp b/tests/test_frame_generation_config.cpp
-index 3073d912c3c5..cbf317528e3f 100644
+index 3073d912..cbf31752 100644
 --- a/tests/test_frame_generation_config.cpp
 +++ b/tests/test_frame_generation_config.cpp
 @@ -14,7 +14,7 @@ int main()
@@ -9895,7 +9895,7 @@ Subject: framegen: reduce GUI mask sampling in midpoint pass
  1 file changed, 5 insertions(+), 14 deletions(-)
 
 diff --git a/src/shaders/cs_ffx_frameinterpolation_midpoint.comp b/src/shaders/cs_ffx_frameinterpolation_midpoint.comp
-index 91c9bd7df90a..2d1eee618521 100644
+index 91c9bd7d..2d1eee61 100644
 --- a/src/shaders/cs_ffx_frameinterpolation_midpoint.comp
 +++ b/src/shaders/cs_ffx_frameinterpolation_midpoint.comp
 @@ -80,20 +80,11 @@ vec3 toWorkingColor(vec3 rawColor)
@@ -9937,7 +9937,7 @@ Subject: framegen: write SDR interpolation directly to scanout
  3 files changed, 64 insertions(+), 21 deletions(-)
 
 diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
-index d29f7c44e223..4a6696249bdb 100644
+index d29f7c44..4a669624 100644
 --- a/src/frame_generation_vulkan.cpp
 +++ b/src/frame_generation_vulkan.cpp
 @@ -41,6 +41,9 @@ gamescope::ConVar<bool> cv_frame_generation_debug_gui(
@@ -10046,7 +10046,7 @@ index d29f7c44e223..4a6696249bdb 100644
  	CVulkanCmdBuffer *cmdBuffer, bool usedFsr )
  {
 diff --git a/src/frame_generation_vulkan.hpp b/src/frame_generation_vulkan.hpp
-index bc20bf5a3d2b..dcb8f4aee8ae 100644
+index bc20bf5a..dcb8f4ae 100644
 --- a/src/frame_generation_vulkan.hpp
 +++ b/src/frame_generation_vulkan.hpp
 @@ -15,14 +15,16 @@ bool vulkan_frame_generation_record_optical_flow(
@@ -10079,7 +10079,7 @@ index bc20bf5a3d2b..dcb8f4aee8ae 100644
  void vulkan_frame_generation_record_output_timestamp(
  	CVulkanCmdBuffer *cmdBuffer, bool usedFsr );
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index a4a7ecc4b5b8..175114d253ee 100644
+index a4a7ecc4..175114d2 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -4681,9 +4681,25 @@ namespace
@@ -10159,7 +10159,7 @@ Subject: framegen: fix screenshot teardown crash
  2 files changed, 43 insertions(+), 18 deletions(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index c2bb884b68d1..bc31432ad5be 100644
+index c2bb884b..bc31432a 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -2835,6 +2835,14 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
@@ -10285,7 +10285,7 @@ index c2bb884b68d1..bc31432ad5be 100644
  	// Clean up any commits.
  	{
 diff --git a/src/steamcompmgr_shared.hpp b/src/steamcompmgr_shared.hpp
-index 7be906206cd2..dfc7e63c43b7 100644
+index 7be90620..dfc7e63c 100644
 --- a/src/steamcompmgr_shared.hpp
 +++ b/src/steamcompmgr_shared.hpp
 @@ -281,6 +281,7 @@ namespace gamescope
@@ -10334,7 +10334,7 @@ Subject: framegen: unblock Steam focus transitions
  1 file changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index bc31432ad5be..ed8a3d013b72 100644
+index bc31432a..ed8a3d01 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -9250,7 +9250,11 @@ steamcompmgr_main(int argc, char **argv)
@@ -10363,7 +10363,7 @@ Subject: fix running gamescope in a vm with the venus driver
  3 files changed, 54 insertions(+), 10 deletions(-)
 
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index 175114d253ee..bfd9e83b7f44 100644
+index 175114d2..bfd9e83b 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -429,11 +429,28 @@ bool CVulkanDevice::selectPhysDev(VkSurfaceKHR surface)
@@ -10421,7 +10421,7 @@ index 175114d253ee..bfd9e83b7f44 100644
  		return nullptr;
  
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index dd2b718516eb..4d7ffab49a68 100644
+index dd2b7185..4d7ffab4 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -883,6 +883,7 @@ public:
@@ -10441,7 +10441,7 @@ index dd2b718516eb..4d7ffab49a68 100644
  
  
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index ed8a3d013b72..e716a1e4720e 100644
+index ed8a3d01..e716a1e4 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -1437,16 +1437,26 @@ import_commit (
@@ -10513,7 +10513,7 @@ Subject: add motion_absolute mouse handling (used in VMs)
  2 files changed, 23 insertions(+)
 
 diff --git a/src/wlserver.cpp b/src/wlserver.cpp
-index e6f43501119d..088fa8e9e9af 100644
+index e6f43501..088fa8e9 100644
 --- a/src/wlserver.cpp
 +++ b/src/wlserver.cpp
 @@ -111,6 +111,7 @@ wlserver_wl_surface_info *get_wl_surface_info(struct wlr_surface *wlr_surf);
@@ -10560,7 +10560,7 @@ index e6f43501119d..088fa8e9e9af 100644
  			wl_signal_add( &pointer->wlr->events.button, &pointer->button );
  			pointer->axis.notify = wlserver_handle_pointer_axis;
 diff --git a/src/wlserver.hpp b/src/wlserver.hpp
-index 2eebb67c9486..accaae61c2dd 100644
+index 2eebb67c..accaae61 100644
 --- a/src/wlserver.hpp
 +++ b/src/wlserver.hpp
 @@ -208,6 +208,7 @@ struct wlserver_pointer {
@@ -10586,7 +10586,7 @@ A warning per frame is noisy and wasteful.
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index e716a1e4720e..c916fbfea76a 100644
+index e716a1e4..c916fbfe 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -7352,7 +7352,7 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
@@ -10610,7 +10610,7 @@ tvs may set 60hz as the default output. This is not optimal, especially if they 
  1 file changed, 13 insertions(+), 2 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index e941a0e26c84..876507b6ff58 100644
+index e941a0e2..876507b6 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -2142,13 +2142,24 @@ namespace gamescope
@@ -10656,7 +10656,7 @@ Moreover, parts of the metadata block are optional, and gamescope rejects the wh
  2 files changed, 3 insertions(+), 23 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 876507b6ff58..4b72bf9096af 100644
+index 876507b6..4b72bf90 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -2562,25 +2562,10 @@ namespace gamescope
@@ -10689,7 +10689,7 @@ index 876507b6ff58..4b72bf9096af 100644
  			m_Mutable.HDR.pDefaultMetadataBlob = GetBackend()->CreateBackendBlob( defaultHDRMetadata );
  		}
 diff --git a/src/wlserver.cpp b/src/wlserver.cpp
-index 088fa8e9e9af..bdbaff5847d5 100644
+index 088fa8e9..bdbaff58 100644
 --- a/src/wlserver.cpp
 +++ b/src/wlserver.cpp
 @@ -989,11 +989,6 @@ static void gamescope_swapchain_set_hdr_metadata( struct wl_client *client, stru
@@ -10740,7 +10740,7 @@ Subject: fix crash with FSR, HDR, and framegen due to incorrect memory buffer
  create mode 100644 src/shaders/cs_easu_rgba16f.comp
 
 diff --git a/src/frame_generation_pacing.hpp b/src/frame_generation_pacing.hpp
-index b85ae7201531..78bfd89f4ad5 100644
+index b85ae720..78bfd89f 100644
 --- a/src/frame_generation_pacing.hpp
 +++ b/src/frame_generation_pacing.hpp
 @@ -44,6 +44,12 @@ namespace gamescope
@@ -10757,7 +10757,7 @@ index b85ae7201531..78bfd89f4ad5 100644
  		uint64_t now, uint64_t deadline, uint64_t interval )
  	{
 diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
-index 4a6696249bdb..0a3045c7ae75 100644
+index 4a669624..0a3045c7 100644
 --- a/src/frame_generation_vulkan.cpp
 +++ b/src/frame_generation_vulkan.cpp
 @@ -746,7 +746,10 @@ namespace
@@ -10773,7 +10773,7 @@ index 4a6696249bdb..0a3045c7ae75 100644
  					Sampled( source->srgbView() ), Storage( resources->luma[current][0] ), common,
  				}, ( resources->lumaExtent.width + 31 ) / 32, ( resources->lumaExtent.height + 31 ) / 32 ) )
 diff --git a/src/meson.build b/src/meson.build
-index eb793c3429db..f4ba7652ba89 100644
+index eb793c34..f4ba7652 100644
 --- a/src/meson.build
 +++ b/src/meson.build
 @@ -63,12 +63,17 @@ endif
@@ -10795,7 +10795,7 @@ index eb793c3429db..f4ba7652ba89 100644
    'shaders/cs_nis.comp',
    'shaders/cs_nis_fp16.comp',
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index bfd9e83b7f44..c8d05d7527e4 100644
+index bfd9e83b..c8d05d75 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -43,12 +43,17 @@
@@ -11240,7 +11240,7 @@ index bfd9e83b7f44..c8d05d7527e4 100644
  			}
  
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index 4d7ffab49a68..4a6c05169fee 100644
+index 4d7ffab4..4a6c0516 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -619,12 +619,16 @@ struct VulkanOutput_t
@@ -11299,7 +11299,7 @@ index 4d7ffab49a68..4a6c05169fee 100644
  	uint32_t m_renderBufferOffset = 0;
  };
 diff --git a/src/shaders/cs_composite_blit.comp b/src/shaders/cs_composite_blit.comp
-index b728d46c0e67..740cee39a115 100644
+index b728d46c..740cee39 100644
 --- a/src/shaders/cs_composite_blit.comp
 +++ b/src/shaders/cs_composite_blit.comp
 @@ -3,48 +3,4 @@
@@ -11354,7 +11354,7 @@ index b728d46c0e67..740cee39a115 100644
 +#include "cs_composite_blit_common.h"
 diff --git a/src/shaders/cs_composite_blit_common.h b/src/shaders/cs_composite_blit_common.h
 new file mode 100644
-index 000000000000..b1995922077d
+index 00000000..b1995922
 --- /dev/null
 +++ b/src/shaders/cs_composite_blit_common.h
 @@ -0,0 +1,45 @@
@@ -11405,7 +11405,7 @@ index 000000000000..b1995922077d
 +}
 diff --git a/src/shaders/cs_composite_blit_rgb10a2.comp b/src/shaders/cs_composite_blit_rgb10a2.comp
 new file mode 100644
-index 000000000000..38393aa38838
+index 00000000..38393aa3
 --- /dev/null
 +++ b/src/shaders/cs_composite_blit_rgb10a2.comp
 @@ -0,0 +1,7 @@
@@ -11418,7 +11418,7 @@ index 000000000000..38393aa38838
 +#include "cs_composite_blit_common.h"
 diff --git a/src/shaders/cs_composite_rcas_rgb10a2.comp b/src/shaders/cs_composite_rcas_rgb10a2.comp
 new file mode 100644
-index 000000000000..4c2cd654699a
+index 00000000..4c2cd654
 --- /dev/null
 +++ b/src/shaders/cs_composite_rcas_rgb10a2.comp
 @@ -0,0 +1,7 @@
@@ -11431,7 +11431,7 @@ index 000000000000..4c2cd654699a
 +#include "cs_composite_rcas_common.h"
 diff --git a/src/shaders/cs_composite_rcas_rgba16f.comp b/src/shaders/cs_composite_rcas_rgba16f.comp
 new file mode 100644
-index 000000000000..eedc6993158f
+index 00000000..eedc6993
 --- /dev/null
 +++ b/src/shaders/cs_composite_rcas_rgba16f.comp
 @@ -0,0 +1,7 @@
@@ -11443,7 +11443,7 @@ index 000000000000..eedc6993158f
 +#define VKR_TARGET_FORMAT rgba16f
 +#include "cs_composite_rcas_common.h"
 diff --git a/src/shaders/cs_easu.comp b/src/shaders/cs_easu.comp
-index d13ee9577779..0cef5fb088e1 100644
+index d13ee957..0cef5fb0 100644
 --- a/src/shaders/cs_easu.comp
 +++ b/src/shaders/cs_easu.comp
 @@ -3,45 +3,5 @@
@@ -11496,7 +11496,7 @@ index d13ee9577779..0cef5fb088e1 100644
 +#include "cs_easu_common.h"
 diff --git a/src/shaders/cs_easu_common.h b/src/shaders/cs_easu_common.h
 new file mode 100644
-index 000000000000..70eb2ca97f10
+index 00000000..70eb2ca9
 --- /dev/null
 +++ b/src/shaders/cs_easu_common.h
 @@ -0,0 +1,57 @@
@@ -11558,7 +11558,7 @@ index 000000000000..70eb2ca97f10
 +    easuPass(pos);
 +}
 diff --git a/src/shaders/cs_easu_fp16.comp b/src/shaders/cs_easu_fp16.comp
-index 403c2b28dc1b..76840661a904 100644
+index 403c2b28..76840661 100644
 --- a/src/shaders/cs_easu_fp16.comp
 +++ b/src/shaders/cs_easu_fp16.comp
 @@ -4,45 +4,5 @@
@@ -11611,7 +11611,7 @@ index 403c2b28dc1b..76840661a904 100644
 +#include "cs_easu_common.h"
 diff --git a/src/shaders/cs_easu_fp16_rgba16f.comp b/src/shaders/cs_easu_fp16_rgba16f.comp
 new file mode 100644
-index 000000000000..4e07af2e1a9a
+index 00000000..4e07af2e
 --- /dev/null
 +++ b/src/shaders/cs_easu_fp16_rgba16f.comp
 @@ -0,0 +1,9 @@
@@ -11626,7 +11626,7 @@ index 000000000000..4e07af2e1a9a
 +#include "cs_easu_common.h"
 diff --git a/src/shaders/cs_easu_rgba16f.comp b/src/shaders/cs_easu_rgba16f.comp
 new file mode 100644
-index 000000000000..2a9845492a3c
+index 00000000..2a984549
 --- /dev/null
 +++ b/src/shaders/cs_easu_rgba16f.comp
 @@ -0,0 +1,8 @@
@@ -11639,7 +11639,7 @@ index 000000000000..2a9845492a3c
 +#define FSR_EASU_USE_FP16 0
 +#include "cs_easu_common.h"
 diff --git a/src/shaders/cs_ffx_opticalflow_prepare_luma_scaled.comp b/src/shaders/cs_ffx_opticalflow_prepare_luma_scaled.comp
-index c1706451bf2b..0a8dda68d14c 100644
+index c1706451..0a8dda68 100644
 --- a/src/shaders/cs_ffx_opticalflow_prepare_luma_scaled.comp
 +++ b/src/shaders/cs_ffx_opticalflow_prepare_luma_scaled.comp
 @@ -70,9 +70,20 @@ void main()
@@ -11667,7 +11667,7 @@ index c1706451bf2b..0a8dda68d14c 100644
      }
  }
 diff --git a/src/shaders/descriptor_set.h b/src/shaders/descriptor_set.h
-index 723e964f4ed2..c04f8d1c3bb5 100644
+index 723e964f..c04f8d1c 100644
 --- a/src/shaders/descriptor_set.h
 +++ b/src/shaders/descriptor_set.h
 @@ -45,10 +45,14 @@ uint get_layer_colorspace(uint layerIdx) {
@@ -11689,7 +11689,7 @@ index 723e964f4ed2..c04f8d1c3bb5 100644
  layout(binding = 3) uniform sampler2D s_samplers[VKR_SAMPLER_SLOTS];
  layout(binding = 4) uniform sampler2D s_ycbcr_samplers[VKR_SAMPLER_SLOTS];
 diff --git a/tests/test_frame_generation_config.cpp b/tests/test_frame_generation_config.cpp
-index cbf317528e3f..c64ca0a7fd55 100644
+index cbf31752..c64ca0a7 100644
 --- a/tests/test_frame_generation_config.cpp
 +++ b/tests/test_frame_generation_config.cpp
 @@ -79,6 +79,11 @@ int main()
@@ -11719,7 +11719,7 @@ during e.g. Steam Remote Play. Affects both Intel and NVIDIA hardware.
  1 file changed, 1 insertion(+)
 
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index c8d05d7527e4..3ca1650242ec 100644
+index c8d05d75..3ca16502 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -3787,6 +3787,7 @@ static gamescope::Rc<CVulkanTexture> acquire_pooled_texture( auto& pool, uint32_
@@ -11750,7 +11750,7 @@ video capture.
  1 file changed, 16 insertions(+), 14 deletions(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index c916fbfea76a..e24399aedb9b 100644
+index c916fbfe..e24399ae 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -3087,6 +3087,8 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
@@ -11863,7 +11863,7 @@ in remote play streaming from both NVK and NVIDIA prop drivers.
  3 files changed, 31 insertions(+), 6 deletions(-)
 
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index 3ca1650242ec..8c6d6adc89ff 100644
+index 3ca16502..8c6d6adc 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -3827,6 +3827,25 @@ gamescope::Rc<CVulkanTexture> vulkan_acquire_capture_texture(uint32_t width, uin
@@ -11893,7 +11893,7 @@ index 3ca1650242ec..8c6d6adc89ff 100644
  float g_flInternalDisplayBrightnessNits = 500.0f;
  
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index 4a6c05169fee..b7ad6d236014 100644
+index 4a6c0516..b7ad6d23 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -477,6 +477,7 @@ void vulkan_wait( uint64_t ulSeqNo, bool bReset );
@@ -11905,7 +11905,7 @@ index 4a6c05169fee..b7ad6d236014 100644
  void vulkan_present_to_window( uint64_t frameGenerationOutputId );
  
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index e24399aedb9b..73637b0d1661 100644
+index e24399ae..73637b0d 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -2442,7 +2442,7 @@ static void paint_pipewire()
@@ -11970,7 +11970,7 @@ Subject: steamcompmgr: fix the error message when a screenshot is requested
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 73637b0d1661..ec0087f3d928 100644
+index 73637b0d..ec0087f3 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -2968,6 +2968,8 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
@@ -12009,7 +12009,7 @@ and the request would always fail with this misleading error message:
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index ec0087f3d928..0ac5639b4ab1 100644
+index ec0087f3..0ac5639b 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -2966,7 +2966,7 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
@@ -12044,7 +12044,7 @@ Fixes: https://github.com/ValveSoftware/gamescope/issues/1996
  1 file changed, 36 insertions(+), 1 deletion(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 0ac5639b4ab1..f9e085d82c76 100644
+index 0ac5639b..f9e085d8 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -2971,9 +2971,18 @@ paint_all(global_focus_t *pFocus, bool async, bool dpms, bool frameGenerationPre
@@ -12112,7 +12112,7 @@ regression from bff10d5331f8
  1 file changed, 7 insertions(+), 2 deletions(-)
 
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index 8c6d6adc89ff..bc353223530b 100644
+index 8c6d6adc..bc353223 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -4931,16 +4931,21 @@ namespace
@@ -12166,7 +12166,7 @@ Subject: temporarily add gdm just for nvidia to force contiguous allocations
  6 files changed, 263 insertions(+), 10 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 4b72bf9096af..f175aeabdd78 100644
+index 4b72bf90..f175aeab 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -52,6 +52,10 @@
@@ -12333,7 +12333,7 @@ index 4b72bf9096af..f175aeabdd78 100644
  		{
  			return g_DRM.allow_modifiers;
 diff --git a/src/Backends/DeferredBackend.h b/src/Backends/DeferredBackend.h
-index 0f7346605078..44c13e28addd 100644
+index 0f734660..44c13e28 100644
 --- a/src/Backends/DeferredBackend.h
 +++ b/src/Backends/DeferredBackend.h
 @@ -163,6 +163,20 @@ namespace gamescope
@@ -12358,7 +12358,7 @@ index 0f7346605078..44c13e28addd 100644
  		{
              return true;
 diff --git a/src/backend.h b/src/backend.h
-index 607c25d9a0db..277f676a647b 100644
+index 607c25d9..277f676a 100644
 --- a/src/backend.h
 +++ b/src/backend.h
 @@ -337,6 +337,17 @@ namespace gamescope
@@ -12385,7 +12385,7 @@ index 607c25d9a0db..277f676a647b 100644
  }
 -
 diff --git a/src/meson.build b/src/meson.build
-index f4ba7652ba89..7a723123ecc4 100644
+index f4ba7652..7a723123 100644
 --- a/src/meson.build
 +++ b/src/meson.build
 @@ -11,6 +11,7 @@ dep_xmu = dependency('xmu')
@@ -12414,7 +12414,7 @@ index f4ba7652ba89..7a723123ecc4 100644
        vulkan_dep, liftoff_dep, dep_xtst, dep_xmu, cap_dep, epoll_dep, pipewire_dep, librt_dep,
        stb_dep, displayinfo_dep, openvr_dep, dep_xcursor, avif_dep, dep_xi,
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index bc353223530b..6f06f14a5b20 100644
+index bc353223..6f06f14a 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -2157,7 +2157,7 @@ bool CVulkanTexture::BInit( uint32_t width, uint32_t height, uint32_t depth, uin
@@ -12617,7 +12617,7 @@ index bc353223530b..6f06f14a5b20 100644
  	bool bSuccess = pOutput->outputImages[0]->BInit( l_nOutputWidth, l_nOutputHeight, 1u, uDRMFormat, outputImageflags );
  	if ( bSuccess != true )
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index b7ad6d236014..d6809d2757ec 100644
+index b7ad6d23..d6809d27 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -211,6 +211,7 @@ private:
@@ -12648,7 +12648,7 @@ When plugging in an eGPU, the display of a handheld might still stay on. Blank a
  1 file changed, 31 insertions(+), 7 deletions(-)
 
 diff --git a/src/wlserver.cpp b/src/wlserver.cpp
-index bdbaff5847d5..8cf0dfc1d4b4 100644
+index bdbaff58..8cf0dfc1 100644
 --- a/src/wlserver.cpp
 +++ b/src/wlserver.cpp
 @@ -9,6 +9,7 @@
@@ -12732,7 +12732,7 @@ currently, gamescope chooses gpu 0 regardless. Well, what if gpu 0 is not the on
  create mode 160000 subprojects/v4l-utils
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index f175aeabdd78..f015cd9a31eb 100644
+index f175aeab..f015cd9a 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -1007,15 +1007,42 @@ static std::unordered_map<std::string, int> parse_connector_priorities(const cha
@@ -12903,7 +12903,7 @@ index f175aeabdd78..f015cd9a31eb 100644
  
  		virtual bool PostInit() override
 diff --git a/src/wlserver.cpp b/src/wlserver.cpp
-index 8cf0dfc1d4b4..9f54aac2fdc2 100644
+index 8cf0dfc1..9f54aac2 100644
 --- a/src/wlserver.cpp
 +++ b/src/wlserver.cpp
 @@ -77,6 +77,7 @@
@@ -12953,7 +12953,7 @@ index 8cf0dfc1d4b4..9f54aac2fdc2 100644
  
  	for ( ssize_t i = 0; i < n; i++ )
 diff --git a/src/wlserver.hpp b/src/wlserver.hpp
-index accaae61c2dd..bb005b9658fc 100644
+index accaae61..bb005b96 100644
 --- a/src/wlserver.hpp
 +++ b/src/wlserver.hpp
 @@ -227,7 +227,8 @@ struct wlserver_touch {
@@ -12968,7 +12968,7 @@ index accaae61c2dd..bb005b9658fc 100644
  bool wlserver_init( void );
 diff --git a/subprojects/v4l-utils b/subprojects/v4l-utils
 new file mode 160000
-index 000000000000..1316a80455ef
+index 00000000..1316a804
 --- /dev/null
 +++ b/subprojects/v4l-utils
 @@ -0,0 +1 @@
@@ -12984,7 +12984,7 @@ Subject: also blank crtcs on resume
  1 file changed, 19 insertions(+), 5 deletions(-)
 
 diff --git a/src/wlserver.cpp b/src/wlserver.cpp
-index 9f54aac2fdc2..e20be330240c 100644
+index 9f54aac2..e20be330 100644
 --- a/src/wlserver.cpp
 +++ b/src/wlserver.cpp
 @@ -1613,6 +1613,8 @@ void wlserver_refresh_cycle( struct wlr_surface *surface, uint64_t refresh_cycle
@@ -13071,7 +13071,7 @@ Subject: fix hdr framegen on nvidia being black
  1 file changed, 12 insertions(+), 3 deletions(-)
 
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index 6f06f14a5b20..01bfc18643f4 100644
+index 6f06f14a..01bfc186 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -5125,7 +5125,11 @@ namespace
@@ -13121,7 +13121,7 @@ Subject: add retry for automatic gpu detection
  1 file changed, 21 insertions(+), 8 deletions(-)
 
 diff --git a/src/wlserver.cpp b/src/wlserver.cpp
-index e20be330240c..d64bd605d9c3 100644
+index e20be330..d64bd605 100644
 --- a/src/wlserver.cpp
 +++ b/src/wlserver.cpp
 @@ -1788,6 +1788,9 @@ static void blank_unused_kms_devices()
@@ -13183,7 +13183,7 @@ Subject: add fallback if reaper process is missing
  1 file changed, 41 insertions(+), 1 deletion(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index f9e085d82c76..48fd7faa36f7 100644
+index f9e085d8..48fd7faa 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -46,9 +46,11 @@
@@ -13279,7 +13279,7 @@ configs and read the HDR metadata from the displays.
  4 files changed, 15 insertions(+), 1 deletion(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index f015cd9a31eb..1d86f2ebcace 100644
+index f015cd9a..1d86f2eb 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -2593,7 +2593,13 @@ namespace gamescope
@@ -13298,7 +13298,7 @@ index f015cd9a31eb..1d86f2ebcace 100644
  					pHDRStaticMetadata->desired_content_max_luminance
  					? nits_to_u16( pHDRStaticMetadata->desired_content_max_luminance )
 diff --git a/src/backend.h b/src/backend.h
-index 277f676a647b..7ffdf9b3f5d2 100644
+index 277f676a..7ffdf9b3 100644
 --- a/src/backend.h
 +++ b/src/backend.h
 @@ -24,6 +24,7 @@ struct wlr_dmabuf_attributes;
@@ -13310,7 +13310,7 @@ index 277f676a647b..7ffdf9b3f5d2 100644
  namespace gamescope
  {
 diff --git a/src/main.cpp b/src/main.cpp
-index ee221188037c..1835424f62b3 100644
+index ee221188..1835424f 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -143,6 +143,7 @@ const struct option *gamescope_options = (struct option[]){
@@ -13338,7 +13338,7 @@ index ee221188037c..1835424f62b3 100644
  
  static void UpdateCompatEnvVars()
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 48fd7faa36f7..f1606a514482 100644
+index 48fd7faa..f1606a51 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -157,6 +157,8 @@ gamescope_color_mgmt_luts g_ScreenshotColorMgmtLutsHDR[ EOTF_Count ];
@@ -13374,7 +13374,7 @@ Subject: sync: retain Vulkan buffer releases until GPU completion
  5 files changed, 65 insertions(+), 2 deletions(-)
 
 diff --git a/src/commit.cpp b/src/commit.cpp
-index b3fcaca24534..4aa56b1897ba 100644
+index b3fcaca2..4aa56b18 100644
 --- a/src/commit.cpp
 +++ b/src/commit.cpp
 @@ -128,6 +128,13 @@ void commit_t::SetFence( int nFence, bool bMangoNudge, CommitDoneList_t *pDoneCo
@@ -13392,7 +13392,7 @@ index b3fcaca24534..4aa56b1897ba 100644
  
  bool commit_t::ShouldPreemptivelyUpscale()
 diff --git a/src/commit.h b/src/commit.h
-index 0f098a93132f..e807d78d5bba 100644
+index 0f098a93..e807d78d 100644
 --- a/src/commit.h
 +++ b/src/commit.h
 @@ -37,9 +37,11 @@ struct commit_t final : public gamescope::RcObject, public gamescope::IWaitable,
@@ -13415,7 +13415,7 @@ index 0f098a93132f..e807d78d5bba 100644
 \ No newline at end of file
 +};
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index 01bfc18643f4..867b44bdf48e 100644
+index 01bfc186..867b44bd 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -1644,6 +1644,7 @@ void CVulkanCmdBuffer::reset()
@@ -13482,7 +13482,7 @@ index 01bfc18643f4..867b44bdf48e 100644
  {
    VkPhysicalDeviceImageFormatInfo2 imageFormatInfo = {
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index d6809d2757ec..530d38cdd1ea 100644
+index d6809d27..530d38cd 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -61,6 +61,7 @@ enum EStreamColorspace : int
@@ -13525,7 +13525,7 @@ index d6809d2757ec..530d38cdd1ea 100644
  
  	// Draw State
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index f1606a514482..0412e4d95597 100644
+index f1606a51..0412e4d9 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -7462,6 +7462,14 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
@@ -13564,7 +13564,7 @@ otherwise we can starve the nvidia display engine...
  1 file changed, 10 insertions(+), 1 deletion(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 0412e4d95597..6a9fd7466d48 100644
+index 0412e4d9..6a9fd746 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -9430,7 +9430,16 @@ steamcompmgr_main(int argc, char **argv)
@@ -13596,7 +13596,7 @@ Subject: drm: only set IN_FENCE_FD for real acquire fences
  1 file changed, 2 insertions(+), 16 deletions(-)
 
 diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
-index 1d86f2ebcace..8a358f241e42 100644
+index 1d86f2eb..8a358f24 100644
 --- a/src/Backends/DRMBackend.cpp
 +++ b/src/Backends/DRMBackend.cpp
 @@ -1236,9 +1236,6 @@ void load_pnps(void)
@@ -13652,7 +13652,7 @@ otherwise nvidia crashes when enabling scaling filters
  3 files changed, 46 insertions(+), 32 deletions(-)
 
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index 867b44bdf48e..4345be5b1bc9 100644
+index 867b44bd..4345be5b 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -1569,14 +1569,22 @@ std::shared_ptr<VulkanTimelineSemaphore_t> CVulkanDevice::ImportTimelineSemaphor
@@ -13681,7 +13681,7 @@ index 867b44bdf48e..4345be5b1bc9 100644
  
  void CVulkanDevice::wait(uint64_t sequence, bool reset)
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index 530d38cdd1ea..00a5b9af4962 100644
+index 530d38cd..00a5b9af 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -1057,8 +1057,8 @@ public:
@@ -13696,7 +13696,7 @@ index 530d38cdd1ea..00a5b9af4962 100644
  	const std::vector<VulkanTimelinePoint_t> &GetExternalDependencies() const { return m_ExternalDependencies; }
  	const std::vector<VulkanTimelinePoint_t> &GetExternalSignals() const { return m_ExternalSignals; }
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 6a9fd7466d48..92e0870a94c6 100644
+index 6a9fd746..92e0870a 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -7516,44 +7516,50 @@ void update_wayland_res(CommitDoneList_t *doneCommits, steamcompmgr_win_t *w, Re
@@ -13793,7 +13793,7 @@ Subject: framegen: fix generated frame presentation
  create mode 100644 src/shaders/cs_ffx_frameinterpolation_inpainting.comp
 
 diff --git a/src/frame_generation_vulkan.cpp b/src/frame_generation_vulkan.cpp
-index 0a3045c7ae75..9fc401353698 100644
+index 0a3045c7..9fc40135 100644
 --- a/src/frame_generation_vulkan.cpp
 +++ b/src/frame_generation_vulkan.cpp
 @@ -16,7 +16,7 @@
@@ -13817,7 +13817,7 @@ index 0a3045c7ae75..9fc401353698 100644
  					Binding( 2, D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ), Binding( 3, D::VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ),
  					Binding( 7, D::VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ), Binding( 8, D::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ),
 diff --git a/src/meson.build b/src/meson.build
-index 7a723123ecc4..84636c9fec79 100644
+index 7a723123..84636c9f 100644
 --- a/src/meson.build
 +++ b/src/meson.build
 @@ -120,7 +120,6 @@ endforeach
@@ -13851,7 +13851,7 @@ index 7a723123ecc4..84636c9fec79 100644
  ffx_spirv_shaders += custom_target(
    ffx_midpoint_shader_name + '.h',
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index 4345be5b1bc9..94b8bd856477 100644
+index 4345be5b..94b8bd85 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -4735,6 +4735,7 @@ namespace
@@ -13953,7 +13953,7 @@ index 4345be5b1bc9..94b8bd856477 100644
  				m_telemetry.deadlineDroppedFrames++;
 diff --git a/src/shaders/cs_ffx_frameinterpolation_inpainting.comp b/src/shaders/cs_ffx_frameinterpolation_inpainting.comp
 new file mode 100644
-index 000000000000..cd95b050ffdb
+index 00000000..cd95b050
 --- /dev/null
 +++ b/src/shaders/cs_ffx_frameinterpolation_inpainting.comp
 @@ -0,0 +1,55 @@
@@ -14023,7 +14023,7 @@ Subject: move hdr-pq-internal in the check before DRM init
  1 file changed, 2 insertions(+)
 
 diff --git a/src/main.cpp b/src/main.cpp
-index 1835424f62b3..d37f13a45759 100644
+index 1835424f..d37f13a4 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -815,6 +815,8 @@ int main(int argc, char **argv)
@@ -14046,7 +14046,7 @@ Subject: layer: treat stale XWayland swapchain formats as out of date
  1 file changed, 39 insertions(+), 18 deletions(-)
 
 diff --git a/layer/VkLayer_FROG_gamescope_wsi.cpp b/layer/VkLayer_FROG_gamescope_wsi.cpp
-index bbe445890a74..30712e29f779 100644
+index bbe44589..30712e29 100644
 --- a/layer/VkLayer_FROG_gamescope_wsi.cpp
 +++ b/layer/VkLayer_FROG_gamescope_wsi.cpp
 @@ -1135,6 +1135,23 @@ namespace GamescopeWSILayer {
@@ -14139,7 +14139,7 @@ SteamAppId doesnt survive pure x11 windows
  2 files changed, 21 insertions(+), 11 deletions(-)
 
 diff --git a/layer/VkLayer_FROG_gamescope_wsi.cpp b/layer/VkLayer_FROG_gamescope_wsi.cpp
-index 30712e29f779..b9761a3e4faf 100644
+index 30712e29..b9761a3e 100644
 --- a/layer/VkLayer_FROG_gamescope_wsi.cpp
 +++ b/layer/VkLayer_FROG_gamescope_wsi.cpp
 @@ -85,6 +85,9 @@ namespace GamescopeWSILayer {
@@ -14153,7 +14153,7 @@ index 30712e29f779..b9761a3e4faf 100644
        return 0;
  
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 92e0870a94c6..92e81d23b7b6 100644
+index 92e0870a..92e81d23 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -4961,15 +4961,24 @@ get_appid_from_pid_environ( pid_t pid )
@@ -14230,7 +14230,7 @@ it chose the wrong layout...
  1 file changed, 5 insertions(+)
 
 diff --git a/src/ime.cpp b/src/ime.cpp
-index 80c3307717d8..cdd156723821 100644
+index 80c33077..cdd15672 100644
 --- a/src/ime.cpp
 +++ b/src/ime.cpp
 @@ -316,11 +316,16 @@ static bool try_type_keysym(struct wlserver_input_method *ime, xkb_keysym_t keys
@@ -14261,7 +14261,7 @@ Subject: improve lifetimes on crossgpu
  1 file changed, 64 insertions(+), 4 deletions(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 92e81d23b7b6..17f1f14d890c 100644
+index 92e81d23..17f1f14d 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -57,6 +57,7 @@
@@ -14385,7 +14385,7 @@ Subject: prevent present_margin going negative
  1 file changed, 8 insertions(+), 8 deletions(-)
 
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 17f1f14d890c..459f649534b1 100644
+index 17f1f14d..459f6495 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -7020,7 +7020,9 @@ bool handle_done_commit( steamcompmgr_win_t *w, xwayland_ctx_t *ctx, uint64_t co
@@ -14473,7 +14473,7 @@ this fix results in a >10x speedup for the capture path on my 5090.
  4 files changed, 230 insertions(+), 20 deletions(-)
 
 diff --git a/src/pipewire.cpp b/src/pipewire.cpp
-index 7a44c4efa583..7151860661a4 100644
+index 7a44c4ef..71518606 100644
 --- a/src/pipewire.cpp
 +++ b/src/pipewire.cpp
 @@ -34,6 +34,9 @@ static uint32_t s_nCaptureHeight;
@@ -14544,7 +14544,7 @@ index 7a44c4efa583..7151860661a4 100644
  
  	if (!buffer->copying) {
 diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
-index 94b8bd856477..a617355e243b 100644
+index 94b8bd85..a617355e 100644
 --- a/src/rendervulkan.cpp
 +++ b/src/rendervulkan.cpp
 @@ -1930,6 +1930,68 @@ void CVulkanCmdBuffer::copyImage(gamescope::Rc<CVulkanTexture> src, gamescope::R
@@ -14858,7 +14858,7 @@ index 94b8bd856477..a617355e243b 100644
  
  	uint64_t sequence = g_device.submit(std::move(cmdBuffer));
 diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
-index 00a5b9af4962..e71da019de9e 100644
+index 00a5b9af..e71da019 100644
 --- a/src/rendervulkan.hpp
 +++ b/src/rendervulkan.hpp
 @@ -143,6 +143,7 @@ public:
@@ -14934,7 +14934,7 @@ index 00a5b9af4962..e71da019de9e 100644
  
  
 diff --git a/src/steamcompmgr.cpp b/src/steamcompmgr.cpp
-index 459f649534b1..9c68b83bf9ad 100644
+index 459f6495..9c68b83b 100644
 --- a/src/steamcompmgr.cpp
 +++ b/src/steamcompmgr.cpp
 @@ -2487,7 +2487,7 @@ static void paint_pipewire()
@@ -14946,3 +14946,51 @@ index 459f649534b1..9c68b83bf9ad 100644
  		: gamescope::Rc<CVulkanTexture>{ s_pPipewireBuffer->texture };
  
  	gamescope::Rc<CVulkanTexture> pYUVTexture = s_pPipewireBuffer->texture->isYcbcr() ? s_pPipewireBuffer->texture : nullptr;
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 21 Sep 2026 19:59:43 +0200
+Subject: drm: avoid sampling FSR scanout during full composition
+
+FSR base-plane preprocessing stores its result in an output image. If plane assignment falls back to full composition, using that image as a source triggers the assertion in prepareSrcImage. Restore the original frame for full composition so FSR runs in the compositor instead.
+
+Fixes: 09aec178f9090e9eda15e38beb72876687b18594 ("drm: scan out FSR base plane when possible")
+---
+ src/Backends/DRMBackend.cpp | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
+index 8a358f24..3a9a6d61 100644
+--- a/src/Backends/DRMBackend.cpp
++++ b/src/Backends/DRMBackend.cpp
+@@ -3619,6 +3619,7 @@ namespace gamescope
+ 
+ 		virtual int Present( const FrameInfo_t *pFrameInfo, bool bAsync )
+ 		{
++			const FrameInfo_t *pUnprocessedFrameInfo = pFrameInfo;
+ 			static uint64_t s_ulLastTime = get_time_in_nanos();
+ 			uint64_t ulNow = get_time_in_nanos();
+ 			drm_log.debugf( "CDRMBackend::Present Begin: %lu -> delta: %lu", ulNow, ulNow - s_ulLastTime );
+@@ -3694,9 +3695,9 @@ namespace gamescope
+ 					scanoutBaseLayer.colorspace = GAMESCOPE_APP_TEXTURE_COLORSPACE_SRGB;
+ 					scanoutBaseLayer.eAlphaBlendingMode = ALPHA_BLENDING_MODE_NONE;
+ 
+-					// From here, normal plane assignment can scan out the FSR result and
+-					// keep compatible overlays and the cursor on hardware planes. If it
+-					// fails, the compositor reuses this base without executing FSR again.
++					// Normal plane assignment can scan out the FSR result with compatible
++					// overlays and the cursor on hardware planes. Full composition must
++					// use the original frame because output images cannot be sampled.
+ 					pFrameInfo = &fsrScanoutFrameInfo;
+ 				}
+ 			}
+@@ -3816,6 +3817,9 @@ namespace gamescope
+ 				}
+ 			}
+ 
++			if ( bNeedsFullComposite && pFrameInfo == &fsrScanoutFrameInfo )
++				compositeFrameInfo = *pUnprocessedFrameInfo;
++
+ 			// If we ever promoted from partial -> full, for the first frame
+ 			// do NOT defer this partial composition.
+ 			// We were already stalling for the full composition before, so it's not an issue
