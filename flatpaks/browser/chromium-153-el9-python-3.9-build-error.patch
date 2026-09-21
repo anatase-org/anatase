@@ -1,0 +1,16 @@
+Fix FTBFS with python-3.9.x on EL9
+
+def _XmlToET(tree: xml.dom.minidom.Node | ET.Element) -> ET.Element:
+TypeError: unsupported operand type(s) for |: 'type' and 'type'
+
+diff -up chromium-153.0.8010.36/tools/metrics/histograms/extract_histograms.py.me chromium-153.0.8010.36/tools/metrics/histograms/extract_histograms.py
+--- chromium-153.0.8010.36/tools/metrics/histograms/extract_histograms.py.me	2026-09-17 10:05:03.615742994 +0200
++++ chromium-153.0.8010.36/tools/metrics/histograms/extract_histograms.py	2026-09-17 11:45:18.983075013 +0200
+@@ -8,6 +8,7 @@ see histograms.xml; example path:
+ tools/metrics/histograms/metadata/uma/histograms.xml
+ """
+ 
++from __future__ import annotations
+ import bisect
+ import copy
+ import datetime

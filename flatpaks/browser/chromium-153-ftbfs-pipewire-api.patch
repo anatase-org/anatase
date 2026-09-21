@@ -1,0 +1,44 @@
+Fix FTBFS with old pipewire
+
+ error: use of undeclared identifier 'spa_pod_type_size'
+
+diff -up chromium-153.0.8010.36/third_party/webrtc/modules/video_capture/linux/pipewire_session.cc.me chromium-153.0.8010.36/third_party/webrtc/modules/video_capture/linux/pipewire_session.cc
+--- chromium-153.0.8010.36/third_party/webrtc/modules/video_capture/linux/pipewire_session.cc.me	2026-09-16 08:52:36.959680086 +0200
++++ chromium-153.0.8010.36/third_party/webrtc/modules/video_capture/linux/pipewire_session.cc	2026-09-16 14:57:45.237435143 +0200
+@@ -46,9 +46,36 @@
+ namespace webrtc {
+ namespace videocapturemodule {
+ 
++#if defined(PW_MAJOR) && \
++    (PW_MAJOR < 1 || \
++     (PW_MAJOR == 1 && PW_MINOR < 5))
++// spa_pod_type_size() is not available in the SPA headers shipped with
++// older PipeWire versions. These are the only POD types for which this
++// file performs size validation.
++static uint32_t SpaPodTypeSize(uint32_t type) {
++  switch (type) {
++    case SPA_TYPE_Fraction:
++      return sizeof(struct spa_fraction);
++    case SPA_TYPE_Rectangle:
++      return sizeof(struct spa_rectangle);
++    case SPA_TYPE_Id:
++      return sizeof(uint32_t);
++    default:
++      RTC_DCHECK_NOTREACHED();
++      return 0;
++  }
++}
++#endif
++
+ // Checks that the pod matches the expected type and is large enough to hold it.
+ static bool SpaValueIsType(const spa_pod* val, uint32_t type) {
++#if defined(PW_MAJOR) && \
++    (PW_MAJOR < 1 || \
++     (PW_MAJOR == 1 && PW_MINOR < 5))
++  return val->type == type && val->size >= SpaPodTypeSize(type);
++#else
+   return val->type == type && val->size >= spa_pod_type_size(type);
++#endif
+ }
+ 
+ VideoType PipeWireRawFormatToVideoType(uint32_t id) {

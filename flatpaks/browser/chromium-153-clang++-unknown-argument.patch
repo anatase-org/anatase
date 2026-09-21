@@ -1,0 +1,91 @@
+diff -up chromium-153.0.8010.36/build/config/compiler/BUILD.gn.clang++-unknown-argument chromium-153.0.8010.36/build/config/compiler/BUILD.gn
+--- chromium-153.0.8010.36/build/config/compiler/BUILD.gn.clang++-unknown-argument	2026-09-14 11:46:30.242704480 +0200
++++ chromium-153.0.8010.36/build/config/compiler/BUILD.gn	2026-09-14 18:47:03.412720207 +0200
+@@ -588,14 +588,6 @@ config("compiler") {
+   if (is_clang) {
+     # Flags for diagnostics.
+     cflags += [ "-fcolor-diagnostics" ]
+-    if (!is_wasm) {
+-      if (!is_win) {
+-        cflags += [ "-fdiagnostics-show-inlining-chain" ]
+-      } else {
+-        # Combine after https://github.com/llvm/llvm-project/pull/192241
+-        cflags += [ "/clang:-fdiagnostics-show-inlining-chain" ]
+-      }
+-    }
+     if (diagnostics_print_source_range_info && !is_win) {
+       cflags += [ "-fdiagnostics-print-source-range-info" ]
+     }
+@@ -629,9 +621,6 @@ config("compiler") {
+     # The performance improvement does not seem worth the risk. See
+     # https://crbug.com/484082200 for background and https://crrev.com/c/7593035
+     # for discussion.
+-    if (!is_wasm) {
+-      cflags += [ "-fno-lifetime-dse" ]
+-    }
+ 
+     # TODO(hans): Remove this once Clang generates better optimized debug info
+     # by default. https://crbug.com/765793
+@@ -1596,7 +1585,7 @@ ubsan_hardening("c_array_bounds") {
+   # the related warning about "unsafe-buffer-usage-in-static-sized-array",
+   # since we know that the array bounds sanitizing will catch any out-of-
+   # bounds accesses.
+-  cflags = [ "-Wno-unsafe-buffer-usage-in-static-sized-array" ]
++  cflags = [ ]
+ }
+ 
+ # Enable UBSan subset to ensure we always hit `return` statement in non-void
+@@ -1953,9 +1942,6 @@ config("default_warnings") {
+       cflags += [
+         # TODO(crbug.com/432275627): Fix and re-enable.
+         "-Wno-uninitialized-const-pointer",
+-
+-        # TODO(crbug.com/495753203): Fix and re-enable.
+-        "-Wno-unused-but-set-global",
+       ]
+     }
+ 
+diff -up chromium-153.0.8010.36/build/config/sanitizers/sanitizers.gni.clang++-unknown-argument chromium-153.0.8010.36/build/config/sanitizers/sanitizers.gni
+--- chromium-153.0.8010.36/build/config/sanitizers/sanitizers.gni.clang++-unknown-argument	2026-09-07 12:14:27.000000000 +0200
++++ chromium-153.0.8010.36/build/config/sanitizers/sanitizers.gni	2026-09-14 11:46:30.246291854 +0200
+@@ -549,7 +549,6 @@ template("ubsan_hardening") {
+         # be usable even in release builds, i.e. as widely as possible.
+         # It's important not to have full-on UBSan workarounds activate
+         # just because we built support for a specific sanitizer.
+-        "-fsanitize-ignore-for-ubsan-feature=${invoker.sanitizer}",
+       ]
+       if (defined(invoker.cflags)) {
+         cflags += invoker.cflags
+diff -up chromium-153.0.8010.36/third_party/dawn/src/utils/BUILD.gn.clang++-unknown-argument chromium-153.0.8010.36/third_party/dawn/src/utils/BUILD.gn
+--- chromium-153.0.8010.36/third_party/dawn/src/utils/BUILD.gn.clang++-unknown-argument	2026-09-07 12:14:27.000000000 +0200
++++ chromium-153.0.8010.36/third_party/dawn/src/utils/BUILD.gn	2026-09-14 18:48:38.037295122 +0200
+@@ -214,7 +214,6 @@ config("dawn_warnings") {
+       # -Wlifetime-safety-lifetimebound-violation) are not yet mapped to
+       # toggleable warning flags, so we suppress the entire group and disable
+       # the analysis pass.
+-      "-Wno-lifetime-safety-all",
+     ]
+ 
+     # P3. Checks that could be nice but probably don't help with hardening.
+diff -up chromium-153.0.8010.36/third_party/pdfium/BUILD.gn.clang++-unknown-argument chromium-153.0.8010.36/third_party/pdfium/BUILD.gn
+--- chromium-153.0.8010.36/third_party/pdfium/BUILD.gn.clang++-unknown-argument	2026-09-07 12:14:27.000000000 +0200
++++ chromium-153.0.8010.36/third_party/pdfium/BUILD.gn	2026-09-14 11:46:30.247377014 +0200
+@@ -175,7 +175,6 @@ config("pdfium_core_config") {
+   if (is_clang) {
+     cflags += [
+       "-Wcovered-switch-default",
+-      "-Wlifetime-safety-permissive",
+     ]
+   }
+ }
+diff -up chromium-153.0.8010.36/third_party/skia/gn/skia/BUILD.gn.clang++-unknown-argument chromium-153.0.8010.36/third_party/skia/gn/skia/BUILD.gn
+--- chromium-153.0.8010.36/third_party/skia/gn/skia/BUILD.gn.clang++-unknown-argument	2026-09-07 12:14:27.000000000 +0200
++++ chromium-153.0.8010.36/third_party/skia/gn/skia/BUILD.gn	2026-09-14 11:46:30.249038496 +0200
+@@ -552,7 +552,6 @@ config("warnings") {
+       "-Wno-unused-member-function",
+       "-Wno-non-c-typedef-for-linkage",  # Dawn, not Skia per se.
+ 
+-      "-Wno-lifetime-safety",
+       "-Wno-lifetime-safety-suggestions",
+       "-Wno-lifetime-safety-validations",
+ 
