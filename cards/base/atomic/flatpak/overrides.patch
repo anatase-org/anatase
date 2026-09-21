@@ -25,7 +25,7 @@ sockets from the host to the client.
  6 files changed, 30 insertions(+), 8 deletions(-)
 
 diff --git a/common/flatpak-context-private.h b/common/flatpak-context-private.h
-index 56ce95734a26..0bf7874d4f3e 100644
+index 56ce9573..0bf7874d 100644
 --- a/common/flatpak-context-private.h
 +++ b/common/flatpak-context-private.h
 @@ -61,6 +61,7 @@ typedef enum {
@@ -37,7 +37,7 @@ index 56ce95734a26..0bf7874d4f3e 100644
  
  typedef enum {
 diff --git a/common/flatpak-context.c b/common/flatpak-context.c
-index 0a35a41ca4cf..af98128f5de3 100644
+index 0a35a41c..af98128f 100644
 --- a/common/flatpak-context.c
 +++ b/common/flatpak-context.c
 @@ -67,6 +67,7 @@ const char *flatpak_context_sockets[] = {
@@ -49,7 +49,7 @@ index 0a35a41ca4cf..af98128f5de3 100644
  };
  
 diff --git a/common/flatpak-run-sockets.c b/common/flatpak-run-sockets.c
-index f9d0547c468d..2d8e91e16a76 100644
+index f9d0547c..2d8e91e1 100644
 --- a/common/flatpak-run-sockets.c
 +++ b/common/flatpak-run-sockets.c
 @@ -179,6 +179,7 @@ flatpak_run_add_socket_args_environment (FlatpakBwrap         *bwrap,
@@ -73,7 +73,7 @@ index f9d0547c468d..2d8e91e16a76 100644
    if (sockets & FLATPAK_CONTEXT_SOCKET_SSH_AUTH)
      {
 diff --git a/common/flatpak-run-x11-private.h b/common/flatpak-run-x11-private.h
-index 96da2e6ba4ea..d3741447de54 100644
+index 96da2e6b..d3741447 100644
 --- a/common/flatpak-run-x11-private.h
 +++ b/common/flatpak-run-x11-private.h
 @@ -30,7 +30,8 @@ G_BEGIN_DECLS
@@ -87,7 +87,7 @@ index 96da2e6ba4ea..d3741447de54 100644
  gboolean flatpak_run_parse_x11_display (const char  *display,
                                          int         *family,
 diff --git a/common/flatpak-run-x11.c b/common/flatpak-run-x11.c
-index 90931c2ea267..b6f2ca1d53cf 100644
+index 90931c2e..b6f2ca1d 100644
 --- a/common/flatpak-run-x11.c
 +++ b/common/flatpak-run-x11.c
 @@ -202,15 +202,20 @@ flatpak_run_parse_x11_display (const char  *display,
@@ -132,7 +132,7 @@ index 90931c2ea267..b6f2ca1d53cf 100644
                            "--tmpfs", "/tmp/.X11-unix",
                            NULL);
 diff --git a/portal/flatpak-portal.c b/portal/flatpak-portal.c
-index 3bd68e2847c2..fba770927d3d 100644
+index 3bd68e28..fba77092 100644
 --- a/portal/flatpak-portal.c
 +++ b/portal/flatpak-portal.c
 @@ -968,13 +968,16 @@ handle_spawn (PortalFlatpak         *object,
@@ -168,7 +168,7 @@ Subject: Export KDE file manager service menus
  5 files changed, 32 insertions(+)
 
 diff --git a/app/flatpak-builtins-build-finish.c b/app/flatpak-builtins-build-finish.c
-index 96a794574e4f..155ba94efd46 100644
+index 96a79457..155ba94e 100644
 --- a/app/flatpak-builtins-build-finish.c
 +++ b/app/flatpak-builtins-build-finish.c
 @@ -237,6 +237,7 @@ collect_exports (GFile          *base,
@@ -180,7 +180,7 @@ index 96a794574e4f..155ba94efd46 100644
      "share/metainfo",                     /* Copy appdata/metainfo files */
      NULL,
 diff --git a/common/flatpak-context.c b/common/flatpak-context.c
-index af98128f5de3..bbc9ac786bd4 100644
+index af98128f..bbc9ac78 100644
 --- a/common/flatpak-context.c
 +++ b/common/flatpak-context.c
 @@ -4360,6 +4360,10 @@ flatpak_context_get_allowed_exports (FlatpakContext *context,
@@ -195,7 +195,7 @@ index af98128f5de3..bbc9ac786bd4 100644
      {
        g_ptr_array_add (allowed_extensions, g_strdup (".xml"));
 diff --git a/common/flatpak-dir.c b/common/flatpak-dir.c
-index c05961c6d421..680becfa37cf 100644
+index c05961c6..680becfa 100644
 --- a/common/flatpak-dir.c
 +++ b/common/flatpak-dir.c
 @@ -9058,6 +9058,7 @@ flatpak_export_dir (GFile        *source,
@@ -207,7 +207,7 @@ index c05961c6d421..680becfa37cf 100644
      "share/metainfo",                      "../..",
      "bin",                                 "..",
 diff --git a/tests/make-test-app.sh b/tests/make-test-app.sh
-index 21f7d5bd5e48..adec709608d7 100755
+index 21f7d5bd..adec7096 100755
 --- a/tests/make-test-app.sh
 +++ b/tests/make-test-app.sh
 @@ -128,6 +128,29 @@ X-Plasma-DBusRunner-Service=org.test.Hello.KRunner
@@ -241,7 +241,7 @@ index 21f7d5bd5e48..adec709608d7 100755
  cp $(dirname $0)/org.test.Hello.png ${DIR}/files/share/icons/hicolor/64x64/apps/${APP_ID}.png
  cp $(dirname $0)/org.test.Hello.png ${DIR}/files/share/icons/hicolor/64x64/apps/dont-export.png
 diff --git a/tests/test-run.sh b/tests/test-run.sh
-index cbe0cda3be4b..ca5d557b08c2 100644
+index cbe0cda3..ca5d557b 100644
 --- a/tests/test-run.sh
 +++ b/tests/test-run.sh
 @@ -50,6 +50,9 @@ assert_has_file $FL_DIR/exports/share/gnome-shell/search-providers/org.test.Hell
@@ -269,7 +269,7 @@ Subject: Export Plasma application launcher actions
  5 files changed, 19 insertions(+)
 
 diff --git a/app/flatpak-builtins-build-finish.c b/app/flatpak-builtins-build-finish.c
-index 155ba94efd46..ae9cbf653ba4 100644
+index 155ba94e..ae9cbf65 100644
 --- a/app/flatpak-builtins-build-finish.c
 +++ b/app/flatpak-builtins-build-finish.c
 @@ -238,6 +238,7 @@ collect_exports (GFile          *base,
@@ -281,7 +281,7 @@ index 155ba94efd46..ae9cbf653ba4 100644
      "share/metainfo",                     /* Copy appdata/metainfo files */
      NULL,
 diff --git a/common/flatpak-context.c b/common/flatpak-context.c
-index bbc9ac786bd4..c8a2fa65317a 100644
+index bbc9ac78..c8a2fa65 100644
 --- a/common/flatpak-context.c
 +++ b/common/flatpak-context.c
 @@ -4364,6 +4364,10 @@ flatpak_context_get_allowed_exports (FlatpakContext *context,
@@ -296,7 +296,7 @@ index bbc9ac786bd4..c8a2fa65317a 100644
      {
        g_ptr_array_add (allowed_extensions, g_strdup (".xml"));
 diff --git a/common/flatpak-dir.c b/common/flatpak-dir.c
-index 680becfa37cf..cfd47b649526 100644
+index 680becfa..cfd47b64 100644
 --- a/common/flatpak-dir.c
 +++ b/common/flatpak-dir.c
 @@ -9059,6 +9059,7 @@ flatpak_export_dir (GFile        *source,
@@ -308,7 +308,7 @@ index 680becfa37cf..cfd47b649526 100644
      "share/metainfo",                      "../..",
      "bin",                                 "..",
 diff --git a/tests/make-test-app.sh b/tests/make-test-app.sh
-index adec709608d7..20c84b4b29e9 100755
+index adec7096..20c84b4b 100755
 --- a/tests/make-test-app.sh
 +++ b/tests/make-test-app.sh
 @@ -151,6 +151,17 @@ Name=Do not export
@@ -330,7 +330,7 @@ index adec709608d7..20c84b4b29e9 100755
  cp $(dirname $0)/org.test.Hello.png ${DIR}/files/share/icons/hicolor/64x64/apps/${APP_ID}.png
  cp $(dirname $0)/org.test.Hello.png ${DIR}/files/share/icons/hicolor/64x64/apps/dont-export.png
 diff --git a/tests/test-run.sh b/tests/test-run.sh
-index ca5d557b08c2..1b1e44148a69 100644
+index ca5d557b..1b1e4414 100644
 --- a/tests/test-run.sh
 +++ b/tests/test-run.sh
 @@ -53,6 +53,8 @@ assert_file_has_content $FL_DIR/exports/share/krunner/dbusplugins/org.test.Hello
@@ -354,7 +354,7 @@ Subject: Invalidate linker cache for mutable runtimes
  2 files changed, 47 insertions(+)
 
 diff --git a/common/flatpak-run.c b/common/flatpak-run.c
-index 4c05f266a3bb..e091e035dc7f 100644
+index 4c05f266..e091e035 100644
 --- a/common/flatpak-run.c
 +++ b/common/flatpak-run.c
 @@ -2842,13 +2842,42 @@ flatpak_context_load_for_deploy (FlatpakDeploy *deploy,
@@ -409,7 +409,7 @@ index 4c05f266a3bb..e091e035dc7f 100644
        ld_so_fd = regenerate_ld_cache (bwrap->argv,
                                        bwrap->fds,
 diff --git a/tests/test-run.sh b/tests/test-run.sh
-index 1b1e44148a69..d851fbdff388 100644
+index 1b1e4414..d851fbdf 100644
 --- a/tests/test-run.sh
 +++ b/tests/test-run.sh
 @@ -89,6 +89,23 @@ assert_file_has_content hello_out '^Hello world, from a sandbox$'
@@ -436,3 +436,528 @@ index 1b1e44148a69..d851fbdff388 100644
  # This should try and fail to run e.g. /usr/bin/--tmpfs, which will
  # exit with a nonzero status because there is no such executable.
  # It should not pass "--tmpfs /blah hello.sh" as bwrap options.
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 21 Sep 2026 11:47:54 +0200
+Subject: Add host XDG directories permission
+
+---
+ common/flatpak-context-private.h | 17 +++---
+ common/flatpak-context.c         | 61 +++++++++++++++++++-
+ common/flatpak-run.c             |  6 +-
+ doc/flatpak-build-finish.xml     | 13 ++++-
+ doc/flatpak-metadata.xml         |  8 +++
+ doc/flatpak-override.xml         |  7 ++-
+ doc/flatpak-run.xml              |  9 ++-
+ tests/test-completion.sh         |  2 +
+ tests/test-exports.c             | 96 ++++++++++++++++++++++++++++----
+ tests/test-run.sh                | 45 +++++++++++++++
+ 10 files changed, 234 insertions(+), 30 deletions(-)
+
+diff --git a/common/flatpak-context-private.h b/common/flatpak-context-private.h
+index 0bf7874d..93dcda05 100644
+--- a/common/flatpak-context-private.h
++++ b/common/flatpak-context-private.h
+@@ -79,6 +79,7 @@ typedef enum {
+   FLATPAK_CONTEXT_FEATURE_BLUETOOTH    = 1 << 2,
+   FLATPAK_CONTEXT_FEATURE_CANBUS       = 1 << 3,
+   FLATPAK_CONTEXT_FEATURE_PER_APP_DEV_SHM = 1 << 4,
++  FLATPAK_CONTEXT_FEATURE_HOST_XDG_DIRS = 1 << 5,
+ } FlatpakContextFeatures;
+ 
+ typedef enum {
+@@ -178,13 +179,15 @@ FlatpakExports *flatpak_context_get_exports_full (FlatpakContext *context,
+                                                   gchar         **xdg_dirs_conf,
+                                                   gboolean       *home_access_out);
+ 
+-void flatpak_context_append_bwrap_filesystem (FlatpakContext  *context,
+-                                              FlatpakBwrap    *bwrap,
+-                                              const char      *app_id,
+-                                              GFile           *app_id_dir,
+-                                              FlatpakExports  *exports,
+-                                              const char      *xdg_dirs_conf,
+-                                              gboolean         home_access);
++gboolean flatpak_context_append_bwrap_filesystem (FlatpakContext         *context,
++                                                  FlatpakBwrap           *bwrap,
++                                                  const char             *app_id,
++                                                  GFile                  *app_id_dir,
++                                                  FlatpakExports         *exports,
++                                                  const char             *xdg_dirs_conf,
++                                                  gboolean                home_access,
++                                                  FlatpakContextFeatures  features,
++                                                  GError                **error);
+ 
+ gboolean flatpak_context_parse_env_block (FlatpakContext *context,
+                                           const char *data,
+diff --git a/common/flatpak-context.c b/common/flatpak-context.c
+index c8a2fa65..517a87c7 100644
+--- a/common/flatpak-context.c
++++ b/common/flatpak-context.c
+@@ -87,6 +87,7 @@ const char *flatpak_context_features[] = {
+   "bluetooth",
+   "canbus",
+   "per-app-dev-shm",
++  "host-xdg-dirs",
+   NULL
+ };
+ 
+@@ -4069,6 +4070,54 @@ flatpak_context_get_exports_full (FlatpakContext *context,
+   return g_steal_pointer (&exports);
+ }
+ 
++static gboolean
++flatpak_context_apply_host_xdg_dirs (FlatpakBwrap   *bwrap,
++                                     FlatpakExports *exports,
++                                     GError        **error)
++{
++  static const struct {
++    const char *name;
++    const char *default_path;
++  } dirs[] = {
++    { "XDG_CONFIG_HOME", ".config" },
++    { "XDG_DATA_HOME", ".local/share" },
++    { "XDG_CACHE_HOME", ".cache" },
++    { "XDG_STATE_HOME", ".local/state" },
++  };
++  g_auto(GStrv) paths = g_new0 (char *, G_N_ELEMENTS (dirs) + 1);
++
++  for (gsize i = 0; i < G_N_ELEMENTS (dirs); i++)
++    {
++      const char *configured = g_getenv (dirs[i].name);
++      g_autofree char *default_path = NULL;
++
++      if (configured == NULL || !g_path_is_absolute (configured))
++        {
++          default_path = g_build_filename (g_get_home_dir (), dirs[i].default_path, NULL);
++          configured = default_path;
++        }
++
++      paths[i] = flatpak_canonicalize_filename (configured);
++
++      if (g_mkdir_with_parents (paths[i], 0700) != 0)
++        return glnx_throw_errno_prefix (error, "Cannot create host %s directory %s",
++                                        dirs[i].name, paths[i]);
++
++      if (!flatpak_exports_add_path_expose (exports, FLATPAK_FILESYSTEM_MODE_READ_WRITE,
++                                            paths[i], error))
++        {
++          g_prefix_error (error, "Cannot expose host %s directory %s: ",
++                          dirs[i].name, paths[i]);
++          return FALSE;
++        }
++    }
++
++  for (gsize i = 0; i < G_N_ELEMENTS (dirs); i++)
++    flatpak_bwrap_set_env (bwrap, dirs[i].name, paths[i], TRUE);
++
++  return TRUE;
++}
++
+ static void
+ flatpak_context_apply_env_appid (FlatpakBwrap *bwrap,
+                                  GFile        *app_dir)
+@@ -4184,14 +4233,16 @@ mkdir_p_open_nofollow_at (int          base_fd,
+   return TRUE;
+ }
+ 
+-void
++gboolean
+ flatpak_context_append_bwrap_filesystem (FlatpakContext  *context,
+                                          FlatpakBwrap    *bwrap,
+                                          const char      *app_id,
+                                          GFile           *app_id_dir,
+                                          FlatpakExports  *exports,
+                                          const char      *xdg_dirs_conf,
+-                                         gboolean         home_access)
++                                         gboolean         home_access,
++                                         FlatpakContextFeatures features,
++                                         GError         **error)
+ {
+   GHashTableIter iter;
+   gpointer key, value;
+@@ -4253,6 +4304,10 @@ flatpak_context_append_bwrap_filesystem (FlatpakContext  *context,
+       flatpak_bwrap_add_runtime_dir_member (bwrap, "app");
+     }
+ 
++  if ((features & FLATPAK_CONTEXT_FEATURE_HOST_XDG_DIRS) != 0 &&
++      !flatpak_context_apply_host_xdg_dirs (bwrap, exports, error))
++    return FALSE;
++
+   /* This actually outputs the args for the hide/expose operations
+    * in the exports */
+   flatpak_exports_append_bwrap_args (exports, bwrap);
+@@ -4312,6 +4367,8 @@ flatpak_context_append_bwrap_filesystem (FlatpakContext  *context,
+       flatpak_bwrap_add_args_data (bwrap, "xdg-config-dirs",
+                                    xdg_dirs_conf, strlen (xdg_dirs_conf), path, NULL);
+     }
++
++  return TRUE;
+ }
+ 
+ gboolean
+diff --git a/common/flatpak-run.c b/common/flatpak-run.c
+index e091e035..94574bbe 100644
+--- a/common/flatpak-run.c
++++ b/common/flatpak-run.c
+@@ -623,8 +623,10 @@ flatpak_run_add_environment_args (FlatpakBwrap           *bwrap,
+                               NULL);
+     }
+ 
+-  flatpak_context_append_bwrap_filesystem (context, bwrap, app_id, app_id_dir,
+-                                           exports, xdg_dirs_conf, home_access);
++  if (!flatpak_context_append_bwrap_filesystem (context, bwrap, app_id, app_id_dir,
++                                                exports, xdg_dirs_conf, home_access,
++                                                features, error))
++    return FALSE;
+ 
+   flatpak_run_add_socket_args_environment (bwrap, shares, sockets, app_id, instance_id);
+   flatpak_run_add_session_dbus_args (bwrap, proxy_arg_bwrap, sockets, context, flags, app_id);
+diff --git a/doc/flatpak-build-finish.xml b/doc/flatpak-build-finish.xml
+index fce6f9a0..e32f88e5 100644
+--- a/doc/flatpak-build-finish.xml
++++ b/doc/flatpak-build-finish.xml
+@@ -249,7 +249,7 @@
+                     Allow access to a specific feature. This updates
+                     the [Context] group in the metadata.
+                     FEATURE must be one of: devel, multiarch, bluetooth, canbus,
+-                    per-app-dev-shm.
++                    per-app-dev-shm, host-xdg-dirs.
+                     This option can be used multiple times.
+                  </para><para>
+                     The <code>devel</code> feature allows the application to
+@@ -277,6 +277,12 @@
+                     application, any unrestricted subsandboxes that it creates,
+                     and any other instances of the application that are
+                     launched while it is running.
++                </para><para>
++                    The <code>host-xdg-dirs</code> feature gives the application
++                    read-write access to the host's XDG config, data, cache and
++                    state directories, and sets the corresponding
++                    <code>XDG_*_HOME</code> variables to those host paths. It
++                    also applies to unrestricted subsandboxes.
+                 </para></listitem>
+             </varlistentry>
+ 
+@@ -287,7 +293,7 @@
+                     Disallow access to a specific feature. This updates
+                     the [Context] group in the metadata.
+                     FEATURE must be one of: devel, multiarch, bluetooth, canbus,
+-                    per-app-dev-shm.
++                    per-app-dev-shm, host-xdg-dirs.
+                     This option can be used multiple times.
+                 </para></listitem>
+             </varlistentry>
+@@ -299,7 +305,8 @@
+                     Allow access to a specific feature conditionally,
+                     only when the specified condition is met at runtime.
+                     This updates the [Context] group in the metadata.
+-                    <arg choice="plain">FEATURE</arg> must be one of: devel, multiarch, bluetooth.
++                    <arg choice="plain">FEATURE</arg> must be one of: devel, multiarch, bluetooth,
++                    canbus, per-app-dev-shm, host-xdg-dirs.
+                     <arg choice="plain">CONDITION</arg> must be one of:
+                     <option>true</option>, <option>false</option>,
+                     <option>has-input-device</option>, <option>has-wayland</option>,
+diff --git a/doc/flatpak-metadata.xml b/doc/flatpak-metadata.xml
+index e3cc0064..823cf01d 100644
+--- a/doc/flatpak-metadata.xml
++++ b/doc/flatpak-metadata.xml
+@@ -681,6 +681,14 @@ sockets=!x11;x11;if:x11:!has-wayland;
+                               Available since 1.12.0.
+                             </para></listitem></varlistentry>
+ 
++                            <varlistentry><term><option>host-xdg-dirs</option></term>
++                            <listitem><para>
++                              Expose the host's XDG config, data, cache and state
++                              directories read-write and use them as the application's
++                              XDG home directories. Unrestricted sub-sandboxes inherit
++                              this permission.
++                            </para></listitem></varlistentry>
++
+                         </variablelist>
+                         A feature can be prefixed with <option>!</option> to
+                         indicate the absence of that feature, for example
+diff --git a/doc/flatpak-override.xml b/doc/flatpak-override.xml
+index 50174444..34ee87fc 100644
+--- a/doc/flatpak-override.xml
++++ b/doc/flatpak-override.xml
+@@ -250,7 +250,7 @@
+                     the [Context] group in the metadata.
+                     <arg choice="plain">FEATURE</arg> must be one of:
+                     devel, multiarch, bluetooth, canbus,
+-                    per-app-dev-shm.
++                    per-app-dev-shm, host-xdg-dirs.
+                     This option can be used multiple times.
+                  </para><para>
+                     See <citerefentry><refentrytitle>flatpak-build-finish</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+@@ -266,7 +266,7 @@
+                     the [Context] group in the metadata.
+                     <arg choice="plain">FEATURE</arg> must be one of:
+                     devel, multiarch, bluetooth, canbus,
+-                    per-app-dev-shm.
++                    per-app-dev-shm, host-xdg-dirs.
+                     This option can be used multiple times.
+                 </para></listitem>
+             </varlistentry>
+@@ -278,7 +278,8 @@
+                     Allow access to a specific feature conditionally,
+                     only when the specified condition is met at runtime.
+                     This overrides to the Context section from the application metadata.
+-                    <arg choice="plain">FEATURE</arg> must be one of: devel, multiarch, bluetooth.
++                    <arg choice="plain">FEATURE</arg> must be one of: devel, multiarch, bluetooth,
++                    canbus, per-app-dev-shm, host-xdg-dirs.
+                     <arg choice="plain">CONDITION</arg> must be one of:
+                     <option>true</option>, <option>false</option>,
+                     <option>has-input-device</option>, <option>has-wayland</option>,
+diff --git a/doc/flatpak-run.xml b/doc/flatpak-run.xml
+index 628ceae1..33edd947 100644
+--- a/doc/flatpak-run.xml
++++ b/doc/flatpak-run.xml
+@@ -447,7 +447,8 @@
+                 <listitem><para>
+                     Allow access to a specific feature. This overrides to
+                     the Context section from the application metadata.
+-                    <arg choice="plain">FEATURE</arg> must be one of: devel, multiarch, bluetooth.
++                    <arg choice="plain">FEATURE</arg> must be one of: devel, multiarch, bluetooth,
++                    canbus, per-app-dev-shm, host-xdg-dirs.
+                     This option can be used multiple times.
+                     </para><para>
+                     See <citerefentry><refentrytitle>flatpak-build-finish</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+@@ -461,7 +462,8 @@
+                 <listitem><para>
+                     Disallow access to a specific feature. This overrides to
+                     the Context section from the application metadata.
+-                    <arg choice="plain">FEATURE</arg> must be one of: devel, multiarch, bluetooth.
++                    <arg choice="plain">FEATURE</arg> must be one of: devel, multiarch, bluetooth,
++                    canbus, per-app-dev-shm, host-xdg-dirs.
+                     This option can be used multiple times.
+                 </para></listitem>
+             </varlistentry>
+@@ -473,7 +475,8 @@
+                     Allow access to a specific feature conditionally,
+                     only when the specified condition is met at runtime.
+                     This overrides to the Context section from the application metadata.
+-                    <arg choice="plain">FEATURE</arg> must be one of: devel, multiarch, bluetooth.
++                    <arg choice="plain">FEATURE</arg> must be one of: devel, multiarch, bluetooth,
++                    canbus, per-app-dev-shm, host-xdg-dirs.
+                     <arg choice="plain">CONDITION</arg> must be one of:
+                     <option>true</option>, <option>false</option>,
+                     <option>has-input-device</option>, <option>has-wayland</option>,
+diff --git a/tests/test-completion.sh b/tests/test-completion.sh
+index bc49489d..fa175c20 100755
+--- a/tests/test-completion.sh
++++ b/tests/test-completion.sh
+@@ -116,6 +116,8 @@ EOF
+ ok "complete --arch"
+ 
+ ${FLATPAK} complete "flatpak override --allow=" 25 "--allow=" | sort > complete_out
++assert_file_has_content complete_out '^host-xdg-dirs $'
++sed -i '/^host-xdg-dirs $/d' complete_out
+ (diff -u complete_out - || exit 1) <<EOF
+ bluetooth 
+ canbus 
+diff --git a/tests/test-exports.c b/tests/test-exports.c
+index 2146488b..fd83e716 100644
+--- a/tests/test-exports.c
++++ b/tests/test-exports.c
+@@ -172,6 +172,7 @@ test_empty_context (void)
+   g_autoptr(FlatpakBwrap) bwrap = flatpak_bwrap_new (NULL);
+   g_autoptr(FlatpakContext) context = flatpak_context_new ();
+   g_autoptr(FlatpakExports) exports = NULL;
++  g_autoptr(GError) error = NULL;
+   g_autofree char *xdg_dirs_conf = NULL;
+   gboolean home_access = FALSE;
+ 
+@@ -196,10 +197,11 @@ test_empty_context (void)
+                                               &xdg_dirs_conf, &home_access);
+   g_assert_nonnull (exports);
+   g_assert_nonnull (xdg_dirs_conf);
+-  flatpak_context_append_bwrap_filesystem (context, bwrap,
+-                                           "com.example.App",
+-                                           NULL, exports, xdg_dirs_conf,
+-                                           home_access);
++  g_assert_true (flatpak_context_append_bwrap_filesystem (context, bwrap,
++                                                           "com.example.App",
++                                                           NULL, exports, xdg_dirs_conf,
++                                                           home_access, 0, &error));
++  g_assert_no_error (error);
+   print_bwrap (bwrap);
+ }
+ 
+@@ -233,7 +235,7 @@ test_full_context (void)
+   g_key_file_set_value (keyfile,
+                         FLATPAK_METADATA_GROUP_CONTEXT,
+                         FLATPAK_METADATA_KEY_FEATURES,
+-                        "devel;multiarch;bluetooth;canbus;per-app-dev-shm;");
++                        "devel;multiarch;bluetooth;canbus;per-app-dev-shm;host-xdg-dirs;");
+   g_key_file_set_value (keyfile,
+                         FLATPAK_METADATA_GROUP_CONTEXT,
+                         FLATPAK_METADATA_KEY_FILESYSTEMS,
+@@ -293,7 +295,8 @@ test_full_context (void)
+                      FLATPAK_CONTEXT_FEATURE_MULTIARCH |
+                      FLATPAK_CONTEXT_FEATURE_BLUETOOTH |
+                      FLATPAK_CONTEXT_FEATURE_CANBUS |
+-                     FLATPAK_CONTEXT_FEATURE_PER_APP_DEV_SHM));
++                     FLATPAK_CONTEXT_FEATURE_PER_APP_DEV_SHM |
++                     FLATPAK_CONTEXT_FEATURE_HOST_XDG_DIRS));
+ 
+   g_assert_cmpuint (g_hash_table_size (context->env_vars), ==, 3);
+   g_assert_true (g_hash_table_contains (context->env_vars, "LD_AUDIT"));
+@@ -314,10 +317,11 @@ test_full_context (void)
+                                               &xdg_dirs_conf, &home_access);
+   g_assert_nonnull (exports);
+   g_assert_nonnull (xdg_dirs_conf);
+-  flatpak_context_append_bwrap_filesystem (context, bwrap,
+-                                           "com.example.App",
+-                                           NULL, exports, xdg_dirs_conf,
+-                                           home_access);
++  g_assert_true (flatpak_context_append_bwrap_filesystem (context, bwrap,
++                                                           "com.example.App",
++                                                           NULL, exports, xdg_dirs_conf,
++                                                           home_access, 0, &error));
++  g_assert_no_error (error);
+   print_bwrap (bwrap);
+ 
+   g_clear_pointer (&keyfile, g_key_file_unref);
+@@ -505,6 +509,77 @@ test_full_context (void)
+   g_clear_pointer (&strv, g_strfreev);
+ }
+ 
++static void
++test_host_xdg_dirs (void)
++{
++  static const char *names[] = {
++    "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME", "XDG_STATE_HOME"
++  };
++  g_autoptr(FlatpakContext) context = flatpak_context_new ();
++  g_autoptr(FlatpakBwrap) bwrap = flatpak_bwrap_new (NULL);
++  g_autoptr(FlatpakExports) exports = flatpak_exports_new ();
++  g_autoptr(FlatpakExports) probe = flatpak_exports_new ();
++  g_autoptr(GError) error = NULL;
++  g_autofree char *root = g_build_filename (g_get_current_dir (), "host-xdg-test-XXXXXX", NULL);
++  g_auto(GStrv) paths = g_new0 (char *, G_N_ELEMENTS (names) + 1);
++  g_auto(GStrv) old_values = g_new0 (char *, G_N_ELEMENTS (names) + 1);
++
++  g_assert_nonnull (g_mkdtemp (root));
++  if (!flatpak_exports_add_path_expose (probe, FLATPAK_FILESYSTEM_MODE_READ_WRITE,
++                                        root, &error))
++    {
++      if (g_error_matches (error, G_IO_ERROR, G_IO_ERROR_NOT_MOUNTABLE_FILE))
++        {
++          g_test_skip ("Build directory is reserved by Flatpak");
++          g_assert_no_errno (rmdir (root));
++          return;
++        }
++      g_assert_no_error (error);
++    }
++
++  for (gsize i = 0; i < G_N_ELEMENTS (names); i++)
++    {
++      paths[i] = g_build_filename (root, names[i], NULL);
++      old_values[i] = g_strdup (g_getenv (names[i]));
++      g_setenv (names[i], paths[i], TRUE);
++    }
++
++  g_assert_true (flatpak_context_append_bwrap_filesystem (context, bwrap,
++                                                           "org.test.Hello", NULL,
++                                                           exports, NULL, FALSE,
++                                                           FLATPAK_CONTEXT_FEATURE_HOST_XDG_DIRS,
++                                                           &error));
++  g_assert_no_error (error);
++  for (gsize i = 0; i < G_N_ELEMENTS (names); i++)
++    {
++      g_assert_cmpstr (g_environ_getenv (bwrap->envp, names[i]), ==, paths[i]);
++      g_assert_cmpint (flatpak_exports_path_get_mode (exports, paths[i]), ==,
++                       FLATPAK_FILESYSTEM_MODE_READ_WRITE);
++    }
++
++  g_setenv ("XDG_CONFIG_HOME", "/usr", TRUE);
++  g_clear_pointer (&exports, flatpak_exports_free);
++  exports = flatpak_exports_new ();
++  g_clear_pointer (&bwrap, flatpak_bwrap_free);
++  bwrap = flatpak_bwrap_new (NULL);
++  g_assert_false (flatpak_context_append_bwrap_filesystem (context, bwrap,
++                                                            "org.test.Hello", NULL,
++                                                            exports, NULL, FALSE,
++                                                            FLATPAK_CONTEXT_FEATURE_HOST_XDG_DIRS,
++                                                            &error));
++  g_assert_nonnull (strstr (error->message, "Cannot expose host XDG_CONFIG_HOME"));
++
++  for (gsize i = 0; i < G_N_ELEMENTS (names); i++)
++    {
++      if (old_values[i] != NULL)
++        g_setenv (names[i], old_values[i], TRUE);
++      else
++        g_unsetenv (names[i]);
++      g_assert_no_errno (rmdir (paths[i]));
++    }
++  g_assert_no_errno (rmdir (root));
++}
++
+ typedef struct
+ {
+   const char *input;
+@@ -1465,6 +1540,7 @@ main (int argc, char *argv[])
+   g_test_add_func ("/context/empty", test_empty_context);
+   g_test_add_func ("/context/filesystems", test_filesystems);
+   g_test_add_func ("/context/full", test_full_context);
++  g_test_add_func ("/context/host-xdg-dirs", test_host_xdg_dirs);
+   g_test_add_func ("/exports/empty", test_empty);
+   g_test_add_func ("/exports/full", test_full);
+   g_test_add_func ("/exports/host/arch", test_exports_arch);
+diff --git a/tests/test-run.sh b/tests/test-run.sh
+index d851fbdf..84bfb2d7 100644
+--- a/tests/test-run.sh
++++ b/tests/test-run.sh
+@@ -169,6 +169,51 @@ assert_file_has_content host-value-in-sandbox "^${TEST_DATA_DIR}/home/state\$"
+ 
+ ok "XDG_foo_HOME work as expected"
+ 
++# The host XDG directories can be outside HOME and must be mounted as well
++# as named in the sandbox environment.
++host_xdg_root="${TEST_DATA_DIR}/host-xdg"
++host_xdg_config="${host_xdg_root}/config"
++host_xdg_data="${host_xdg_root}/data"
++host_xdg_cache="${host_xdg_root}/cache"
++host_xdg_state="${host_xdg_root}/state"
++${FLATPAK} override --user --allow=host-xdg-dirs org.test.Hello
++FLATPAK_USER_DIR="$USERDIR" \
++XDG_CONFIG_HOME="$host_xdg_config" \
++XDG_DATA_HOME="$host_xdg_data" \
++XDG_CACHE_HOME="$host_xdg_cache" \
++XDG_STATE_HOME="$host_xdg_state" \
++run --command=sh org.test.Hello -c '
++  printf "%s\n" "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_CACHE_HOME" "$XDG_STATE_HOME"
++  touch "$XDG_CONFIG_HOME/from-sandbox" "$XDG_DATA_HOME/from-sandbox" \
++    "$XDG_CACHE_HOME/from-sandbox" "$XDG_STATE_HOME/from-sandbox"
++' > host-xdg-out
++printf '%s\n' "$host_xdg_config" "$host_xdg_data" "$host_xdg_cache" "$host_xdg_state" > host-xdg-expected
++diff -u host-xdg-expected host-xdg-out
++for dir in "$host_xdg_config" "$host_xdg_data" "$host_xdg_cache" "$host_xdg_state"; do
++  assert_has_file "$dir/from-sandbox"
++done
++
++FLATPAK_USER_DIR="$USERDIR" \
++XDG_CONFIG_HOME="$host_xdg_config" \
++XDG_DATA_HOME="$host_xdg_data" \
++XDG_CACHE_HOME="$host_xdg_cache" \
++XDG_STATE_HOME="$host_xdg_state" \
++run --disallow=host-xdg-dirs --command=sh org.test.Hello -c \
++  'printf "%s\n" "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_CACHE_HOME" "$XDG_STATE_HOME"' \
++  > private-xdg-out
++printf '%s\n' \
++  "$HOME/.var/app/org.test.Hello/config" \
++  "$HOME/.var/app/org.test.Hello/data" \
++  "$HOME/.var/app/org.test.Hello/cache" \
++  "$HOME/.var/app/org.test.Hello/.local/state" > private-xdg-expected
++diff -u private-xdg-expected private-xdg-out
++
++FLATPAK_USER_DIR="$USERDIR" XDG_CONFIG_HOME=/usr \
++  assert_fail run --command=sh org.test.Hello -c true
++${FLATPAK} override --user --reset org.test.Hello
++
++ok "host XDG directories feature and override"
++
+ run_sh org.test.Platform cat /.flatpak-info >runtime-fpi
+ assert_file_has_content runtime-fpi "[Runtime]"
+ assert_file_has_content runtime-fpi "^runtime=runtime/org\.test\.Platform/$ARCH/stable$"

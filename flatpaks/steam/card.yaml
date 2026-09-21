@@ -16,6 +16,7 @@ flatpak:
     --allow=devel
     --allow=bluetooth
     --allow=per-app-dev-shm
+    --allow=host-xdg-dirs
     --socket=x11
     --socket=wayland
     --socket=pulseaudio
@@ -95,6 +96,7 @@ files:
   - files/flatpak
   - files/anatase-steam-reaper.c
   - files/test-anatase-steam-applications.py
+  - files/test-anatase-steam.sh
   - files/test-anatase-add-to-steam.py
   - files/test-anatase-fossilize-replay-wrapper.py
   - files/dbus-send
@@ -189,6 +191,7 @@ postprocess: |-
   ln -s /usr/bin/steamos-polkit-helpers/steamos-select-branch app/bin/steamos-select-branch
 
   bash -n app/bin/anatase-steam
+  ANATASE_STEAM=files/anatase-steam bash files/test-anatase-steam.sh
   bash -n app/bin/anatase-add-to-steam
   bash -n app/libexec/anatase-fossilize-replay-wrapper
   bash -n app/bin/hrun

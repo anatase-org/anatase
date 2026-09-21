@@ -1,7 +1,8 @@
 #!/bin/bash
 
-anatase_sandbox_config_home="${XDG_CONFIG_HOME:-$HOME/.var/app/org.anatase.Steam/config}"
-anatase_sandbox_data_home="${XDG_DATA_HOME:-$HOME/.var/app/org.anatase.Steam/data}"
+anatase_private_config_home="$HOME/.var/app/org.anatase.Steam/config"
+anatase_private_data_home="$HOME/.var/app/org.anatase.Steam/data"
+export ANATASE_STEAM_SANDBOX_DATA_HOME="$anatase_private_data_home"
 steam_home="$HOME"
 
 # We are in a flatpak, we do not have
@@ -33,7 +34,82 @@ has_filesystem() {
         | grep -Fx -- "$1" >/dev/null
 }
 
-if has_filesystem '~/.steam:create' && has_filesystem 'xdg-data/Steam:create'; then
+has_feature() {
+    [[ -n $flatpak_info ]] || return 1
+    sed -n '/^\[Context\]/,/^\[/{s/^features=//p}' "$flatpak_info" \
+        | tr ';' '\n' \
+        | grep -Fx -- "$1" >/dev/null
+}
+
+migrate_config() {
+    local source_home=$1 destination_home=$2 marker=$3
+    local migration_complete=true source name destination backup suffix
+
+    [[ $source_home != "$destination_home" ]] || return 0
+    [[ -d $source_home && ! -e $marker ]] || return 0
+    if [[ -e $destination_home && $source_home -ef $destination_home ]]; then
+        return 0
+    fi
+
+    # Preserve config and saves written by older Anatase builds. Keep an
+    # existing host entry active and copy a conflicting private entry next
+    # to it as .bak instead of merging or replacing either copy.
+    shopt -s dotglob nullglob
+    for source in "$source_home"/*; do
+        name="${source##*/}"
+        [[ $name = .* ]] && continue
+        case "$name" in
+            QtProject.conf|dconf|glib-2.0|kdeglobals|pulse|\
+            user-dirs.dirs|user-dirs.locale)
+                continue
+                ;;
+        esac
+        destination="$destination_home/$name"
+        if [[ -e $destination ]] && [[ $source -ef $destination ]]; then
+            continue
+        fi
+        if [[ ! -e $destination ]] && [[ ! -L $destination ]]; then
+            if cp -a -- "$source" "$destination"; then
+                printf 'anatase-steam: migrated config %q -> %q\n' \
+                    "$source" "$destination" >&2
+            else
+                printf 'anatase-steam: failed to migrate config %q -> %q\n' \
+                    "$source" "$destination" >&2
+                migration_complete=false
+            fi
+            continue
+        fi
+        backup="$destination.bak"
+        suffix=1
+        while [[ -e $backup ]] || [[ -L $backup ]]; do
+            backup="$destination.bak.$suffix"
+            ((suffix += 1))
+        done
+        if cp -a -- "$source" "$backup"; then
+            printf 'anatase-steam: migrated config %q -> %q\n' \
+                "$source" "$backup" >&2
+        else
+            printf 'anatase-steam: failed to migrate config %q -> %q\n' \
+                "$source" "$backup" >&2
+            migration_complete=false
+        fi
+    done
+    shopt -u dotglob nullglob
+    if $migration_complete && mkdir -p "${marker%/*}" 2>/dev/null; then
+        touch "$marker" 2>/dev/null || true
+    fi
+}
+
+if has_feature host-xdg-dirs; then
+    # Flatpak already points XDG_CONFIG_HOME at the host. A new marker makes
+    # one more migration pass for saves written by older game subsandboxes.
+    if [[ ${XDG_CONFIG_HOME:-} = /* ]] &&
+            mkdir -p "$XDG_CONFIG_HOME" 2>/dev/null &&
+            [[ -w $XDG_CONFIG_HOME ]]; then
+        migrate_config "$anatase_private_config_home" "$XDG_CONFIG_HOME" \
+            "$anatase_private_data_home/.anatase-host-xdg-config-migrated"
+    fi
+elif has_filesystem '~/.steam:create' && has_filesystem 'xdg-data/Steam:create'; then
     host_home="$HOME"
     host_xdg_data_home=
     if command -v flatpak-spawn >/dev/null 2>&1; then
@@ -60,62 +136,6 @@ if has_filesystem '~/.steam:create' && has_filesystem 'xdg-data/Steam:create'; t
             && [[ -w $host_home/.steam ]] \
             && [[ -w $steam_config_home ]] \
             && [[ -w $steam_data_home/Steam ]]; then
-
-        # Preserve config and saves written by older Anatase builds. Keep an
-        # existing host entry active and copy a conflicting private entry next
-        # to it as .bak instead of merging or replacing either copy.
-        migration_marker="$anatase_sandbox_data_home/.anatase-config-home-migrated"
-        if [[ $anatase_sandbox_config_home != "$steam_config_home" ]] \
-                && [[ -d $anatase_sandbox_config_home ]] \
-                && [[ ! -e $migration_marker ]]; then
-            migration_complete=true
-            shopt -s dotglob nullglob
-            for source in "$anatase_sandbox_config_home"/*; do
-                name="${source##*/}"
-                [[ $name = .* ]] && continue
-                case "$name" in
-                    QtProject.conf|dconf|glib-2.0|kdeglobals|pulse|\
-                    user-dirs.dirs|user-dirs.locale)
-                        continue
-                        ;;
-                esac
-                destination="$steam_config_home/$name"
-                if [[ -e $destination ]] && [[ $source -ef $destination ]]; then
-                    continue
-                fi
-                if [[ ! -e $destination ]] && [[ ! -L $destination ]]; then
-                    if cp -a -- "$source" "$destination"; then
-                        printf 'anatase-steam: migrated config %q -> %q\n' \
-                            "$source" "$destination" >&2
-                    else
-                        printf 'anatase-steam: failed to migrate config %q -> %q\n' \
-                            "$source" "$destination" >&2
-                        migration_complete=false
-                    fi
-                    continue
-                fi
-                backup="$destination.bak"
-                suffix=1
-                while [[ -e $backup ]] || [[ -L $backup ]]; do
-                    backup="$destination.bak.$suffix"
-                    ((suffix += 1))
-                done
-                if cp -a -- "$source" "$backup"; then
-                    printf 'anatase-steam: migrated config %q -> %q\n' \
-                        "$source" "$backup" >&2
-                else
-                    printf 'anatase-steam: failed to migrate config %q -> %q\n' \
-                        "$source" "$backup" >&2
-                    migration_complete=false
-                fi
-            done
-            shopt -u dotglob nullglob
-            if $migration_complete \
-                    && mkdir -p "$anatase_sandbox_data_home" 2>/dev/null; then
-                touch "$migration_marker" 2>/dev/null || true
-            fi
-        fi
-
         steam_home="$host_home"
         export XDG_CONFIG_HOME="$steam_config_home"
         export XDG_DATA_HOME="$steam_data_home"
@@ -185,7 +205,6 @@ if mkdir -p \
         "$anatase_runtime_root/applications" \
         "$anatase_runtime_root/icons" \
         "$anatase_runtime_root/bin"
-    export ANATASE_STEAM_SANDBOX_DATA_HOME="$anatase_sandbox_data_home"
     export XDG_DATA_DIRS="$anatase_runtime_root:${XDG_DATA_DIRS:-/app/share:/usr/share}"
     /app/libexec/anatase-steam-applications \
         >"$anatase_runtime_root/rewrite.log" 2>&1 </dev/null &
