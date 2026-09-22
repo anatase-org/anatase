@@ -1,5 +1,4 @@
 {
-  "homepage": "https://google.com",
   "homepage_is_newtabpage": true,
   "distribution": {
      "require_eula": false,
@@ -10,8 +9,5 @@
      "show_welcome_page": false,
      "system_level": false,
      "verbose_logging": false
-  },
-  "first_run_tabs": [
-     "https://google.com"
-  ]
+  }
 }
