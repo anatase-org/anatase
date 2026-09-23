@@ -12,7 +12,7 @@ Subject: [NA] Developer files, readme, etc
 
 diff --git a/Containerfile b/Containerfile
 new file mode 100644
-index 000000000000..9bfb6955a0fc
+index 00000000000..9bfb6955a0f
 --- /dev/null
 +++ b/Containerfile
 @@ -0,0 +1,117 @@
@@ -136,7 +136,7 @@ index 000000000000..9bfb6955a0fc
 \ No newline at end of file
 diff --git a/sync.sh b/sync.sh
 new file mode 100755
-index 000000000000..504e273b90f7
+index 00000000000..504e273b90f
 --- /dev/null
 +++ b/sync.sh
 @@ -0,0 +1,93 @@
@@ -251,10 +251,10 @@ gamescope the game could get stuck in low power states.
  1 file changed, 4 insertions(+)
 
 diff --git a/src/amd/vulkan/00-radv-defaults.conf b/src/amd/vulkan/00-radv-defaults.conf
-index 77b7f4743745..896e0bbba0b8 100644
+index b54145b6dd2..68533cf89f9 100644
 --- a/src/amd/vulkan/00-radv-defaults.conf
 +++ b/src/amd/vulkan/00-radv-defaults.conf
-@@ -309,6 +309,10 @@ Application bugs worked around in this file:
+@@ -314,6 +314,10 @@ Application bugs worked around in this file:
              <option name="vk_zero_vram" value="true"/>
          </application>
  
@@ -287,7 +287,7 @@ Signed-off-by: Samuel Pitoiset <samuel.pitoiset@gmail.com>
  2 files changed, 41 insertions(+), 2 deletions(-)
 
 diff --git a/src/gallium/frontends/dri/loader_dri3_helper.c b/src/gallium/frontends/dri/loader_dri3_helper.c
-index 6b80ead53de8..a398e157c5ca 100644
+index 6b80ead53de..a398e157c5c 100644
 --- a/src/gallium/frontends/dri/loader_dri3_helper.c
 +++ b/src/gallium/frontends/dri/loader_dri3_helper.c
 @@ -297,6 +297,30 @@ dri3_update_max_num_back(struct loader_dri3_drawable *draw)
@@ -363,7 +363,7 @@ index 6b80ead53de8..a398e157c5ca 100644
         * successful MSC and adding in a swap interval for each outstanding swap
         * request. target_msc=divisor=remainder=0 means "Use glXSwapBuffers()
 diff --git a/src/gallium/frontends/dri/loader_dri3_helper.h b/src/gallium/frontends/dri/loader_dri3_helper.h
-index 26f138d1b831..3f0f3f66fac4 100644
+index 26f138d1b83..3f0f3f66fac 100644
 --- a/src/gallium/frontends/dri/loader_dri3_helper.h
 +++ b/src/gallium/frontends/dri/loader_dri3_helper.h
 @@ -169,6 +169,7 @@ struct loader_dri3_drawable {
