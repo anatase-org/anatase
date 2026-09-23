@@ -81,6 +81,8 @@ specs:
       file: overrides.patch
 
 files:
+  - alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-1.0-NP750XQB_KA3SE.conf
+  - alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge-HiFi.conf
   - keys/anatase-mok-ca.crt
   - keys/anatase-gpg.pub.asc
   - keys/anatase-cosign-root.pem
@@ -100,6 +102,11 @@ files:
 
 postprocess: |
     set -eux
+
+    install -Dm0644 /files/alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-1.0-NP750XQB_KA3SE.conf \
+        /usr/share/alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-1.0-NP750XQB_KA3SE.conf
+    install -Dm0644 /files/alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge-HiFi.conf \
+        /usr/share/alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge-HiFi.conf
 
     install -Dm0644 /files/udev/70-anatase-sysfs.rules \
         /usr/lib/udev/rules.d/70-anatase-sysfs.rules
