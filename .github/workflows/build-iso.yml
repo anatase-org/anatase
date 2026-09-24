@@ -28,7 +28,6 @@ jobs:
     environment: prod
     strategy:
       fail-fast: false
-      max-parallel: 1
       matrix:
         arch: [x86_64, aarch64]
     env:
@@ -118,4 +117,97 @@ jobs:
           download_name="anatase${arm_suffix}-${CHANNEL}-${VERSION}.iso"
           venv/bin/ludos registry file upload \
             "cache/iso/${CHANNEL}-${ARCH}/installer.iso" \
+            "iso/${object_name}" "$download_name" --sign
+
+  disk:
+    name: Build aarch64 disk image
+    if: >-
+      ${{ github.event_name != 'workflow_run' ||
+          (github.event.workflow_run.conclusion == 'success' &&
+           (github.event.workflow_run.event == 'push' ||
+            github.event.workflow_run.event == 'workflow_dispatch')) }}
+    runs-on: ubuntu-26.04-arm
+    environment: prod
+    env:
+      CHANNEL: ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref_name) == 'testing' && 'testing' || 'rolling' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 1
+          token: ${{ secrets.ANATASE_READ }}
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Install ludos
+        run: ./ludos/prepare.sh images
+
+      - name: Save Storage Space
+        run: |
+          echo Saving space due to insufficient size
+          df -h
+          sudo swapoff -a
+          sudo rm -f /swapfile
+          shopt -s nullglob
+          printf '%s\0' /opt/PyPy /opt/az /opt/node/ /opt/pipx /opt/go /opt/Ruby \
+              /usr/lib/llvm-* /usr/local/julia* /usr/local/lib/android /usr/share/dotnet \
+              /usr/share/swift /usr/local/.ghcup /usr/lib/firefox /opt/google/chrome \
+              /opt/microsoft/msedge \
+              | sudo xargs -0 -n1 -P4 rm -rf
+          df -h
+
+      - name: Pin channel ARM image
+        id: image
+        run: |
+          image="i.anatase.org/anatase:${CHANNEL}"
+          podman pull --quiet "$image"
+          digest=$(podman image inspect "$image" --format '{{.Digest}}')
+          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Invalid digest for $image: $digest" >&2
+            exit 1
+          fi
+          pinned_ref="docker://i.anatase.org/anatase@${digest}"
+          version=$(skopeo inspect --no-tags "$pinned_ref" \
+            | jq -er '.Labels["org.opencontainers.image.version"] | select(type == "string" and length > 0)')
+          echo "ref=$pinned_ref" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Build disk image with channel Flatpaks
+        env:
+          SOURCE_REF: ${{ steps.image.outputs.ref }}
+        run: |
+          releasever=$(venv/bin/python -c 'import yaml; print(yaml.safe_load(open("anatase.yml"))["env"]["releasever"])')
+          flatpak_uri="anatase=oci+https://flatpaks.anatase.org/${CHANNEL}-f${releasever}-aarch64"
+          venv/bin/ludos bootc disk anatase.yml "$SOURCE_REF" \
+            --target-ref i.anatase.org/anatase:stable \
+            --flatpak-uri "$flatpak_uri" \
+            --compress \
+            --output "cache/disk/${CHANNEL}-aarch64"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          token_format: access_token
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+
+      - name: Upload ARM disk image
+        env:
+          VERSION: ${{ steps.image.outputs.version }}
+          LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
+          LUDOS_S3_KEY: ${{ secrets.LUDOS_S3_KEY }}
+          LUDOS_S3_SECRET: ${{ secrets.LUDOS_S3_SECRET }}
+          LUDOS_GPG_KEY: ${{ secrets.LUDOS_GPG_KEY }}
+          LUDOS_GPG_CERT: ${{ secrets.LUDOS_GPG_CERT }}
+        run: |
+          object_name="anatase-${CHANNEL}-arm.img.gz"
+          download_name="anatase-arm-${CHANNEL}-${VERSION}.img.gz"
+          venv/bin/ludos registry file upload \
+            "cache/disk/${CHANNEL}-aarch64/disk.img.gz" \
             "iso/${object_name}" "$download_name" --sign

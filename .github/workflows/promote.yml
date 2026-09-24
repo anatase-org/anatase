@@ -128,7 +128,7 @@ jobs:
           fi
           venv/bin/ludos ci promote "${args[@]}"
 
-      - name: Promote rolling ISOs
+      - name: Promote rolling ISOs and ARM disk image
         if: ${{ inputs.images }}
         env:
           VERSION: ${{ steps.image.outputs.version }}
@@ -139,6 +139,10 @@ jobs:
           venv/bin/ludos registry file copy \
             iso/anatase-rolling-arm.iso iso/anatase-arm.iso \
             "anatase-arm-${VERSION}.iso" \
+            --with-signature
+          venv/bin/ludos registry file copy \
+            iso/anatase-rolling-arm.img.gz iso/anatase-arm.img.gz \
+            "anatase-arm-${VERSION}.img.gz" \
             --with-signature
 
       - name: Archive Stable image manifest
