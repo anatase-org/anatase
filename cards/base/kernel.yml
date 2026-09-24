@@ -47,6 +47,14 @@ postprocess: |
     add_dracutmodules+=" tpm2-tss fido2 systemd-pcrphase "
     EOF
 
+    # The Galaxy Book4 Edge eDP panel depends on the PMK8550 PWM provider.
+    # Include it before LUKS unlock so Plymouth can display the password prompt.
+    if find /usr/lib/modules -type f -name 'leds-qcom-lpg.ko*' -print -quit | grep -q .; then
+        cat > /usr/lib/dracut/dracut.conf.d/20-atomic-qcom-display.conf <<'EOF'
+    force_drivers+=" leds-qcom-lpg pwm_bl "
+    EOF
+    fi
+
     if [ -d /usr/share/dnf5/libdnf.conf.d ]; then
         cat > /usr/share/dnf5/libdnf.conf.d/20-ostree-installonlypkgs.conf <<'EOF'
     [main]
