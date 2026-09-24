@@ -1,31 +1,43 @@
 name: Build Anatase ISO
 
 on:
-  workflow_dispatch:
-    inputs:
-      draft:
-        description: Skip ISO Upload
-        required: false
-        type: boolean
-        default: false
+  workflow_run:
+    workflows: [Build Anatase]
+    types: [completed]
+    branches: [main, master, testing]
 
 permissions:
   contents: read
   id-token: write
 
 concurrency:
-  group: build-iso
+  group: build-iso-${{ github.event.workflow_run.head_branch == 'testing' && 'testing' || 'rolling' }}
+  cancel-in-progress: true
 
 jobs:
   iso:
-    name: Build x86_64 ISO
-    runs-on: ubuntu-26.04
-    environment: "prod"
+    name: Build ${{ matrix.arch }} ISO
+    if: >-
+      ${{ github.event.workflow_run.conclusion == 'success' &&
+          (github.event.workflow_run.event == 'push' ||
+           github.event.workflow_run.event == 'workflow_dispatch') }}
+    runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-26.04-arm' || 'ubuntu-26.04' }}
+    environment: prod
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        arch: [x86_64, aarch64]
+    env:
+      ARCH: ${{ matrix.arch }}
+      CHANNEL: ${{ github.event.workflow_run.head_branch == 'testing' && 'testing' || 'rolling' }}
+      INTERIM_PREFIX: ${{ github.event.workflow_run.head_branch == 'testing' && 'testing-' || '' }}
 
     steps:
-      - name: Checkout
+      - name: Checkout image build commit
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 1
           token: ${{ secrets.ANATASE_READ }}
           persist-credentials: false
@@ -48,36 +60,34 @@ jobs:
               | sudo xargs -0 -n1 -P4 rm -rf
           df -h
 
-      - name: Resolve stable image
+      - name: Pin channel image
         id: image
         run: |
-          stable_ref=docker://i.anatase.org/anatase:stable
-          podman pull --quiet "$stable_ref"
-          digest=$(podman image inspect i.anatase.org/anatase:stable \
-            --format '{{.Digest}}')
-
-          image_ref="docker://i.anatase.org/anatase@${digest}"
-          image_info=$(skopeo inspect --no-tags "$image_ref")
-
-          version=$(jq -r \
-            '.Labels["org.opencontainers.image.version"] // empty' \
-            <<< "$image_info")
-          if [[ -z "$version" ]]; then
-            echo "Stable image has no version label" >&2
+          tag="${INTERIM_PREFIX}${ARCH}"
+          image="i.anatase.org/anatase:${tag}"
+          podman pull --quiet "$image"
+          digest=$(podman image inspect "$image" --format '{{.Digest}}')
+          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Invalid digest for $image: $digest" >&2
             exit 1
           fi
-
-          echo "ref=$image_ref" >> "$GITHUB_OUTPUT"
+          pinned_ref="docker://i.anatase.org/anatase@${digest}"
+          version=$(skopeo inspect --no-tags "$pinned_ref" \
+            | jq -er '.Labels["org.opencontainers.image.version"] | select(type == "string" and length > 0)')
+          echo "ref=$pinned_ref" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Build ISO
+      - name: Build ISO with channel Flatpaks
         env:
           SOURCE_REF: ${{ steps.image.outputs.ref }}
-        run: venv/bin/ludos bootc installer anatase.yml "$SOURCE_REF"
+        run: |
+          releasever=$(venv/bin/python -c 'import yaml; print(yaml.safe_load(open("anatase.yml"))["env"]["releasever"])')
+          flatpak_uri="anatase=oci+https://flatpaks.anatase.org/${CHANNEL}-f${releasever}-${ARCH}"
+          venv/bin/ludos bootc installer anatase.yml "$SOURCE_REF" \
+            --flatpak-uri "$flatpak_uri" \
+            --output "cache/iso/${CHANNEL}-${ARCH}"
 
       - name: Authenticate to Google Cloud
-        if: ${{ !inputs.draft }}
-        id: auth
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
@@ -86,11 +96,9 @@ jobs:
           token_format: access_token
 
       - name: Set up Google Cloud SDK
-        if: ${{ !inputs.draft }}
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
 
       - name: Upload ISO
-        if: ${{ !inputs.draft }}
         env:
           VERSION: ${{ steps.image.outputs.version }}
           LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
@@ -99,6 +107,12 @@ jobs:
           LUDOS_GPG_KEY: ${{ secrets.LUDOS_GPG_KEY }}
           LUDOS_GPG_CERT: ${{ secrets.LUDOS_GPG_CERT }}
         run: |
+          arm_suffix=""
+          if [[ "$ARCH" == "aarch64" ]]; then
+            arm_suffix="-arm"
+          fi
+          object_name="anatase-${CHANNEL}${arm_suffix}.iso"
+          download_name="anatase${arm_suffix}-${CHANNEL}-${VERSION}.iso"
           venv/bin/ludos registry file upload \
-            ./cache/iso/anatase-f44-x86_64/installer.iso \
-            iso/anatase.iso "anatase-${VERSION}.iso" --sign
+            "cache/iso/${CHANNEL}-${ARCH}/installer.iso" \
+            "iso/${object_name}" "$download_name" --sign
