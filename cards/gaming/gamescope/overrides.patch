@@ -14994,3 +14994,71 @@ index 8a358f24..3a9a6d61 100644
  			// If we ever promoted from partial -> full, for the first frame
  			// do NOT defer this partial composition.
  			// We were already stalling for the full composition before, so it's not an issue
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Thu, 24 Sep 2026 02:14:41 +0200
+Subject: drm: accept KMS devices without PCI identity
+
+Use the selected KMS device even when it is not on a PCI bus. PCI IDs are only a hint for preferring the corresponding Vulkan device; platform DRM devices such as Qualcomm display controllers do not provide them.
+
+Fixes: 1101cd641d934ad9f836ddbbb638b43f25a2f2e0 ("match the display to the chosen gpu")
+---
+ src/Backends/DRMBackend.cpp | 39 +++++++++++++++++++++++--------------
+ 1 file changed, 24 insertions(+), 15 deletions(-)
+
+diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
+index 3a9a6d61..5479d1b3 100644
+--- a/src/Backends/DRMBackend.cpp
++++ b/src/Backends/DRMBackend.cpp
+@@ -3555,26 +3555,35 @@ namespace gamescope
+ 				return false;
+ 			}
+ 
++			// PCI IDs only help prefer the Vulkan device associated with this KMS
++			// device. Platform DRM devices do not have them and are still valid.
+ 			struct stat fd_stat = {};
+-			if ( fstat( kms_fd, &fd_stat ) != 0 )
++			if ( fstat( kms_fd, &fd_stat ) == 0 )
+ 			{
+-				drm_log.errorf_errno( "Failed to identify selected KMS device" );
+-				return false;
+-			}
+-
+-			drmDevice *drm_device = nullptr;
+-			if ( drmGetDeviceFromDevId( fd_stat.st_rdev, 0, &drm_device ) != 0 ||
+-			     drm_device->bustype != DRM_BUS_PCI || !drm_device->deviceinfo.pci )
+-			{
+-				drm_log.errorf( "Selected KMS device has no PCI identity" );
++				drmDevice *drm_device = nullptr;
++				if ( drmGetDeviceFromDevId( fd_stat.st_rdev, 0, &drm_device ) == 0 && drm_device )
++				{
++					if ( drm_device->bustype == DRM_BUS_PCI && drm_device->deviceinfo.pci )
++					{
++						g_preferVendorID = drm_device->deviceinfo.pci->vendor_id;
++						g_preferDeviceID = drm_device->deviceinfo.pci->device_id;
++					}
++					else
++					{
++						drm_log.infof( "Selected KMS device has no PCI identity; skipping KMS PCI preference" );
++					}
++				}
++				else
++				{
++					drm_log.warnf( "Could not identify selected KMS device; skipping KMS PCI preference" );
++				}
+ 				if ( drm_device )
+ 					drmFreeDevice( &drm_device );
+-				return false;
+ 			}
+-
+-			g_preferVendorID = drm_device->deviceinfo.pci->vendor_id;
+-			g_preferDeviceID = drm_device->deviceinfo.pci->device_id;
+-			drmFreeDevice( &drm_device );
++			else
++			{
++				drm_log.warnf( "Could not stat selected KMS device; skipping KMS PCI preference" );
++			}
+ 
+ 			if ( !vulkan_init( vulkan_get_instance(), VK_NULL_HANDLE ) )
+ 			{
