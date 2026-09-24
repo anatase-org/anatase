@@ -2,28 +2,29 @@ name: Build Anatase ISO
 
 on:
   workflow_call:
+    inputs:
+      source_sha:
+        description: Image build commit to check out
+        required: false
+        type: string
   workflow_dispatch:
-  workflow_run:
-    workflows: [Build Anatase]
-    types: [completed]
-    branches: [main, master, testing]
+    inputs:
+      source_sha:
+        description: Image build commit to check out
+        required: false
+        type: string
 
 permissions:
   contents: read
   id-token: write
 
 concurrency:
-  group: build-iso-${{ (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref_name) == 'testing' && 'testing' || 'rolling' }}
+  group: build-iso-${{ github.ref_name == 'testing' && 'testing' || 'rolling' }}
   cancel-in-progress: true
 
 jobs:
   iso:
     name: Build ${{ matrix.arch }} ISO
-    if: >-
-      ${{ github.event_name != 'workflow_run' ||
-          (github.event.workflow_run.conclusion == 'success' &&
-           (github.event.workflow_run.event == 'push' ||
-            github.event.workflow_run.event == 'workflow_dispatch')) }}
     runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-26.04-arm' || 'ubuntu-26.04' }}
     environment: prod
     strategy:
@@ -32,14 +33,14 @@ jobs:
         arch: [x86_64, aarch64]
     env:
       ARCH: ${{ matrix.arch }}
-      CHANNEL: ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref_name) == 'testing' && 'testing' || 'rolling' }}
-      INTERIM_PREFIX: ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref_name) == 'testing' && 'testing-' || '' }}
+      CHANNEL: ${{ github.ref_name == 'testing' && 'testing' || 'rolling' }}
+      INTERIM_PREFIX: ${{ github.ref_name == 'testing' && 'testing-' || '' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ inputs.source_sha || github.sha }}
           fetch-depth: 1
           token: ${{ secrets.ANATASE_READ }}
           persist-credentials: false
@@ -121,21 +122,16 @@ jobs:
 
   disk:
     name: Build aarch64 disk image
-    if: >-
-      ${{ github.event_name != 'workflow_run' ||
-          (github.event.workflow_run.conclusion == 'success' &&
-           (github.event.workflow_run.event == 'push' ||
-            github.event.workflow_run.event == 'workflow_dispatch')) }}
     runs-on: ubuntu-26.04-arm
     environment: prod
     env:
-      CHANNEL: ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref_name) == 'testing' && 'testing' || 'rolling' }}
+      CHANNEL: ${{ github.ref_name == 'testing' && 'testing' || 'rolling' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ inputs.source_sha || github.sha }}
           fetch-depth: 1
           token: ${{ secrets.ANATASE_READ }}
           persist-credentials: false

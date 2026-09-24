@@ -24,6 +24,7 @@ on:
       - '.gitignore'
 
 permissions:
+  actions: write
   contents: write
   packages: write
   id-token: write
@@ -211,3 +212,11 @@ jobs:
         run: |
           .github/discord-notify.sh \
             "$LUDOS_CHANNEL" "$VERSION" "$RELEASE_URL"
+
+      - name: Start ISO and ARM disk builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run build-iso.yml \
+            --ref "$GITHUB_REF_NAME" \
+            -f "source_sha=$GITHUB_SHA"
