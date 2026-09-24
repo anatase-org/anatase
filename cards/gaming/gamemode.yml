@@ -33,6 +33,11 @@ packages:
     - fmt.i686
     - spdlog.i686
     - libxkbcommon.i686
+  - aarch64:
+    # Steam's runtime is partial in arch, it downloads x86. We are missing
+    # gtk2 by default so add it for now and revisit once steam fixes it
+    - gtk2
+
   # Host D-Bus service used by the Steam Flatpak for battery information.
   - upower
   # Automount
