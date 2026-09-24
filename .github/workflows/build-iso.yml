@@ -1,6 +1,8 @@
 name: Build Anatase ISO
 
 on:
+  workflow_call:
+  workflow_dispatch:
   workflow_run:
     workflows: [Build Anatase]
     types: [completed]
@@ -11,16 +13,17 @@ permissions:
   id-token: write
 
 concurrency:
-  group: build-iso-${{ github.event.workflow_run.head_branch == 'testing' && 'testing' || 'rolling' }}
+  group: build-iso-${{ (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref_name) == 'testing' && 'testing' || 'rolling' }}
   cancel-in-progress: true
 
 jobs:
   iso:
     name: Build ${{ matrix.arch }} ISO
     if: >-
-      ${{ github.event.workflow_run.conclusion == 'success' &&
-          (github.event.workflow_run.event == 'push' ||
-           github.event.workflow_run.event == 'workflow_dispatch') }}
+      ${{ github.event_name != 'workflow_run' ||
+          (github.event.workflow_run.conclusion == 'success' &&
+           (github.event.workflow_run.event == 'push' ||
+            github.event.workflow_run.event == 'workflow_dispatch')) }}
     runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-26.04-arm' || 'ubuntu-26.04' }}
     environment: prod
     strategy:
@@ -30,14 +33,14 @@ jobs:
         arch: [x86_64, aarch64]
     env:
       ARCH: ${{ matrix.arch }}
-      CHANNEL: ${{ github.event.workflow_run.head_branch == 'testing' && 'testing' || 'rolling' }}
-      INTERIM_PREFIX: ${{ github.event.workflow_run.head_branch == 'testing' && 'testing-' || '' }}
+      CHANNEL: ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref_name) == 'testing' && 'testing' || 'rolling' }}
+      INTERIM_PREFIX: ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref_name) == 'testing' && 'testing-' || '' }}
 
     steps:
-      - name: Checkout image build commit
+      - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 1
           token: ${{ secrets.ANATASE_READ }}
           persist-credentials: false
