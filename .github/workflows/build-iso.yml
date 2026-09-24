@@ -110,12 +110,12 @@ jobs:
           LUDOS_GPG_KEY: ${{ secrets.LUDOS_GPG_KEY }}
           LUDOS_GPG_CERT: ${{ secrets.LUDOS_GPG_CERT }}
         run: |
-          arm_suffix=""
+          arm_prefix=""
           if [[ "$ARCH" == "aarch64" ]]; then
-            arm_suffix="-arm"
+            arm_prefix="-arm"
           fi
-          object_name="anatase-${CHANNEL}${arm_suffix}.iso"
-          download_name="anatase${arm_suffix}-${CHANNEL}-${VERSION}.iso"
+          object_name="anatase${arm_prefix}-${CHANNEL}.iso"
+          download_name="anatase${arm_prefix}-${CHANNEL}-${VERSION}.iso"
           venv/bin/ludos registry file upload \
             "cache/iso/${CHANNEL}-${ARCH}/installer.iso" \
             "iso/${object_name}" "$download_name" --sign
@@ -202,7 +202,7 @@ jobs:
           LUDOS_GPG_KEY: ${{ secrets.LUDOS_GPG_KEY }}
           LUDOS_GPG_CERT: ${{ secrets.LUDOS_GPG_CERT }}
         run: |
-          object_name="anatase-${CHANNEL}-arm.img.gz"
+          object_name="anatase-arm-${CHANNEL}.img.gz"
           download_name="anatase-arm-${CHANNEL}-${VERSION}.img.gz"
           venv/bin/ludos registry file upload \
             "cache/disk/${CHANNEL}-aarch64/disk.img.gz" \
