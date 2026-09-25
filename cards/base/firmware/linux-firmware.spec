@@ -670,6 +670,8 @@ end
 %{_firmwarepath}/qcom/glymur/
 %{_firmwarepath}/qcom/hawi/
 %{_firmwarepath}/qcom/kaanapali/
+%{_firmwarepath}/qcom/maili/
+%{_firmwarepath}/qcom/nord/
 %{_firmwarepath}/a300_p*
 %{_firmwarepath}/qcom/*.fw*
 %{_firmwarepath}/qcom/*.bin*
