@@ -211,12 +211,3 @@ jobs:
         run: |
           .github/discord-notify.sh \
             "$LUDOS_CHANNEL" "$VERSION" "$RELEASE_URL"
-
-
-  iso:
-    name: Build ISOs and ARM disk image
-    needs: publish
-    uses: ./.github/workflows/build-iso.yml
-    with:
-      source_sha: ${{ github.sha }}
-    secrets: inherit
