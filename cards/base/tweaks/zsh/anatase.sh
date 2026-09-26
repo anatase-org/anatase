@@ -716,8 +716,20 @@ fi
 
 # The arch executable is provided by coreutils, so expose the Arch space only
 # as an interactive alias rather than replacing it with another executable.
-if (( $+commands[spaces] )); then
+if [[ -e /usr/bin/spaces ]]; then
   alias arch='spaces enter arch --'
+
+  function apt apt-get pacman {
+    local command_name=${funcstack[1]} space
+    case $command_name in
+      apt|apt-get) space=ubuntu ;;
+      pacman) space=arch ;;
+    esac
+
+    print -u2 -- "$command_name package manager is not supported on Anatase, use \`$space\` for Spaces instead."
+    print -u2 -- "https://docs.anatase.org/spaces/tutorial"
+    return 1
+  }
 fi
 
 #
