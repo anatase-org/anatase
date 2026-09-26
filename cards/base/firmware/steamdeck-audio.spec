@@ -11,13 +11,15 @@ URL:            https://github.com/evlaV/valve-hardware-audio-processing
 BuildArch:      noarch
 
 Source0:        https://codeload.github.com/evlaV/valve-hardware-audio-processing/tar.gz/%{commit}#/valve-hardware-audio-processing-%{commit}.tar.gz
+Source1:        steamdeck-oled-speakers.conf
+Patch0:         steamdeck-audio-speaker-gain.patch
 
 %description
 Signed Sound Open Firmware binaries, topology, and ALSA UCM routes for the
 Steam Deck OLED (Galileo) built-in audio device.
 
 %prep
-%autosetup -n valve-hardware-audio-processing-%{commit}
+%autosetup -p1 -n valve-hardware-audio-processing-%{commit}
 
 %build
 
@@ -32,6 +34,8 @@ install -Dm0644 ucm2/conf.d/sof-nau8821-max/HiFi.conf \
     %{buildroot}%{_datadir}/alsa/ucm2/conf.d/sof-nau8821-max/HiFi.conf
 install -Dm0644 ucm2/conf.d/sof-nau8821-max/sof-nau8821-max.conf \
     %{buildroot}%{_datadir}/alsa/ucm2/conf.d/sof-nau8821-max/sof-nau8821-max.conf
+install -Dm0644 %{SOURCE1} \
+    %{buildroot}%{_datadir}/wireplumber/wireplumber.conf.d/51-steamdeck-oled-speakers.conf
 
 %files
 %license LICENSE
@@ -43,3 +47,4 @@ install -Dm0644 ucm2/conf.d/sof-nau8821-max/sof-nau8821-max.conf \
 %dir %{_datadir}/alsa/ucm2/conf.d/sof-nau8821-max
 %{_datadir}/alsa/ucm2/conf.d/sof-nau8821-max/HiFi.conf
 %{_datadir}/alsa/ucm2/conf.d/sof-nau8821-max/sof-nau8821-max.conf
+%{_datadir}/wireplumber/wireplumber.conf.d/51-steamdeck-oled-speakers.conf

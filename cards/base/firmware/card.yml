@@ -47,6 +47,8 @@ specs:
   - spec: steamdeck-audio.spec
     files:
       - steamdeck-audio.spec
+      - steamdeck-audio-speaker-gain.patch
+      - steamdeck-oled-speakers.conf
     packages:
       - x86_64:
           - steamdeck-audio

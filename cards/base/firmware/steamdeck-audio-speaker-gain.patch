@@ -1,0 +1,13 @@
+--- a/ucm2/conf.d/sof-nau8821-max/HiFi.conf
++++ b/ucm2/conf.d/sof-nau8821-max/HiFi.conf
+@@ -10,8 +10,8 @@
+ 		cset "name='Right VI Sense Switch' on"
+ 		cset "name='Left OP Mode Switch' on"
+ 		cset "name='Right OP Mode Switch' on"
+-		cset "name='Left Speaker Volume' 5"
+-		cset "name='Right Speaker Volume' 5"
++		cset "name='Left Speaker Volume' 1"
++		cset "name='Right Speaker Volume' 1"
+ 		cset "name='Left Digital Volume' 127"
+ 		cset "name='Right Digital Volume' 127"
+ 
