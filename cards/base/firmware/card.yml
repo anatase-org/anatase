@@ -43,3 +43,10 @@ specs:
       type: dist-git
       url: https://src.fedoraproject.org/rpms/linux-firmware
       branch: rawhide
+
+  - spec: steamdeck-audio.spec
+    files:
+      - steamdeck-audio.spec
+    packages:
+      - x86_64:
+          - steamdeck-audio
