@@ -131,6 +131,8 @@ packages:
   - default-fonts-other-mono
   - default-fonts-other-sans
   - default-fonts-other-serif
+  # For chinese static fonts... (reported for QQMusic)
+  - wqy-microhei-fonts
   - hunspell
   - langpacks-en
 
