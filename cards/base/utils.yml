@@ -84,6 +84,10 @@ packages:
   - ifuse
   - usbmuxd
 
+  # Appimages need these to launch
+  - fuse
+  - fuse-devel
+
 postprocess: |
   set -eux
 
