@@ -1,4 +1,4 @@
 device_config:
-  - id_type: [ext4, btrfs]
+  - id_type: [ext4, btrfs, f2fs]
     ignore: false
   - ignore: true
