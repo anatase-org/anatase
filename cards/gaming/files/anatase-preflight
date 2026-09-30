@@ -38,8 +38,11 @@ def steam_data_directories(home=None, xdg_data_home=None):
 def steam_primed(data_directories=None):
     roots = data_directories or steam_data_directories()
     for root in roots:
-        pattern = str(Path(root) / "package/steam_client_*_ubuntu12.installed")
-        for marker_name in glob.glob(pattern):
+        patterns = (
+            str(Path(root) / f"package/steam_client_*_{platform}.installed")
+            for platform in ("ubuntu12", "linuxarm64")
+        )
+        for marker_name in (name for pattern in patterns for name in glob.glob(pattern)):
             marker = Path(marker_name)
             try:
                 if marker.is_file() and marker.stat().st_size > 0:
