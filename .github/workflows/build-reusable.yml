@@ -445,5 +445,10 @@ jobs:
           LUDOS_GPG_KEY: ${{ secrets.LUDOS_GPG_KEY }}
           LUDOS_GPG_CERT: ${{ secrets.LUDOS_GPG_CERT }}
         run: |
+          # Keep runtimes available in both the published and channel indexes.
+          for prefix in "" "${LUDOS_CHANNEL}-"; do
+            venv/bin/ludos registry flatpak init-dummy-runtime anatase.yml \
+              --arch "$ARCH" --prefix "$prefix" --if-needed
+          done
           venv/bin/ludos ci upload --flatpaks --refresh \
             --prefix "${LUDOS_CHANNEL}-"
