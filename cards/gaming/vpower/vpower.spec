@@ -5,7 +5,7 @@
 %global debug_package %{nil}
 
 Name:           vpower
-Version:        1.6.2
+Version:        1.6.3
 Release:        %autorelease
 Summary:        Daemon for calculating Steam battery metrics
 

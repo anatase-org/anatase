@@ -12,7 +12,7 @@ Subject: remove shutdown ability
  delete mode 100644 vpower.toml
 
 diff --git a/Cargo.lock b/Cargo.lock
-index 036d2ea2a089..27ce6b1107cf 100644
+index fc0213b..ceb7683 100644
 --- a/Cargo.lock
 +++ b/Cargo.lock
 @@ -14,76 +14,10 @@ version = "0.2.172"
@@ -85,7 +85,7 @@ index 036d2ea2a089..27ce6b1107cf 100644
 -
  [[package]]
  name = "vpower"
- version = "1.6.2"
+ version = "1.6.3"
  dependencies = [
   "lazy_static",
   "libc",
@@ -93,7 +93,7 @@ index 036d2ea2a089..27ce6b1107cf 100644
 - "toml",
  ]
 diff --git a/Cargo.toml b/Cargo.toml
-index aa52ea16d402..e6476408e84a 100644
+index c717a09..1c33058 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
 @@ -9,6 +9,4 @@ path = "main.rs"
@@ -104,7 +104,7 @@ index aa52ea16d402..e6476408e84a 100644
 -toml = "0.5"
  lazy_static = "1.5.0"
 diff --git a/main.rs b/main.rs
-index eb9f1b559b3f..5bfe2705af7e 100644
+index f357ca9..95b43b3 100644
 --- a/main.rs
 +++ b/main.rs
 @@ -1,12 +1,10 @@
@@ -163,7 +163,7 @@ index eb9f1b559b3f..5bfe2705af7e 100644
      // Mains/AC
      let mut path_ac = PathBuf::from("");
      let power_supply_paths = fs::read_dir("/sys/class/power_supply/").unwrap();
-@@ -475,10 +444,9 @@ fn main() {
+@@ -493,10 +462,9 @@ fn main() {
          let voltage_now = read_battery_f64(&path_bat, "voltage_now");
  
          // Derive battery variables.
@@ -177,7 +177,7 @@ index eb9f1b559b3f..5bfe2705af7e 100644
  
          let power_now = match (voltage_now, current_now, power_now_from_file) {
              (Some(voltage_now), Some(current_now), _) => Some(voltage_now * current_now),
-@@ -738,7 +706,8 @@ fn main() {
+@@ -757,7 +725,8 @@ fn main() {
              _ => None,
          };
  
@@ -187,7 +187,7 @@ index eb9f1b559b3f..5bfe2705af7e 100644
          let vars = (charge_now, charge_shutdown, voltage_min_design, power_now);
          let secs_until_shutdown_request = match vars {
              (
-@@ -753,7 +722,7 @@ fn main() {
+@@ -772,7 +741,7 @@ fn main() {
                      Some(hours * 3600.0)
                  } else {
                      match ac_status {
@@ -196,7 +196,7 @@ index eb9f1b559b3f..5bfe2705af7e 100644
                          Some("Connected") => Some(1.0),
                          _ => Some(0.0),
                      }
-@@ -774,22 +743,6 @@ fn main() {
+@@ -793,22 +762,6 @@ fn main() {
          let val = secs_until_shutdown_request;
          write_f64(dir_path, "secs_until_shutdown_request", val);
  
@@ -221,7 +221,7 @@ index eb9f1b559b3f..5bfe2705af7e 100644
  	let prev_battery_percent_int = prev_battery_percent.unwrap_or(-1.0).round() as i32;
 diff --git a/vpower.toml b/vpower.toml
 deleted file mode 100644
-index 692749d8368b..000000000000
+index 692749d..0000000
 --- a/vpower.toml
 +++ /dev/null
 @@ -1,2 +0,0 @@
@@ -238,7 +238,7 @@ Subject: detect nonstandard system battery names
  1 file changed, 19 insertions(+), 10 deletions(-)
 
 diff --git a/main.rs b/main.rs
-index 5bfe2705af7e..fa73f85e58de 100644
+index 95b43b3..d7671ce 100644
 --- a/main.rs
 +++ b/main.rs
 @@ -196,20 +196,29 @@ fn main() {
@@ -284,72 +284,50 @@ index 5bfe2705af7e..fa73f85e58de 100644
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
-Date: Fri, 14 Aug 2026 12:20:41 +0200
-Subject: assume max charge level is 80% to not fire false positives
+Date: Thu, 1 Oct 2026 11:04:53 +0200
+Subject: skip 0% readings
 
 ---
- main.rs | 21 +++++++++++++--------
- 1 file changed, 13 insertions(+), 8 deletions(-)
+ main.rs | 6 ++++++
+ 1 file changed, 6 insertions(+)
 
 diff --git a/main.rs b/main.rs
-index fa73f85e58de..c8d50bc9b80b 100644
+index d7671ce..38bf03f 100644
 --- a/main.rs
 +++ b/main.rs
-@@ -159,6 +159,8 @@ fn format_duration(total_seconds: f64) -> String {
-     format!("{}d {}h {}m {:.2}s", days, hours, minutes, seconds)
- }
- 
-+const DEFAULT_MAX_CHARGE_LEVEL: f64 = 80.0;
+@@ -430,6 +430,12 @@ fn main() {
+ 	    // mixed or used in other ways
+             ( read_battery_f64(&path_bat, "energy_full"), read_battery_f64(&path_bat, "energy_now") )
+ 	};
++        // Ignore invalid zero-charge readings and keep the last reported values.
++        if charge_now == Some(0.0) {
++            thread::sleep(Duration::from_secs(1));
++            continue;
++        }
 +
- fn main() {
-     // Print version info
-     let version = env!("CARGO_PKG_VERSION");
-@@ -304,7 +306,7 @@ fn main() {
- 	    println!("Info: Init: MaxChargeLevel feature: using indirect file '{}'", path_chargetypes_file.display());
+         let (current_now, power_now_from_file) = if files_named_current {
+ 	    // SteamDeck (and others)
+ 	    attempts_to_read_current_now += 1;
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Thu, 1 Oct 2026 11:08:28 +0200
+Subject: disable slow charging nag
+
+---
+ main.rs | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/main.rs b/main.rs
+index 38bf03f..73f6955 100644
+--- a/main.rs
++++ b/main.rs
+@@ -655,7 +655,7 @@ fn main() {
+ 	// 'Discharging' (or 'Charging') for the same reasons explained there,
+ 	// and giving some grace period to the connection to settle.
+ 	if ac_status == Some("Connected") && battery_status == Some("Discharging") {
+-	    ac_status = Some("Connected slow");
++	    // Slow-charging classification disabled; keep the adapter Connected.
  	}
- 	else {
--	    println!("Warning: Init: MaxChargeLevel feature: Cound not find suitable indirect file (charge_types) either, assuming MaxChargeLevel=100%");
-+	    println!("Warning: Init: MaxChargeLevel feature: Cound not find suitable indirect file (charge_types) either, assuming MaxChargeLevel={DEFAULT_MAX_CHARGE_LEVEL}%");
- 	}
-     }
- 
-@@ -359,8 +361,9 @@ fn main() {
-         }
-         suspend_last_boottime = suspend_current_boottime;
- 
--	// Get max charge battery level, if set
--	let mut bat_maxchargelevel = 100.0;
-+	// Get max charge battery level, defaulting to a conservative limit for
-+	// devices that cannot report one.
-+	let mut bat_maxchargelevel = DEFAULT_MAX_CHARGE_LEVEL;
- 	if ! path_maxchargelevel_file.as_os_str().is_empty() {
- 	    bat_maxchargelevel = match read_battery_maxchargelevel(&path_maxchargelevel_file.display().to_string()) {
- 		None       => -999.9,
-@@ -370,12 +373,14 @@ fn main() {
- 	else {
- 	    // Get max charge battery level indirectly (charge_types='Long Life'
- 	    // is assumed to limit to 80% (Lenovo Legion Go S models), otherwise
--	    // assume 100%)
-+	    // assume 100% when the selected charge type is readable.)
- 	    if ! path_chargetypes_file.as_os_str().is_empty() {
- 		if let Some(content) = read_battery_string(&path_bat, "charge_types") {
--		    if content.contains("[Long Life]") {
--			bat_maxchargelevel = 80.0;
--		    }
-+		    bat_maxchargelevel = if content.contains("[Long Life]") {
-+			DEFAULT_MAX_CHARGE_LEVEL
-+		    } else {
-+			100.0
-+		    };
- 		}
- 	    }
- 	}
-@@ -387,7 +392,7 @@ fn main() {
- 		bat_maxchargelevel = last_bat_maxchargelevel;
- 	    }
- 	    else {
--		bat_maxchargelevel = 100.0;
-+		bat_maxchargelevel = DEFAULT_MAX_CHARGE_LEVEL;
- 	    }
- 	}
- 
+ 	if ac_status == Some("Connected slow") && battery_status == Some("Charging") {
+ 	    ac_status = Some("Connected");
