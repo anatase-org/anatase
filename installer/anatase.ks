@@ -122,9 +122,12 @@ case "$installer_arch" in
 esac
 [ -f "$target_efi/EFI/anatase/$shim_filename" ]
 printf -v efi_loader '\\EFI\\anatase\\%s' "$shim_filename"
-command -v efibootmgr >/dev/null
-efibootmgr --create --disk "/dev/$efi_parent" --part "$efi_part" \
-    --loader "$efi_loader" --label Anatase
+if ! command -v efibootmgr >/dev/null; then
+    echo "efibootmgr is unavailable; skipping EFI boot entry creation" >&2
+elif ! efibootmgr --create --disk "/dev/$efi_parent" --part "$efi_part" \
+    --loader "$efi_loader" --label Anatase; then
+    echo "failed to create EFI boot entry; continuing installation" >&2
+fi
 %end
 
 #
