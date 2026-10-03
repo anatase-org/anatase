@@ -67,7 +67,7 @@ jobs:
         run: venv/bin/ludos ci seed --autoremove
 
       - name: Build adblocker
-        run: venv/bin/ludos ci build "${{ steps.prepare.outputs.flatpak_id }}" --autoremove
+        run: venv/bin/ludos ci build "${{ steps.prepare.outputs.flatpak_id }}" --force --autoremove
 
       - name: Authenticate to Google Cloud
         id: auth
