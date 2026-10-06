@@ -4,6 +4,7 @@ files:
   - sysctl.conf
   - memlock.conf
   - modules-load.conf
+  - pipewire-pulse.conf
   - zram-generator.conf
   - systemd-zram-setup-reset.conf
   - dev-hugepages1G.mount
@@ -48,6 +49,8 @@ postprocess: |
       /etc/security/limits.d/80-anatase-memlock.conf
   install -Dm0644 /files/modules-load.conf \
       /usr/lib/modules-load.d/80-anatase.conf
+  install -Dm0644 /files/pipewire-pulse.conf \
+      /usr/share/pipewire/pipewire-pulse.conf.d/80-anatase.conf
 
   # Add zram and huge pages
   install -Dm0644 /files/zram-generator.conf \
