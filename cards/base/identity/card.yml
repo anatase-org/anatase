@@ -70,7 +70,7 @@ postprocess: |
   # Steam reads these
   VERSION_CODENAME="Anatase"
   BUILD_ID=""
-  VARIANT_ID="original"
+  VARIANT_ID=anatase
   EOF
   echo "Anatase" > /etc/system-release
 
