@@ -8,7 +8,7 @@ ExcludeArch: %{ix86}
 
 Name:    ark
 Summary: Archive manager
-Version: 26.08.0
+Version: 26.08.1
 Release: 1%{?dist}
 
 # icons are LGPL-3.0-only
@@ -148,6 +148,9 @@ desktop-file-validate %{buildroot}%{_kf6_datadir}/applications/org.kde.ark.deskt
 
 
 %changelog
+* Wed Sep 09 2026 Steve Cossette <farchord@gmail.com> - 26.08.1-1
+- 26.08.1
+
 * Fri Aug 14 2026 Steve Cossette <farchord@gmail.com> - 26.08.0-1
 - 26.08.0
 

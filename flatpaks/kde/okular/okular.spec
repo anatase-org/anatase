@@ -14,8 +14,8 @@
 
 Name:    okular
 Summary: A document viewer
-Version: 26.08.0
-Release: 2%{?dist}
+Version: 26.08.1
+Release: 1%{?dist}
 
 License: GPL-2.0-only
 URL:     https://www.kde.org/applications/graphics/okular/
@@ -30,10 +30,6 @@ URL:     https://www.kde.org/applications/graphics/okular/
 Source0: https://download.kde.org/%{stable}/release-service/%{version}/src/%{name}-%{version}.tar.xz
 
 ## upstream patches (master branch)
-
-# Initialize m_pasteAnnotation (Fixes a crash with Kile)
-# https://invent.kde.org/graphics/okular/-/commit/e322356cd1b5fae4fb71ff61b248fcb352d189cb
-Patch0:        e322356cd1b5fae4fb71ff61b248fcb352d189cb.patch
 
 BuildRequires: desktop-file-utils
 BuildRequires: libappstream-glib
@@ -225,6 +221,9 @@ appstream-util validate-relax --nonet %{buildroot}%{_kf6_metainfodir}/org.kde.ok
 
 
 %changelog
+* Wed Sep 09 2026 Steve Cossette <farchord@gmail.com> - 26.08.1-1
+- 26.08.1
+
 * Wed Aug 26 2026 Steve Cossette <farchord@gmail.com> - 26.08.0-2
 - Added upstream patch to fix kile crashing on start
 

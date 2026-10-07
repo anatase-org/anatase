@@ -3,7 +3,7 @@
 %global arm_client_source_id dc817d33f8308815bf4fde6a3cb61fd4529728c8
 
 Name:           steam
-Version:        1.0.0.86
+Version:        1.0.0.87
 Release:        1%{?dist}
 Summary:        Installer for the Steam software distribution service
 # Redistribution and repackaging for Linux is allowed, see license file

@@ -10,7 +10,7 @@ ExcludeArch: %{ix86}
 
 Name:    kate
 Summary: Advanced Text Editor
-Version: 26.08.0
+Version: 26.08.1
 Release: 1%{?dist}
 
 # kwrite LGPLv2+
@@ -189,6 +189,9 @@ make test ARGS="--output-on-failure --timeout 20" -C %{_target_platform} ||:
 
 
 %changelog
+* Wed Sep 09 2026 Steve Cossette <farchord@gmail.com> - 26.08.1-1
+- 26.08.1
+
 * Fri Aug 14 2026 Steve Cossette <farchord@gmail.com> - 26.08.0-1
 - 26.08.0
 
