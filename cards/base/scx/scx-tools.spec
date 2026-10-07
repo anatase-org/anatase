@@ -60,6 +60,7 @@ BuildRequires:  systemd
 BuildRequires:  bpftool
 BuildRequires:  libseccomp-devel
 BuildRequires:  (crate(anyhow/default) >= 1.0.102 with crate(anyhow/default) < 2.0.0~)
+BuildRequires:  (crate(chrono/clock) >= 0.4.0 with crate(chrono/clock) < 0.5.0~)
 BuildRequires:  (crate(clap/default) >= 4.5.0 with crate(clap/default) < 5.0.0~)
 BuildRequires:  (crate(clap/derive) >= 4.5.0 with crate(clap/derive) < 5.0.0~)
 BuildRequires:  (crate(clap/env) >= 4.5.0 with crate(clap/env) < 5.0.0~)
@@ -72,8 +73,11 @@ BuildRequires:  (crate(log/default) >= 0.4.29 with crate(log/default) < 0.5.0~)
 BuildRequires:  (crate(nix) >= 0.31.3 with crate(nix) < 0.32.0~)
 BuildRequires:  (crate(nix/process) >= 0.31.3 with crate(nix/process) < 0.32.0~)
 BuildRequires:  (crate(nix/signal) >= 0.31.3 with crate(nix/signal) < 0.32.0~)
+BuildRequires:  (crate(ratatui/default) >= 0.30.0 with crate(ratatui/default) < 0.31.0~)
 BuildRequires:  (crate(serde/default) >= 1.0.228 with crate(serde/default) < 2.0.0~)
 BuildRequires:  (crate(serde/derive) >= 1.0.228 with crate(serde/derive) < 2.0.0~)
+BuildRequires:  (crate(serde_json/default) >= 1.0.0 with crate(serde_json/default) < 2.0.0~)
+BuildRequires:  (crate(shell-words/default) >= 1.1.0 with crate(shell-words/default) < 2.0.0~)
 BuildRequires:  (crate(tokio-util/default) >= 0.7.18 with crate(tokio-util/default) < 0.8.0~)
 BuildRequires:  (crate(tokio/default) >= 1.0.0 with crate(tokio/default) < 2.0.0~)
 BuildRequires:  (crate(tokio/macros) >= 1.0.0 with crate(tokio/macros) < 2.0.0~)
@@ -117,6 +121,8 @@ tar -xvf %{SOURCE25} -C vendor/
 tar -xvf %{SOURCE26} -C vendor/
 # Keep the requirement aligned with the vendored sysinfo crate across updates.
 sed -i -E 's/^sysinfo = "[^"]+"/sysinfo = "%{rust_sysinfo_ver}"/' crates/scx_loader/Cargo.toml
+# Fedora 44 provides ratatui 0.30.0, which supports scxtui's API usage.
+sed -i 's/^ratatui = "0\.30\.2"/ratatui = "0.30.0"/' crates/scxtui/Cargo.toml
 sed -i \
     -e '/"windows\//d' \
     -e '/"objc2-core-foundation\//d' \
