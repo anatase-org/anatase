@@ -164,8 +164,8 @@ Subject: Export KDE file manager service menus
  common/flatpak-context.c            |  4 ++++
  common/flatpak-dir.c                |  1 +
  tests/make-test-app.sh              | 23 +++++++++++++++++++++++
- tests/test-run.sh                   |  3 +++
- 5 files changed, 32 insertions(+)
+ tests/test-run.sh                   |  4 ++++
+ 5 files changed, 33 insertions(+)
 
 diff --git a/app/flatpak-builtins-build-finish.c b/app/flatpak-builtins-build-finish.c
 index 96a79457..155ba94e 100644
@@ -244,10 +244,11 @@ diff --git a/tests/test-run.sh b/tests/test-run.sh
 index 7206ec80..09b2a154 100644
 --- a/tests/test-run.sh
 +++ b/tests/test-run.sh
-@@ -50,6 +50,9 @@ assert_has_file $FL_DIR/exports/share/gnome-shell/search-providers/org.test.Hell
+@@ -50,6 +50,10 @@ assert_has_file $FL_DIR/exports/share/gnome-shell/search-providers/org.test.Hell
  assert_file_has_content $FL_DIR/exports/share/gnome-shell/search-providers/org.test.Hello.search-provider.ini "^DefaultDisabled=true$"
  assert_has_file $FL_DIR/exports/share/krunner/dbusplugins/org.test.Hello.desktop
  assert_not_file_has_content $FL_DIR/exports/share/krunner/dbusplugins/org.test.Hello.desktop "^X-KDE-PluginInfo-EnabledByDefault=.*$"
++assert_file_has_content $FL_DIR/exports/share/krunner/dbusplugins/org.test.Hello.desktop "^X-KDE-PluginInfo-EnabledByDefault=false$"
 +assert_has_file $FL_DIR/exports/share/kio/servicemenus/org.test.Hello.desktop
 +assert_file_has_content $FL_DIR/exports/share/kio/servicemenus/org.test.Hello.desktop "^Exec=.*flatpak run --branch=stable --arch=$ARCH --command=hello\.sh --file-forwarding org\.test\.Hello --service-menu @@ %F @@$"
 +assert_not_has_file $FL_DIR/exports/share/kio/servicemenus/dont-export.desktop
@@ -333,7 +334,7 @@ diff --git a/tests/test-run.sh b/tests/test-run.sh
 index 09b2a154..5a473d21 100644
 --- a/tests/test-run.sh
 +++ b/tests/test-run.sh
-@@ -53,6 +53,8 @@ assert_file_has_content $FL_DIR/exports/share/krunner/dbusplugins/org.test.Hello
+@@ -54,6 +54,8 @@ assert_file_has_content $FL_DIR/exports/share/krunner/dbusplugins/org.test.Hello
  assert_has_file $FL_DIR/exports/share/kio/servicemenus/org.test.Hello.desktop
  assert_file_has_content $FL_DIR/exports/share/kio/servicemenus/org.test.Hello.desktop "^Exec=.*flatpak run --branch=stable --arch=$ARCH --command=hello\.sh --file-forwarding org\.test\.Hello --service-menu @@ %F @@$"
  assert_not_has_file $FL_DIR/exports/share/kio/servicemenus/dont-export.desktop
@@ -412,7 +413,7 @@ diff --git a/tests/test-run.sh b/tests/test-run.sh
 index 5a473d21..e98e8c32 100644
 --- a/tests/test-run.sh
 +++ b/tests/test-run.sh
-@@ -89,6 +89,23 @@ assert_file_has_content hello_out '^Hello world, from a sandbox$'
+@@ -90,6 +90,23 @@ assert_file_has_content hello_out '^Hello world, from a sandbox$'
  
  ok "hello"
  
@@ -909,7 +910,7 @@ diff --git a/tests/test-run.sh b/tests/test-run.sh
 index e98e8c32..aa9dc7e8 100644
 --- a/tests/test-run.sh
 +++ b/tests/test-run.sh
-@@ -169,6 +169,51 @@ assert_file_has_content host-value-in-sandbox "^${TEST_DATA_DIR}/home/state\$"
+@@ -170,6 +170,51 @@ assert_file_has_content host-value-in-sandbox "^${TEST_DATA_DIR}/home/state\$"
  
  ok "XDG_foo_HOME work as expected"
  
@@ -961,3 +962,51 @@ index e98e8c32..aa9dc7e8 100644
  run_sh org.test.Platform cat /.flatpak-info >runtime-fpi
  assert_file_has_content runtime-fpi "[Runtime]"
  assert_file_has_content runtime-fpi "^runtime=runtime/org\.test\.Platform/$ARCH/stable$"
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Thu, 8 Oct 2026 00:22:31 +0200
+Subject: Revert "run: Use deploy helper to open runtime files directory"
+
+This reverts commit 47c83291745fd6255a83d73c6ce3c97465ea5cd3.
+---
+ common/flatpak-run.c | 11 +++--------
+ 1 file changed, 3 insertions(+), 8 deletions(-)
+
+diff --git a/common/flatpak-run.c b/common/flatpak-run.c
+index 6c06a202..94574bbe 100644
+--- a/common/flatpak-run.c
++++ b/common/flatpak-run.c
+@@ -3298,7 +3298,6 @@ flatpak_run_app (FlatpakDecomposed   *app_ref,
+   FlatpakContextDevices devices;
+   FlatpakContextSockets sockets;
+   FlatpakContextFeatures features;
+-  glnx_autofd int runtime_deploy_dfd = -1;
+   glnx_autofd int original_runtime_fd = -1;
+   g_autoptr(GFile) original_runtime_files = NULL;
+   g_autoptr(GFile) custom_runtime_files = NULL;
+@@ -3424,11 +3423,6 @@ flatpak_run_app (FlatpakDecomposed   *app_ref,
+   if (runtime_deploy == NULL)
+     return FALSE;
+ 
+-  if (!glnx_opendirat (AT_FDCWD,
+-                       flatpak_file_get_path_cached (flatpak_deploy_get_dir (runtime_deploy)),
+-                       FALSE, &runtime_deploy_dfd, error))
+-    return FALSE;
+-
+   runtime_deploy_data = flatpak_deploy_get_deploy_data (runtime_deploy, FLATPAK_DEPLOY_VERSION_ANY, cancellable, error);
+   if (runtime_deploy_data == NULL)
+     return FALSE;
+@@ -3465,9 +3459,10 @@ flatpak_run_app (FlatpakDecomposed   *app_ref,
+   features = flatpak_run_compute_allowed_features (app_context);
+ 
+   original_runtime_files = flatpak_deploy_get_files (runtime_deploy);
+-  original_runtime_fd = flatpak_deploy_get_files_fd (runtime_deploy_dfd, NULL, 0, error);
++  original_runtime_fd = open (flatpak_file_get_path_cached (original_runtime_files),
++                              O_PATH | O_CLOEXEC);
+   if (original_runtime_fd < 0)
+-    return glnx_prefix_error (error, "Failed to open original runtime");
++    return glnx_throw_errno_prefix (error, "Failed to open original runtime");
+ 
+   if (custom_runtime_fd >= 0)
+     {
