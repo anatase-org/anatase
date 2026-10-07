@@ -8,7 +8,7 @@ Subject: rename back to --json-fd
  1 file changed, 6 insertions(+), 3 deletions(-)
 
 diff --git a/crates/lib/src/cli.rs b/crates/lib/src/cli.rs
-index c749b1199178..da8a66d47af9 100644
+index 23570314..ffaf7da5 100644
 --- a/crates/lib/src/cli.rs
 +++ b/crates/lib/src/cli.rs
 @@ -67,16 +67,19 @@ pub(crate) struct ProgressOptions {
@@ -47,7 +47,7 @@ Subject: bootc compiles three times for specs, make it compile once
  3 files changed, 35 insertions(+), 7 deletions(-)
 
 diff --git a/Makefile b/Makefile
-index ff96de69239b..93673eae3e9a 100644
+index ff96de69..93673eae 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -32,28 +32,42 @@ prefix ?= /usr
@@ -109,7 +109,7 @@ index ff96de69239b..93673eae3e9a 100644
  
  # Run this to also take over the functionality of `ostree container` for example.
 diff --git a/crates/cli/Cargo.toml b/crates/cli/Cargo.toml
-index 2cfba548b6b4..08ae3be21d29 100644
+index be2ea5b4..ef0174e5 100644
 --- a/crates/cli/Cargo.toml
 +++ b/crates/cli/Cargo.toml
 @@ -25,5 +25,8 @@ log = { workspace = true }
@@ -122,7 +122,7 @@ index 2cfba548b6b4..08ae3be21d29 100644
  [lints]
  workspace = true
 diff --git a/crates/xtask/src/man.rs b/crates/xtask/src/man.rs
-index b41565c4074b..1e1ceb93e20b 100644
+index b41565c4..1e1ceb93 100644
 --- a/crates/xtask/src/man.rs
 +++ b/crates/xtask/src/man.rs
 @@ -55,6 +55,17 @@ pub struct CliPositional {
@@ -156,7 +156,7 @@ Subject: add parallel writer
  3 files changed, 425 insertions(+), 44 deletions(-)
 
 diff --git a/crates/ostree-ext/src/cli.rs b/crates/ostree-ext/src/cli.rs
-index 7c3f9995fd89..8072ef88c0fc 100644
+index 38a1c798..ddf17123 100644
 --- a/crates/ostree-ext/src/cli.rs
 +++ b/crates/ostree-ext/src/cli.rs
 @@ -21,16 +21,17 @@ use std::collections::BTreeMap;
@@ -321,7 +321,7 @@ index 7c3f9995fd89..8072ef88c0fc 100644
                  )
                  .await
 diff --git a/crates/ostree-ext/src/container/encapsulate.rs b/crates/ostree-ext/src/container/encapsulate.rs
-index c012797abc98..425b63b08510 100644
+index c012797a..425b63b0 100644
 --- a/crates/ostree-ext/src/container/encapsulate.rs
 +++ b/crates/ostree-ext/src/container/encapsulate.rs
 @@ -2,7 +2,7 @@
@@ -761,7 +761,7 @@ index c012797abc98..425b63b08510 100644
  
  impl ExportOpts<'_, '_> {
 diff --git a/crates/ostree-ext/tests/it/main.rs b/crates/ostree-ext/tests/it/main.rs
-index e43aab027b29..fa536d125e73 100644
+index e43aab02..fa536d12 100644
 --- a/crates/ostree-ext/tests/it/main.rs
 +++ b/crates/ostree-ext/tests/it/main.rs
 @@ -14,7 +14,8 @@ use ocidir::oci_spec::distribution::Reference;
@@ -817,7 +817,7 @@ Subject: Drop reserved package layer
  1 file changed, 1 insertion(+), 7 deletions(-)
 
 diff --git a/crates/ostree-ext/src/chunking.rs b/crates/ostree-ext/src/chunking.rs
-index ee0350b4fc70..a1bc141e195b 100644
+index ee0350b4..a1bc141e 100644
 --- a/crates/ostree-ext/src/chunking.rs
 +++ b/crates/ostree-ext/src/chunking.rs
 @@ -748,11 +748,7 @@ fn basic_packing<'a>(
@@ -853,7 +853,7 @@ Subject: Preserve image version in merge commits
  1 file changed, 7 insertions(+)
 
 diff --git a/crates/ostree-ext/src/container/store.rs b/crates/ostree-ext/src/container/store.rs
-index 449d3db2ec97..0634de9c76c2 100644
+index 449d3db2..0634de9c 100644
 --- a/crates/ostree-ext/src/container/store.rs
 +++ b/crates/ostree-ext/src/container/store.rs
 @@ -61,6 +61,7 @@
@@ -902,7 +902,7 @@ Subject: Optimize pure OSTree image imports
  1 file changed, 38 insertions(+)
 
 diff --git a/crates/ostree-ext/src/container/store.rs b/crates/ostree-ext/src/container/store.rs
-index 0634de9c76c2..041ccf8a77b2 100644
+index 0634de9c..041ccf8a 100644
 --- a/crates/ostree-ext/src/container/store.rs
 +++ b/crates/ostree-ext/src/container/store.rs
 @@ -1223,6 +1223,44 @@ impl ImageImporter {

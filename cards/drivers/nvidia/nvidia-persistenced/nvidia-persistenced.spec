@@ -1,6 +1,6 @@
 Name:           nvidia-persistenced
 Version:        615.71.09
-Release:        1%{?dist}
+Release:        3%{?dist}
 Summary:        A daemon to maintain persistent software state in the NVIDIA driver
 Epoch:          3
 License:        GPLv2+
@@ -10,6 +10,7 @@ ExclusiveArch:  x86_64 aarch64
 Source0:        https://download.nvidia.com/XFree86/%{name}/%{name}-%{version}.tar.bz2
 Source1:        %{name}.service
 Source2:        %{name}-sysusers.conf
+Source3:        60-nvidia-persistenced.rules
 
 BuildRequires:  gcc
 BuildRequires:  libtirpc-devel
@@ -50,8 +51,8 @@ make %{?_smp_mflags} \
     PREFIX=%{_prefix} \
     STRIP_CMD=true
 
-# Systemd unit files
 install -p -m 644 -D %{SOURCE1} %{buildroot}%{_unitdir}/%{name}.service
+install -p -m 644 -D %{SOURCE3} %{buildroot}%{_udevrulesdir}/60-nvidia-persistenced.rules
 
 # Systemd user
 install -p -D -m 0644 %{SOURCE2} %{buildroot}%{_sysusersdir}/%{name}.conf
@@ -72,10 +73,18 @@ install -p -D -m 0644 %{SOURCE2} %{buildroot}%{_sysusersdir}/%{name}.conf
 %license COPYING
 %{_mandir}/man1/%{name}.1.*
 %{_bindir}/%{name}
+%{_udevrulesdir}/60-nvidia-persistenced.rules
 %{_unitdir}/%{name}.service
 %{_sysusersdir}/%{name}.conf
 
 %changelog
+* Tue Sep 22 2026 Simone Caronni <negativo17@gmail.com> - 3:615.71.09-3
+- Start systemd unit automatically if a GPU is present, so it can also be bundled
+  in images for systems that might not have an NVIDIA gpu (https://anatase.org).
+
+* Tue Sep 22 2026 Simone Caronni <negativo17@gmail.com> - 3:615.71.09-2
+- Import changes from Anatase (https://anatase.org/).
+
 * Thu Sep 10 2026 Simone Caronni <negativo17@gmail.com> - 3:615.71.09-1
 - Update to 615.71.09.
 

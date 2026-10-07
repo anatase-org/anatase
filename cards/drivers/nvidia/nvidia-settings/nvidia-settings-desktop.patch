@@ -1,6 +1,6 @@
-diff -Naur nvidia-settings-530.30.02/doc/nvidia-settings.desktop nvidia-settings-530.30.02.old/doc/nvidia-settings.desktop
---- nvidia-settings-530.30.02/doc/nvidia-settings.desktop	2023-03-08 13:01:39.749406623 +0100
-+++ nvidia-settings-530.30.02.old/doc/nvidia-settings.desktop	2023-03-08 13:02:50.950572460 +0100
+diff -Naur nvidia-settings-615.71.09.orig/doc/nvidia-settings.desktop nvidia-settings-615.71.09/doc/nvidia-settings.desktop
+--- nvidia-settings-615.71.09.orig/doc/nvidia-settings.desktop	2026-09-05 02:03:25.000000000 +0200
++++ nvidia-settings-615.71.09/doc/nvidia-settings.desktop	2026-10-02 10:32:29.068294458 +0200
 @@ -1,11 +1,11 @@
  [Desktop Entry]
  Type=Application
@@ -16,3 +16,12 @@ diff -Naur nvidia-settings-530.30.02/doc/nvidia-settings.desktop nvidia-settings
  
  # Translation by Marcin Mikołajczak
  Name[pl]=Ustawienia serwera X NVIDIA
+@@ -36,7 +36,7 @@
+ Comment[it]=Configura NVIDIA X Server Settings
+ Comment[ja]=NVIDIA X サーバー設定を構成します
+ Comment[ko]=NVIDIA X 서버 설정 구성
+-Comment[pt_BR]=Definir &configurações de gerenciamento de usuário...
++Comment[pt_BR]=Ajustar as configurações do NVIDIA X Server
+ Comment[zh_CN]=配置 NVIDIA X 服务器设置
+ Comment[zh_HK]=配置 NVIDIA X 伺服器設定
+ Comment[zh_TW]=配置 NVIDIA X 伺服器設定

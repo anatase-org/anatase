@@ -1,16 +1,9 @@
-# Load UVM and create its base and tools device nodes when an NVIDIA GPU is
-# discovered. Minor 0 tells nvidia-modprobe to create both UVM nodes.
-ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", RUN+="/usr/bin/nvidia-modprobe -u -c 0"
-ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030200", RUN+="/usr/bin/nvidia-modprobe -u -c 0"
+# Load UVM and create its base and tools device nodes when GPU is present. Minor 0 tells nvidia-modprobe to create both UVM nodes.
+# This is usually done via NVIDIA libraries calling nvidia-modprobe; but containers lack the privileges to do that so we preload it here.
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000|0x030200", RUN+="/usr/bin/nvidia-modprobe -u -c 0"
 
-# Start NVIDIA services when a GPU is present
-ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", TAG+="systemd", ENV{SYSTEMD_WANTS}+="nvidia-powerd.service nvidia-persistenced.service"
-ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030200", TAG+="systemd", ENV{SYSTEMD_WANTS}+="nvidia-powerd.service nvidia-persistenced.service"
+# Enable runtime PM for GPUs on driver bind
+ACTION=="bind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000|0x030200", TEST=="power/control", ATTR{power/control}="auto"
 
-# Enable runtime PM for NVIDIA VGA/3D controller devices on driver bind
-ACTION=="bind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", TEST=="power/control", ATTR{power/control}="auto"
-ACTION=="bind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030200", TEST=="power/control", ATTR{power/control}="auto"
-
-# Disable runtime PM for NVIDIA VGA/3D controller devices on driver unbind
-ACTION=="unbind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000", TEST=="power/control", ATTR{power/control}="on"
-ACTION=="unbind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030200", TEST=="power/control", ATTR{power/control}="on"
+# Disable runtime PM for GPUs on driver unbind
+ACTION=="unbind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x030000|0x030200", TEST=="power/control", ATTR{power/control}="on"

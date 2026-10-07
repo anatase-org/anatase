@@ -3,7 +3,7 @@
 
 Name:           nvidia-driver-selinux
 Version:        0.1
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        NVIDIA driver SELinux module
 License:        GPL-3.0-only
 URL:            https://negativo17.org
@@ -55,6 +55,9 @@ fi
 %ghost %verify(not md5 size mode mtime) %{_sharedstatedir}/selinux/%{selinuxtype}/active/modules/200/%{modulename}
 
 %changelog
+* Fri Sep 25 2026 Simone Caronni <negativo17@gmail.com> - 0.1-3
+- Fix license (#1).
+
 * Thu Mar 19 2026 Simone Caronni <negativo17@gmail.com> - 0.1-2
 - Do not use the selinux_requires macro so we have more generic dependencies and
   we can install the generated packages also on RHEL z/EUS streams (#197).

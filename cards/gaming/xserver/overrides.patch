@@ -13,10 +13,10 @@ This reverts commit 2cc869626a5728d8bd80241322546f98df96094d.
  1 file changed, 21 deletions(-)
 
 diff --git a/hw/xwayland/xwayland-screen.c b/hw/xwayland/xwayland-screen.c
-index c83adda9fd60..efe3205b3551 100644
+index 9c9addd6d..c7bab04b0 100644
 --- a/hw/xwayland/xwayland-screen.c
 +++ b/hw/xwayland/xwayland-screen.c
-@@ -182,32 +182,11 @@ xwl_property_callback(CallbackListPtr *pcbl, void *closure,
+@@ -181,32 +181,11 @@ xwl_property_callback(CallbackListPtr *pcbl, void *closure,
  }
  
  #ifdef XACE
@@ -67,10 +67,10 @@ This reverts commit 7c25024879824cc96dc930e1af9e4c203eea740f.
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/hw/xwayland/xwayland-present.c b/hw/xwayland/xwayland-present.c
-index 7b9a4ac32acd..d29411d2c170 100644
+index 2d65c3690..c267130fd 100644
 --- a/hw/xwayland/xwayland-present.c
 +++ b/hw/xwayland/xwayland-present.c
-@@ -870,7 +870,7 @@ xwl_present_flip(present_vblank_ptr vblank, RegionPtr damage)
+@@ -873,7 +873,7 @@ xwl_present_flip(present_vblank_ptr vblank, RegionPtr damage)
      struct xwl_present_event    *event = xwl_present_event_from_vblank(vblank);
      Bool                        implicit_sync = TRUE;
  
@@ -100,7 +100,7 @@ and then sending that to the compositor.
  1 file changed, 35 insertions(+), 5 deletions(-)
 
 diff --git a/hw/xwayland/xwayland-xtest.c b/hw/xwayland/xwayland-xtest.c
-index c2aacca661c3..54094ab30712 100644
+index c2aacca66..54094ab30 100644
 --- a/hw/xwayland/xwayland-xtest.c
 +++ b/hw/xwayland/xwayland-xtest.c
 @@ -25,6 +25,9 @@
@@ -245,7 +245,7 @@ Subject: xwayland: accept 24-bit SHM uploads to 32-bit drawables
  1 file changed, 8 insertions(+), 1 deletion(-)
 
 diff --git a/Xext/shm.c b/Xext/shm.c
-index 1eed91bc552e..bfacdb0d072e 100644
+index 1eed91bc5..bfacdb0d0 100644
 --- a/Xext/shm.c
 +++ b/Xext/shm.c
 @@ -540,7 +540,14 @@ ProcShmPutImage(ClientPtr client)
@@ -278,7 +278,7 @@ Subject: xwayland: gate text input on libei 1.6
  4 files changed, 27 insertions(+), 3 deletions(-)
 
 diff --git a/hw/xwayland/xwayland-xtest.c b/hw/xwayland/xwayland-xtest.c
-index 54094ab30712..e2994c0189d9 100644
+index 54094ab30..e2994c018 100644
 --- a/hw/xwayland/xwayland-xtest.c
 +++ b/hw/xwayland/xwayland-xtest.c
 @@ -75,7 +75,10 @@ struct xwl_ei_client {
@@ -394,7 +394,7 @@ index 54094ab30712..e2994c0189d9 100644
                  break;
              case EI_EVENT_SEAT_REMOVED:
 diff --git a/include/meson.build b/include/meson.build
-index 72e1e5d5b0dd..61b140e3ff8e 100644
+index 72e1e5d5b..61b140e3f 100644
 --- a/include/meson.build
 +++ b/include/meson.build
 @@ -323,6 +323,7 @@ xwayland_data.set('XWL_HAS_LIBDECOR', have_libdecor ? '1' : false)
@@ -406,7 +406,7 @@ index 72e1e5d5b0dd..61b140e3ff8e 100644
  configure_file(output : 'xwayland-config.h',
                 input : 'xwayland-config.h.meson.in',
 diff --git a/include/xwayland-config.h.meson.in b/include/xwayland-config.h.meson.in
-index 17ca8fcb0cee..d1e2bb8f9a0a 100644
+index 17ca8fcb0..d1e2bb8f9 100644
 --- a/include/xwayland-config.h.meson.in
 +++ b/include/xwayland-config.h.meson.in
 @@ -18,3 +18,4 @@
@@ -415,7 +415,7 @@ index 17ca8fcb0cee..d1e2bb8f9a0a 100644
  #mesondefine XWL_HAS_EI_PORTAL
 +#mesondefine XWL_HAS_EI_TEXT
 diff --git a/meson.build b/meson.build
-index 737cc8f79222..8583a18f2f71 100644
+index 244c58fed..291810699 100644
 --- a/meson.build
 +++ b/meson.build
 @@ -223,6 +223,7 @@ liboeffis_dep = dependency('liboeffis-1.0', version: '>= 1.0.0', required: get_o

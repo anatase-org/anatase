@@ -5,8 +5,8 @@ mangohud:
   upstream-sha: 83471e0529dbdf23bdba1e2cd6e5d0b7883fd46a
   patch-sha: 992103e4fb744897826de04ea00a2f71e7018214
 xserver:
-  patch-sha: c5a47fda896aeefbf1d06a73e392a294344f9e1a
-  upstream-sha: eccfdec0c4b5141f1aac04127751425f215b498d
+  patch-sha: d958b4e84c903e8d5851b5ea587b998e4834ce62
+  upstream-sha: f393c03be1e67b2a24c2c53272bed4fcea917188
 steamos-manager:
   patch-sha: 244e21225379af4037aeeabdc6efd5b71984e7dd
 xdg-desktop-portal-gamescope:
