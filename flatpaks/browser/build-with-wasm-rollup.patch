@@ -1,5 +1,6 @@
---- a/third_party/devtools-frontend/src/front_end/Images/BUILD.gn
-+++ b/third_party/devtools-frontend/src/front_end/Images/BUILD.gn
+diff -up chromium-154.0.8037.57/third_party/devtools-frontend/src/front_end/Images/BUILD.gn.build-with-wasm-rollup chromium-154.0.8037.57/third_party/devtools-frontend/src/front_end/Images/BUILD.gn
+--- chromium-154.0.8037.57/third_party/devtools-frontend/src/front_end/Images/BUILD.gn.build-with-wasm-rollup	2026-09-22 02:09:16.000000000 +0200
++++ chromium-154.0.8037.57/third_party/devtools-frontend/src/front_end/Images/BUILD.gn	2026-09-23 16:40:40.895486247 +0200
 @@ -28,7 +28,7 @@ node_action("generate_css_vars") {
  }
  
@@ -9,8 +10,9 @@
  
    _bundled_entrypoint = target_gen_dir + "/Images.prebundle.js"
    _output_file_location = target_gen_dir + "/Images.js"
---- a/third_party/devtools-frontend/src/front_end/models/live-metrics/web-vitals-injected/BUILD.gn
-+++ b/third_party/devtools-frontend/src/front_end/models/live-metrics/web-vitals-injected/BUILD.gn
+diff -up chromium-154.0.8037.57/third_party/devtools-frontend/src/front_end/models/live-metrics/web-vitals-injected/BUILD.gn.build-with-wasm-rollup chromium-154.0.8037.57/third_party/devtools-frontend/src/front_end/models/live-metrics/web-vitals-injected/BUILD.gn
+--- chromium-154.0.8037.57/third_party/devtools-frontend/src/front_end/models/live-metrics/web-vitals-injected/BUILD.gn.build-with-wasm-rollup	2026-09-22 02:09:16.000000000 +0200
++++ chromium-154.0.8037.57/third_party/devtools-frontend/src/front_end/models/live-metrics/web-vitals-injected/BUILD.gn	2026-09-23 16:40:40.896352266 +0200
 @@ -26,7 +26,7 @@ devtools_module("web-vitals-injected") {
  }
  
@@ -20,9 +22,10 @@
  
    _bundled_entrypoint = target_gen_dir + "/web-vitals-injected.js"
    _output_file_location = target_gen_dir + "/web-vitals-injected.generated.js"
---- a/third_party/devtools-frontend/src/front_end/panels/recorder/injected/BUILD.gn
-+++ b/third_party/devtools-frontend/src/front_end/panels/recorder/injected/BUILD.gn
-@@ -55,7 +55,7 @@ devtools_entrypoint("bundle") {
+diff -up chromium-154.0.8037.57/third_party/devtools-frontend/src/front_end/panels/recorder/injected/BUILD.gn.build-with-wasm-rollup chromium-154.0.8037.57/third_party/devtools-frontend/src/front_end/panels/recorder/injected/BUILD.gn
+--- chromium-154.0.8037.57/third_party/devtools-frontend/src/front_end/panels/recorder/injected/BUILD.gn.build-with-wasm-rollup	2026-09-22 02:09:16.000000000 +0200
++++ chromium-154.0.8037.57/third_party/devtools-frontend/src/front_end/panels/recorder/injected/BUILD.gn	2026-09-23 16:40:40.896634097 +0200
+@@ -57,7 +57,7 @@ devtools_entrypoint("bundle") {
  }
  
  node_action("bundled_library") {
@@ -31,8 +34,9 @@
  
    _bundled_entrypoint = target_gen_dir + "/injected.js"
    _output_file_location = target_gen_dir + "/injected.generated.js"
---- a/third_party/devtools-frontend/src/inspector_overlay/BUILD.gn
-+++ b/third_party/devtools-frontend/src/inspector_overlay/BUILD.gn
+diff -up chromium-154.0.8037.57/third_party/devtools-frontend/src/inspector_overlay/BUILD.gn.build-with-wasm-rollup chromium-154.0.8037.57/third_party/devtools-frontend/src/inspector_overlay/BUILD.gn
+--- chromium-154.0.8037.57/third_party/devtools-frontend/src/inspector_overlay/BUILD.gn.build-with-wasm-rollup	2026-09-22 02:09:16.000000000 +0200
++++ chromium-154.0.8037.57/third_party/devtools-frontend/src/inspector_overlay/BUILD.gn	2026-09-23 16:40:40.896898910 +0200
 @@ -38,7 +38,7 @@ action("build_inspector_overlay") {
      "$target_gen_dir/tool_window_controls.css",
      "$target_gen_dir/main.js",
@@ -42,8 +46,9 @@
    ]
  
    outputs = [ "$resources_out_dir/main.js" ]
---- a/third_party/devtools-frontend/src/scripts/build/build_inspector_overlay.py
-+++ b/third_party/devtools-frontend/src/scripts/build/build_inspector_overlay.py
+diff -up chromium-154.0.8037.57/third_party/devtools-frontend/src/scripts/build/build_inspector_overlay.py.build-with-wasm-rollup chromium-154.0.8037.57/third_party/devtools-frontend/src/scripts/build/build_inspector_overlay.py
+--- chromium-154.0.8037.57/third_party/devtools-frontend/src/scripts/build/build_inspector_overlay.py.build-with-wasm-rollup	2026-09-22 02:09:16.000000000 +0200
++++ chromium-154.0.8037.57/third_party/devtools-frontend/src/scripts/build/build_inspector_overlay.py	2026-09-23 16:40:40.897130981 +0200
 @@ -56,7 +56,7 @@ def rollup(input_path, output_path, file
          [devtools_paths.node_path(),
           devtools_paths.rollup_path()] +
@@ -53,21 +58,22 @@
          stdout=subprocess.PIPE,
          stderr=subprocess.PIPE,
          universal_newlines=True,
---- a/third_party/devtools-frontend/src/scripts/build/ninja/bundle.gni
-+++ b/third_party/devtools-frontend/src/scripts/build/ninja/bundle.gni
+diff -up chromium-154.0.8037.57/third_party/devtools-frontend/src/scripts/build/ninja/bundle.gni.build-with-wasm-rollup chromium-154.0.8037.57/third_party/devtools-frontend/src/scripts/build/ninja/bundle.gni
+--- chromium-154.0.8037.57/third_party/devtools-frontend/src/scripts/build/ninja/bundle.gni.build-with-wasm-rollup	2026-09-22 02:09:16.000000000 +0200
++++ chromium-154.0.8037.57/third_party/devtools-frontend/src/scripts/build/ninja/bundle.gni	2026-09-23 16:51:01.399321185 +0200
 @@ -11,7 +11,7 @@ template("bundle") {
           "You must define the 'entrypoint' for a bundle target")
  
    node_action(target_name) {
 -    script = "scripts/build/esbuild.js"
 +    script = "../../node/node_modules/@rollup/wasm-node/dist/bin/rollup"
-     forward_variables_from(invoker,
-                            [
-                              "visibility",
-@@ -21,27 +21,23 @@ template("bundle") {
- 
+     _bundled_entrypoints_target =
+         devtools_location_prepend + ":bundled_entrypoints"
+     deps = [ _bundled_entrypoints_target ]
+@@ -31,22 +31,22 @@ template("bundle") {
      inputs = [
        invoker.entrypoint,
+       _entrypoints_file,
 +      devtools_location_prepend + "scripts/build/rollup.config.mjs",
        devtools_location_prepend + "scripts/build/devtools_plugin.js",
        devtools_location_prepend + "scripts/devtools_paths.js",
@@ -80,6 +86,9 @@
 -      inputs += [ _esbuild ]
 -    }
 -
+     _depfile = "$target_gen_dir/$target_name.d"
+     depfile = _depfile
+ 
      args = [
 +      "--config",
 +      rebase_path(
@@ -89,7 +98,10 @@
        rebase_path(invoker.entrypoint, root_build_dir),
 +      "--file",
        rebase_path(invoker.output_file_location, root_build_dir),
-       "--configSourcemaps",
+       "--entrypointsFile",
+       rebase_path(_entrypoints_file, root_build_dir),
+@@ -59,10 +59,6 @@ template("bundle") {
+       rebase_path(_depfile, root_build_dir),
      ]
  
 -    if (!is_debug) {
@@ -99,9 +111,10 @@
      outputs = [ invoker.output_file_location ]
    }
  }
---- a/third_party/devtools-frontend/src/scripts/devtools_paths.py
-+++ b/third_party/devtools-frontend/src/scripts/devtools_paths.py
-@@ -64,8 +64,11 @@ def license_checker_path():
+diff -up chromium-154.0.8037.57/third_party/devtools-frontend/src/scripts/devtools_paths.py.build-with-wasm-rollup chromium-154.0.8037.57/third_party/devtools-frontend/src/scripts/devtools_paths.py
+--- chromium-154.0.8037.57/third_party/devtools-frontend/src/scripts/devtools_paths.py.build-with-wasm-rollup	2026-09-22 02:09:16.000000000 +0200
++++ chromium-154.0.8037.57/third_party/devtools-frontend/src/scripts/devtools_paths.py	2026-09-23 16:40:40.897786257 +0200
+@@ -65,8 +65,11 @@ def license_checker_path():
  
  def rollup_path():
      return path.join(

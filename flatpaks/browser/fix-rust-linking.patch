@@ -1,8 +1,8 @@
-Index: chromium-150.0.7871.46/build/toolchain/gcc_toolchain.gni
+Index: chromium-154.0.8037.44/build/toolchain/gcc_toolchain.gni
 ===================================================================
---- chromium-150.0.7871.46.orig/build/toolchain/gcc_toolchain.gni
-+++ chromium-150.0.7871.46/build/toolchain/gcc_toolchain.gni
-@@ -457,13 +457,25 @@ template("single_gcc_toolchain") {
+--- chromium-154.0.8037.44.orig/build/toolchain/gcc_toolchain.gni
++++ chromium-154.0.8037.44/build/toolchain/gcc_toolchain.gni
+@@ -462,13 +462,25 @@ template("single_gcc_toolchain") {
        } else {
          main_so_file = sofile_with_symbols
        }
@@ -30,31 +30,31 @@ Index: chromium-150.0.7871.46/build/toolchain/gcc_toolchain.gni
  
        # Generate a map file to be used for binary size analysis.
        # Map file adds ~10% to the link time on a z620.
-@@ -575,13 +587,25 @@ template("single_gcc_toolchain") {
+@@ -580,13 +592,25 @@ template("single_gcc_toolchain") {
        } else {
          main_so_file = sofile_with_symbols
        }
--      command = "$ld -shared $soname_flag {{ldflags}}${extra_ldflags} -o \"$main_so_file\" "
+-      link_command = "$ld -shared $soname_flag {{ldflags}}${extra_ldflags} -o \"$main_so_file\" "
 +      if (target_cpu == "ppc64") {
 +        # Work around linker failures due to Rust libraries and the use of whole-archive
-+        command = "$ld -shared -Wl,--start-group $soname_flag {{ldflags}}${extra_ldflags} -o \"$main_so_file\" "
++        link_command = "$ld -shared -Wl,--start-group $soname_flag {{ldflags}}${extra_ldflags} -o \"$main_so_file\" "
 +      }
 +      else {
-+        command = "$ld -shared $soname_flag {{ldflags}}${extra_ldflags} -o \"$main_so_file\" "
++        link_command = "$ld -shared $soname_flag {{ldflags}}${extra_ldflags} -o \"$main_so_file\" "
 +      }
  
        if (use_mold_separate_debug_file) {
          # TODO(40208899): See if it adding --detach for local builds helps.
-         command += "\"-Wl,--separate-debug-file=$sofile_with_symbols\" -Wl,--no-detach "
+         link_command += "\"-Wl,--separate-debug-file=$sofile_with_symbols\" -Wl,--no-detach "
        }
--      command += "@\"$rspfile\" {{rlibs}}"
+-      link_command += "@\"$rspfile\" {{rlibs}}"
 +      if (target_cpu == "ppc64") {
 +        # Work around linker failures due to Rust libraries and the use of whole-archive
-+        command += "@\"$rspfile\" -Wl,--end-group {{rlibs}}"
++        link_command += "@\"$rspfile\" -Wl,--end-group {{rlibs}}"
 +      }
 +      else {
-+        command += "@\"$rspfile\" {{rlibs}}"
++        link_command += "@\"$rspfile\" {{rlibs}}"
 +      }
  
-       if (defined(invoker.strip) && !use_mold_separate_debug_file) {
-         strip_command =
+       # Generate a map file to be used for binary size analysis.
+       # Map file adds ~10% to the link time on a z620.

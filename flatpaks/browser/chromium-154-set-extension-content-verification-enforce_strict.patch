@@ -1,0 +1,20 @@
+Author: Than Ngo <than@redhat.com>
+
+  Enable extension signature validation to prevent any modifications to extension contents
+  in chromium
+
+diff -up chromium-154.0.8037.92/chrome/browser/extensions/chrome_content_verifier_delegate.cc.me chromium-154.0.8037.92/chrome/browser/extensions/chrome_content_verifier_delegate.cc
+--- chromium-154.0.8037.92/chrome/browser/extensions/chrome_content_verifier_delegate.cc.me	2026-09-30 16:04:51.168474332 +0200
++++ chromium-154.0.8037.92/chrome/browser/extensions/chrome_content_verifier_delegate.cc	2026-09-30 16:04:59.493101635 +0200
+@@ -103,11 +103,7 @@ ChromeContentVerifierDelegate::GetDefaul
+ #endif  // BUILDFLAG(PLATFORM_CFM)
+ 
+   VerifyInfo::Mode experiment_value;
+-#if BUILDFLAG(GOOGLE_CHROME_BRANDING)
+   experiment_value = VerifyInfo::Mode::ENFORCE_STRICT;
+-#else
+-  experiment_value = VerifyInfo::Mode::NONE;
+-#endif
+   const std::string group =
+       base::FieldTrialList::FindFullName(kContentVerificationExperimentName);
+   if (group == "EnforceStrict")

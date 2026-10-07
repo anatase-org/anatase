@@ -1,0 +1,18 @@
+Author: Than Ngo <than@redhat.com>
+  
+   Disable auto-download of widevine binary
+
+diff -up chromium-154.0.8037.92/chrome/browser/component_updater/registration.cc.me chromium-154.0.8037.92/chrome/browser/component_updater/registration.cc
+--- chromium-154.0.8037.92/chrome/browser/component_updater/registration.cc.me	2026-09-30 16:52:54.363835630 +0200
++++ chromium-154.0.8037.92/chrome/browser/component_updater/registration.cc	2026-09-30 16:53:56.806333646 +0200
+@@ -143,10 +143,6 @@ void RegisterComponentsForUpdate() {
+   RegisterRecoveryImprovedComponent(cus, g_browser_process->local_state());
+ #endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC)
+ 
+-#if BUILDFLAG(ENABLE_WIDEVINE_CDM_COMPONENT)
+-  RegisterWidevineCdmComponent(cus);
+-#endif  // BUILDFLAG(ENABLE_WIDEVINE_CDM_COMPONENT)
+-
+   RegisterSubresourceFilterComponent(cus);
+   RegisterOnDeviceHeadSuggestComponent(
+       cus, g_browser_process->GetApplicationLocale());
