@@ -67,23 +67,15 @@
          </message>
          <message name="IDS_RELAUNCH_TO_UPDATE" desc="The text label of the relaunch to update ChromeOS menu item">
            Relaunch to update &amp;ChromiumOS
-@@ -1100,7 +1100,7 @@
-         <if expr="use_titlecase">
-           <then>
-             <message name="IDS_CUSTOMIZE_CHROME" desc="In Title Case: The text label of the Customize Chrome menu item">
--              C&amp;ustomize Your Chromium
-+              C&amp;ustomize Browser
-             </message>
-             <message name="IDS_OTHER_CHROME_PROFILES_TITLE" desc="In Title Case: The title of the Other Chrome profiles section">
-               Other Chromium Profiles
-@@ -1111,6 +1111,6 @@
-           <else>
-             <message name="IDS_CUSTOMIZE_CHROME" desc="The text label of the Customize Chrome menu item">
--              C&amp;ustomize your Chromium
-+              C&amp;ustomize Browser
-             </message>
-             <message name="IDS_OTHER_CHROME_PROFILES_TITLE" desc="The title of the Other Chrome profiles section">
-               Other Chromium profiles
+@@ -1196,7 +1196,7 @@
+       <!-- Page menu. Android has separate strings for its menu -->
+       <if expr="not is_android">
+         <message name="IDS_CUSTOMIZE_CHROME" desc="The text label of the Customize Chrome menu item">
+-          C&amp;ustomize your Chromium
++          C&amp;ustomize Browser
+         </message>
+         <message name="IDS_OTHER_CHROME_PROFILES_TITLE" desc="The title of the Other Chrome profiles section">
+           Other Chromium profiles
 @@ -1243,7 +1243,7 @@
          </then>
          <else>

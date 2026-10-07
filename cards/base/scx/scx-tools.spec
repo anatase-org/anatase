@@ -115,7 +115,8 @@ tar -xvf %{SOURCE23} -C vendor/
 tar -xvf %{SOURCE24} -C vendor/
 tar -xvf %{SOURCE25} -C vendor/
 tar -xvf %{SOURCE26} -C vendor/
-sed -i 's/^sysinfo = "0\.39\.5"/sysinfo = "0.38.4"/' crates/scx_loader/Cargo.toml
+# Keep the requirement aligned with the vendored sysinfo crate across updates.
+sed -i -E 's/^sysinfo = "[^"]+"/sysinfo = "%{rust_sysinfo_ver}"/' crates/scx_loader/Cargo.toml
 sed -i \
     -e '/"windows\//d' \
     -e '/"objc2-core-foundation\//d' \

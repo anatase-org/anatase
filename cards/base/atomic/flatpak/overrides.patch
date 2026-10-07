@@ -164,8 +164,8 @@ Subject: Export KDE file manager service menus
  common/flatpak-context.c            |  4 ++++
  common/flatpak-dir.c                |  1 +
  tests/make-test-app.sh              | 23 +++++++++++++++++++++++
- tests/test-run.sh                   |  4 ++++
- 5 files changed, 33 insertions(+)
+ tests/test-run.sh                   |  3 +++
+ 5 files changed, 32 insertions(+)
 
 diff --git a/app/flatpak-builtins-build-finish.c b/app/flatpak-builtins-build-finish.c
 index 96a79457..155ba94e 100644
@@ -244,11 +244,10 @@ diff --git a/tests/test-run.sh b/tests/test-run.sh
 index 7206ec80..09b2a154 100644
 --- a/tests/test-run.sh
 +++ b/tests/test-run.sh
-@@ -50,6 +50,10 @@ assert_has_file $FL_DIR/exports/share/gnome-shell/search-providers/org.test.Hell
+@@ -50,6 +50,9 @@ assert_has_file $FL_DIR/exports/share/gnome-shell/search-providers/org.test.Hell
  assert_file_has_content $FL_DIR/exports/share/gnome-shell/search-providers/org.test.Hello.search-provider.ini "^DefaultDisabled=true$"
  assert_has_file $FL_DIR/exports/share/krunner/dbusplugins/org.test.Hello.desktop
  assert_not_file_has_content $FL_DIR/exports/share/krunner/dbusplugins/org.test.Hello.desktop "^X-KDE-PluginInfo-EnabledByDefault=.*$"
-+assert_file_has_content $FL_DIR/exports/share/krunner/dbusplugins/org.test.Hello.desktop "^X-KDE-PluginInfo-EnabledByDefault=false$"
 +assert_has_file $FL_DIR/exports/share/kio/servicemenus/org.test.Hello.desktop
 +assert_file_has_content $FL_DIR/exports/share/kio/servicemenus/org.test.Hello.desktop "^Exec=.*flatpak run --branch=stable --arch=$ARCH --command=hello\.sh --file-forwarding org\.test\.Hello --service-menu @@ %F @@$"
 +assert_not_has_file $FL_DIR/exports/share/kio/servicemenus/dont-export.desktop
@@ -334,7 +333,7 @@ diff --git a/tests/test-run.sh b/tests/test-run.sh
 index 09b2a154..5a473d21 100644
 --- a/tests/test-run.sh
 +++ b/tests/test-run.sh
-@@ -54,6 +54,8 @@ assert_file_has_content $FL_DIR/exports/share/krunner/dbusplugins/org.test.Hello
+@@ -53,6 +53,8 @@ assert_file_has_content $FL_DIR/exports/share/krunner/dbusplugins/org.test.Hello
  assert_has_file $FL_DIR/exports/share/kio/servicemenus/org.test.Hello.desktop
  assert_file_has_content $FL_DIR/exports/share/kio/servicemenus/org.test.Hello.desktop "^Exec=.*flatpak run --branch=stable --arch=$ARCH --command=hello\.sh --file-forwarding org\.test\.Hello --service-menu @@ %F @@$"
  assert_not_has_file $FL_DIR/exports/share/kio/servicemenus/dont-export.desktop
@@ -413,7 +412,7 @@ diff --git a/tests/test-run.sh b/tests/test-run.sh
 index 5a473d21..e98e8c32 100644
 --- a/tests/test-run.sh
 +++ b/tests/test-run.sh
-@@ -90,6 +90,23 @@ assert_file_has_content hello_out '^Hello world, from a sandbox$'
+@@ -89,6 +89,23 @@ assert_file_has_content hello_out '^Hello world, from a sandbox$'
  
  ok "hello"
  
@@ -910,7 +909,7 @@ diff --git a/tests/test-run.sh b/tests/test-run.sh
 index e98e8c32..aa9dc7e8 100644
 --- a/tests/test-run.sh
 +++ b/tests/test-run.sh
-@@ -170,6 +170,51 @@ assert_file_has_content host-value-in-sandbox "^${TEST_DATA_DIR}/home/state\$"
+@@ -169,6 +169,51 @@ assert_file_has_content host-value-in-sandbox "^${TEST_DATA_DIR}/home/state\$"
  
  ok "XDG_foo_HOME work as expected"
  
