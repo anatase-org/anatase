@@ -20,6 +20,7 @@ specs:
       - brcmfmac-firmware
       - cirrus-audio-firmware
       - intel-gpu-firmware
+      - iwlbluetooth-firmware
       - iwlegacy-firmware
       - iwlwifi-dvm-firmware
       - iwlwifi-mld-firmware
@@ -36,6 +37,7 @@ specs:
       - x86_64:
           - amd-ucode-firmware
           - intel-audio-firmware
+          - intel-npu-firmware
           - intel-vsc-firmware
         aarch64:
           - qcom-firmware
