@@ -1,48 +1,32 @@
 version: 1
 
-packages:
-  # Shell and libc runtime
-  - bash
-  - glibc
-
-  # NVIDIA Container Toolkit runtime libraries
-  - elfutils-libelf
-  - libcap
-  - libseccomp
-
 build-deps:
-  # Base
   - bash
   - coreutils
-  - dnf5
-  - dnf5-plugins
   - findutils
-  - gawk
-  - grep
-  - sed
+  - rpm-build
+  - rpmdevtools
   - tar
-  - which
-  - xz
 
-  # NCT
-  - fuse-overlayfs
-  - gcc
-  - podman
+specs:
+  - spec: libnvidia-container.spec
+    files:
+      - libnvidia-container.spec
+    packages:
+      - libnvidia-container1
+      - libnvidia-container-tools
+  - spec: nvidia-container-toolkit.spec
+    files:
+      - nvidia-container-toolkit.spec
+    packages:
+      - nvidia-container-toolkit
+      - nvidia-container-toolkit-base
 
-hash: >
-  @hash(
-    nct.yml,
-    build-nct.sh,
-    nvidia-container-toolkit
-  )
-
-prepare: |
+postprocess: |
   set -eux
-  nct_revision="$(git -C nvidia-container-toolkit rev-parse HEAD)"
-  nct_version="$(git -C nvidia-container-toolkit describe --tags --exact-match 2>/dev/null || printf '%s' "$nct_revision" | cut -c1-8)"
-  echo "nct_revision=$nct_revision" >> "$LUDOS_ENV"
-  echo "nct_version=$nct_version" >> "$LUDOS_ENV"
-
-build: |
-  set -eux
-  REVISION="$nct_revision" VERSION="$nct_version" ./build-nct.sh
+  install -dm0755 /usr/lib/systemd/system-preset
+  cat > /usr/lib/systemd/system-preset/80-anatase-nvidia-cdi.preset <<'EOF'
+  enable nvidia-cdi-refresh.service
+  enable nvidia-cdi-refresh.path
+  EOF
+  systemctl preset nvidia-cdi-refresh.service nvidia-cdi-refresh.path
