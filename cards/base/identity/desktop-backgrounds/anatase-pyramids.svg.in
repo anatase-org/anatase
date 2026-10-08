@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2160" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <title>Anatase Pyramids</title>
+  <desc>Two faceted pyramids joined by a broad mineral valley.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="@SKY_0@" />
+      <stop offset=".7" stop-color="@SKY_1@" />
+      <stop offset="1" stop-color="@ROCK_BACK@" />
+    </linearGradient>
+    <linearGradient id="light" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="@HIGHLIGHT@" />
+      <stop offset="1" stop-color="@ROCK_1@" />
+    </linearGradient>
+    <linearGradient id="stone" x1="0" y1="0" x2=".7" y2="1">
+      <stop stop-color="@ROCK_1@" />
+      <stop offset="1" stop-color="@ROCK_2@" />
+    </linearGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="@ROCK_2@" />
+      <stop offset="1" stop-color="@ROCK_4@" />
+    </linearGradient>
+    <linearGradient id="warm" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="@ROCK_0@" />
+      <stop offset="1" stop-color="@ROCK_2@" />
+    </linearGradient>
+    <linearGradient id="edge" x1="0" y1="1" x2="1" y2="0">
+      <stop stop-color="@ACCENT@" stop-opacity=".12" />
+      <stop offset=".45" stop-color="@ACCENT@" stop-opacity=".7" />
+      <stop offset="1" stop-color="@ACCENT@" />
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#sky)" />
+  <path d="M0 660 L470 380 L920 595 L1250 390 L1600 480 V900 H0 Z" fill="url(#stone)" opacity="0.6" />
+  <path d="M0 660 L470 380 L610 670 L320 900 H0 Z" fill="url(#light)" opacity="0.76" />
+  <path d="M470 380 L920 595 L610 670 Z" fill="url(#shade)" opacity="0.63" />
+  <path d="M610 670 L920 595 L1250 390 L1160 730 L820 900 H320 Z" fill="url(#light)" opacity="0.65" />
+  <path d="M1250 390 L1600 480 L1160 730 Z" fill="url(#warm)" opacity="0.8" />
+  <path d="M1160 730 L1600 480 V900 H820 Z" fill="url(#shade)" opacity="0.6" />
+  <path d="M0 660 L470 380 L920 595 L1250 390 L1600 480" fill="none" stroke="url(#edge)" stroke-width="2.5" stroke-linejoin="round" opacity="1" />
+  <path d="M470 380 L610 670 L920 595 M1250 390 L1160 730 L820 900" fill="none" stroke="@HIGHLIGHT@" stroke-width="1.2" stroke-linejoin="round" opacity="0.16" />
+</svg>
