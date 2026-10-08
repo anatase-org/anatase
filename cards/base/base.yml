@@ -205,3 +205,9 @@ postprocess: |
   fi
 
   install -dm0755 /usr/lib/systemd/system /usr/lib/systemd/system-preset
+  
+  # Use agetty until kmscon's atomic modesetting works properly
+  cat > /usr/lib/systemd/system-preset/80-anatase-console.preset <<'EOF'
+  disable kmsconvt@.service
+  enable getty@.service
+  EOF
