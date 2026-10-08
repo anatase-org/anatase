@@ -25,6 +25,9 @@ oci:
 postprocess: |
     set -eux
 
+    # OpenRazer's udev rules and helper require this group.
+    getent group plugdev >/dev/null || groupadd --system plugdev
+
     for dtbloader in /usr/lib/modules/*/vmlinuz-dtbloader.efi; do
         [ -e "${dtbloader}" ] || continue
         ln "${dtbloader}" "${dtbloader%/vmlinuz-dtbloader.efi}/vmlinuz"
