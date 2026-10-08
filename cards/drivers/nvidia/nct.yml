@@ -22,11 +22,16 @@ specs:
       - nvidia-container-toolkit
       - nvidia-container-toolkit-base
 
+files:
+  - 60-nvidia-cdi.rules
+
 postprocess: |
   set -eux
+  install -Dm0644 /files/60-nvidia-cdi.rules \
+      /usr/lib/udev/rules.d/60-nvidia-cdi.rules
   install -dm0755 /usr/lib/systemd/system-preset
   cat > /usr/lib/systemd/system-preset/80-anatase-nvidia-cdi.preset <<'EOF'
-  enable nvidia-cdi-refresh.service
-  enable nvidia-cdi-refresh.path
+  disable nvidia-cdi-refresh.service
+  disable nvidia-cdi-refresh.path
   EOF
   systemctl preset nvidia-cdi-refresh.service nvidia-cdi-refresh.path
