@@ -11,6 +11,7 @@ files:
   - ssh-agent.conf
   - plasma-core-ssh-agent.conf
   - override-zsh.sh
+  - systemd-f45-hotfix.cil
 
 build-deps:
   - fontforge
@@ -41,6 +42,9 @@ postprocess: |
   #
   # System policy
   #
+
+  # Temporary F45 policy fixes; remove when Fedora ships both upstream rules.
+  semodule -n -s targeted -X 200 -i /files/systemd-f45-hotfix.cil
 
   # Various configs
   install -Dm0644 /files/sysctl.conf \
