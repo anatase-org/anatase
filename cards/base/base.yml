@@ -41,6 +41,9 @@ packages:
   - policycoreutils
   - policycoreutils-python-utils
   - realmd
+  # Keep desktop SSH defaults independent of the installer release identity.
+  - redhat-systemd-presets-common
+  - redhat-systemd-presets-desktop
   - selinux-policy-targeted
   - systemd
   - systemd-container
