@@ -8,7 +8,7 @@
 
 Name:           scx-scheds
 Version:        1.1.3
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Sched_ext Schedulers and Tools
 
 License:        GPL=2.0
@@ -319,8 +319,12 @@ sed -i \
     -e '/^\[build-dependencies.protoc-bin-vendored\]/,/^$/d' \
     vendor/perfetto_protos-%{rust_perfetto_protos_ver}/Cargo.toml
 sed -i 's/let protoc = &protoc_bin_vendored::protoc_bin_path().unwrap();/let protoc = std::path::Path::new("protoc");/' vendor/perfetto_protos-%{rust_perfetto_protos_ver}/build.rs
+# protoc emits a Makefile target before the dependency paths.
 sed -i \
     -e '/^    let files = deps$/,+3c\    let files = deps\
+        .split_once('\'':'\'')\
+        .expect("protoc dependency output must contain a target")\
+        .1\
         .lines()\
         .map(|line| line.trim().trim_end_matches('\''\\\\'\''))\
         .flat_map(|line| line.split_whitespace());' \
