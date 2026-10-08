@@ -8,7 +8,7 @@
 
 Name:           scx-scheds
 Version:        1.1.3
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Sched_ext Schedulers and Tools
 
 License:        GPL=2.0
@@ -27,6 +27,10 @@ Patch2:         %{URL}/commit/18dbe236217a907a4f165bb89e8f75a3fda9ab46.diff
 %global rust_blazesym_ver 0.2.3
 %global rust_buddy_system_allocator_ver 0.13.0
 %global rust_cargo_metadata_ver 0.19.2
+# below 0.9 crates are not packaged in Fedora.
+%global rust_below_common_ver 0.9.0
+%global rust_cgroupfs_ver 0.9.0
+%global rust_fb_procfs_ver 0.9.0
 %global rust_chunked_transfer_ver 1.5.0
 %global rust_clap_main_ver 0.2.9
 %global rust_combinations_ver 0.1.0
@@ -81,6 +85,9 @@ Source36:       https://crates.io/api/v1/crates/ascii/%{rust_ascii_ver}/download
 Source37:       https://crates.io/api/v1/crates/chunked_transfer/%{rust_chunked_transfer_ver}/download#/chunked_transfer-%{rust_chunked_transfer_ver}.tar.gz
 Source38:       https://crates.io/api/v1/crates/httpdate/%{rust_httpdate_ver}/download#/httpdate-%{rust_httpdate_ver}.tar.gz
 Source39:       https://crates.io/api/v1/crates/tiny_http/%{rust_tiny_http_ver}/download#/tiny_http-%{rust_tiny_http_ver}.tar.gz
+Source40:       https://crates.io/api/v1/crates/below-common/%{rust_below_common_ver}/download#/below-common-%{rust_below_common_ver}.tar.gz
+Source41:       https://crates.io/api/v1/crates/cgroupfs/%{rust_cgroupfs_ver}/download#/cgroupfs-%{rust_cgroupfs_ver}.tar.gz
+Source42:       https://crates.io/api/v1/crates/fb_procfs/%{rust_fb_procfs_ver}/download#/fb_procfs-%{rust_fb_procfs_ver}.tar.gz
 
 BuildRequires:  gcc
 BuildRequires:  git
@@ -112,7 +119,6 @@ BuildRequires:  (crate(bon/default) >= 3.9.0 with crate(bon/default) < 4.0.0~)
 BuildRequires:  (crate(cargo-platform/default) >= 0.1.2 with crate(cargo-platform/default) < 0.2.0~)
 BuildRequires:  (crate(cargo_metadata/default) >= 0.23.0 with crate(cargo_metadata/default) < 0.24.0~)
 BuildRequires:  (crate(cc/default) >= 1.0.0 with crate(cc/default) < 2.0.0~)
-BuildRequires:  (crate(cgroupfs/default) >= 0.9.0 with crate(cgroupfs/default) < 0.10.0~)
 BuildRequires:  (crate(chrono/default) >= 0.4.0 with crate(chrono/default) < 0.5.0~)
 BuildRequires:  (crate(clap-num/default) >= 1.0.0 with crate(clap-num/default) < 2.0.0~)
 BuildRequires:  (crate(clap/cargo) >= 4.0.0 with crate(clap/cargo) < 5.0.0~)
@@ -136,7 +142,6 @@ BuildRequires:  (crate(ctrlc/default) >= 3.0.0 with crate(ctrlc/default) < 4.0.0
 BuildRequires:  (crate(ctrlc/termination) >= 3.0.0 with crate(ctrlc/termination) < 4.0.0~)
 BuildRequires:  (crate(env_logger/default) >= 0.11.0 with crate(env_logger/default) < 0.12.0~)
 BuildRequires:  (crate(fastrand/default) >= 2.0.0 with crate(fastrand/default) < 3.0.0~)
-BuildRequires:  (crate(fb_procfs/default) >= 0.9.0 with crate(fb_procfs/default) < 0.10.0~)
 BuildRequires:  (crate(flate2/default) >= 1.0.0 with crate(flate2/default) < 2.0.0~)
 BuildRequires:  (crate(futures/default) >= 0.3.0 with crate(futures/default) < 0.4.0~)
 BuildRequires:  (crate(gimli/default) >= 0.32.0 with crate(gimli/default) < 0.33.0~)
@@ -221,6 +226,39 @@ BuildRequires:  (crate(zbus/default) >= 5.0.0 with crate(zbus/default) < 6.0.0~)
 BuildRequires:  crate(bindgen/default) >= 0.69.0
 BuildRequires:  rust >= 1.56
 
+# Dependencies of the vendored below 0.9 crates.
+BuildRequires:  (crate(chrono/clock) >= 0.4.0 with crate(chrono/clock) < 0.5.0~)
+BuildRequires:  (crate(chrono/serde) >= 0.4.0 with crate(chrono/serde) < 0.5.0~)
+BuildRequires:  (crate(chrono/std) >= 0.4.0 with crate(chrono/std) < 0.5.0~)
+BuildRequires:  (crate(cursive/crossterm-backend) >= 0.20.0 with crate(cursive/crossterm-backend) < 0.21.0~)
+BuildRequires:  (crate(humantime/default) >= 2.1.0 with crate(humantime/default) < 3.0.0~)
+BuildRequires:  (crate(nix/dir) >= 0.29.0 with crate(nix/dir) < 0.30.0~)
+BuildRequires:  (crate(nix/event) >= 0.29.0 with crate(nix/event) < 0.30.0~)
+BuildRequires:  (crate(nix/hostname) >= 0.29.0 with crate(nix/hostname) < 0.30.0~)
+BuildRequires:  (crate(nix/inotify) >= 0.29.0 with crate(nix/inotify) < 0.30.0~)
+BuildRequires:  (crate(nix/ioctl) >= 0.29.0 with crate(nix/ioctl) < 0.30.0~)
+BuildRequires:  (crate(nix/mman) >= 0.29.0 with crate(nix/mman) < 0.30.0~)
+BuildRequires:  (crate(nix/mount) >= 0.29.0 with crate(nix/mount) < 0.30.0~)
+BuildRequires:  (crate(nix/net) >= 0.29.0 with crate(nix/net) < 0.30.0~)
+BuildRequires:  (crate(nix/poll) >= 0.29.0 with crate(nix/poll) < 0.30.0~)
+BuildRequires:  (crate(nix/ptrace) >= 0.29.0 with crate(nix/ptrace) < 0.30.0~)
+BuildRequires:  (crate(nix/reboot) >= 0.29.0 with crate(nix/reboot) < 0.30.0~)
+BuildRequires:  (crate(nix/resource) >= 0.29.0 with crate(nix/resource) < 0.30.0~)
+BuildRequires:  (crate(nix/sched) >= 0.29.0 with crate(nix/sched) < 0.30.0~)
+BuildRequires:  (crate(nix/signal) >= 0.29.0 with crate(nix/signal) < 0.30.0~)
+BuildRequires:  (crate(nix/term) >= 0.29.0 with crate(nix/term) < 0.30.0~)
+BuildRequires:  (crate(nix/time) >= 0.29.0 with crate(nix/time) < 0.30.0~)
+BuildRequires:  (crate(nix/user) >= 0.29.0 with crate(nix/user) < 0.30.0~)
+BuildRequires:  (crate(nix/zerocopy) >= 0.29.0 with crate(nix/zerocopy) < 0.30.0~)
+BuildRequires:  (crate(openat/default) >= 0.1.21 with crate(openat/default) < 0.2.0~)
+BuildRequires:  (crate(parking_lot/send_guard) >= 0.12.1 with crate(parking_lot/send_guard) < 0.13.0~)
+BuildRequires:  (crate(serde/rc) >= 1.0.185 with crate(serde/rc) < 2.0.0~)
+BuildRequires:  (crate(slog/max_level_trace) >= 2.7.0 with crate(slog/max_level_trace) < 3.0.0~)
+BuildRequires:  (crate(slog/nested-values) >= 2.7.0 with crate(slog/nested-values) < 3.0.0~)
+BuildRequires:  (crate(slog-term/default) >= 2.8.0 with crate(slog-term/default) < 3.0.0~)
+BuildRequires:  (crate(thiserror/default) >= 2.0.0 with crate(thiserror/default) < 3.0.0~)
+BuildRequires:  (crate(threadpool/default) >= 1.8.1 with crate(threadpool/default) < 2.0.0~)
+
 Requires:  elfutils-libelf
 Requires:  libseccomp
 Requires:  protobuf
@@ -274,6 +312,9 @@ tar -xvf %{SOURCE36} -C vendor/
 tar -xvf %{SOURCE37} -C vendor/
 tar -xvf %{SOURCE38} -C vendor/
 tar -xvf %{SOURCE39} -C vendor/
+tar -xvf %{SOURCE40} -C vendor/
+tar -xvf %{SOURCE41} -C vendor/
+tar -xvf %{SOURCE42} -C vendor/
 sed -i \
     -e '/^\[build-dependencies.protoc-bin-vendored\]/,/^$/d' \
     vendor/perfetto_protos-%{rust_perfetto_protos_ver}/Cargo.toml
@@ -303,6 +344,9 @@ anpa = { path = "vendor/anpa-%{rust_anpa_ver}" }
 ascii = { path = "vendor/ascii-%{rust_ascii_ver}" }
 blazesym = { path = "vendor/blazesym-%{rust_blazesym_ver}" }
 buddy_system_allocator = { path = "vendor/buddy_system_allocator-%{rust_buddy_system_allocator_ver}" }
+below-common = { path = "vendor/below-common-%{rust_below_common_ver}" }
+cgroupfs = { path = "vendor/cgroupfs-%{rust_cgroupfs_ver}" }
+fb_procfs = { path = "vendor/fb_procfs-%{rust_fb_procfs_ver}" }
 cargo_metadata = { path = "vendor/cargo_metadata-%{rust_cargo_metadata_ver}" }
 chunked_transfer = { path = "vendor/chunked_transfer-%{rust_chunked_transfer_ver}" }
 clap_main = { path = "vendor/clap_main-%{rust_clap_main_ver}" }
