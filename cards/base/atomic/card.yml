@@ -23,6 +23,9 @@ packages:
     - libblockdev-mpath
 
     # Installer
+    # Select Slitherer in Anaconda's RPM dependency condition. The spec below
+    # replaces Fedora's identity package with a fileless compatibility RPM.
+    - fedora-release-identity-kde-desktop
     - anaconda-webui
     - anaconda-live
     - slitherer
@@ -48,6 +51,9 @@ build-deps:
   - sccache
 
 specs:
+  - spec: release-identity/release-identity.spec
+    packages:
+      - fedora-release-identity-kde-desktop
   - spec: bootc/bootc.spec
     files:
       - overrides.patch
