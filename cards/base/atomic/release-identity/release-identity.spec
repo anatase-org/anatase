@@ -1,7 +1,7 @@
 # Anaconda selects Slitherer by RPM release identity, independently of the
 # webui_web_engine setting. Provide that identity without Fedora branding files.
 Name:           fedora-release-identity-kde-desktop
-Version:        1
+Version:        99
 Release:        1%{?dist}
 Summary:        Release identity compatibility for Anatase's installer
 License:        MIT
