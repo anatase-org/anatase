@@ -93,6 +93,12 @@ packages:
     - vulkan-tools
     - xwaylandvideobridge
 
+    # Libcanberra sound events (backends are weak dependencies in F45)
+    - libcanberra
+    - libcanberra-backend-alsa
+    - libcanberra-backend-gstreamer
+    - libcanberra-backend-pulse
+
     # Boot and theme
     - plymouth-system-theme
     - signon-kwallet-extension
