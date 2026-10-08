@@ -202,3 +202,8 @@ postprocess: |
   fi
 
   install -dm0755 /usr/lib/systemd/system /usr/lib/systemd/system-preset
+  # Ship SSH access disabled independently of Fedora's release identity presets.
+  cat > /usr/lib/systemd/system-preset/80-anatase-ssh.preset <<'EOF'
+  disable sshd.service
+  disable sshd.socket
+  EOF
