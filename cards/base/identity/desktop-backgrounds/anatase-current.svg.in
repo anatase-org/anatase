@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2160" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <title>Anatase Current</title>
+  <desc>A sweeping fold with a warm lip and cool underside.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="@SKY_0@" />
+      <stop offset=".7" stop-color="@SKY_1@" />
+      <stop offset="1" stop-color="@ROCK_BACK@" />
+    </linearGradient>
+    <linearGradient id="light" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="@HIGHLIGHT@" />
+      <stop offset="1" stop-color="@ROCK_1@" />
+    </linearGradient>
+    <linearGradient id="stone" x1="0" y1="0" x2=".7" y2="1">
+      <stop stop-color="@ROCK_1@" />
+      <stop offset="1" stop-color="@ROCK_2@" />
+    </linearGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="@ROCK_2@" />
+      <stop offset="1" stop-color="@ROCK_4@" />
+    </linearGradient>
+    <linearGradient id="warm" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="@ROCK_0@" />
+      <stop offset="1" stop-color="@ROCK_2@" />
+    </linearGradient>
+    <linearGradient id="edge" x1="0" y1="1" x2="1" y2="0">
+      <stop stop-color="@ACCENT@" stop-opacity=".12" />
+      <stop offset=".45" stop-color="@ACCENT@" stop-opacity=".7" />
+      <stop offset="1" stop-color="@ACCENT@" />
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#sky)" />
+  <path d="M0 660 C470 735 950 420 1600 220 V900 H0 Z" fill="url(#warm)" opacity="0.24" />
+  <path d="M0 720 C480 735 920 505 1600 270 V900 H0 Z" fill="url(#stone)" opacity="0.68" />
+  <path d="M0 720 C480 735 920 505 1600 270 V460 C995 598 550 830 0 780 Z" fill="url(#light)" opacity="0.68" />
+  <path d="M0 780 C550 830 995 598 1600 460 V620 C1050 720 555 925 0 870 Z" fill="url(#shade)" opacity="0.52" />
+  <path d="M0 870 C555 925 1050 720 1600 620 V900 H0 Z" fill="url(#stone)" opacity="0.75" />
+  <path d="M0 780 C550 830 995 598 1600 460" fill="none" stroke="url(#edge)" stroke-width="2.5" stroke-linejoin="round" opacity="1" />
+  <path d="M0 720 C480 735 920 505 1600 270" fill="none" stroke="@HIGHLIGHT@" stroke-width="1.1" stroke-linejoin="round" opacity="0.25" />
+</svg>

@@ -1692,6 +1692,9 @@ fi
   * CVE-2026-93386: UI misrepresentation in WebAppInstalls
   * CVE-2026-93387: Improper state validation in Skia
 
+* Thu Sep 17 2026 Dominik Mierzejewski <dominik@greysector.net> - 153.0.8010.36-2
+- Rebuild for FFmpeg 9
+
 * Mon Sep 14 2026 Than Ngo <than@redhat.com> - 153.0.8010.36-1
 - Update to 153.0.8010.36
   * CVE-2026-87429: Missing authorization in ServiceWorker

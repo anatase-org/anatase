@@ -1,6 +1,6 @@
 version: 1
 env:
-  releasever: 44
+  releasever: 45
   dist: ""
   prefix: ""
   tag: $prefix$version$dist

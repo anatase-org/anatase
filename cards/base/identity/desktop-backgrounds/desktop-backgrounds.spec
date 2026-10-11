@@ -3,7 +3,7 @@
 %global resolutions 1024x600 1024x768 1080x1920 1152x720 1152x864 1200x900 1280x1024 1280x720 1280x768 1280x800 1280x960 1366x768 1440x1080 1440x2960 1440x900 1600x1200 1600x1280 1680x1050 1920x1080 1920x1200 1920x1280 1920x1440 2048x1536 2160x1440 2304x1440 2560x1440 2560x1600 2960x1440 3000x2000 3200x1800 3440x1440 3840x2160 5120x2880 640x480 800x480 800x600
 
 Name:           desktop-backgrounds
-Version:        44.0.0
+Version:        45.0.0
 Release:        %autorelease
 Summary:        Anatase desktop backgrounds
 
@@ -13,6 +13,8 @@ Source1:        palette-night
 Source10:       anatase-formation.svg.in
 Source11:       anatase-crystal.svg.in
 Source12:       anatase-strata.svg.in
+Source13:       anatase-pyramids.svg.in
+Source14:       anatase-current.svg.in
 
 BuildArch:      noarch
 BuildRequires:  libjxl-utils
@@ -106,6 +108,8 @@ render_design() {
 render_design formation %{SOURCE10}
 render_design crystal %{SOURCE11}
 render_design strata %{SOURCE12}
+render_design pyramids %{SOURCE13}
+render_design current %{SOURCE14}
 
 
 %install
@@ -211,6 +215,8 @@ EOF
 install_wallpaper crystal %{wallpaper_id} "Anatase Crystal"
 install_wallpaper formation Anatase_Formation "Anatase Formation"
 install_wallpaper strata Anatase_Strata "Anatase Strata"
+install_wallpaper pyramids Anatase_Pyramids "Anatase Pyramids"
+install_wallpaper current Anatase_Current "Anatase Current"
 
 pushd "${wallpaper_root}"
   ln -s %{wallpaper_id} Default
@@ -236,6 +242,8 @@ popd
 %{_datadir}/wallpapers/%{wallpaper_id}
 %{_datadir}/wallpapers/Anatase_Formation
 %{_datadir}/wallpapers/Anatase_Strata
+%{_datadir}/wallpapers/Anatase_Pyramids
+%{_datadir}/wallpapers/Anatase_Current
 %{_datadir}/wallpapers/Default
 
 %changelog

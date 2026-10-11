@@ -7,4 +7,4 @@ kde/markdownpart:
 kde/svgpart:
   upstream-sha: 2e0b045492c25da58545eaa52b745cfa1e2b9d5a
 kde/qtkeychain:
-  upstream-sha: a95a88b38ca8e261e2704795fbbd84dc82db2072
+  upstream-sha: 7f88933cd96b93420652f9cbaee851dce8549c26

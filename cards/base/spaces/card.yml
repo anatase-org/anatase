@@ -6,25 +6,10 @@ build-deps:
   - gcc
   - glib2-devel
   - pam-devel
-  - pytest
-  - python3-aiohttp
   - python3-build
   - python3-devel
   - python3-installer
-  - python3-jinja2
-  - python3-linkify-it-py
-  - python3-markdown-it-py
-  - python3-mdit-py-plugins
-  - python3-pip
-  - python3-platformdirs
-  - python3-poetry-core
-  - python3-pytest-aiohttp
-  - python3-pytest-asyncio
-  - python3-rich
   - python3-setuptools
-  - python3-syrupy
-  - python3-time-machine
-  - python3-typing-extensions
   - python3-wheel
   - rpm-build
   - rpmdevtools
@@ -46,6 +31,7 @@ packages:
   - python3-pillow
   - python3-platformdirs
   - python3-rich
+  - python3-textual
   - python3-typing-extensions
   - systemd
   - systemd-container
@@ -62,15 +48,6 @@ files:
   - zshrc.ubuntu
 
 specs:
-  - spec: python-textual/python-textual.spec
-    files:
-      - python-textual.spec
-    packages:
-      - python3-textual
-    upstream:
-      type: dist-git
-      url: https://src.fedoraproject.org/rpms/python-textual
-      branch: rawhide
   - spec: git+https://github.com/anatase-org/spaces:spaces-git.spec
     packages:
       - spaces

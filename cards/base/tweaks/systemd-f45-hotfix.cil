@@ -1,0 +1,8 @@
+; Temporary fixes for systemd denials with selinux-policy-targeted-45.20.
+; Remove this module and its card installation when Fedora ships both rules.
+; Namespace manager capability: https://github.com/fedora-selinux/selinux-policy/pull/3433
+(allow systemd_nsresourced_t systemd_nsresourced_t
+    (capability (sys_admin)))
+; User lookup socket access: https://github.com/fedora-selinux/selinux-policy/blob/rawhide/policy/modules/system/systemd.te
+(allow systemd_userdbd_t systemd_nsresourced_runtime_t
+    (sock_file (read)))

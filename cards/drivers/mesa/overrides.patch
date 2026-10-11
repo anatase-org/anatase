@@ -251,10 +251,10 @@ gamescope the game could get stuck in low power states.
  1 file changed, 4 insertions(+)
 
 diff --git a/src/amd/vulkan/00-radv-defaults.conf b/src/amd/vulkan/00-radv-defaults.conf
-index b54145b6dd2..68533cf89f9 100644
+index c847ca597db..68bfec5266c 100644
 --- a/src/amd/vulkan/00-radv-defaults.conf
 +++ b/src/amd/vulkan/00-radv-defaults.conf
-@@ -314,6 +314,10 @@ Application bugs worked around in this file:
+@@ -315,6 +315,10 @@ Application bugs worked around in this file:
              <option name="vk_zero_vram" value="true"/>
          </application>
  

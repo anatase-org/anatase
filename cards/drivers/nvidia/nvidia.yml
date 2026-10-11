@@ -21,6 +21,7 @@ packages:
   - jansson
   - libtirpc
   - libvdpau
+  - openssl3-libs
   - pango
   - libwayland-client
 

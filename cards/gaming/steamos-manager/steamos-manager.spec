@@ -12,7 +12,7 @@
 
 Name:           steamos-manager
 Version:        26.3.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        SteamOS Manager daemon for running various tasks as root
 
 License:        MIT
@@ -69,7 +69,7 @@ BuildRequires:  rust >= 1.85
 BuildRequires:  (crate(anyhow/default) >= 1.0.0 with crate(anyhow/default) < 2.0.0~)
 BuildRequires:  (crate(async-trait/default) >= 0.1.0 with crate(async-trait/default) < 0.2.0~)
 BuildRequires:  (crate(bindgen/default) >= 0.54.0 with crate(bindgen/default) < 0.73.0~)
-BuildRequires:  (crate(bitfield-struct/default) >= 0.12.0 with crate(bitfield-struct/default) < 0.13.0~)
+BuildRequires:  (crate(bitfield-struct/default) >= 0.13.0 with crate(bitfield-struct/default) < 0.14.0~)
 BuildRequires:  (crate(clap) >= 4.5.0 with crate(clap) < 5.0.0~)
 BuildRequires:  (crate(clap/derive) >= 4.5.0 with crate(clap/derive) < 5.0.0~)
 BuildRequires:  (crate(clap/help) >= 4.5.0 with crate(clap/help) < 5.0.0~)
@@ -163,6 +163,9 @@ tar -xvf %{SOURCE14} -C vendor/
 tar -xvf %{SOURCE15} -C vendor/
 tar -xvf %{SOURCE16} -C vendor/
 tar -xvf %{SOURCE17} -C vendor/
+# Use Fedora 45's bitfield-struct in the vendored linux-cec dependency.
+sed -i '/^\[dependencies.bitfield-struct\]/,/^$/s/^version = "0\.12"$/version = "0.13"/' \
+    vendor/linux-cec-%{rust_linux_cec_ver}/Cargo.toml
 sed -i \
     -e '/"windows\//d' \
     -e '/"objc2-core-foundation\//d' \

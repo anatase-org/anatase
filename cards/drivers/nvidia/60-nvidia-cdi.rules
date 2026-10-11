@@ -1,0 +1,2 @@
+# Start CDI refresh and its update watcher once the NVIDIA driver is loaded.
+ACTION=="add", SUBSYSTEM=="module", KERNEL=="nvidia", TAG+="systemd", ENV{SYSTEMD_WANTS}+="nvidia-cdi-refresh.service nvidia-cdi-refresh.path"

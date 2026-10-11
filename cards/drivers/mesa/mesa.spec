@@ -81,7 +81,7 @@
 
 Name:           mesa
 Summary:        Mesa graphics libraries
-Version:        26.2.3
+Version:        26.2.4
 Release:        %autorelease
 License:        MIT AND BSD-3-Clause AND SGI-B-2.0
 URL:            https://mesa3d.org
@@ -104,11 +104,11 @@ Patch99:         overrides.patch
 # https://gitlab.freedesktop.org/mesa/mesa/-/tree/main/subprojects
 # but we generally want the latest compatible versions
 %global rust_paste_ver 1.0.15
-%global rust_proc_macro2_ver 1.0.106
-%global rust_quote_ver 1.0.44
-%global rust_syn_ver 2.0.115
-%global rust_unicode_ident_ver 1.0.23
-%global rustc_hash_ver 2.1.1
+%global rust_proc_macro2_ver 1.0.107
+%global rust_quote_ver 1.0.47
+%global rust_syn_ver 2.0.119
+%global rust_unicode_ident_ver 1.0.26
+%global rustc_hash_ver 2.1.3
 Source10:       https://crates.io/api/v1/crates/paste/%{rust_paste_ver}/download#/paste-%{rust_paste_ver}.tar.gz
 Source11:       https://crates.io/api/v1/crates/proc-macro2/%{rust_proc_macro2_ver}/download#/proc-macro2-%{rust_proc_macro2_ver}.tar.gz
 Source12:       https://crates.io/api/v1/crates/quote/%{rust_quote_ver}/download#/quote-%{rust_quote_ver}.tar.gz
@@ -176,7 +176,6 @@ BuildRequires:  xtensor-devel
 %endif
 %if 0%{?with_opencl} || 0%{?with_nvk} || 0%{?with_asahi} || 0%{?with_panfrost}
 BuildRequires:  clang-devel
-BuildRequires:  pkgconfig(libclc)
 BuildRequires:  pkgconfig(SPIRV-Tools)
 BuildRequires:  pkgconfig(LLVMSPIRVLib)
 %endif
@@ -190,6 +189,7 @@ BuildRequires:  cargo-rpm-macros
 %endif
 %if 0%{?with_opencl}
 BuildRequires:  libstdc++-static
+BuildRequires:  pkgconfig(libclc)
 %endif
 %if 0%{?with_nvk}
 BuildRequires:  cbindgen
