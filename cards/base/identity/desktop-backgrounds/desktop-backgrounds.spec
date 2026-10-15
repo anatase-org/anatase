@@ -17,6 +17,9 @@ Source13:       anatase-pyramids.svg.in
 Source14:       anatase-current.svg.in
 
 BuildArch:      noarch
+# Provide Fedora's compatibility names using Anatase's default wallpapers.
+Provides:       desktop-backgrounds-compat = %{version}-%{release}
+Provides:       system-backgrounds-compat = %{version}-%{release}
 BuildRequires:  libjxl-utils
 BuildRequires:  librsvg2-tools
 BuildRequires:  libxml2
@@ -159,10 +162,15 @@ mkdir -p %{buildroot}%{_datadir}/backgrounds/images
 pushd %{buildroot}%{_datadir}/backgrounds
   ln -s anatase/default/anatase-01-day.jxl default.jxl
   ln -s anatase/default/anatase-01-night.jxl default-dark.jxl
+  ln -s anatase/default/anatase.xml default.xml
 popd
 pushd %{buildroot}%{_datadir}/backgrounds/images
   ln -s ../anatase/default/anatase-01-day.jxl default.jxl
   ln -s ../anatase/default/anatase-01-night.jxl default-dark.jxl
+  for ratio in 16_10 16_9 5_4; do
+    ln -s ../anatase/default/anatase-01-day.jxl "default-${ratio}.jxl"
+    ln -s ../anatase/default/anatase-01-night.jxl "default-dark-${ratio}.jxl"
+  done
 popd
 
 mkdir -p %{buildroot}%{_datadir}/glib-2.0/schemas
@@ -232,6 +240,7 @@ popd
 %dir %{_datadir}/backgrounds/images
 %{_datadir}/backgrounds/images/default*.jxl
 %{_datadir}/backgrounds/default*.jxl
+%{_datadir}/backgrounds/default.xml
 
 %files gnome
 %{_datadir}/glib-2.0/schemas/10_org.gnome.desktop.background.anatase.gschema.override
