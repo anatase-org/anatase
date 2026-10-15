@@ -2,6 +2,10 @@ version: 1
 
 name: Anatase
 
+manifests:
+  - base.yml
+  - anatase.yml
+
 ci:
   registry: ghcr.io/anatase-org
 
