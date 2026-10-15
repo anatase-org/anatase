@@ -1,6 +1,6 @@
 Name:           hhd-power-profiles
 Version:        1
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Power profile package compatibility for HHD
 License:        MIT
 BuildArch:      noarch
@@ -10,6 +10,7 @@ Requires:       hhd
 Provides:       tuned
 Provides:       tuned-ppd
 Provides:       power-profiles-daemon
+Provides:       ppd-service
 Conflicts:      tuned
 Conflicts:      tuned-ppd
 Conflicts:      power-profiles-daemon
