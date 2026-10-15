@@ -212,16 +212,30 @@ postprocess: |
   install -Dm0755 /files/files/steam \
       /usr/bin/steam
 
-  install -Dm0755 /files/files/return-to-gamemode \
-      /usr/bin/return-to-gamemode
-  install -Dm0755 /files/files/return-to-gamemode-helper \
-      /usr/libexec/return-to-gamemode-helper
-  install -Dm0644 /files/files/gamemode.svg \
-      /usr/share/icons/hicolor/scalable/apps/gamemode.svg
-  install -Dm0644 /files/files/org.anatase.return-to-gamemode.policy \
-      /usr/share/polkit-1/actions/org.anatase.return-to-gamemode.policy
-  install -Dm0644 /files/files/return-to-gamemode.desktop \
-      /usr/share/applications/gamemode.desktop
+  # Return to Game Mode requires Plasma Login Manager and KDE's logout API.
+  if rpm -q plasma-login-manager >/dev/null 2>&1; then
+      install -Dm0755 /files/files/return-to-gamemode \
+          /usr/bin/return-to-gamemode
+      install -Dm0755 /files/files/return-to-gamemode-helper \
+          /usr/libexec/return-to-gamemode-helper
+      install -Dm0644 /files/files/gamemode.svg \
+          /usr/share/icons/hicolor/scalable/apps/gamemode.svg
+      install -Dm0644 /files/files/org.anatase.return-to-gamemode.policy \
+          /usr/share/polkit-1/actions/org.anatase.return-to-gamemode.policy
+      install -Dm0644 /files/files/return-to-gamemode.desktop \
+          /usr/share/applications/gamemode.desktop
+
+      bash -n /usr/bin/return-to-gamemode /usr/libexec/return-to-gamemode-helper
+      desktop-file-validate /usr/share/applications/gamemode.desktop
+      python3 - <<'PY'
+  import xml.etree.ElementTree as ET
+  ET.parse("/usr/share/polkit-1/actions/org.anatase.return-to-gamemode.policy")
+  PY
+      grep -Fx 'Exec=/usr/bin/return-to-gamemode' \
+          /usr/share/applications/gamemode.desktop
+      grep -Fx '      <allow_active>yes</allow_active>' \
+          /usr/share/polkit-1/actions/org.anatase.return-to-gamemode.policy
+  fi
 
   # Sanity check preflight
   python3 - <<'PY'
@@ -257,23 +271,12 @@ postprocess: |
 
   bash -n \
       /usr/libexec/anatase-gamemode \
-      /usr/libexec/return-to-gamemode-helper \
       /usr/bin/anatase-gamemode-session \
-      /usr/bin/return-to-gamemode \
       /usr/bin/steam
   udevadm verify --resolve-names=never \
       /etc/udev/rules.d/80-anatase-udev.rules
-  desktop-file-validate /usr/share/applications/gamemode.desktop
-  python3 - <<'PY'
-  import xml.etree.ElementTree as ET
-  ET.parse("/usr/share/polkit-1/actions/org.anatase.return-to-gamemode.policy")
-  PY
   grep -Fx 'Exec=/usr/bin/anatase-gamemode-session' \
       /usr/share/wayland-sessions/gamemode.desktop
-  grep -Fx 'Exec=/usr/bin/return-to-gamemode' \
-      /usr/share/applications/gamemode.desktop
-  grep -Fx '      <allow_active>yes</allow_active>' \
-      /usr/share/polkit-1/actions/org.anatase.return-to-gamemode.policy
   grep -Fx 'DesktopNames=gamescope' \
       /usr/share/wayland-sessions/gamemode.desktop
   grep -Fx 'UseIn=gamescope;' \
