@@ -139,6 +139,8 @@ A copy of the files in this repository is provided to you under the terms of [GN
 
 You may reuse the Anatase mark when producing derived images or rehosting unmodified images that are for personal or internal organizational use. Otherwise, [fork](https://github.com/anatase-org/anatase/fork) Anatase and replace the identity card with your type and marks.
 
-**Non-legally binding TLDR:** Anatase is free software and under the terms of AGPLv3, you may freely adapt the software for your or your organization's (internal) needs without publishing your changes. The same applies to the mark. An example of internal use is your IT department installing Anatase on your laptop or you putting it on your son's laptop.
-
 Anatase is not currently at the stage where it can be pre-installed on devices.
+
+**Non-legally binding TLDR:** Anatase is free software and under the terms of AGPLv3, you may freely adapt the software for your or your organization's (internal) needs without publishing your changes. The same applies to the mark. An example of internal use is your IT department installing Anatase on your laptop or you putting it on your son's laptop. 
+
+You are also encouraged to and allowed to freely share Anatase remixes created based on [its template](https://github.com/anatase-org/template) and base image in Discord, Github, Reddit, and other social media. We are all here to have fun. Get creative.
