@@ -270,7 +270,8 @@ postprocess: |
     f /run/plasma-setup/.config/autostart/org.kde.discover.notifier.desktop 0644 plasma-setup plasma-setup - [Desktop Entry]\nHidden=true
     EOF
 
-    # Workaround for missing shadow and gshadow entries for plasmalogin.
+    # Repair missing plasmalogin entries on every boot: switching desktops can
+    # remove them while leaving /etc state from a previous KDE deployment.
     # See: https://forge.fedoraproject.org/kde/tickets/issues/684
     cat > /usr/lib/systemd/system/fedora-kinoite-plasmalogin-workaround.service <<'EOF'
     [Unit]
@@ -278,7 +279,6 @@ postprocess: |
     Documentation=https://forge.fedoraproject.org/kde/SIG/issues/684
     ConditionPathIsReadWrite=/etc
     ConditionPathExists=/run/ostree-booted
-    ConditionPathExists=!/etc/.fedora-kinoite-plasmalogin-workaround
     Before=plasmalogin.service
 
     [Service]
@@ -296,24 +296,15 @@ postprocess: |
 
     set -eu
 
-    echo "Checking plasmalogin entries in /etc/shadow and /etc/gshadow"
-
     if ! grep -q '^plasmalogin:' /etc/shadow; then
         echo 'plasmalogin:!*:::::::' >> /etc/shadow
         echo "Added missing plasmalogin entry to /etc/shadow"
-    else
-        echo "Nothing to do for /etc/shadow"
     fi
 
     if ! grep -q '^plasmalogin:' /etc/gshadow; then
         echo 'plasmalogin:!*::' >> /etc/gshadow
         echo "Added missing plasmalogin entry to /etc/gshadow"
-    else
-        echo "Nothing to do for /etc/gshadow"
     fi
-
-    echo "Writing stamp file: /etc/.fedora-kinoite-plasmalogin-workaround"
-    touch /etc/.fedora-kinoite-plasmalogin-workaround
     EOF
 
     chmod a+x /usr/libexec/fedora-kinoite-plasmalogin-workaround
