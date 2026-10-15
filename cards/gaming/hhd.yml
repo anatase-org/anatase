@@ -61,6 +61,12 @@ postprocess: |
   install -dm0755 /usr/lib/systemd/system/hhd.service.d/
   cp /files/files/hhd.conf /usr/lib/systemd/system/hhd.service.d/override.conf
 
+  # Base has no Plasma Login Manager to handle HHD's autologin requests.
+  if ! rpm -q plasma-login-manager >/dev/null 2>&1; then
+      sed -i '/^Environment="HHD_GS_AUTOLOGIN=/d' \
+          /usr/lib/systemd/system/hhd.service.d/override.conf
+  fi
+
   # Add modprobe.d for weird modules
   cp /files/files/hhd-modprobe.conf \
     /etc/modprobe.d/70-hhd.conf
