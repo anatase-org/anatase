@@ -58,6 +58,10 @@ jobs:
       - name: Install ludos
         run: ./ludos/prepare.sh flatpaks
 
+      - name: Validate image promotion inputs
+        if: ${{ inputs.images }}
+        run: venv/bin/python .github/image-release.py promote
+
       - name: Generate Stable changelog
         if: ${{ inputs.images }}
         id: image
@@ -109,15 +113,11 @@ jobs:
             exit 1
           fi
 
-          args=(
-            anatase.yml
-            --prefix rolling-
-            --from rolling
-            --to stable
-          )
+          args=(anatase.yml)
           if [[ "$PROMOTE_IMAGES" == "true" ]]; then
-            args+=(--images)
+            args+=(base.yml --images)
           fi
+          args+=(--prefix rolling- --from rolling --to stable)
           if [[ "$PROMOTE_FLATPAKS" == "true" ]]; then
             args+=(
               --flatpaks
@@ -145,19 +145,19 @@ jobs:
             "anatase-arm-${VERSION}.img.gz" \
             --with-signature
 
-      - name: Archive Stable image manifest
+      - name: Archive Stable image manifests
         if: ${{ inputs.images }}
-        env:
-          VERSION: ${{ steps.image.outputs.version }}
         run: |
-          skopeo --override-arch amd64 inspect --no-tags \
-            docker://i.anatase.org/anatase:stable \
-            > final-manifest.json
-          venv/bin/ludos registry file upload \
-            final-manifest.json \
-            "releases/anatase/stable/$VERSION.json" \
-            "$VERSION.json" \
-            --sign
+          while IFS=$'\t' read -r image version; do
+            skopeo --override-arch amd64 inspect --no-tags \
+              "docker://i.anatase.org/$image:stable" \
+              > "$image-manifest.json"
+            venv/bin/ludos registry file upload \
+              "$image-manifest.json" \
+              "releases/$image/stable/$version.json" \
+              "$version.json" \
+              --sign
+          done < <(jq -r '.[] | [.name, .version] | @tsv' publish-images.json)
 
       - name: Create GitHub release
         if: ${{ inputs.images }}

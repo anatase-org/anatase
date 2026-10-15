@@ -73,6 +73,9 @@ jobs:
       - name: Install ludos
         run: ./ludos/prepare.sh base
 
+      - name: Check image manifests
+        run: venv/bin/python .github/check-manifests.py
+
       - name: Login to GHCR
         run: |
           auth_file="$RUNNER_TEMP/containers/auth.json"
@@ -97,16 +100,16 @@ jobs:
             env_args+=(--prefix "$LUDOS_INTERIM_PREFIX")
           fi
           venv/bin/ludos ci env "${env_args[@]}"
-          args=(anatase.yml)
+          args=(anatase.yml base.yml)
           if [[ "$REFRESH_CACHE" == "true" ]]; then
             args+=(--recreate)
           fi
-          venv/bin/ludos ci init "${args[@]}" # add more later
+          venv/bin/ludos ci init "${args[@]}"
 
       - name: Prepare CI build manifest
         id: orchestration
         run: |
-          venv/bin/ludos ci prepare --ci anatase.yml \
+          venv/bin/ludos ci prepare --ci anatase.yml base.yml \
             --prefix "${LUDOS_CHANNEL}-" --tag "${LUDOS_CHANNEL}" \
             --registry i.anatase.org
 
@@ -351,13 +354,15 @@ jobs:
           LUDOS_S3_SECRET: ${{ secrets.LUDOS_S3_SECRET }}
           LUDOS_COSIGN_KEY: ${{ secrets.LUDOS_COSIGN_KEY }}
           LUDOS_COSIGN_CERT: ${{ secrets.LUDOS_COSIGN_CERT }}
+          IMAGE_NAME: ${{ matrix.image.name }}
         run: |
           previous=()
-          stable=$(skopeo inspect --no-tags \
-            docker://i.anatase.org/anatase:stable 2>/dev/null || true)
+          stable_ref="i.anatase.org/${IMAGE_NAME}:stable"
+          stable=$(skopeo --override-arch "$OCI_ARCH" inspect --no-tags \
+            "docker://$stable_ref" 2>/dev/null || true)
           stable_arch=$(jq -r '.Architecture // empty' <<< "$stable")
           if [[ "$stable_arch" == "$OCI_ARCH" ]]; then
-            previous=(--previous-manifest i.anatase.org/anatase:stable)
+            previous=(--previous-manifest "$stable_ref")
           else
             echo "No matching $OCI_ARCH stable manifest; exporting without a previous manifest"
           fi

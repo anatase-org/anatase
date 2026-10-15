@@ -56,8 +56,10 @@ jobs:
     secrets: inherit
 
   publish:
-    name: Publish multi-platform image
+    name: Publish multi-platform images
     environment: prod
+    outputs:
+      anatase: ${{ steps.image.outputs.anatase }}
     needs:
       - x86
       - arm
@@ -67,8 +69,7 @@ jobs:
         github.event_name != 'schedule' &&
         needs.x86.result == 'success' &&
         needs.arm.result == 'success' &&
-        needs.x86.outputs.images != '[]' &&
-        needs.arm.outputs.images != '[]'
+        (needs.x86.outputs.images != '[]' || needs.arm.outputs.images != '[]')
         }}
     runs-on: ubuntu-26.04
 
@@ -93,33 +94,15 @@ jobs:
           create_credentials_file: true
           token_format: access_token
 
-      - name: Resolve image version
+      - name: Validate publication inputs
         id: image
-        run: |
-          x86_tag="${LUDOS_INTERIM_PREFIX}x86_64"
-          arm_tag="${LUDOS_INTERIM_PREFIX}aarch64"
-          version=$(skopeo inspect --no-tags \
-            "docker://i.anatase.org/anatase:$x86_tag" \
-            | jq -r '.Labels["org.opencontainers.image.version"] // empty')
-          if [[ -z "$version" ]]; then
-            echo "$x86_tag image has no version label" >&2
-            exit 1
-          fi
-
-          arm_version=$(skopeo inspect --no-tags \
-            "docker://i.anatase.org/anatase:$arm_tag" \
-            | jq -r '.Labels["org.opencontainers.image.version"] // empty')
-          if [[ -z "$arm_version" ]]; then
-            echo "$arm_tag image has no version label" >&2
-            exit 1
-          fi
-          if [[ "$arm_version" != "$version" ]]; then
-            echo "Architecture image versions differ: $x86_tag=$version $arm_tag=$arm_version" >&2
-            exit 1
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+        env:
+          X86_IMAGES: ${{ needs.x86.outputs.images }}
+          ARM_IMAGES: ${{ needs.arm.outputs.images }}
+        run: venv/bin/python .github/image-release.py build
 
       - name: Generate changelog
+        if: ${{ steps.image.outputs.anatase == 'true' }}
         run: |
           if ! skopeo --override-arch amd64 inspect --no-tags \
               "docker://i.anatase.org/anatase:$LUDOS_CHANNEL" \
@@ -148,7 +131,7 @@ jobs:
             --image aarch64 "$previous_aarch64" current-aarch64.json \
             --channel "$LUDOS_CHANNEL" > changelog.md
 
-      - name: Publish OCI image index
+      - name: Publish OCI image indexes
         env:
           LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
           LUDOS_S3_KEY: ${{ secrets.LUDOS_S3_KEY }}
@@ -164,28 +147,32 @@ jobs:
           if [[ "$LUDOS_CHANNEL" == "rolling" ]]; then
             tags+=(--tag latest)
           fi
-          venv/bin/ludos registry oci index anatase \
-            "${tags[@]}" "${sources[@]}"
+          while IFS= read -r image; do
+            venv/bin/ludos registry oci index "$image" \
+              "${tags[@]}" "${sources[@]}"
+          done < <(jq -r '.[].name' publish-images.json)
 
-      - name: Archive image manifest
+      - name: Archive image manifests
         env:
-          VERSION: ${{ steps.image.outputs.version }}
           LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
           LUDOS_S3_KEY: ${{ secrets.LUDOS_S3_KEY }}
           LUDOS_S3_SECRET: ${{ secrets.LUDOS_S3_SECRET }}
           LUDOS_GPG_CERT: ${{ secrets.LUDOS_GPG_CERT }}
           LUDOS_GPG_KEY: ${{ secrets.LUDOS_GPG_KEY }}
         run: |
-          skopeo --override-arch amd64 inspect --no-tags \
-            "docker://i.anatase.org/anatase:$LUDOS_CHANNEL" \
-            > final-manifest.json
-          venv/bin/ludos registry file upload \
-            final-manifest.json \
-            "releases/anatase/$LUDOS_CHANNEL/$VERSION.json" \
-            "$VERSION.json" \
-            --sign
+          while IFS=$'\t' read -r image version; do
+            skopeo --override-arch amd64 inspect --no-tags \
+              "docker://i.anatase.org/$image:$LUDOS_CHANNEL" \
+              > "$image-manifest.json"
+            venv/bin/ludos registry file upload \
+              "$image-manifest.json" \
+              "releases/$image/$LUDOS_CHANNEL/$version.json" \
+              "$version.json" \
+              --sign
+          done < <(jq -r '.[] | [.name, .version] | @tsv' publish-images.json)
 
       - name: Create GitHub prerelease
+        if: ${{ steps.image.outputs.anatase == 'true' }}
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -202,6 +189,7 @@ jobs:
           echo "url=$release_url" >> "$GITHUB_OUTPUT"
 
       - name: Announce prerelease on Discord
+        if: ${{ steps.image.outputs.anatase == 'true' }}
         env:
           DISCORD_ROLE_ID: ${{ secrets.DISCORD_ROLE_ROLLING }}
           DISCORD_THREAD_ID: ${{ secrets.DISCORD_ROLLING_THREAD }}
@@ -216,6 +204,7 @@ jobs:
   iso:
     name: Build ISOs and ARM disk image
     needs: publish
+    if: ${{ needs.publish.outputs.anatase == 'true' }}
     uses: ./.github/workflows/build-iso.yml
     with:
       source_sha: ${{ github.sha }}

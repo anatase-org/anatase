@@ -1,0 +1,65 @@
+version: 1
+env:
+  releasever: 45
+  dist: ""
+  prefix: ""
+  tag: $prefix$version$dist
+
+name: Anatase Base
+releasever: $releasever
+distro: f$releasever-$arch
+tag: $tag
+
+orchestrator: quay.io/fedora/fedora:$releasever
+orchestrator-deps:
+  # Required for rpmbuild deps to resolve correctly
+  # particularly in mesa
+  - redhat-rpm-config
+  - cargo-rpm-macros
+  # Tooling for local checks
+  - rust
+  - cargo
+  - rpm-build
+  - rpmdevtools
+  - ripgrep
+  - python3
+  # Flatpaks
+  - appstream-compose
+
+repos:
+  - repo: fedora
+    priority: 20
+    releasever: $releasever
+    basearch: $arch
+  - repo: fedora-updates
+    priority: 10
+    releasever: $releasever
+    basearch: $arch
+
+bootstrap: cards/bootstrap.yml
+
+cards:
+  - cards/base/kernel
+  - cards/base/firmware
+  - cards/drivers/mesa # mesa is required by base packages
+  - cards/drivers/mesa/lib32
+  - cards/drivers/intel
+  - cards/base/identity # fedora-logos is pulled by base
+  - cards/base/base
+  - cards/base/grub
+  - cards/base/utils
+  - cards/base/atomic
+  - cards/base/scx
+  - cards/drivers/nvidia/nvidia
+  - cards/drivers/nvidia/nct
+  - cards/base/spaces
+  - cards/gaming/hhd
+  - cards/gaming/gamemode
+  - cards/base/tweaks
+  - cards/base/finalize
+
+labels:
+  org.opencontainers.image.title: Anatase Base
+  org.opencontainers.image.source: https://github.com/anatase-org/anatase
+  org.opencontainers.image.description: Anatase base system for downstream desktops. Built with <3 in Europe.
+  org.opencontainers.image.version: $tag

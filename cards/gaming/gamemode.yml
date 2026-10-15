@@ -11,6 +11,8 @@ build-deps:
   - sccache
 
 packages:
+  # Used by the postprocess validation, including in images without KDE.
+  - desktop-file-utils
   # Base rules for hid* access
   - steam-devices
   # Implicit deps by gamescope/mangohud
