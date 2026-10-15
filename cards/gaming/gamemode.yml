@@ -17,7 +17,10 @@ packages:
   - steam-devices
   # Implicit deps by gamescope/mangohud
   - glfw
+  - libXmu
   - libXres
+  - libavif
+  - libeis
   - libliftoff
   - libseat
   - luajit
@@ -25,6 +28,9 @@ packages:
   - spdlog
   - wlroots0.18
   - xcb-util-errors
+  # Additional runtime deps of our Xwayland build
+  - libei
+  - liboeffis
   # Base gcc deps, required by steam bootstrap
   - libnsl
   - x86_64:
