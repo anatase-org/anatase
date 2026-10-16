@@ -83,6 +83,8 @@ packages:
     - kf6-syntax-highlighting
     - kf6-threadweaver
     - plasma-activities
+    # Select KWallet's Qt pinentry provider before the KDE card is installed.
+    - pinentry-qt
 
     # Qt platform, multimedia, and document integration.
     - phonon-qt6
