@@ -1,0 +1,56 @@
+#!/bin/bash
+set -euo pipefail
+
+# Valve's generated run script sets this before calling the prefix hook.
+runtime_base=${PRESSURE_VESSEL_RUNTIME_BASE:?Missing Steam runtime base}
+delegate="$runtime_base/pressure-vessel/bin/pressure-vessel-unruntime"
+case ${STEAM_COMPAT_MACHINE_ARCHITECTURE:-} in
+    aarch64-linux-gnu) architecture=arm64 ;;
+    x86_64-linux-gnu) architecture=amd64 ;;
+    *) architecture= ;;
+esac
+if [[ -n $architecture && -x $runtime_base/pressure-vessel-$architecture/bin/pressure-vessel-unruntime ]]; then
+    delegate="$runtime_base/pressure-vessel-$architecture/bin/pressure-vessel-unruntime"
+fi
+
+# Only wrap the client payload. Game containers and launcher-service arguments
+# continue through Valve's implementation unchanged.
+client=false
+options=()
+while (( $# )); do
+    case $1 in
+        --for-steam-client) client=true ;;
+        --) break ;;
+    esac
+    options+=("$1")
+    shift
+done
+if ! $client || (( $# < 2 )); then
+    exec "$delegate" "${options[@]}" "$@"
+fi
+shift
+
+# pressure-vessel resets LD_LIBRARY_PATH in pv-adverb after generating its
+# cache. Add these paths in the payload so the client can still find its
+# libraries when a game container replaces Flatpak's shared linker cache.
+exec "$delegate" "${options[@]}" -- /bin/sh -c '
+    # LD_LIBRARY_PATH takes precedence over the client libraries RUNPATH.
+    # Keep bundled client libraries ahead of the added system directories.
+    case ${1-} in
+        /*/steam)
+            client_dir=${1%/*}
+            LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}$client_dir"
+            if [ -d "${client_dir%/*}/steamrt32" ]; then
+                LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${client_dir%/*}/steamrt32"
+            fi
+            ;;
+    esac
+    for tuple in x86_64-linux-gnu i386-linux-gnu aarch64-linux-gnu; do
+        LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}/usr/lib/pressure-vessel/overrides/lib/$tuple"
+    done
+    for tuple in x86_64-linux-gnu i386-linux-gnu aarch64-linux-gnu; do
+        LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/lib/$tuple"
+    done
+    export LD_LIBRARY_PATH
+    exec "$@"
+' anatase-steam-runtime "$@"

@@ -15,6 +15,9 @@ export APPIMAGE_EXTRACT_AND_RUN=1
 # Steam does not use Qt, so do not propagate the runtime's plugin paths to games.
 unset QT_PLUGIN_PATH
 
+# Add the client library paths after pressure-vessel prepares its environment.
+export PRESSURE_VESSEL_PREFIX="${PRESSURE_VESSEL_PREFIX:-/app/libexec/anatase-pressure-vessel}"
+
 # Give expensive Vulkan pipelines enough time to compile before Fossilize
 # discards the worker and retries its range from the last progress marker.
 export FOSSILIZE_REPLAY_WRAPPER="${FOSSILIZE_REPLAY_WRAPPER:-/app/libexec/anatase-fossilize-replay-wrapper}"

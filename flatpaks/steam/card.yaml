@@ -89,6 +89,8 @@ flatpak:
 
 files:
   - files/anatase-steam
+  - files/anatase-pressure-vessel-unruntime
+  - files/test-anatase-pressure-vessel-unruntime.py
   - files/anatase-fossilize-replay-wrapper
   - files/anatase-steam-applications.py
   - files/anatase-add-to-steam
@@ -167,6 +169,8 @@ postprocess: |-
       cp -f /usr/bin/cmp app/bin/cmp
   fi
   install -Dm0755 files/anatase-steam app/bin/anatase-steam
+  install -Dm0755 files/anatase-pressure-vessel-unruntime \
+      app/libexec/anatase-pressure-vessel/bin/pressure-vessel-unruntime
   install -Dm0755 files/anatase-fossilize-replay-wrapper \
       app/libexec/anatase-fossilize-replay-wrapper
   install -Dm0755 files/anatase-steam-applications.py \
@@ -191,6 +195,9 @@ postprocess: |-
   ln -s /usr/bin/steamos-polkit-helpers/steamos-select-branch app/bin/steamos-select-branch
 
   bash -n app/bin/anatase-steam
+  bash -n app/libexec/anatase-pressure-vessel/bin/pressure-vessel-unruntime
+  ANATASE_PRESSURE_VESSEL_UNRUNTIME=files/anatase-pressure-vessel-unruntime \
+      python3 files/test-anatase-pressure-vessel-unruntime.py
   ANATASE_STEAM=files/anatase-steam bash files/test-anatase-steam.sh
   bash -n app/bin/anatase-add-to-steam
   bash -n app/libexec/anatase-fossilize-replay-wrapper
