@@ -152,6 +152,9 @@ specs:
       file: overrides.patch
 
 files:
+  - alsa/backport-soundwire.py
+  - alsa/ucm2/codecs/tas2783/init.conf
+  - alsa/ucm2/sof-soundwire/tas2783.conf
   - alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-1.0-NP750XQB_KA3SE.conf
   - alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-2.1-NP940XMA_KB1SE.conf
   - alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge-HiFi.conf
@@ -175,6 +178,12 @@ files:
 
 postprocess: |
     set -eux
+
+    python3 /files/alsa/backport-soundwire.py
+    install -Dm0644 /files/alsa/ucm2/codecs/tas2783/init.conf \
+        /usr/share/alsa/ucm2/codecs/tas2783/init.conf
+    install -Dm0644 /files/alsa/ucm2/sof-soundwire/tas2783.conf \
+        /usr/share/alsa/ucm2/sof-soundwire/tas2783.conf
 
     install -Dm0644 /files/alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-1.0-NP750XQB_KA3SE.conf \
         /usr/share/alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-1.0-NP750XQB_KA3SE.conf
