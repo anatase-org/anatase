@@ -276,6 +276,14 @@ if [[ -x /usr/lib/vpower ]]; then
     /usr/lib/vpower &
 fi
 
+# Run IBus for Steam's input methods without a desktop panel or emoji UI.
+while true; do
+    ibus-daemon -r --panel=disable --emoji-extension=disable
+    status=$?
+    echo >&2 "IBus exited with status $status; restarting"
+    sleep 10
+done &
+
 # Enable mangohud and fix its path to work in flatpak
 while true; do
     mangoapp
