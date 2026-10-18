@@ -248,7 +248,8 @@ fi
 # Portal-launched applications use the game Xwayland display. Keep the standard
 # Wayland display empty so activated services do not connect to Gamescope.
 export DISPLAY=":$((${response_x_display#:} + 1))"
-dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY=
+export IBUS_ADDRESS="unix:path=$tmpdir/ibus"
+dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY= IBUS_ADDRESS
 
 # MangoApp, preflight, and Steam use the primary Xwayland display. Steam gets
 # the Gamescope Wayland socket through its dedicated environment variable.
@@ -277,8 +278,10 @@ if [[ -x /usr/lib/vpower ]]; then
 fi
 
 # Run IBus for Steam's input methods without a desktop panel or emoji UI.
+# A session-specific address avoids discovering a daemon from a previous session
+# and remains valid when the daemon restarts.
 while true; do
-    ibus-daemon -r --panel=disable --emoji-extension=disable
+    ibus-daemon -r --panel=disable --emoji-extension=disable --address="$IBUS_ADDRESS"
     status=$?
     echo >&2 "IBus exited with status $status; restarting"
     sleep 10
@@ -329,6 +332,17 @@ done
 # systems. Installation and recovery flows remain synchronous.
 /usr/libexec/anatase-preflight || exit $?
 
+# Steam's bundled IBus rejects address files whose host daemon PID is invisible
+# inside the sandbox. Pass the address directly to bypass that discovery check.
+ibus_ready_deadline=$((SECONDS + 10))
+until timeout 1s ibus list-engine >/dev/null 2>&1; do
+    if (( SECONDS >= ibus_ready_deadline )); then
+        echo >&2 'IBus did not become ready for the Steam session'
+        exit 1
+    fi
+    sleep 0.1
+done
+
 # So, using switcherooctl here makes it so we force the iGPU
 # This is soso from a power energy perspective. However, since steam does
 # not provide GPU controls we are kind of stuck here.
@@ -341,6 +355,7 @@ switcherooctl launch flatpak run \
         --filesystem="${GAMESCOPE_MODE_SAVE_FILE}:rw" \
         --filesystem=/run/vpower:ro \
         --env="TMPDIR=$steam_tmp" \
+        --env="IBUS_ADDRESS=$IBUS_ADDRESS" \
         org.anatase.Steam \
         -steamos3 \
         -steampal \

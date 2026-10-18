@@ -15149,3 +15149,36 @@ index 47a5590e..c67a3e9b 160000
 @@ -1 +1 @@
 -Subproject commit 47a5590e9c4eb35d67651b8c05a55f1a48259329
 +Subproject commit c67a3e9bedb05ab61c7443704a1a107e76254595
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Matthew Schwartz <matthew.schwartz@linux.dev>
+Date: Tue, 1 Sep 2026 11:05:03 -0700
+Subject: ime: keep one interpret in the generated keymap
+
+libxkbcommon 1.12 stops serializing interprets that no key matched. The
+IME keys match none, so the compat section comes out empty, xkbcomp writes
+no compat map into the XKM and Xwayland silently keeps its default keymap.
+
+Add a catch-all NoAction interpret so the serialized keymap keeps a
+compat map.
+---
+ src/ime.cpp | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/ime.cpp b/src/ime.cpp
+index cdd15672..12a989f0 100644
+--- a/src/ime.cpp
++++ b/src/ime.cpp
+@@ -218,7 +218,11 @@ static struct xkb_keymap *generate_keymap(struct wlserver_input_method *ime)
+ 		"\n"
+ 		"xkb_types \"(unnamed)\" { include \"complete\" };\n"
+ 		"\n"
+-		"xkb_compatibility \"(unnamed)\" { include \"complete\" };\n"
++		"xkb_compatibility \"(unnamed)\" {\n"
++		"	include \"complete\"\n"
++		// libxkbcommon 1.12+ serializes only matched interprets, Xwayland needs at least one
++		"	interpret Any+AnyOfOrNone(all) { action= NoAction(); };\n"
++		"};\n"
+ 		"\n"
+ 		"xkb_symbols \"(unnamed)\" {\n"
+ 	);
