@@ -15182,3 +15182,183 @@ index cdd15672..12a989f0 100644
  		"\n"
  		"xkb_symbols \"(unnamed)\" {\n"
  	);
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sun, 18 Oct 2026 20:54:12 +0200
+Subject: framegen: apply display LUTs for gamma 2.2 HDR output
+
+---
+ src/rendervulkan.cpp | 22 ++++++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index a617355e..32e89ee9 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -4927,6 +4927,24 @@ namespace
+ 			format == VK_FORMAT_R16G16B16A16_SFLOAT;
+ 	}
+ 
++	static void FrameGenerationBindGamma22HdrLuts( FrameInfo_t &frameInfo )
++	{
++		if ( !frameInfo.applyOutputColorMgmt || frameInfo.outputEncodingEOTF != EOTF_Gamma22 ||
++			 !ColorspaceIsHDR( frameInfo.layers[0].colorspace ) )
++			return;
++
++		// scRGB is in units of 80 nits, not normalized display luminance. The
++		// HDR LUT maps it to the panel's brightness/gamut before gamma encoding;
++		// encoding scRGB directly clips everything above 80 nits in UNORM.
++		// paint_all binds these LUTs only after frame generation, so take them
++		// from the active color-management state here. Leave PQ output alone.
++		if ( g_ColorMgmtLuts[EOTF_PQ].HasLuts() )
++		{
++			frameInfo.shaperLut[EOTF_PQ] = g_ColorMgmtLuts[EOTF_PQ].vk_lut1d;
++			frameInfo.lut3D[EOTF_PQ] = g_ColorMgmtLuts[EOTF_PQ].vk_lut3d;
++		}
++	}
++
+ 	class VulkanFrameGenerationPacingContext
+ 	{
+ 	public:
+@@ -5295,6 +5313,8 @@ namespace
+ 					generatedFrame.layers[0].blackBorder = false;
+ 				}
+ 
++				FrameGenerationBindGamma22HdrLuts( generatedFrame );
++
+ 				if ( !m_completionTimeline )
+ 					m_completionTimeline = gamescope::CTimeline::Create();
+ 				if ( !m_completionTimeline )
+@@ -5429,6 +5449,8 @@ namespace
+ 						realFrame.layers[0].blackBorder = false;
+ 					}
+ 
++					FrameGenerationBindGamma22HdrLuts( realFrame );
++
+ 					auto realCmdBuffer = g_device.commandBuffer();
+ 					const uint64_t realCompletionPoint = ++m_completionPoint;
+ 					realCmdBuffer->AddSignal(
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sun, 18 Oct 2026 20:54:16 +0200
+Subject: framegen: preserve display colors when compositing overlays
+
+---
+ src/rendervulkan.cpp                   | 6 ++++++
+ src/rendervulkan.hpp                   | 9 ++++++++-
+ src/shaders/colorimetry.h              | 4 ++++
+ src/shaders/composite.h                | 2 +-
+ src/shaders/descriptor_set.h           | 1 +
+ src/shaders/descriptor_set_constants.h | 3 +++
+ 6 files changed, 23 insertions(+), 2 deletions(-)
+
+diff --git a/src/rendervulkan.cpp b/src/rendervulkan.cpp
+index 32e89ee9..28aa7da4 100644
+--- a/src/rendervulkan.cpp
++++ b/src/rendervulkan.cpp
+@@ -5378,7 +5378,10 @@ namespace
+ 
+ 				generated.layer.tex = scanout;
+ 				if ( generatedFrame.applyOutputColorMgmt && generatedFrame.outputEncodingEOTF == EOTF_Gamma22 )
++				{
+ 					generated.layer.colorspace = GAMESCOPE_APP_TEXTURE_COLORSPACE_SRGB;
++					generated.layer.outputColorMgmtApplied = true;
++				}
+ 				else if ( ColorspaceIsHDR( realLayer.colorspace ) )
+ 					generated.layer.colorspace = generatedFrame.outputEncodingEOTF == EOTF_PQ
+ 						? GAMESCOPE_APP_TEXTURE_COLORSPACE_HDR10_PQ
+@@ -5476,7 +5479,10 @@ namespace
+ 					}
+ 					real.useFSR = false;
+ 					if ( realFrame.outputEncodingEOTF == EOTF_Gamma22 )
++					{
+ 						real.layer.colorspace = GAMESCOPE_APP_TEXTURE_COLORSPACE_SRGB;
++						real.layer.outputColorMgmtApplied = realFrame.applyOutputColorMgmt;
++					}
+ 					else if ( ColorspaceIsHDR( realLayer.colorspace ) )
+ 						real.layer.colorspace = realFrame.outputEncodingEOTF == EOTF_PQ
+ 							? GAMESCOPE_APP_TEXTURE_COLORSPACE_HDR10_PQ
+diff --git a/src/rendervulkan.hpp b/src/rendervulkan.hpp
+index e71da019..1deeeb3d 100644
+--- a/src/rendervulkan.hpp
++++ b/src/rendervulkan.hpp
+@@ -333,6 +333,7 @@ struct FrameInfo_t
+ 
+ 		bool blackBorder;
+ 		bool applyColorMgmt; // drm only
++		bool outputColorMgmtApplied = false; // Skip LUTs when recompositing display-encoded output.
+ 
+ 		AlphaBlendingMode_t eAlphaBlendingMode = ALPHA_BLENDING_MODE_PREMULTIPLIED;
+ 
+@@ -403,10 +404,16 @@ struct FrameInfo_t
+ 		return result;
+ 	}
+ 	uint32_t colorspaceMask() const {
++		static_assert( VKR_COLORSPACE_DISPLAY_NATIVE >= GamescopeAppTextureColorspace_Count );
++		static_assert( VKR_COLORSPACE_DISPLAY_NATIVE < ( 1u << GamescopeAppTextureColorspace_Bits ) );
+ 		uint32_t result = 0;
+ 		for (int i = 0; i < layerCount; i++)
+ 		{
+-result |= layers[ i ].colorspace << (i * GamescopeAppTextureColorspace_Bits);
++			const uint32_t colorspace = layers[i].outputColorMgmtApplied &&
++				outputEncodingEOTF == EOTF_Gamma22 &&
++				layers[i].colorspace == GAMESCOPE_APP_TEXTURE_COLORSPACE_SRGB
++				? VKR_COLORSPACE_DISPLAY_NATIVE : uint32_t( layers[i].colorspace );
++			result |= colorspace << (i * GamescopeAppTextureColorspace_Bits);
+ 		}
+ 		return result;
+ 	}
+diff --git a/src/shaders/colorimetry.h b/src/shaders/colorimetry.h
+index 00adebf4..594b0081 100644
+--- a/src/shaders/colorimetry.h
++++ b/src/shaders/colorimetry.h
+@@ -338,6 +338,10 @@ vec3 colorspace_plane_degamma_tf(vec3 color, uint colorspace) {
+         case colorspace_linear: // Using sRGB image view. Unlike DRM which doesn't get that liberty for scanout.
+ 		case colorspace_scRGB:
+             return color;
++        case colorspace_display_native:
++            // The gamut and luminance mapping is already baked in. Decode only
++            // for blending; mura composition keeps display-encoded values.
++            return c_output_eotf == EOTF_Gamma22 ? srgbToLinear(color) : color;
+ 		case colorspace_sRGB:
+ 			return srgbToLinear(color);
+ 		case colorspace_pq:
+diff --git a/src/shaders/composite.h b/src/shaders/composite.h
+index 961379b0..19c7e589 100644
+--- a/src/shaders/composite.h
++++ b/src/shaders/composite.h
+@@ -76,7 +76,7 @@ void compositing_debug(uvec2 coord) {
+ // ie. call colorspace_plane_degamma_tf(color.rgb, colorspace) before
+ // input to this function.
+ vec3 apply_layer_color_mgmt(vec3 color, uint layer, uint colorspace) {
+-    if (colorspace == colorspace_passthru)
++    if (colorspace == colorspace_passthru || colorspace == colorspace_display_native)
+         return color;
+ 
+     if (c_itm_enable)
+diff --git a/src/shaders/descriptor_set.h b/src/shaders/descriptor_set.h
+index c04f8d1c..396bbe97 100644
+--- a/src/shaders/descriptor_set.h
++++ b/src/shaders/descriptor_set.h
+@@ -15,6 +15,7 @@ const int colorspace_sRGB = 1;
+ const int colorspace_scRGB = 2;
+ const int colorspace_pq = 3;
+ const int colorspace_passthru = 4;
++const uint colorspace_display_native = VKR_COLORSPACE_DISPLAY_NATIVE;
+ const int colorspace_max_bits = 3;
+ 
+ const int filter_linear_emulated = 0;
+diff --git a/src/shaders/descriptor_set_constants.h b/src/shaders/descriptor_set_constants.h
+index 4a68aa33..55ac12e5 100644
+--- a/src/shaders/descriptor_set_constants.h
++++ b/src/shaders/descriptor_set_constants.h
+@@ -11,4 +11,7 @@
+ 
+ #define VKR_LUT3D_COUNT 2 // Must match EOTF_Count
+ 
++// Shader-only colorspace for a layer already converted to Gamma 2.2 output.
++#define VKR_COLORSPACE_DISPLAY_NATIVE 5u
++
+ #endif
