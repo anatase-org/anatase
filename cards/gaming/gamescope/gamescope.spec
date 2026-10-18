@@ -1,4 +1,5 @@
 %global libliftoff_minver 0.5.0
+%global libdisplay_info_version 0.4.0
 %global fidelityfx_commit c6efa6bf7f2027b3ec94f28578bb5965eabb9e55
 %global fidelityfx_shortcommit %(c=%{fidelityfx_commit}; echo ${c:0:7})
 %global reshade_commit 696b14cd6006ae9ca174e6164450619ace043283
@@ -23,6 +24,8 @@ Source1:        stb.pc
 Source2:        https://github.com/misyltoad/reshade/archive/%{reshade_commit}/reshade-%{reshade_shortcommit}.tar.gz
 Source3:        https://github.com/misyltoad/vkroots/archive/%{vkroots_commit}/vkroots-%{vkroots_shortcommit}.tar.gz
 Source4:        https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK/archive/%{fidelityfx_commit}/FidelityFX-SDK-%{fidelityfx_shortcommit}.tar.gz
+# Fedora's libdisplay-info predates DisplayID 2 CTA-861 block support.
+Source5:        https://gitlab.freedesktop.org/emersion/libdisplay-info/-/releases/%{libdisplay_info_version}/downloads/libdisplay-info-%{libdisplay_info_version}.tar.xz
 
 # https://github.com/misyltoad/reshade/pull/1:
 Patch:          0001-cstdint.patch
@@ -55,7 +58,6 @@ BuildRequires:  pkgconfig(hwdata)
 BuildRequires:  pkgconfig(libavif)
 BuildRequires:  pkgconfig(libcap)
 BuildRequires:  pkgconfig(libdecor-0)
-BuildRequires:  pkgconfig(libdisplay-info)
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libeis-1.0)
 BuildRequires:  (pkgconfig(libliftoff) >= %{libliftoff_minver} with pkgconfig(libliftoff) < 0.6)
@@ -92,6 +94,9 @@ BuildRequires:  /usr/bin/glslangValidator
 
 Provides:       bundled(vkroots) = 0^20240429git5106d8a
 Provides:       bundled(FidelityFX-SDK) = 1.1.4
+%ifnarch %{ix86}
+Provides:       bundled(libdisplay-info) = %{libdisplay_info_version}
+%endif
 
 # libliftoff hasn't bumped soname, but API/ABI has changed for 0.2.0 release
 %ifarch %{ix86}
@@ -119,12 +124,21 @@ sed -i 's^../thirdparty/SPIRV-Headers/include/spirv/^/usr/include/spirv/^' src/m
 tar -xzf %{SOURCE2} --strip-components=1 -C src/reshade
 tar -xzf %{SOURCE3} --strip-components=1 -C subprojects/vkroots
 
+# RPM's patch tool treats the libdisplay-info gitlink update as a text hunk.
+rm -rf subprojects/libdisplay-info
+echo 'Subproject commit 47a5590e9c4eb35d67651b8c05a55f1a48259329' > subprojects/libdisplay-info
+
 %autopatch -p1
 
 # Replace the gitlink created by overrides.patch with the pinned source archive.
 rm -f subprojects/FidelityFX-SDK
 mkdir -p subprojects/FidelityFX-SDK
 tar -xzf %{SOURCE4} --strip-components=1 -C subprojects/FidelityFX-SDK
+
+# Build the pinned libdisplay-info statically instead of Fedora's older library.
+rm -rf subprojects/libdisplay-info
+mkdir -p subprojects/libdisplay-info
+tar -xJf %{SOURCE5} --strip-components=1 -C subprojects/libdisplay-info
 
 %ifarch %{ix86}
 # Meson otherwise uses the x86_64 build machine for both layer filenames.
@@ -153,7 +167,7 @@ export PKG_CONFIG_PATH=pkgconfig
     -Denable_gamescope=true \
     -Denable_gamescope_wsi_layer=true \
     -Denable_openvr_support=false \
-    -Dforce_fallback_for=[] \
+    -Dforce_fallback_for=libdisplay-info \
     -Dinput_emulation=enabled \
     -Dpipewire=enabled \
     -Drt_cap=enabled \

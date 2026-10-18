@@ -15062,3 +15062,90 @@ index 3a9a6d61..5479d1b3 100644
  
  			if ( !vulkan_init( vulkan_get_instance(), VK_NULL_HANDLE ) )
  			{
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sun, 18 Oct 2026 15:05:56 +0200
+Subject: drm: read HDR metadata through libdisplay-info 0.4.0
+
+---
+ src/Backends/DRMBackend.cpp | 36 ++++--------------------------------
+ src/meson.build             |  2 +-
+ subprojects/libdisplay-info |  2 +-
+ 3 files changed, 6 insertions(+), 34 deletions(-)
+
+diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
+index 5479d1b3..ba30f245 100644
+--- a/src/Backends/DRMBackend.cpp
++++ b/src/Backends/DRMBackend.cpp
+@@ -49,7 +49,6 @@
+ #include <wlr/types/wlr_buffer.h>
+ #include "libdisplay-info/info.h"
+ #include "libdisplay-info/edid.h"
+-#include "libdisplay-info/cta.h"
+ #include "wlr_end.hpp"
+ 
+ #if HAVE_GBM
+@@ -2545,38 +2544,11 @@ namespace gamescope
+ 		/////////////////////
+ 		if ( !bHasKnownHDRInfo )
+ 		{
+-			const di_cta_hdr_static_metadata_block *pHDRStaticMetadata = nullptr;
+-			const di_cta_colorimetry_block *pColorimetry = nullptr;
++			// libdisplay-info 0.4.0 also finds CTA-861 blocks in DisplayID 2 extensions.
++			const di_hdr_static_metadata *pHDRStaticMetadata = di_info_get_hdr_static_metadata( pInfo );
++			const di_supported_signal_colorimetry *pColorimetry = di_info_get_supported_signal_colorimetry( pInfo );
+ 
+-			const di_edid_cta* pCTA = NULL;
+-			const di_edid_ext *const *ppExts = di_edid_get_extensions( pEdid );
+-			for ( ; *ppExts != nullptr; ppExts++ )
+-			{
+-				if ( ( pCTA = di_edid_ext_get_cta( *ppExts ) ) )
+-					break;
+-			}
+-
+-			if ( pCTA )
+-			{
+-				const di_cta_data_block *const *ppBlocks = di_edid_cta_get_data_blocks( pCTA );
+-				for ( ; *ppBlocks != nullptr; ppBlocks++ )
+-				{
+-					if ( di_cta_data_block_get_tag( *ppBlocks ) == DI_CTA_DATA_BLOCK_HDR_STATIC_METADATA )
+-					{
+-						pHDRStaticMetadata = di_cta_data_block_get_hdr_static_metadata( *ppBlocks );
+-						continue;
+-					}
+-
+-					if ( di_cta_data_block_get_tag( *ppBlocks ) == DI_CTA_DATA_BLOCK_COLORIMETRY )
+-					{
+-						pColorimetry = di_cta_data_block_get_colorimetry( *ppBlocks );
+-						continue;
+-					}
+-				}
+-			}
+-
+-			if ( pColorimetry && pColorimetry->bt2020_rgb &&
+-				 pHDRStaticMetadata && pHDRStaticMetadata->eotfs && pHDRStaticMetadata->eotfs->pq )
++			if ( pColorimetry->bt2020_rgb && pHDRStaticMetadata->pq )
+ 			{
+ 				m_Mutable.HDR.bExposeHDRSupport = true;
+ 				if (disableInternalPq && GetScreenType() == GAMESCOPE_SCREEN_TYPE_INTERNAL)
+diff --git a/src/meson.build b/src/meson.build
+index 84636c9f..b46c8286 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -36,7 +36,7 @@ wlroots_dep = dependency(
+ 
+ displayinfo_dep = dependency(
+   'libdisplay-info',
+-  version: ['>= 0.0.0', '< 0.4.0'],
++  version: ['>= 0.4.0', '< 0.5.0'],
+   fallback: 'libdisplay-info',
+   default_options: ['default_library=static'],
+ )
+diff --git a/subprojects/libdisplay-info b/subprojects/libdisplay-info
+index 47a5590e..c67a3e9b 160000
+--- a/subprojects/libdisplay-info
++++ b/subprojects/libdisplay-info
+@@ -1 +1 @@
+-Subproject commit 47a5590e9c4eb35d67651b8c05a55f1a48259329
++Subproject commit c67a3e9bedb05ab61c7443704a1a107e76254595
