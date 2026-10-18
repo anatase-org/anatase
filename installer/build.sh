@@ -5,6 +5,12 @@ set -eux
 command -v liveinst >/dev/null
 command -v slitherer-anaconda >/dev/null
 
+# Mark the Anatase installer as final, overriding liveinst's Fedora RPM check.
+cat > /.buildstamp <<'EOF'
+[Main]
+IsFinal=True
+EOF
+
 # Disable hhd features that are unavailable in the live installer session. The
 # installed system keeps the normal service environment from the OSTree payload.
 hhd_override=/usr/lib/systemd/system/hhd.service.d/override.conf
