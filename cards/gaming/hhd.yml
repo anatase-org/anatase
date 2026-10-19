@@ -53,6 +53,12 @@ specs:
 postprocess: |
   set -eux
 
+  # Report a critical battery level at 3% instead of 5%.
+  if [ -f /etc/UPower/UPower.conf ]; then
+      sed -i 's/^PercentageCritical=.*/PercentageCritical=3.0/' \
+          /etc/UPower/UPower.conf
+  fi
+
   install -dm0755 /usr/lib/systemd/system-preset
   cat > /usr/lib/systemd/system-preset/80-anatase-hhd.preset <<'EOF'
   enable hhd.service
