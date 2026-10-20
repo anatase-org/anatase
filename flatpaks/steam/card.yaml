@@ -78,6 +78,8 @@ flatpak:
     # Let's give up and give them access to home. Too many bug reports
     # and it is just not worth dealing with.
     --filesystem=home
+    # Steam's IBus binding checks /home; preserve its symlink to /var/home.
+    --filesystem=/home:ro
     --filesystem=xdg-data/Steam:create
     --filesystem=xdg-data/flatpak/exports/share:ro
     --filesystem=xdg-data/flatpak/app:ro
