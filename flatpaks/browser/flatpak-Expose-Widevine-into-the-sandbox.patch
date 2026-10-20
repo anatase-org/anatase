@@ -10,22 +10,22 @@ Subject: [PATCH] flatpak: Expose Widevine into the sandbox
  3 files changed, 131 insertions(+), 24 deletions(-)
 
 diff --git a/content/browser/zygote_host/zygote_host_impl_linux.cc b/content/browser/zygote_host/zygote_host_impl_linux.cc
-index c87e1248171cf..11f17a19ff949 100644
 --- a/content/browser/zygote_host/zygote_host_impl_linux.cc
 +++ b/content/browser/zygote_host/zygote_host_impl_linux.cc
-@@ -10,7 +10,10 @@
+@@ -10,8 +10,11 @@
  
  #include "base/compiler_specific.h"
  #include "base/files/file_enumerator.h"
 +#include "base/files/file_util.h"
+ #include "base/functional/bind.h"
  #include "base/logging.h"
 +#include "base/nix/xdg_util.h"
 +#include "base/path_service.h"
  #include "base/posix/unix_domain_socket.h"
  #include "base/process/kill.h"
  #include "base/process/launch.h"
-@@ -18,9 +21,12 @@
- #include "base/strings/string_number_conversions.h"
+@@ -20,9 +23,12 @@
+ #include "base/time/time.h"
  #include "base/types/fixed_array.h"
  #include "build/build_config.h"
 +#include "chrome/common/chrome_paths.h"  // nogncheck
@@ -37,7 +37,7 @@ index c87e1248171cf..11f17a19ff949 100644
  #include "content/public/common/zygote/zygote_handle.h"
  #include "sandbox/linux/services/credentials.h"
  #include "sandbox/linux/services/flatpak_sandbox.h"
-@@ -29,6 +35,7 @@
+@@ -31,6 +37,7 @@
  #include "sandbox/linux/suid/common/sandbox.h"
  #include "sandbox/policy/linux/sandbox_linux.h"
  #include "sandbox/policy/switches.h"
@@ -45,12 +45,12 @@ index c87e1248171cf..11f17a19ff949 100644
  
  #if BUILDFLAG(IS_CHROMEOS)
  #include "content/common/zygote/zygote_communication_linux.h"
-@@ -193,8 +200,51 @@ pid_t ZygoteHostImpl::LaunchZygote(
+@@ -197,8 +204,51 @@
    if (is_sandboxed_zygote && use_namespace_sandbox_) {
      process = sandbox::NamespaceSandbox::LaunchProcess(*cmd_line, options);
    } else if (is_sandboxed_zygote && use_flatpak_sandbox_) {
 -    process = sandbox::FlatpakSandbox::GetInstance()->LaunchProcess(*cmd_line,
--                                                                    options);
+-                                                                  options);
 +    sandbox::FlatpakSandbox::SpawnOptions spawn_options;
 +
 +#if BUILDFLAG(ENABLE_LIBRARY_CDMS)

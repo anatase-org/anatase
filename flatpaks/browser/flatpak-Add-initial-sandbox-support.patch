@@ -125,44 +125,41 @@ index 1174a704b8126..e7fd738b705fb 100644
                       status & sandbox::policy::SandboxLinux::kNetNS;
    // A second-layer sandbox is also required to be adequately sandboxed.
 diff --git a/content/browser/child_process_host_impl.cc b/content/browser/child_process_host_impl.cc
-index 685af654e0832..cb2d7fb0966d1 100644
 --- a/content/browser/child_process_host_impl.cc
 +++ b/content/browser/child_process_host_impl.cc
-@@ -37,6 +37,7 @@
+@@ -38,6 +38,7 @@
  
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
  #include "base/linux_util.h"
 +#include "sandbox/linux/services/flatpak_sandbox.h"
  #elif BUILDFLAG(IS_MAC)
  #include "base/apple/foundation_util.h"
- #include "content/browser/mac_helpers.h"
-@@ -62,7 +63,12 @@ base::FilePath ChildProcessHost::GetChildPath(int flags) {
+ #include "base/strings/strcat.h"
+@@ -75,7 +76,11 @@
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
    // Use /proc/self/exe rather than our known binary path so updates
    // can't swap out the binary from underneath us.
--  if (child_path.empty() && flags & CHILD_ALLOW_SELF) {
+-  if (flags & CHILD_ALLOW_SELF) {
 +  // This is not needed for Flatpaks, where updates are going to be in
 +  // a new hardlink tree.
-+  if ((child_path.empty() &&
-+       sandbox::FlatpakSandbox::GetInstance()->GetSandboxLevel() ==
-+           sandbox::FlatpakSandbox::SandboxLevel::kNone) &&
++  if (sandbox::FlatpakSandbox::GetInstance()->GetSandboxLevel() ==
++          sandbox::FlatpakSandbox::SandboxLevel::kNone &&
 +      flags & CHILD_ALLOW_SELF) {
-     child_path = base::FilePath(base::kProcSelfExe);
+     return base::FilePath(base::kProcSelfExe);
    }
  #endif
 diff --git a/content/browser/zygote_host/zygote_host_impl_linux.cc b/content/browser/zygote_host/zygote_host_impl_linux.cc
-index 5707dd93fd5e9..c87e1248171cf 100644
 --- a/content/browser/zygote_host/zygote_host_impl_linux.cc
 +++ b/content/browser/zygote_host/zygote_host_impl_linux.cc
-@@ -13,6 +13,7 @@
+@@ -14,6 +14,7 @@
  #include "base/logging.h"
  #include "base/posix/unix_domain_socket.h"
  #include "base/process/kill.h"
 +#include "base/process/launch.h"
  #include "base/process/memory.h"
  #include "base/strings/string_number_conversions.h"
- #include "base/types/fixed_array.h"
-@@ -22,6 +23,7 @@
+ #include "base/time/time.h"
+@@ -24,6 +25,7 @@
  #include "content/common/zygote/zygote_handle_impl_linux.h"
  #include "content/public/common/zygote/zygote_handle.h"
  #include "sandbox/linux/services/credentials.h"
@@ -170,7 +167,7 @@ index 5707dd93fd5e9..c87e1248171cf 100644
  #include "sandbox/linux/services/namespace_sandbox.h"
  #include "sandbox/linux/suid/client/setuid_sandbox_host.h"
  #include "sandbox/linux/suid/common/sandbox.h"
-@@ -72,6 +74,7 @@ ZygoteHostImpl::ZygoteHostImpl()
+@@ -74,6 +76,7 @@
      : use_namespace_sandbox_(false),
        use_suid_sandbox_(false),
        use_suid_sandbox_for_adj_oom_score_(false),
@@ -178,7 +175,7 @@ index 5707dd93fd5e9..c87e1248171cf 100644
        sandbox_binary_(),
        zygote_pids_lock_(),
        zygote_pids_() {}
-@@ -110,9 +113,12 @@ void ZygoteHostImpl::Init(const base::CommandLine& command_line) {
+@@ -112,9 +115,12 @@
      sandbox_binary_ = setuid_sandbox_host->GetSandboxBinaryPath().value();
    }
  
@@ -194,7 +191,7 @@ index 5707dd93fd5e9..c87e1248171cf 100644
      use_namespace_sandbox_ = true;
    } else if (!command_line.HasSwitch(
                   sandbox::policy::switches::kDisableSetuidSandbox) &&
-@@ -183,10 +189,16 @@ pid_t ZygoteHostImpl::LaunchZygote(
+@@ -187,17 +193,24 @@
      sandbox_host->SetupLaunchEnvironment();
    }
  
@@ -207,7 +204,7 @@ index 5707dd93fd5e9..c87e1248171cf 100644
 +    process = sandbox::NamespaceSandbox::LaunchProcess(*cmd_line, options);
 +  } else if (is_sandboxed_zygote && use_flatpak_sandbox_) {
 +    process = sandbox::FlatpakSandbox::GetInstance()->LaunchProcess(*cmd_line,
-+                                                                    options);
++                                                                  options);
 +  } else {
 +    process = base::LaunchProcess(*cmd_line, options);
 +  }
@@ -215,30 +212,29 @@ index 5707dd93fd5e9..c87e1248171cf 100644
    CHECK(process.IsValid()) << "Failed to launch zygote process";
  
    dummy_fd.reset();
-@@ -195,7 +207,8 @@ pid_t ZygoteHostImpl::LaunchZygote(
- 
-   pid_t pid = process.Pid();
+   close(fds[1]);
+   control_fd->reset(fds[0]);
  
 -  if (is_sandboxed_zygote && (use_namespace_sandbox_ || use_suid_sandbox_)) {
 +  if (is_sandboxed_zygote &&
 +      (use_namespace_sandbox_ || use_suid_sandbox_ || use_flatpak_sandbox_)) {
-     // The namespace and SUID sandbox will execute the zygote in a new
-     // PID namespace, and the main zygote process will then fork from
-     // there. Watch now our elaborate dance to find and validate the
-@@ -223,7 +236,11 @@ pid_t ZygoteHostImpl::LaunchZygote(
+     // Finding out the zygote's pid means waiting for it to start up. Put that
+     // off until the zygote is needed so that it starts up in parallel with the
+     // browser; ZygoteCommunication runs this before it first talks to the
+@@ -258,7 +271,11 @@
  
-     if (real_pid != pid) {
-       // Reap the sandbox.
--      base::EnsureProcessGetsReaped(std::move(process));
-+      if (use_flatpak_sandbox_) {
-+        sandbox::FlatpakSandbox::GetInstance()->IgnoreExitStatus(pid);
-+      } else {
-+        base::EnsureProcessGetsReaped(base::Process(pid));
-+      }
-     }
-     pid = real_pid;
+   if (real_pid != process.Pid()) {
+     // Reap the sandbox.
+-    base::EnsureProcessGetsReaped(std::move(process));
++    if (use_flatpak_sandbox_) {
++      sandbox::FlatpakSandbox::GetInstance()->IgnoreExitStatus(process.Pid());
++    } else {
++      base::EnsureProcessGetsReaped(std::move(process));
++    }
    }
-@@ -274,6 +291,10 @@ void ZygoteHostImpl::AdjustRendererOOMScore(base::ProcessHandle pid,
+ 
+   AddZygotePid(real_pid);
+@@ -307,6 +324,10 @@
      selinux_valid = true;
    }
  
