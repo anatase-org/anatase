@@ -1010,3 +1010,381 @@ index 6c06a202..94574bbe 100644
  
    if (custom_runtime_fd >= 0)
      {
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Tue, 20 Oct 2026 10:24:47 +0200
+Subject: portal: inherit explicit FD binds in unrestricted subsandboxes
+
+---
+ app/flatpak-builtins-build.c      |   2 +-
+ common/flatpak-metadata-private.h |   2 +
+ common/flatpak-run-private.h      |   2 +
+ common/flatpak-run.c              |  38 ++++++++++-
+ doc/flatpak-metadata.xml          |  13 ++++
+ portal/flatpak-portal.c           |  84 +++++++++++++++++++++++
+ tests/meson.build                 |   1 +
+ tests/test-bind-inheritance.sh    | 107 ++++++++++++++++++++++++++++++
+ 8 files changed, 247 insertions(+), 2 deletions(-)
+ create mode 100755 tests/test-bind-inheritance.sh
+
+diff --git a/app/flatpak-builtins-build.c b/app/flatpak-builtins-build.c
+index e94523bb..8f6f000e 100644
+--- a/app/flatpak-builtins-build.c
++++ b/app/flatpak-builtins-build.c
+@@ -610,7 +610,7 @@ flatpak_builtin_build (int argc, char **argv, GCancellable *cancellable, GError
+                                       runtime_files, runtime_files, runtime_deploy_data, runtime_extensions,
+                                       id, NULL,
+                                       runtime_ref,
+-                                      app_id_dir, app_context, NULL,
++                                      app_id_dir, app_context, NULL, NULL, NULL,
+                                       sockets,
+                                       FALSE, TRUE, TRUE,
+                                       &app_info_path, -1,
+diff --git a/common/flatpak-metadata-private.h b/common/flatpak-metadata-private.h
+index a5147f96..8306c593 100644
+--- a/common/flatpak-metadata-private.h
++++ b/common/flatpak-metadata-private.h
+@@ -61,6 +61,8 @@ G_BEGIN_DECLS
+ #define FLATPAK_METADATA_KEY_SESSION_BUS_PROXY "session-bus-proxy"
+ #define FLATPAK_METADATA_KEY_SYSTEM_BUS_PROXY "system-bus-proxy"
+ #define FLATPAK_METADATA_KEY_EXTRA_ARGS "extra-args"
++#define FLATPAK_METADATA_KEY_BIND_PATHS "bind-paths"
++#define FLATPAK_METADATA_KEY_RO_BIND_PATHS "ro-bind-paths"
+ #define FLATPAK_METADATA_KEY_SANDBOX "sandbox"
+ #define FLATPAK_METADATA_KEY_BUILD "build"
+ #define FLATPAK_METADATA_KEY_DEVEL "devel"
+diff --git a/common/flatpak-run-private.h b/common/flatpak-run-private.h
+index 94a7bc85..882b0126 100644
+--- a/common/flatpak-run-private.h
++++ b/common/flatpak-run-private.h
+@@ -101,6 +101,8 @@ gboolean flatpak_run_add_app_info_args (FlatpakBwrap           *bwrap,
+                                         GFile                  *app_id_dir,
+                                         FlatpakContext         *final_app_context,
+                                         FlatpakContext         *cmdline_context,
++                                        GArray                 *bind_fds,
++                                        GArray                 *ro_bind_fds,
+                                         FlatpakContextSockets   sockets,
+                                         gboolean                sandbox,
+                                         gboolean                build,
+diff --git a/common/flatpak-run.c b/common/flatpak-run.c
+index 94574bbe..e23bb34a 100644
+--- a/common/flatpak-run.c
++++ b/common/flatpak-run.c
+@@ -1483,6 +1483,32 @@ flatpak_run_save_environ (const char * const  *run_environ,
+   return TRUE;
+ }
+ 
++static gboolean
++add_bind_mount_metadata (GKeyFile    *keyfile,
++                         const char  *key,
++                         GArray      *fds,
++                         GError     **error)
++{
++  g_autoptr(GPtrArray) paths = g_ptr_array_new_with_free_func (g_free);
++  guint i;
++
++  for (i = 0; fds != NULL && i < fds->len; i++)
++    {
++      char *path = flatpak_get_path_for_fd (g_array_index (fds, int, i), error);
++
++      if (path == NULL)
++        return FALSE;
++
++      g_ptr_array_add (paths, path);
++    }
++
++  if (paths->len > 0)
++    g_key_file_set_string_list (keyfile, FLATPAK_METADATA_GROUP_INSTANCE, key,
++                                (const char * const *) paths->pdata, paths->len);
++
++  return TRUE;
++}
++
+ gboolean
+ flatpak_run_add_app_info_args (FlatpakBwrap           *bwrap,
+                                GFile                  *app_files,
+@@ -1499,6 +1525,8 @@ flatpak_run_add_app_info_args (FlatpakBwrap           *bwrap,
+                                GFile                  *app_id_dir,
+                                FlatpakContext         *final_app_context,
+                                FlatpakContext         *cmdline_context,
++                               GArray                 *bind_fds,
++                               GArray                 *ro_bind_fds,
+                                FlatpakContextSockets   sockets,
+                                gboolean                sandbox,
+                                gboolean                build,
+@@ -1649,6 +1677,14 @@ flatpak_run_add_app_info_args (FlatpakBwrap           *bwrap,
+         }
+     }
+ 
++  /* FD binds are not FlatpakContext filesystem permissions, but unrestricted
++   * subsandboxes need to inherit them too. Record destinations, not fd numbers:
++   * the portal reopens the mounted objects through the parent sandbox's root.
++   * Keep the modes separate, in the same order as the late bind operations. */
++  if (!add_bind_mount_metadata (keyfile, FLATPAK_METADATA_KEY_BIND_PATHS, bind_fds, error) ||
++      !add_bind_mount_metadata (keyfile, FLATPAK_METADATA_KEY_RO_BIND_PATHS, ro_bind_fds, error))
++    return FALSE;
++
+   flatpak_context_save_metadata (final_app_context, TRUE, keyfile);
+ 
+   if (!g_key_file_save_to_file (keyfile, info_path, error))
+@@ -3836,7 +3872,7 @@ flatpak_run_app (FlatpakDecomposed   *app_ref,
+                                       runtime_files, original_runtime_files, runtime_deploy_data, runtime_extensions,
+                                       app_id, flatpak_decomposed_get_branch (app_ref),
+                                       runtime_ref, app_id_dir,
+-                                      app_context, extra_context, sockets,
++                                      app_context, extra_context, bind_fds, ro_bind_fds, sockets,
+                                       sandboxed, FALSE, flags & FLATPAK_RUN_FLAG_DEVEL,
+                                       &app_info_path,
+                                       g_steal_fd (&instance_id_fd),
+diff --git a/doc/flatpak-metadata.xml b/doc/flatpak-metadata.xml
+index 823cf01d..0fdbdf89 100644
+--- a/doc/flatpak-metadata.xml
++++ b/doc/flatpak-metadata.xml
+@@ -869,6 +869,19 @@ sockets=!x11;x11;if:x11:!has-wayland;
+                         Extra arguments that were passed to flatpak run.
+                     </para></listitem>
+                 </varlistentry>
++                <varlistentry>
++                    <term><option>bind-paths</option> (list of strings)</term>
++                    <term><option>ro-bind-paths</option> (list of strings)</term>
++                    <listitem><para>
++                        Canonical destinations of explicit <option>--bind-fd</option>
++                        and <option>--ro-bind-fd</option> mounts, respectively.
++                        Unrestricted subsandboxes inherit these mounts from the
++                        parent instance with the same access mode. Restricted
++                        subsandboxes created with <option>--sandbox</option> do not
++                        inherit them. Read-only binds are applied after writable
++                        binds, as for the original instance.
++                    </para></listitem>
++                </varlistentry>
+                 <varlistentry>
+                     <term><option>sandbox</option> (boolean)</term>
+                     <listitem><para>
+diff --git a/portal/flatpak-portal.c b/portal/flatpak-portal.c
+index fba77092..eba55d44 100644
+--- a/portal/flatpak-portal.c
++++ b/portal/flatpak-portal.c
+@@ -611,6 +611,60 @@ validate_opath_fd (int        fd,
+   return TRUE;
+ }
+ 
++static gboolean
++inherit_bind_mounts (GKeyFile    *app_info,
++                      const char  *key,
++                      int          root_fd,
++                      GArray      *expose_fds,
++                      GArray      *owned_fds,
++                      GError     **error)
++{
++  g_auto(GStrv) paths = NULL;
++  guint i;
++
++  if (!g_key_file_has_key (app_info, FLATPAK_METADATA_GROUP_INSTANCE, key, NULL))
++    return TRUE;
++
++  paths = g_key_file_get_string_list (app_info, FLATPAK_METADATA_GROUP_INSTANCE,
++                                      key, NULL, error);
++  if (paths == NULL)
++    return FALSE;
++
++  for (i = 0; paths[i] != NULL; i++)
++    {
++      glnx_autofd int fd = -1;
++      g_autofree char *path = NULL;
++
++      if (!g_path_is_absolute (paths[i]))
++        return glnx_throw (error, "Inherited bind path is not absolute: %s", paths[i]);
++
++      /* Read only the destinations recorded in the parent's immutable
++       * .flatpak-info. Resolve within its root, never against the host root:
++       * the host path might have been replaced since the original bind.
++       * Canonical bind destinations do not need symlinks. */
++      fd = glnx_chaseat (root_fd, paths[i],
++                         GLNX_CHASE_RESOLVE_IN_ROOT | GLNX_CHASE_RESOLVE_NO_SYMLINKS,
++                         error);
++      if (fd < 0)
++        return FALSE;
++
++      path = flatpak_get_path_for_fd (fd, error);
++      if (path == NULL)
++        return FALSE;
++
++      /* flatpak run derives the destination from the fd. Refuse to silently
++       * mount somewhere else if an ancestor was renamed in the parent. */
++      if (strcmp (path, paths[i]) != 0)
++        return glnx_throw (error, "Inherited bind path changed: %s is now %s", paths[i], path);
++
++      g_array_append_val (expose_fds, fd);
++      g_array_append_val (owned_fds, fd);
++      fd = -1;
++    }
++
++  return TRUE;
++}
++
+ static int
+ fd_map_remap_fd (GArray *fd_map,
+                  int    *max_fd_in_out,
+@@ -1227,6 +1281,36 @@ handle_spawn (PortalFlatpak         *object,
+   expose_fds = g_array_new (FALSE, FALSE, sizeof (int));
+   expose_fds_ro = g_array_new (FALSE, FALSE, sizeof (int));
+ 
++  if (!sandboxed &&
++      (g_key_file_has_key (app_info, FLATPAK_METADATA_GROUP_INSTANCE,
++                           FLATPAK_METADATA_KEY_BIND_PATHS, NULL) ||
++       g_key_file_has_key (app_info, FLATPAK_METADATA_GROUP_INSTANCE,
++                           FLATPAK_METADATA_KEY_RO_BIND_PATHS, NULL)))
++    {
++      glnx_autofd int root_fd = -1;
++      g_autofree char *root_path = NULL;
++      int parent_pid = flatpak_instance_get_child_pid (instance);
++
++      if (parent_pid == 0)
++        {
++          g_dbus_method_invocation_return_error (invocation, G_DBUS_ERROR,
++                                                 G_DBUS_ERROR_FAILED,
++                                                 "Could not find parent sandbox for inherited binds");
++          return G_DBUS_METHOD_INVOCATION_HANDLED;
++        }
++
++      root_path = g_strdup_printf ("/proc/%d/root", parent_pid);
++      if (!glnx_opendirat (AT_FDCWD, root_path, TRUE, &root_fd, &error) ||
++          !inherit_bind_mounts (app_info, FLATPAK_METADATA_KEY_BIND_PATHS,
++                                root_fd, expose_fds, owned_fds, &error) ||
++          !inherit_bind_mounts (app_info, FLATPAK_METADATA_KEY_RO_BIND_PATHS,
++                                root_fd, expose_fds_ro, owned_fds, &error))
++        {
++          g_dbus_method_invocation_return_gerror (invocation, error);
++          return G_DBUS_METHOD_INVOCATION_HANDLED;
++        }
++    }
++
+   if (instance_path != NULL)
+     {
+       glnx_autofd int instance_fd = -1;
+diff --git a/tests/meson.build b/tests/meson.build
+index 41014150..949ad83e 100644
+--- a/tests/meson.build
++++ b/tests/meson.build
+@@ -410,6 +410,7 @@ tests = {
+   'extra-data': {'wrap': ['user', 'system']},
+   'preinstall': {},
+   'run-custom': {'wrap': ['user', 'system']},
++  'bind-inheritance': {'wrap': ['user']},
+   'upgrade-from-header': {'wrap': ['user', 'system', 'system-norevokefs']},
+ }
+ 
+diff --git a/tests/test-bind-inheritance.sh b/tests/test-bind-inheritance.sh
+new file mode 100755
+index 00000000..5d6728b0
+--- /dev/null
++++ b/tests/test-bind-inheritance.sh
+@@ -0,0 +1,107 @@
++#!/bin/bash
++# SPDX-License-Identifier: LGPL-2.1-or-later
++
++set -euo pipefail
++
++. "$(dirname "$0")/libtest.sh"
++
++skip_without_bwrap
++skip_revokefs_without_fuse
++if ! command -v flatpak-spawn >/dev/null; then
++    skip "flatpak-spawn is required for subsandbox tests"
++fi
++
++# Include flatpak-spawn and its libraries in a private test runtime.
++GPGARGS="$FL_GPGARGS" "$(dirname "$0")/make-test-runtime.sh" \
++    repos/bind-runtime org.test.Platform stable "" "" flatpak-spawn
++SRC_RUNTIME_REPO=bind-runtime setup_repo "" "" stable
++install_repo "" stable
++
++# Put both files outside HOME and all ordinary filesystem grants. The portal
++# must inherit the FD binds rather than accidentally finding the same files
++# through the child's normal permissions. The directory checks cover LEDs.
++bind_dir="$(pwd)/bind-files"
++mkdir -p "$bind_dir/writable-dir" "$bind_dir/readonly-dir"
++printf 'writable\n' > "$bind_dir/writable"
++printf 'readonly\n' > "$bind_dir/readonly"
++printf 'directory\n' > "$bind_dir/readonly-dir/value"
++
++exec 3< "$bind_dir/writable"
++exec 4< "$bind_dir/readonly"
++exec 5< "$bind_dir/writable-dir"
++exec 6< "$bind_dir/readonly-dir"
++
++bound_run () {
++    run --talk-name=org.freedesktop.portal.Flatpak \
++        --bind-fd=3 --ro-bind-fd=4 --bind-fd=5 --ro-bind-fd=6 \
++        --command=sh org.test.Hello "$@"
++}
++
++bound_run -ec '
++    exec flatpak-spawn sh -ec '\''
++        test "$(cat "$1/readonly")" = readonly
++        test "$(cat "$1/readonly-dir/value")" = directory
++        echo child > "$1/writable"
++        echo child > "$1/writable-dir/value"
++        if (echo changed > "$1/readonly") 2>/dev/null; then exit 1; fi
++        if (echo changed > "$1/readonly-dir/value") 2>/dev/null; then exit 1; fi
++    '\'' sh "$1"
++' sh "$bind_dir"
++assert_file_has_content "$bind_dir/writable" '^child$'
++assert_file_has_content "$bind_dir/writable-dir/value" '^child$'
++assert_file_has_content "$bind_dir/readonly" '^readonly$'
++assert_file_has_content "$bind_dir/readonly-dir/value" '^directory$'
++ok "unrestricted subsandbox inherits file and directory bind modes"
++
++# Inheritance must continue through a second unrestricted child.
++bound_run -ec '
++    exec flatpak-spawn flatpak-spawn sh -ec '\''
++        echo grandchild > "$1/writable"
++        test "$(cat "$1/readonly")" = readonly
++        if (echo changed > "$1/readonly") 2>/dev/null; then exit 1; fi
++    '\'' sh "$1"
++' sh "$bind_dir"
++assert_file_has_content "$bind_dir/writable" '^grandchild$'
++ok "bind metadata propagates to grandchildren"
++
++bound_run -ec '
++    exec flatpak-spawn --sandbox sh -ec '\''
++        test ! -e "$1/writable"
++        test ! -e "$1/readonly"
++        test ! -e "$1/writable-dir"
++        test ! -e "$1/readonly-dir"
++    '\'' sh "$1"
++' sh "$bind_dir"
++ok "restricted subsandbox does not inherit explicit binds"
++
++# The same destination in both lists must remain read-only (last bind wins).
++run --talk-name=org.freedesktop.portal.Flatpak \
++    --bind-fd=3 --ro-bind-fd=3 --command=sh org.test.Hello -ec '
++    exec flatpak-spawn sh -ec '\''
++        test "$(cat "$1")" = grandchild
++        if (echo changed > "$1") 2>/dev/null; then exit 1; fi
++    '\'' sh "$1"
++' sh "$bind_dir/writable"
++ok "read-only bind takes precedence over writable bind"
++
++# Model sysfs: the default view is read-only, with individual writable binds
++# applied afterwards. Both the file and directory exceptions must survive.
++run --talk-name=org.freedesktop.portal.Flatpak \
++    --filesystem="$bind_dir:ro" --bind-fd=3 --bind-fd=5 \
++    --command=sh org.test.Hello -ec '
++    exec flatpak-spawn sh -ec '\''
++        echo exception > "$1/writable"
++        echo exception > "$1/writable-dir/value"
++        if (echo changed > "$1/readonly") 2>/dev/null; then exit 1; fi
++    '\'' sh "$1"
++' sh "$bind_dir"
++assert_file_has_content "$bind_dir/writable" '^exception$'
++assert_file_has_content "$bind_dir/writable-dir/value" '^exception$'
++ok "writable exceptions override the inherited read-only filesystem"
++
++exec 6<&-
++exec 5<&-
++exec 4<&-
++exec 3<&-
++
++done_testing

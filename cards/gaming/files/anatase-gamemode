@@ -346,9 +346,11 @@ done
 # So, using switcherooctl here makes it so we force the iGPU
 # This is soso from a power energy perspective. However, since steam does
 # not provide GPU controls we are kind of stuck here.
+# host-os:ro is needed for Steam in RT3 to access gamescope files
 switcherooctl launch flatpak run \
         --socket=x11-passthrough \
         "${sysfs_bind_args[@]}" \
+        --filesystem=host-os:ro \
         --filesystem="xdg-run/$response_wl_display:ro" \
         --filesystem="xdg-run/${tmpdir##*/}:rw" \
         --filesystem="xdg-run/$steam_tmp_name:create" \
