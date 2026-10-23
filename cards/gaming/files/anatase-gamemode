@@ -257,6 +257,18 @@ export DISPLAY=":$((${response_x_display#:} + 1))"
 export IBUS_ADDRESS="unix:path=$tmpdir/ibus"
 dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY= IBUS_ADDRESS
 
+# Desktop portals can survive logout with Plasma's environment and backend
+# selection. Stop them after publishing Gamescope's display so D-Bus activation
+# starts fresh services with the Gamemode environment.
+systemctl --user stop \
+    flatpak-portal.service \
+    flatpak-session-helper.service \
+    xdg-desktop-portal.service \
+    plasma-xdg-desktop-portal-kde.service \
+    xdg-desktop-portal-gtk.service \
+    xdg-desktop-portal-gamescope.service \
+    xdg-desktop-portal-holo.service || true
+
 # MangoApp, preflight, and Steam use the primary Xwayland display. Steam gets
 # the Gamescope Wayland socket through its dedicated environment variable.
 export DISPLAY="$response_x_display"
