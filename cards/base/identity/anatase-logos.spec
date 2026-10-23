@@ -40,7 +40,14 @@ cp -p %{SOURCE1} "$builddir"/icons/hicolor/scalable/apps/start-here.svg
 
 rsvg-convert -a -w 252 -h 252 -o "$builddir"/pixmaps/anatase-logo-sprite.png %{SOURCE0}
 rsvg-convert -a -w 252 -h 252 -o "$builddir"/pixmaps/system-logo-white.png %{SOURCE0}
+# Steam stretches the update background to the whole screen. Keep the wordmark
+# centered on a black 16:9 canvas, clear of its progress bar and status text.
+rsvg-convert -a -w 720 --page-width 1920 --page-height 1080 \
+  --left 600 --top 450 -b black \
+  -o "$builddir"/pixmaps/anatase-update-background.png %{SOURCE3}
 rsvg-convert -a -w 149 -h 43 -o "$builddir"/plymouth/themes/spinner/watermark.png %{SOURCE3}
+# BGRT uses this transparent wordmark when no firmware logo is available.
+rsvg-convert -a -w 480 -o "$builddir"/plymouth/themes/spinner/bgrt-fallback.png %{SOURCE3}
 
 for size in 16 22 24 32 36 48 96 256 ; do
   mkdir -p "$builddir"/icons/hicolor/${size}x${size}/apps
@@ -54,13 +61,15 @@ done
 mkdir -p $RPM_BUILD_ROOT%{_datadir}/pixmaps
 install -p -m 644 %{_builddir}/%{name}-generated/pixmaps/anatase-logo-sprite.png $RPM_BUILD_ROOT%{_datadir}/pixmaps/
 install -p -m 644 %{_builddir}/%{name}-generated/pixmaps/system-logo-white.png $RPM_BUILD_ROOT%{_datadir}/pixmaps/
+install -p -m 644 %{_builddir}/%{name}-generated/pixmaps/anatase-update-background.png $RPM_BUILD_ROOT%{_datadir}/pixmaps/
 pushd $RPM_BUILD_ROOT%{_datadir}/pixmaps
   ln -s anatase-logo-sprite.png fedora-logo-sprite.png
 popd
 
-# The Plymouth spinner theme logo bit.
+# Plymouth's lower watermark and firmware-logo fallback.
 mkdir -p $RPM_BUILD_ROOT%{_datadir}/plymouth/themes/spinner
 install -p -m 644 %{_builddir}/%{name}-generated/plymouth/themes/spinner/watermark.png $RPM_BUILD_ROOT%{_datadir}/plymouth/themes/spinner/watermark.png
+install -p -m 644 %{_builddir}/%{name}-generated/plymouth/themes/spinner/bgrt-fallback.png $RPM_BUILD_ROOT%{_datadir}/plymouth/themes/spinner/bgrt-fallback.png
 
 # Logo icons used by os-release LOGO.
 for size in 16x16 22x22 24x24 32x32 36x36 48x48 96x96 256x256 ; do
@@ -118,6 +127,7 @@ hardlink -vv %{buildroot}/usr
 %config(noreplace) %{_sysconfdir}/favicon.png
 %{_datadir}/plymouth/themes/spinner/
 %{_datadir}/pixmaps/anatase-logo-sprite.png
+%{_datadir}/pixmaps/anatase-update-background.png
 %{_datadir}/pixmaps/fedora-logo-sprite.png
 %{_datadir}/pixmaps/system-logo-white.png
 %{_datadir}/icons/hicolor/*/apps/anatase-logo-icon.png

@@ -202,8 +202,14 @@ elif [[ $board_name = Jupiter ]]; then
     export STEAM_DISPLAY_REFRESH_LIMITS=40,60
 fi
 
-# The Steam Flatpak sees host data files below /run/host/share.
-export STEAM_UPDATEUI_PNG_BACKGROUND=/run/host/share/pixmaps/anatase-logo-sprite.png
+# Share the background through the session directory already exposed to Steam.
+# A missing PNG makes Steam's GLX updater draw white; use its built-in
+# background when the host image does not provide ours yet.
+steam_background_args=(--unset-env=STEAM_UPDATEUI_PNG_BACKGROUND)
+if install -m0644 /usr/share/pixmaps/anatase-update-background.png \
+        "$tmpdir/anatase-update-background.png"; then
+    steam_background_args=(--env="STEAM_UPDATEUI_PNG_BACKGROUND=$tmpdir/anatase-update-background.png")
+fi
 
 ulimit -n 524288
 
@@ -358,6 +364,7 @@ switcherooctl launch flatpak run \
         --filesystem=/run/vpower:ro \
         --env="TMPDIR=$steam_tmp" \
         --env="IBUS_ADDRESS=$IBUS_ADDRESS" \
+        "${steam_background_args[@]}" \
         org.anatase.Steam \
         -steamos3 \
         -steampal \
