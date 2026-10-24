@@ -13,7 +13,7 @@ flatpak:
     --talk-name=org.freedesktop.secrets
     --talk-name=org.kde.StatusNotifierWatcher
     --filesystem=xdg-run/tray-icon:create
-    --persist=Games
+    --filesystem=~/Games:create
     --env=GTK_USE_PORTAL=1
 
 build-deps:
