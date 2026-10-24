@@ -5,7 +5,7 @@ flatpak:
   command: anatase-epic-games-launcher
   finish-args: |-
     --share=network
-    --device=dri
+    --device=all
     --socket=x11
     --socket=wayland
     --socket=pulseaudio
