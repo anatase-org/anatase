@@ -1,0 +1,33 @@
+version: 1
+
+flatpak:
+  id: org.anatase.EpicGamesLauncher
+  command: anatase-epic-games-launcher
+  finish-args: |-
+    --share=network
+    --device=dri
+    --socket=x11
+    --socket=wayland
+    --socket=pulseaudio
+    --share=ipc
+    --talk-name=org.freedesktop.secrets
+    --talk-name=org.kde.StatusNotifierWatcher
+    --filesystem=xdg-run/tray-icon:create
+    --persist=Games
+    --env=GTK_USE_PORTAL=1
+
+build-deps:
+  - rpm-build
+  - rpmdevtools
+  - redhat-rpm-config
+  - flatpak-rpm-macros
+
+specs:
+  - spec: epic-games-launcher.spec
+    packages:
+      - anatase-epic-games-launcher
+    files:
+      - epic-games-launcher.spec
+      - anatase-epic-games-launcher
+      - test-anatase-epic-games-launcher.py
+      - org.anatase.EpicGamesLauncher.metainfo.xml

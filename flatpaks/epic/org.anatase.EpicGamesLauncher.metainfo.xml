@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.anatase.EpicGamesLauncher</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LicenseRef-proprietary</project_license>
+  <name>Epic Games Launcher</name>
+  <summary>Browse the Epic Games Store and manage your library</summary>
+  <developer_name>Epic Games (packaged by Anatase)</developer_name>
+  <description>
+    <p>Browse the Epic Games Store, sign in to your account, and download your library.</p>
+    <p>The launcher updates itself within its private Flatpak storage. This experimental package does not yet integrate Proton game launching.</p>
+  </description>
+  <launchable type="desktop-id">org.anatase.EpicGamesLauncher.desktop</launchable>
+  <url type="homepage">https://www.launcher.epicgames.com/</url>
+  <url type="bugtracker">https://github.com/anatase-org/anatase/issues</url>
+  <provides>
+    <binary>anatase-epic-games-launcher</binary>
+  </provides>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.102.0" date="2026-10-22"/>
+  </releases>
+</component>

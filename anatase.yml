@@ -83,6 +83,7 @@ flatpaks:
   - x86_64:
     - flatpaks/browser
     - flatpaks/adblocker
+    - flatpaks/epic
 
 installer:
   ostree: True

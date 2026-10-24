@@ -1,0 +1,45 @@
+#!/bin/bash
+set -euo pipefail
+umask 077
+
+seed=/app/share/epic-games-launcher/EpicGamesLauncher-x86_64.AppImage
+data_dir="${XDG_DATA_HOME:?Flatpak must set XDG_DATA_HOME}/epic-games-launcher"
+image="$data_dir/EpicGamesLauncher-x86_64.AppImage"
+marker="$data_dir/.initialized"
+temporary=
+
+mkdir -p "$data_dir"
+chmod 0700 "$data_dir"
+
+# Only serialize bootstrap. Do not hold the lock across the application or its
+# self-update/relaunch, and do not restore the seed during an updater's rename.
+exec 9> "$data_dir/.bootstrap.lock"
+flock 9
+if [[ ! -e $marker ]]; then
+    if [[ ! -e $image ]]; then
+        trap '[[ -z $temporary ]] || rm -f -- "$temporary"' EXIT
+        temporary=$(mktemp "$data_dir/.bootstrap.XXXXXX")
+        cp --reflink=auto -- "$seed" "$temporary"
+        chmod 0700 "$temporary"
+        mv -T -- "$temporary" "$image"
+        temporary=
+        trap - EXIT
+    fi
+    touch "$marker"
+fi
+exec 9>&-
+
+if [[ ! -f $image || ! -x $image ]]; then
+    printf 'Epic Games Launcher: initialized AppImage is missing or not executable: %s\n' "$image" >&2
+    exit 1
+fi
+
+# FUSE mounting is unavailable inside Flatpak. Both extraction and updater
+# staging use a private disk-backed directory, not the sandbox's tmpfs /tmp.
+export TMPDIR="${XDG_CACHE_HOME:?Flatpak must set XDG_CACHE_HOME}/epic-games-launcher/tmp"
+mkdir -p "$TMPDIR"
+chmod 0700 "$TMPDIR"
+export APPIMAGE_EXTRACT_AND_RUN=1
+unset NO_CLEANUP
+
+exec "$image" "$@"
