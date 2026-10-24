@@ -72,6 +72,36 @@ class BootstrapTests(unittest.TestCase):
         self.assertEqual(result.stdout, "updated application\n")
         self.assertEqual(self.image.read_bytes(), updated)
 
+    def test_scrubs_steam_ids_but_preserves_display_and_controller_environment(self):
+        self.seed.chmod(0o644)
+        self.seed.write_text(
+            "#!/usr/bin/python3\n"
+            "import json, os\n"
+            "print(json.dumps(dict(os.environ)))\n"
+        )
+        self.seed.chmod(0o444)
+        removed = {
+            "SteamAppId": "3403903578",
+            "SteamGameId": "14619654546280939520",
+            "SteamOverlayGameId": "14619654546280939520",
+            "STEAM_COMPAT_APP_ID": "3403903578",
+        }
+        preserved = {
+            "SteamVirtualGamepadInfo": "/run/user/1000/steam-gamepad-info",
+            "SDL_GAMECONTROLLERCONFIG": "test-controller-mapping",
+            "DISPLAY": ":1",
+            "STEAM_MULTIPLE_XWAYLANDS": "1",
+        }
+        for inherited in (removed, dict.fromkeys(removed, "")):
+            with self.subTest(inherited=inherited):
+                result = self.run_launcher(**inherited, **preserved)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                output = json.loads(result.stdout)
+                for key in removed:
+                    self.assertNotIn(key, output)
+                for key, value in preserved.items():
+                    self.assertEqual(output.get(key), value, key)
+
     def test_concurrent_first_launches_publish_one_complete_copy(self):
         processes = [subprocess.Popen(
             [str(self.launcher), str(i)], env=self.env,

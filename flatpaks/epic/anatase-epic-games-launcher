@@ -42,4 +42,9 @@ chmod 0700 "$TMPDIR"
 export APPIMAGE_EXTRACT_AND_RUN=1
 unset NO_CLEANUP
 
+# Steam's shortcut IDs describe Epic, not the games it launches. In particular,
+# SteamGameId makes Proton's steam.exe initialize Steam API. Gamescope can use
+# the reaper ancestor to associate windows without passing these IDs to Epic.
+unset SteamAppId SteamGameId SteamOverlayGameId STEAM_COMPAT_APP_ID
+
 exec "$image" "$@"
