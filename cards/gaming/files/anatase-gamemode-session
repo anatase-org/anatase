@@ -12,6 +12,18 @@ export DESKTOP_SESSION=gamemode
 export XDG_CURRENT_DESKTOP=gamescope
 export XDG_SESSION_DESKTOP=gamemode
 export XDG_DESKTOP_PORTAL_DIR=/usr/share/xdg-desktop-portal/gamescope-portals
+
+# A generic browser preference in the user's mimeapps.list takes precedence
+# over system gamescope defaults. Install a desktop-specific user default so
+# links use Steam's visible browser without changing the Plasma preference.
+# Preserve any explicit Gamemode-specific configuration, including symlinks.
+config_home=${XDG_CONFIG_HOME:-$HOME/.config}
+if [[ ! -e $config_home/gamescope-mimeapps.list && ! -L $config_home/gamescope-mimeapps.list ]]; then
+    mkdir -p "$config_home"
+    ln -s /usr/share/applications/gamescope-mimeapps.list \
+        "$config_home/gamescope-mimeapps.list"
+fi
+
 systemctl --user import-environment \
     DESKTOP_SESSION \
     XDG_CURRENT_DESKTOP \
