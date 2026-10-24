@@ -525,6 +525,83 @@ class ReaperTests(unittest.TestCase):
             if process.poll() is None:
                 process.kill()
 
+    def start_detached_tree(self, *, ignore_signals=False, parent_waits=False):
+        directory = tempfile.TemporaryDirectory(dir=self.temporary.name)
+        self.addCleanup(directory.cleanup)
+        ready = Path(directory.name) / "ready"
+        script = (
+            "import os, signal, time\n"
+            "from pathlib import Path\n"
+            + ("signal.signal(signal.SIGTERM, signal.SIG_IGN)\n"
+               "signal.signal(signal.SIGINT, signal.SIG_IGN)\n" if ignore_signals else "")
+            + "child = os.fork()\n"
+            "if child:\n"
+            + ("    os.waitpid(child, 0)\n" if parent_waits else "")
+            + "    os._exit(7)\n"
+            "os.setsid()\n"
+            f"Path({str(ready)!r}).write_text(str(os.getpid()))\n"
+            "time.sleep(30)\n"
+        )
+        process = subprocess.Popen(
+            [self.reaper, "SteamLaunch", "AppId=4321", "--", sys.executable, "-c", script],
+        )
+
+        def cleanup():
+            if ready.exists():
+                try:
+                    os.kill(int(ready.read_text()), signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=4)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=3)
+
+        self.addCleanup(cleanup)
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline:
+            try:
+                descendant = int(ready.read_text())
+                stat = Path(f"/proc/{descendant}/stat").read_text()
+                parent = int(stat[stat.rfind(")") + 2:].split()[1])
+                if parent_waits or parent == process.pid:
+                    return process, descendant
+            except (FileNotFoundError, ValueError):
+                pass
+            time.sleep(0.01)
+        self.fail("detached descendant did not become ready")
+
+    def test_stop_reaches_adopted_child_in_separate_session(self) -> None:
+        unrelated = subprocess.Popen(["/bin/sleep", "30"])
+        self.addCleanup(unrelated.wait)
+        self.addCleanup(unrelated.kill)
+        process, descendant = self.start_detached_tree()
+        self.assertEqual(os.getsid(descendant), descendant)
+        process.send_signal(signal.SIGTERM)
+        self.assertEqual(process.wait(timeout=4), 128 + signal.SIGTERM)
+        self.assertFalse(Path(f"/proc/{descendant}").exists())
+        self.assertIsNone(unrelated.poll())
+
+    def test_stop_escalates_and_cleans_children_adopted_during_shutdown(self) -> None:
+        for stop_signal in (signal.SIGTERM, signal.SIGINT):
+            with self.subTest(stop_signal=stop_signal):
+                process, descendant = self.start_detached_tree(
+                    ignore_signals=True, parent_waits=True,
+                )
+                process.send_signal(stop_signal)
+                self.assertEqual(process.wait(timeout=5), 128 + stop_signal)
+                self.assertFalse(Path(f"/proc/{descendant}").exists())
+
+    def test_normal_exit_waits_for_adopted_child_and_preserves_command_status(self) -> None:
+        process, descendant = self.start_detached_tree()
+        self.assertIsNone(process.poll())
+        os.kill(descendant, signal.SIGTERM)
+        self.assertEqual(process.wait(timeout=3), 7)
+        self.assertFalse(Path(f"/proc/{descendant}").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
