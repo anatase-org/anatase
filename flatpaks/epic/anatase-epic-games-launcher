@@ -39,6 +39,8 @@ fi
 export TMPDIR="${XDG_CACHE_HOME:?Flatpak must set XDG_CACHE_HOME}/epic-games-launcher/tmp"
 mkdir -p "$TMPDIR"
 chmod 0700 "$TMPDIR"
+# Match AppRun's canonical library paths so its URL helper can strip them.
+export TMPDIR="$(realpath "$TMPDIR")"
 export APPIMAGE_EXTRACT_AND_RUN=1
 unset NO_CLEANUP
 
