@@ -15362,3 +15362,117 @@ index 4a68aa33..55ac12e5 100644
 +#define VKR_COLORSPACE_DISPLAY_NATIVE 5u
 +
  #endif
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Wed, 28 Oct 2026 14:22:33 +0100
+Subject: pipewire: serialize capture buffer handoff with stream callbacks
+
+dequeue_pipewire_buffer runs on the compositor thread, while the PipeWire
+loop removes buffers on its own thread. The atomic handoff slots do not
+protect pw_buffer::user_data or the non-atomic copying flag: removal can
+delete the capture buffer between dequeue and marking it as copying.
+Likewise, publishing buffer=nullptr can let the compositor delete a stale
+buffer before the removal callback has finished reading it.
+
+Serialize compositor-side acquisition and stale-buffer destruction with
+PipeWire loop dispatch and teardown. Clear streaming before destroying
+the stream under the same lock so a late acquisition cannot use it.
+Rendering and GPU waits remain outside the lock; copying protects the
+buffer until the compositor returns it.
+
+The reported crashes occur in radv_handle_image_transition through
+paint_pipewire/vulkan_screenshot while the PipeWire thread destroys
+capture buffers. A controlled test of the actual pipewire.cpp event loop
+reproduces the original dequeue/remove use-after-free with ASan. With
+this change, acquisition/removal, stale cleanup, and shutdown tests pass
+with ASan and UBSan; pipewire.cpp also compiles with warnings enabled.
+---
+ src/pipewire.cpp | 13 +++++++++++++
+ src/pipewire.hpp |  6 +++---
+ 2 files changed, 16 insertions(+), 3 deletions(-)
+
+diff --git a/src/pipewire.cpp b/src/pipewire.cpp
+index 71518606..8c3c2aa7 100644
+--- a/src/pipewire.cpp
++++ b/src/pipewire.cpp
+@@ -7,6 +7,7 @@
+ #include <unistd.h>
+ 
+ #include <atomic>
++#include <mutex>
+ #include <thread>
+ #include <vector>
+ 
+@@ -21,6 +22,11 @@ static LogScope pwr_log("pipewire");
+ static struct pipewire_state pipewire_state = { .stream_node_id = SPA_ID_INVALID };
+ static int nudgePipe[2] = { -1, -1 };
+ 
++// Serialize stream callbacks with compositor-side dequeue and stale-buffer
++// destruction. The atomic handoff pointers do not protect pw_buffer::user_data
++// or the copying flag from a concurrent remove_buffer callback.
++static std::mutex s_PipewireMutex;
++
+ // Pending buffer for PipeWire → steamcompmgr
+ static std::atomic<struct pipewire_buffer *> out_buffer;
+ // Pending buffer for steamcompmgr → PipeWire
+@@ -69,6 +75,7 @@ static void destroy_buffer(struct pipewire_buffer *buffer) {
+ 
+ void pipewire_destroy_buffer(struct pipewire_buffer *buffer)
+ {
++	std::lock_guard lock(s_PipewireMutex);
+ 	destroy_buffer(buffer);
+ }
+ 
+@@ -659,6 +666,8 @@ static void run_pipewire(struct pipewire_state *state)
+ 
+ 		assert(!(pollfds[EVENT_NUDGE].revents & POLLHUP));
+ 
++		std::lock_guard lock(s_PipewireMutex);
++
+ 		if (pollfds[EVENT_PIPEWIRE].revents & POLLIN) {
+ 			pw_loop_enter(state->loop);
+ 			ret = pw_loop_iterate(state->loop, -1);
+@@ -675,7 +684,10 @@ static void run_pipewire(struct pipewire_state *state)
+ 	}
+ 
+ 	pwr_log.infof("exiting");
++	std::lock_guard lock(s_PipewireMutex);
++	state->streaming = false;
+ 	pw_stream_destroy(state->stream);
++	state->stream = nullptr;
+ 	pw_core_disconnect(state->core);
+ 	pw_context_destroy(state->context);
+ 	pw_loop_destroy(state->loop);
+@@ -775,6 +787,7 @@ bool pipewire_is_streaming()
+ 
+ struct pipewire_buffer *dequeue_pipewire_buffer(void)
+ {
++	std::lock_guard lock(s_PipewireMutex);
+ 	struct pipewire_state *state = &pipewire_state;
+ 	if (state->streaming) {
+ 		request_buffer(state);
+diff --git a/src/pipewire.hpp b/src/pipewire.hpp
+index b4d7e296..da34dc67 100644
+--- a/src/pipewire.hpp
++++ b/src/pipewire.hpp
+@@ -42,9 +42,8 @@ struct pipewire_buffer {
+ 		int fd;
+ 	} shm;
+ 
+-	// The following fields are not thread-safe
+-
+-	// The PipeWire buffer, or nullptr if it's been destroyed.
++	// The PipeWire buffer, or nullptr if it's been destroyed. Published
++	// atomically so the compositor can detect stale buffers while painting.
+ 	std::atomic<struct pw_buffer *> buffer;
+ 	bool IsStale() const 
+ 	{
+@@ -52,6 +51,7 @@ struct pipewire_buffer {
+ 	}
+ 	// We pass the buffer to the steamcompmgr thread for copying. This is set
+ 	// to true if the buffer is currently owned by the steamcompmgr thread.
++	// Protected by s_PipewireMutex in pipewire.cpp.
+ 	bool copying;
+ };
+ 
