@@ -1,15 +1,19 @@
 %global debug_package %{nil}
-# The AppImage is an immutable bootstrap payload, not an RPM-managed ELF binary.
+
+# To update, find the link of the launcher in the website below (changes per region).
+# Trace the redirect to find the new version for Source0
+# https://launcher.epicgames.com/
+
 %global __brp_strip %{nil}
 %global __brp_strip_comment_note %{nil}
 %global __requires_exclude_from ^%{_datadir}/epic-games-launcher/.*$
 %global __provides_exclude_from ^%{_datadir}/epic-games-launcher/.*$
 %global appstream_id org.anatase.EpicGamesLauncher
-%global upstream_commit g6aa6663
-%global seed_sha256 946993bc8c9c9d16e87035c964bd706272c35b5f0486498ec5b707be0db1a578
+%global upstream_commit g0cb1183
+%global seed_sha256 415c22591542ebe64e2e88e2e705cee5769ba1b2c8d534decee62eef98d1c248
 
 Name:           anatase-epic-games-launcher
-Version:        0.102.0
+Version:        0.106.0
 Release:        1%{?dist}
 Summary:        Self-updating Epic Games Launcher
 License:        LicenseRef-proprietary
@@ -63,7 +67,8 @@ for size in 32x32 128x128 256x256@2; do
     install -Dm0644 "squashfs-root/usr/share/icons/hicolor/$size/apps/EpicGamesLauncher.png" \
         "%{buildroot}%{_datadir}/icons/hicolor/$size/apps/%{appstream_id}.png"
 done
-install -Dm0644 %{SOURCE3} %{buildroot}%{_metainfodir}/%{appstream_id}.metainfo.xml
+sed 's/@VERSION@/%{version}/g' %{SOURCE3} > %{appstream_id}.metainfo.xml
+install -Dm0644 %{appstream_id}.metainfo.xml %{buildroot}%{_metainfodir}/%{appstream_id}.metainfo.xml
 rm -rf -- bootstrap.AppImage squashfs-root
 
 %check
