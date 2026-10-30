@@ -7,19 +7,13 @@
 %global debug_package %{nil}
 
 Name:           scx-scheds
-Version:        1.1.3
-Release:        5%{?dist}
+Version:        1.1.4
+Release:        1%{?dist}
 Summary:        Sched_ext Schedulers and Tools
 
 License:        GPL=2.0
 URL:            https://github.com/sched-ext/scx
 Source0:        %{URL}/archive/refs/tags/v%{version}.tar.gz
-
-# Hotfix PR#3755 for scx_cake. TODO: Remove on dot version bump.
-Patch0:         %{URL}/commit/6624f0f178e233b2f733825e5e08549048ca3700.diff
-Patch1:         %{URL}/commit/bdbf5eec541fdd48ed825d8e07cebdf5aad10e63.diff
-# Hotfix PR#3756 for scx_pandemonium. TODO: Remove on dot version bump.
-Patch2:         %{URL}/commit/18dbe236217a907a4f165bb89e8f75a3fda9ab46.diff
 
 %global rust_affinity_ver 0.1.2
 %global rust_anpa_ver 0.10.0
@@ -37,8 +31,9 @@ Patch2:         %{URL}/commit/18dbe236217a907a4f165bb89e8f75a3fda9ab46.diff
 %global rust_convert_case_ver 0.11.0
 %global rust_gpoint_ver 0.3.0
 %global rust_httpdate_ver 1.0.3
-%global rust_libbpf_cargo_ver 0.26.2
-%global rust_libbpf_rs_ver 0.26.2
+%global rust_libarena_rs_ver 0.3.2
+%global rust_libbpf_cargo_ver 0.27.2
+%global rust_libbpf_rs_ver 0.27.2
 %global rust_libbpf_sys_ver 1.7.0+v1.7.0
 %global rust_micromath_ver 2.1.0
 %global rust_nvml_wrapper_ver 0.12.1
@@ -88,6 +83,8 @@ Source39:       https://crates.io/api/v1/crates/tiny_http/%{rust_tiny_http_ver}/
 Source40:       https://crates.io/api/v1/crates/below-common/%{rust_below_common_ver}/download#/below-common-%{rust_below_common_ver}.tar.gz
 Source41:       https://crates.io/api/v1/crates/cgroupfs/%{rust_cgroupfs_ver}/download#/cgroupfs-%{rust_cgroupfs_ver}.tar.gz
 Source42:       https://crates.io/api/v1/crates/fb_procfs/%{rust_fb_procfs_ver}/download#/fb_procfs-%{rust_fb_procfs_ver}.tar.gz
+
+Source43:       https://crates.io/api/v1/crates/libarena-rs/%{rust_libarena_rs_ver}/download#/libarena-rs-%{rust_libarena_rs_ver}.tar.gz
 
 BuildRequires:  gcc
 BuildRequires:  git
@@ -223,8 +220,11 @@ BuildRequires:  (crate(version-compare/default) >= 0.2.0 with crate(version-comp
 BuildRequires:  (crate(walkdir/default) >= 2.0.0 with crate(walkdir/default) < 3.0.0~)
 BuildRequires:  (crate(xdg/default) >= 3.0.0 with crate(xdg/default) < 4.0.0~)
 BuildRequires:  (crate(zbus/default) >= 5.0.0 with crate(zbus/default) < 6.0.0~)
+BuildRequires:  (crate(tar/default) >= 0.4.0 with crate(tar/default) < 0.5.0~)
+BuildRequires:  (crate(tracing/default) >= 0.1.0 with crate(tracing/default) < 0.2.0~)
+BuildRequires:  (crate(tracing-subscriber/default) >= 0.3.0 with crate(tracing-subscriber/default) < 0.4.0~)
 BuildRequires:  crate(bindgen/default) >= 0.69.0
-BuildRequires:  rust >= 1.56
+BuildRequires:  rust >= 1.91
 
 # Dependencies of the vendored below 0.9 crates.
 BuildRequires:  (crate(chrono/clock) >= 0.4.0 with crate(chrono/clock) < 0.5.0~)
@@ -279,7 +279,7 @@ Provides: rust-scx_utils-devel
 sched_ext is a Linux kernel feature which enables implementing kernel thread schedulers in BPF and dynamically loading them. This repository contains various scheduler implementations and support utilities.
 
 %prep
-%autosetup -n scx-%{version} -p1
+%autosetup -n scx-%{version}
 sed -i 's/^lto = "thin"/lto = false/' Cargo.toml
 mkdir vendor
 tar -xvf %{SOURCE10} -C vendor/
@@ -315,6 +315,12 @@ tar -xvf %{SOURCE39} -C vendor/
 tar -xvf %{SOURCE40} -C vendor/
 tar -xvf %{SOURCE41} -C vendor/
 tar -xvf %{SOURCE42} -C vendor/
+tar -xvf %{SOURCE43} -C vendor/
+# ktstr is only used by the gated scheduler smoke tests.
+sed -i \
+    -e '/^ktstr = /d' \
+    -e 's/^ktstr-tests = .*/ktstr-tests = []/' \
+    scheds/experimental/scx_nitosis/Cargo.toml
 sed -i \
     -e '/^\[build-dependencies.protoc-bin-vendored\]/,/^$/d' \
     vendor/perfetto_protos-%{rust_perfetto_protos_ver}/Cargo.toml
@@ -358,6 +364,7 @@ combinations = { path = "vendor/combinations-%{rust_combinations_ver}" }
 convert_case = { path = "vendor/convert_case-%{rust_convert_case_ver}" }
 gpoint = { path = "vendor/gpoint-%{rust_gpoint_ver}" }
 httpdate = { path = "vendor/httpdate-%{rust_httpdate_ver}" }
+libarena-rs = { path = "vendor/libarena-rs-%{rust_libarena_rs_ver}" }
 libbpf-cargo = { path = "vendor/libbpf-cargo-%{rust_libbpf_cargo_ver}" }
 libbpf-rs = { path = "vendor/libbpf-rs-%{rust_libbpf_rs_ver}" }
 libbpf-sys = { path = "vendor/libbpf-sys-%{rust_libbpf_sys_ver}" }
@@ -379,7 +386,7 @@ wrapcenum-derive = { path = "vendor/wrapcenum-derive-%{rust_wrapcenum_derive_ver
 EOF
 
 %build
-%cargo_build -a -- --frozen --workspace --exclude scx_rlfifo --exclude scx_mitosis --exclude xtask --exclude scx_characterize --exclude vmlinux_docify --exclude scx_arena_selftests --exclude scx_forge_agent
+%cargo_build -a -- --frozen --workspace --exclude scx_rlfifo --exclude scx_mitosis --exclude xtask --exclude scx_characterize --exclude vmlinux_docify --exclude scx_arena_selftests --exclude scx_arena_libarena_selftests --exclude scx_forge_agent
 
 %install
 

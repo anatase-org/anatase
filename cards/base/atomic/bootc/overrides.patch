@@ -8,10 +8,10 @@ Subject: rename back to --json-fd
  1 file changed, 6 insertions(+), 3 deletions(-)
 
 diff --git a/crates/lib/src/cli.rs b/crates/lib/src/cli.rs
-index 23570314..ffaf7da5 100644
+index ed784c4e..fbcfea2e 100644
 --- a/crates/lib/src/cli.rs
 +++ b/crates/lib/src/cli.rs
-@@ -67,16 +67,19 @@ pub(crate) struct ProgressOptions {
+@@ -75,16 +75,19 @@ pub(crate) struct ProgressOptions {
      /// File descriptor number which must refer to an open pipe.
      ///
      /// Progress is written as JSON lines to this file descriptor.
@@ -40,47 +40,51 @@ From: Antheas Kapenekakis <git@antheas.dev>
 Date: Wed, 17 Jun 2026 14:24:03 +0200
 Subject: bootc compiles three times for specs, make it compile once
 
+Assisted-by: AI
 ---
- Makefile                | 28 +++++++++++++++++++++-------
- crates/cli/Cargo.toml   |  3 +++
- crates/xtask/src/man.rs | 11 +++++++++++
- 3 files changed, 35 insertions(+), 7 deletions(-)
+ Makefile                     | 24 +++++++++++++++++++-----
+ contrib/packaging/bootc.spec |  7 ++-----
+ crates/cli/Cargo.toml        |  5 +++--
+ crates/xtask/src/man.rs      | 11 +++++++++++
+ 4 files changed, 35 insertions(+), 12 deletions(-)
 
 diff --git a/Makefile b/Makefile
-index ff96de69..93673eae 100644
+index 5c924f3a..8b8f4c23 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -32,28 +32,42 @@ prefix ?= /usr
- CARGO_FEATURES_DEFAULT ?= $(shell . /usr/lib/os-release; if echo "$$ID_LIKE" |grep -qF rhel; then echo rhsm; fi)
- # You can set this to override all cargo features, including the defaults
- CARGO_FEATURES ?= $(CARGO_FEATURES_DEFAULT)
+@@ -55,6 +55,10 @@ CARGO_OPTIONS ?= --features "$(CARGO_FEATURES)"
+ # This doesn't affect $(prefix)/share/doc/bootc/baseimage, which holds base
+ # image configuration rather than documentation.
+ DISABLE_DOCS ?=
 +BOOTC_PROFILE ?= $(if $(wildcard target/rpm/bootc),rpm,release)
 +BOOTC_TARGET_DIR = target/$(BOOTC_PROFILE)
++# RPM builds are already compiled; release-profile packaging can opt in too.
++BOOTC_PREBUILT ?= $(if $(filter rpm,$(BOOTC_PROFILE)),1,)
  
  # Build all binaries
  .PHONY: bin
+@@ -64,25 +68,35 @@ ifneq ($(DISABLE_DOCS),1)
  bin: manpages
--	cargo build --release --features "$(CARGO_FEATURES)" --bins
-+	if [ ! -x "$(BOOTC_TARGET_DIR)/bootc" ]; then \
-+		cargo build --release --features "$(CARGO_FEATURES)" --bins; \
-+	fi
+ endif
+ bin:
+-	cargo build --release $(CARGO_OPTIONS) --bins
++ifneq ($(BOOTC_PREBUILT),1)
++	cargo build --profile $(BOOTC_PROFILE) $(CARGO_OPTIONS) --bins
++endif
  
--# Note this cargo build is run without features (such as rhsm)
+ # The docgen feature this adds implies install-to-disk, so the man pages
+ # document the full CLI regardless of CARGO_OPTIONS.
  .PHONY: manpages
  manpages:
--	cargo run --release --package xtask -- manpages
-+	if [ -x "$(BOOTC_TARGET_DIR)/bootc" ]; then \
-+		rm -rf target/man; \
-+		if [ -x "$(BOOTC_TARGET_DIR)/xtask" ]; then \
-+			BOOTC_DOCGEN_BIN="$(BOOTC_TARGET_DIR)/bootc" "$(BOOTC_TARGET_DIR)/xtask" manpages; \
-+		else \
-+			BOOTC_DOCGEN_BIN="$(BOOTC_TARGET_DIR)/bootc" cargo run --release --package xtask -- manpages; \
-+		fi; \
++ifeq ($(BOOTC_PREBUILT),1)
++	if [ -x "$(BOOTC_TARGET_DIR)/xtask" ]; then \
++		BOOTC_DOCGEN_BIN="$(BOOTC_TARGET_DIR)/bootc" "$(BOOTC_TARGET_DIR)/xtask" manpages; \
 +	else \
-+		mkdir -p target/man; \
-+		printf '.TH BOOTC 8\n.SH NAME\nbootc \\- bootable container system\n' > target/man/bootc.8; \
-+		printf '.TH BOOTC-SETUP-ROOT-CONF 5\n.SH NAME\nbootc-setup-root.conf \\- bootc setup-root configuration\n' > target/man/bootc-setup-root-conf.5; \
++		BOOTC_DOCGEN_BIN="$(BOOTC_TARGET_DIR)/bootc" cargo run --release --package xtask -- manpages; \
 +	fi
++else
+ 	cargo run --release --package xtask -- manpages -- $(CARGO_OPTIONS)
++endif
  
  .PHONY: completion
  completion: bin
@@ -99,7 +103,7 @@ index ff96de69..93673eae 100644
  	install -d -m 0755 $(DESTDIR)$(prefix)/lib/bootc/bound-images.d
  	install -d -m 0755 $(DESTDIR)$(prefix)/lib/bootc/kargs.d
  	ln -s "$(STORAGE_RELATIVE_PATH)" "$(DESTDIR)$(prefix)/lib/bootc/storage"
-@@ -83,7 +97,7 @@ install: completion
+@@ -115,7 +129,7 @@ endif
  	install -D -m 0755 -t $(DESTDIR)/$(prefix)/lib/bootc contrib/scripts/fedora-bootc-destructive-cleanup; \
  	fi
  	install -D -m 0644 -t $(DESTDIR)/usr/lib/systemd/system crates/initramfs/*.service
@@ -108,27 +112,55 @@ index ff96de69..93673eae 100644
  	install -D -m 0755 -t $(DESTDIR)/usr/lib/dracut/modules.d/51bootc crates/initramfs/dracut/module-setup.sh
  
  # Run this to also take over the functionality of `ostree container` for example.
+diff --git a/contrib/packaging/bootc.spec b/contrib/packaging/bootc.spec
+index 164dd6ee..7c29f0a9 100644
+--- a/contrib/packaging/bootc.spec
++++ b/contrib/packaging/bootc.spec
+@@ -137,9 +137,6 @@ cd %{name}-%{version}-build
+ 
+ %build
+ export SYSTEM_REINSTALL_BOOTC_INSTALL_PODMAN_PATH=%{system_reinstall_bootc_install_podman_path}
+-# Build this first to avoid feature skew
+-make manpages
+-
+ # Build all binaries
+ %if 0%{?container_build}
+ # Container build: use cargo directly with cached dependencies to avoid RPM macro overhead
+@@ -165,8 +162,8 @@ sed -i -e '/https:\/\//d' cargo-vendor.txt
+ %endif
+ 
+ %install
+-# Pass CARGO_FEATURES explicitly to prevent auto-detection rebuild in install environment
+-%make_install INSTALL="install -p -c" CARGO_FEATURES="%{?with_rhsm:rhsm} %{?with_rhel9:rhel9}"
++# Reuse the binaries from %build for man pages, completions, and installation.
++%make_install INSTALL="install -p -c" BOOTC_PREBUILT=1 CARGO_FEATURES="%{?with_rhsm:rhsm} %{?with_rhel9:rhel9}"
+ %if %{with ostree_ext}
+ make install-ostree-hooks DESTDIR=%{?buildroot}
+ %endif
 diff --git a/crates/cli/Cargo.toml b/crates/cli/Cargo.toml
-index be2ea5b4..ef0174e5 100644
+index fcc7315c..7ea29be1 100644
 --- a/crates/cli/Cargo.toml
 +++ b/crates/cli/Cargo.toml
-@@ -25,5 +25,8 @@ log = { workspace = true }
- tokio = { workspace = true, features = ["macros"] }
- tracing = { workspace = true }
+@@ -27,8 +27,9 @@ tracing = { workspace = true }
  
-+[features]
-+default = ["bootc-lib/docgen"]
-+
- [lints]
- workspace = true
+ [features]
+ # Forward bootc-lib's defaults (it's a dependency without default features), so
+-# that `--no-default-features` works for the binary too.
+-default = ["bootc-lib/default"]
++# that `--no-default-features` works for the binary too. Include docgen so RPM
++# builds can generate man pages from the production binary without recompiling.
++default = ["bootc-lib/default", "bootc-lib/docgen"]
+ install-to-disk = ["bootc-lib/install-to-disk"]
+ selinux = ["bootc-lib/selinux"]
+ 
 diff --git a/crates/xtask/src/man.rs b/crates/xtask/src/man.rs
-index b41565c4..1e1ceb93 100644
+index 173ef469..b74b2527 100644
 --- a/crates/xtask/src/man.rs
 +++ b/crates/xtask/src/man.rs
-@@ -55,6 +55,17 @@ pub struct CliPositional {
- /// Extract CLI structure by running the JSON dump command
+@@ -452,6 +452,17 @@ pub struct CliPositional {
+ /// same features as the binaries being built.
  #[context("Extracting CLI")]
- pub fn extract_cli_json(sh: &Shell) -> Result<CliCommand> {
+ pub fn extract_cli_json(sh: &Shell, cargo_options: &[String]) -> Result<CliCommand> {
 +    if let Ok(bootc_bin) = std::env::var("BOOTC_DOCGEN_BIN") {
 +        let json_output = cmd!(sh, "{bootc_bin} internals dump-cli-json")
 +            .read()
@@ -152,11 +184,11 @@ Subject: add parallel writer
 ---
  crates/ostree-ext/src/cli.rs                  |  91 ++++-
  .../ostree-ext/src/container/encapsulate.rs   | 364 ++++++++++++++++--
- crates/ostree-ext/tests/it/main.rs            |  14 +-
- 3 files changed, 425 insertions(+), 44 deletions(-)
+ crates/ostree-ext/tests/it/main.rs            |  15 +-
+ 3 files changed, 425 insertions(+), 45 deletions(-)
 
 diff --git a/crates/ostree-ext/src/cli.rs b/crates/ostree-ext/src/cli.rs
-index 38a1c798..ddf17123 100644
+index 778ea331..148f467b 100644
 --- a/crates/ostree-ext/src/cli.rs
 +++ b/crates/ostree-ext/src/cli.rs
 @@ -21,16 +21,17 @@ use std::collections::BTreeMap;
@@ -194,7 +226,7 @@ index 38a1c798..ddf17123 100644
          /// Path to a JSON-formatted content meta object.
          #[clap(long)]
          contentmeta: Option<Utf8PathBuf>,
-@@ -575,6 +584,50 @@ impl Into<ostree_container::store::ImageProxyConfig> for ContainerProxyOpts {
+@@ -576,6 +585,50 @@ impl Into<ostree_container::store::ImageProxyConfig> for ContainerProxyOpts {
      }
  }
  
@@ -245,7 +277,7 @@ index 38a1c798..ddf17123 100644
  /// Import a tar archive containing an ostree commit.
  async fn tar_import(opts: &ImportOpts) -> Result<()> {
      let repo = parse_repo(&opts.repo)?;
-@@ -769,6 +822,8 @@ async fn container_export(
+@@ -770,6 +823,8 @@ async fn container_export(
      container_config: Option<Utf8PathBuf>,
      cmd: Option<Vec<String>>,
      compression_fast: bool,
@@ -254,7 +286,7 @@ index 38a1c798..ddf17123 100644
      package_contentmeta: Option<Utf8PathBuf>,
  ) -> Result<()> {
      let container_config = if let Some(container_config) = container_config {
-@@ -839,6 +894,16 @@ async fn container_export(
+@@ -840,6 +895,16 @@ async fn container_export(
          cmd,
      };
  
@@ -271,7 +303,7 @@ index 38a1c798..ddf17123 100644
      let opts = crate::container::ExportOpts {
          copy_meta_keys,
          copy_meta_opt_keys,
-@@ -848,13 +913,29 @@ async fn container_export(
+@@ -849,13 +914,29 @@ async fn container_export(
          package_contentmeta: contentmeta_data.as_ref(),
          max_layers,
          created,
@@ -302,7 +334,7 @@ index 38a1c798..ddf17123 100644
  /// Load metadata for a container image with an encapsulated ostree commit.
  async fn container_info(imgref: &OstreeImageReference) -> Result<()> {
      let (_, digest) = crate::container::fetch_manifest(imgref).await?;
-@@ -1071,6 +1152,8 @@ async fn run_from_opt(opt: Opt) -> Result<()> {
+@@ -1072,6 +1153,8 @@ async fn run_from_opt(opt: Opt) -> Result<()> {
                  config,
                  cmd,
                  compression_fast,
@@ -311,7 +343,7 @@ index 38a1c798..ddf17123 100644
                  contentmeta,
              } => {
                  let labels: Result<BTreeMap<_, _>> = labels
-@@ -1094,6 +1177,8 @@ async fn run_from_opt(opt: Opt) -> Result<()> {
+@@ -1095,6 +1178,8 @@ async fn run_from_opt(opt: Opt) -> Result<()> {
                      config,
                      cmd,
                      compression_fast,
@@ -761,20 +793,21 @@ index c012797a..425b63b0 100644
  
  impl ExportOpts<'_, '_> {
 diff --git a/crates/ostree-ext/tests/it/main.rs b/crates/ostree-ext/tests/it/main.rs
-index e43aab02..fa536d12 100644
+index 8f973d3c..56419ab8 100644
 --- a/crates/ostree-ext/tests/it/main.rs
 +++ b/crates/ostree-ext/tests/it/main.rs
-@@ -14,7 +14,8 @@ use ocidir::oci_spec::distribution::Reference;
+@@ -15,8 +15,8 @@ use ocidir::oci_spec::distribution::Reference;
  use ocidir::oci_spec::image::{Arch, DigestAlgorithm};
  use ostree_ext::chunking::ObjectMetaSized;
  use ostree_ext::container::{
--    Config, ExportOpts, ImageReference, OstreeImageReference, SignatureSource, Transport,
-+    Config, ExportOpts, ExportProgress, ImageReference, OstreeImageReference, SignatureSource,
-+    Transport,
+-    Config, ExportOpts, FetchedLayer, ImageReference, LayerSource, OstreeImageReference,
+-    SignatureSource, Transport,
++    Config, ExportOpts, ExportProgress, FetchedLayer, ImageReference, LayerSource,
++    OstreeImageReference, SignatureSource, Transport,
  };
  use ostree_ext::container::{ManifestDiff, OSTREE_COMMIT_LABEL, store};
  use ostree_ext::prelude::{Cast, FileExt};
-@@ -533,6 +534,9 @@ async fn impl_test_container_import_export(chunked: bool) -> Result<()> {
+@@ -535,6 +535,9 @@ async fn impl_test_container_import_export(chunked: bool) -> Result<()> {
      opts.max_layers = std::num::NonZeroU32::new(PKGS_V0_LEN as u32);
      opts.package_contentmeta = contentmeta.as_ref();
      opts.container_config = Some(container_config);
@@ -784,7 +817,7 @@ index e43aab02..fa536d12 100644
      let digest = ostree_ext::container::encapsulate(
          fixture.srcrepo(),
          fixture.testref(),
-@@ -542,6 +546,7 @@ async fn impl_test_container_import_export(chunked: bool) -> Result<()> {
+@@ -544,6 +547,7 @@ async fn impl_test_container_import_export(chunked: bool) -> Result<()> {
      )
      .await
      .context("exporting")?;
@@ -792,7 +825,7 @@ index e43aab02..fa536d12 100644
      assert!(srcoci_path.exists());
  
      let inspect = skopeo_inspect(&srcoci_imgref.to_string())?;
-@@ -576,6 +581,13 @@ async fn impl_test_container_import_export(chunked: bool) -> Result<()> {
+@@ -578,6 +582,13 @@ async fn impl_test_container_import_export(chunked: bool) -> Result<()> {
      let n_chunks = if chunked { LAYERS_V0_LEN } else { 1 };
      assert_eq!(cfg.rootfs().diff_ids().len(), n_chunks);
      assert_eq!(cfg.history().as_ref().unwrap().len(), n_chunks);
@@ -812,15 +845,17 @@ From: Antheas Kapenekakis <git@antheas.dev>
 Date: Fri, 19 Jun 2026 14:34:28 +0200
 Subject: Drop reserved package layer
 
+Assisted-by: AI
 ---
- crates/ostree-ext/src/chunking.rs | 8 +-------
- 1 file changed, 1 insertion(+), 7 deletions(-)
+ crates/ostree-ext/src/chunking.rs | 19 +++++--------------
+ crates/ostree-ext/src/fixture.rs  |  4 ++--
+ 2 files changed, 7 insertions(+), 16 deletions(-)
 
 diff --git a/crates/ostree-ext/src/chunking.rs b/crates/ostree-ext/src/chunking.rs
-index ee0350b4..a1bc141e 100644
+index 35b51824..2a427366 100644
 --- a/crates/ostree-ext/src/chunking.rs
 +++ b/crates/ostree-ext/src/chunking.rs
-@@ -748,11 +748,7 @@ fn basic_packing<'a>(
+@@ -770,11 +770,7 @@ fn basic_packing<'a>(
      // If there are fewer packages/components than there are bins, then we don't need to do
      // any "bin packing" at all; just assign a single component to each and we're done.
      if before_processing_pkgs_len < bin_size.get() as usize {
@@ -833,7 +868,7 @@ index ee0350b4..a1bc141e 100644
          return Ok(r);
      }
  
-@@ -855,8 +851,6 @@ fn basic_packing<'a>(
+@@ -877,8 +873,6 @@ fn basic_packing<'a>(
          r.push(max_freq_components);
      }
  
@@ -842,6 +877,60 @@ index ee0350b4..a1bc141e 100644
      let after_processing_pkgs_len = r.iter().map(|b| b.len()).sum::<usize>();
      assert_eq!(after_processing_pkgs_len, before_processing_pkgs_len);
      assert!(r.len() <= bin_size.get() as usize);
+@@ -914,8 +908,8 @@ mod test {
+         let packing =
+             basic_packing(&contentmeta, NonZeroU32::new(MAX_CHUNKS).unwrap(), None).unwrap();
+         assert!(!contentmeta.is_empty());
+-        // We should fit into the assigned chunk size
+-        assert_eq!(packing.len() as u32, MAX_CHUNKS);
++        // The reserved empty layer is omitted from the assigned chunk budget.
++        assert_eq!(packing.len() as u32, MAX_CHUNKS - 1);
+         // And verify that the sizes match
+         let packed_total_size = packing_size(&packing);
+         assert_eq!(total_size, packed_total_size);
+@@ -1022,7 +1016,6 @@ mod test {
+             vec!["pkg6.0", "pkg7.0", "pkg11.0"],
+             vec!["pkg9.0", "pkg8.0", "pkg10.0"],
+             vec!["pkg1.0", "pkg2.0"],
+-            vec![],
+         ];
+         assert_eq!(structure, v0_expected_structure);
+ 
+@@ -1061,8 +1054,7 @@ mod test {
+             vec!["pkg4.0"],
+             vec!["pkg6.0", "pkg11.0"],
+             vec!["pkg9.0", "pkg8.0", "pkg10.0"],
+-            vec!["pkg1.1", "pkg2.0"],
+-            vec!["pkg5.0"],
++            vec!["pkg1.1", "pkg2.0", "pkg5.0"],
+         ];
+ 
+         assert_eq!(structure_derived, v1_expected_structure);
+@@ -1100,8 +1092,7 @@ mod test {
+             vec!["pkg4.0"],
+             vec!["pkg6.0", "pkg11.0"],
+             vec!["pkg9.0", "pkg8.0", "pkg10.0"],
+-            vec!["pkg1.1", "pkg2.0"],
+-            vec!["pkg5.1", "pkg12.0"],
++            vec!["pkg1.1", "pkg2.0", "pkg5.1", "pkg12.0"],
+         ];
+ 
+         assert_eq!(structure_derived, v2_expected_structure);
+diff --git a/crates/ostree-ext/src/fixture.rs b/crates/ostree-ext/src/fixture.rs
+index 7b8e024f..16589c1f 100644
+--- a/crates/ostree-ext/src/fixture.rs
++++ b/crates/ostree-ext/src/fixture.rs
+@@ -233,8 +233,8 @@ d tmp
+ "## };
+ pub const CONTENTS_CHECKSUM_V0: &str =
+     "bd3d13c3059e63e6f8a3d6d046923ded730d90bd7a055c9ad93312111ea7d395";
+-// 1 for ostree commit, 2 for max frequency packages, 3 as empty layer
+-pub const LAYERS_V0_LEN: usize = 3usize;
++// 1 for ostree commit, 2 for max frequency packages
++pub const LAYERS_V0_LEN: usize = 2usize;
+ pub const PKGS_V0_LEN: usize = 7usize;
+ 
+ #[derive(Debug, PartialEq, Eq)]
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
@@ -853,10 +942,10 @@ Subject: Preserve image version in merge commits
  1 file changed, 7 insertions(+)
 
 diff --git a/crates/ostree-ext/src/container/store.rs b/crates/ostree-ext/src/container/store.rs
-index 449d3db2..0634de9c 100644
+index 9316d854..f7aaf8f6 100644
 --- a/crates/ostree-ext/src/container/store.rs
 +++ b/crates/ostree-ext/src/container/store.rs
-@@ -61,6 +61,7 @@
+@@ -70,6 +70,7 @@
  //! - `ostree.manifest-digest`: The canonical manifest digest (e.g., `sha256:...`)
  //! - `ostree.manifest`: Complete OCI manifest as canonical JSON
  //! - `ostree.container.image-config`: OCI image configuration as canonical JSON
@@ -864,7 +953,7 @@ index 449d3db2..0634de9c 100644
  //!
  //! This metadata enables:
  //! - Detecting when updates are available
-@@ -178,6 +179,8 @@ pub(crate) const META_MANIFEST_DIGEST: &str = "ostree.manifest-digest";
+@@ -187,6 +188,8 @@ pub(crate) const META_MANIFEST_DIGEST: &str = "ostree.manifest-digest";
  const META_MANIFEST: &str = "ostree.manifest";
  /// The key injected into the merge commit with the image configuration serialized as JSON.
  const META_CONFIG: &str = "ostree.container.image-config";
@@ -873,7 +962,7 @@ index 449d3db2..0634de9c 100644
  /// The type used to store content filtering information.
  pub type MetaFilteredData = HashMap<String, HashMap<String, u32>>;
  
-@@ -1462,6 +1465,7 @@ impl ImageImporter {
+@@ -1594,6 +1597,7 @@ impl ImageImporter {
              .ostree_commit_layer
              .as_ref()
              .map(|c| c.commit.clone().unwrap());
@@ -881,7 +970,7 @@ index 449d3db2..0634de9c 100644
  
          let root_is_transient = if let Some(base) = base_commit.as_ref() {
              let rootf = self.repo.read_commit(&base, gio::Cancellable::NONE)?.0;
-@@ -1578,6 +1582,9 @@ impl ImageImporter {
+@@ -1703,6 +1707,9 @@ impl ImageImporter {
              META_CONFIG,
              import.config.to_canon_json_string()?.to_variant(),
          );
@@ -902,10 +991,10 @@ Subject: Optimize pure OSTree image imports
  1 file changed, 38 insertions(+)
 
 diff --git a/crates/ostree-ext/src/container/store.rs b/crates/ostree-ext/src/container/store.rs
-index 0634de9c..041ccf8a 100644
+index f7aaf8f6..55d0a53a 100644
 --- a/crates/ostree-ext/src/container/store.rs
 +++ b/crates/ostree-ext/src/container/store.rs
-@@ -1223,6 +1223,44 @@ impl ImageImporter {
+@@ -1357,6 +1357,44 @@ impl ImageImporter {
  
          let txn = repo.auto_transaction(cancellable)?;
  
