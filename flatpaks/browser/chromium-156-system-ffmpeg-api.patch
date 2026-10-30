@@ -1,0 +1,36 @@
+
+FTBFS Workaround with system ffmpeg due to newer API
+
+diff -up chromium-156.0.8078.47/media/filters/ffmpeg_demuxer.cc.me chromium-156.0.8078.47/media/filters/ffmpeg_demuxer.cc
+--- chromium-156.0.8078.47/media/filters/ffmpeg_demuxer.cc.me	2026-10-21 16:43:53.188590497 +0200
++++ chromium-156.0.8078.47/media/filters/ffmpeg_demuxer.cc	2026-10-21 17:48:59.810845527 +0200
+@@ -1307,6 +1307,7 @@ FFmpegDemuxer::MetadataTrackMap FFmpegDe
+ 
+   for (const AVStreamGroup* stream_group :
+        AVFormatContextStreamGroupsToSpan(format_context)) {
++#if defined(AV_STREAM_GROUP_PARAMS_TREF) && defined(AV_CODEC_ID_ITUT_T35)
+     if (stream_group->type != AV_STREAM_GROUP_PARAMS_TREF) {
+       continue;
+     }
+@@ -1332,6 +1333,7 @@ FFmpegDemuxer::MetadataTrackMap FFmpegDe
+       }
+       entry.render_stream_indices.insert(stream->index);
+     }
++#endif
+   }
+   return result;
+ }
+@@ -1450,11 +1452,13 @@ void FFmpegDemuxer::OnFindStreamInfoDone
+     } else if (codec_type == AVMEDIA_TYPE_SUBTITLE) {
+       stream->discard = AVDISCARD_ALL;
+       continue;
++#if defined(AV_CODEC_ID_ITUT_T35)
+     } else if (codec_id == AV_CODEC_ID_ITUT_T35) {
+       if (!metadata_tracks_.contains(stream->index)) {
+         stream->discard = AVDISCARD_ALL;
+       }
+       continue;
++#endif
+     } else {
+       stream->discard = AVDISCARD_ALL;
+       continue;

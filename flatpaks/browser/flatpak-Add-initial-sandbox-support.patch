@@ -1,4 +1,4 @@
-From c82dcae326090d3b7e31694a7e229f536ead56b7 Mon Sep 17 00:00:00 2001
+From 59f9b26497d26e6db223a5cf5780df4c2cdf5277 Mon Sep 17 00:00:00 2001
 From: Ryan Gonzalez <rymg19@gmail.com>
 Date: Tue, 17 Mar 2020 13:18:27 -0500
 Subject: [PATCH] flatpak: Add initial sandbox support
@@ -30,11 +30,11 @@ Subject: [PATCH] flatpak: Add initial sandbox support
  create mode 100644 sandbox/linux/services/flatpak_sandbox.h
 
 diff --git a/.gitignore b/.gitignore
-index 22985d0edf211..62631942103f0 100644
+index 63b0d36754709..d6f51feb7ff9a 100644
 --- a/.gitignore
 +++ b/.gitignore
 @@ -79,6 +79,7 @@ vs-chromium-project.txt
- /.android_emulator/
+ /.android_emulator_cipd_cache/
  /.clangd/
  /.clangd-index/
 +/.flatpak-builder/
@@ -42,10 +42,10 @@ index 22985d0edf211..62631942103f0 100644
  /.externalToolBuilders/
  /.settings/
 diff --git a/base/threading/thread_restrictions.h b/base/threading/thread_restrictions.h
-index 7739b7379ba67..01d99a3ac5772 100644
+index db88f6ab7629f..cc2636006f154 100644
 --- a/base/threading/thread_restrictions.h
 +++ b/base/threading/thread_restrictions.h
-@@ -410,6 +410,9 @@ class ScopedAllowThreadJoinForWebRtcTransport;
+@@ -425,6 +425,9 @@ class ScopedAllowThreadJoinForWebRtcTransport;
  namespace rlz_lib {
  class FinancialPing;
  }
@@ -55,7 +55,7 @@ index 7739b7379ba67..01d99a3ac5772 100644
  namespace service_manager {
  class ServiceProcessLauncher;
  }
-@@ -641,6 +644,7 @@ class BASE_EXPORT ScopedAllowBlocking {
+@@ -662,6 +665,7 @@ class BASE_EXPORT ScopedAllowBlocking {
    friend class remoting::
        ScopedBypassIOThreadRestrictions;  // http://crbug.com/1144161
    friend class remoting::ScopedAllowBlockingForCrashReporting;
@@ -63,7 +63,7 @@ index 7739b7379ba67..01d99a3ac5772 100644
    friend class ui::DrmDisplayHostManager;
    friend class ui::ScopedAllowBlockingForGbmSurface;
    friend class ui::SelectFileDialogLinux;
-@@ -780,6 +784,7 @@ class BASE_EXPORT ScopedAllowBaseSyncPrimitives {
+@@ -809,6 +813,7 @@ class BASE_EXPORT ScopedAllowBaseSyncPrimitives {
    friend class rlz_lib::FinancialPing;
    friend class shell_integration_linux::
        LaunchXdgUtilityScopedAllowBaseSyncPrimitives;
@@ -72,10 +72,10 @@ index 7739b7379ba67..01d99a3ac5772 100644
    friend class syncer::HttpBridge;
    friend class syncer::GetLocalChangesRequest;
 diff --git a/chrome/browser/resources/sandbox_internals/sandbox_internals.ts b/chrome/browser/resources/sandbox_internals/sandbox_internals.ts
-index 1d2c06f540674..9946482709bbf 100644
+index 9273695331dc2..6606dbcad0243 100644
 --- a/chrome/browser/resources/sandbox_internals/sandbox_internals.ts
 +++ b/chrome/browser/resources/sandbox_internals/sandbox_internals.ts
-@@ -140,6 +140,7 @@ function addGoodBadRow(name: string, result: boolean): HTMLElement {
+@@ -142,6 +142,7 @@ function addGoodBadRow(name: string, result: boolean): HTMLElement {
  function linuxHandler() {
    const suidSandbox = loadTimeData.getBoolean('suid');
    const nsSandbox = loadTimeData.getBoolean('userNs');
@@ -83,7 +83,7 @@ index 1d2c06f540674..9946482709bbf 100644
  
    let layer1SandboxType = 'None';
    let layer1SandboxCssClass = StatusClass.BAD;
-@@ -149,6 +150,9 @@ function linuxHandler() {
+@@ -151,6 +152,9 @@ function linuxHandler() {
    } else if (nsSandbox) {
      layer1SandboxType = 'Namespace';
      layer1SandboxCssClass = StatusClass.GOOD;
@@ -246,10 +246,10 @@ diff --git a/content/browser/zygote_host/zygote_host_impl_linux.cc b/content/bro
      if (!base::AdjustOOMScore(pid, score))
        PLOG(ERROR) << "Failed to adjust OOM score of renderer with pid " << pid;
 diff --git a/content/browser/zygote_host/zygote_host_impl_linux.h b/content/browser/zygote_host/zygote_host_impl_linux.h
-index 8ef884a7db6f4..f441900dd6343 100644
+index 56faa9c7af384..927cfc692c3cd 100644
 --- a/content/browser/zygote_host/zygote_host_impl_linux.h
 +++ b/content/browser/zygote_host/zygote_host_impl_linux.h
-@@ -69,6 +69,7 @@ class CONTENT_EXPORT ZygoteHostImpl : public ZygoteHost {
+@@ -79,6 +79,7 @@ class CONTENT_EXPORT ZygoteHostImpl : public ZygoteHost {
    bool use_namespace_sandbox_;
    bool use_suid_sandbox_;
    bool use_suid_sandbox_for_adj_oom_score_;
@@ -258,10 +258,10 @@ index 8ef884a7db6f4..f441900dd6343 100644
  
    // This lock protects the |zygote_pids_| set.
 diff --git a/content/zygote/zygote_linux.cc b/content/zygote/zygote_linux.cc
-index c90abfaf2e346..5b9cb3e1bd313 100644
+index da555a1907755..495559675b911 100644
 --- a/content/zygote/zygote_linux.cc
 +++ b/content/zygote/zygote_linux.cc
-@@ -122,7 +122,7 @@ bool Zygote::ProcessRequests() {
+@@ -120,7 +120,7 @@ bool Zygote::ProcessRequests() {
    PCHECK(sigaddset(&sigset, SIGCHLD) == 0);
    PCHECK(sigprocmask(SIG_BLOCK, &sigset, &orig_sigmask) == 0);
  
@@ -270,7 +270,7 @@ index c90abfaf2e346..5b9cb3e1bd313 100644
      // Let the ZygoteHost know we are ready to go.
      // The receiving code is in
      // content/browser/zygote_host/zygote_host_impl_linux.cc.
-@@ -227,6 +227,10 @@ bool Zygote::UsingNSSandbox() const {
+@@ -225,6 +225,10 @@ bool Zygote::UsingNSSandbox() const {
    return sandbox_flags_ & sandbox::policy::SandboxLinux::kUserNS;
  }
  
@@ -295,10 +295,10 @@ index 165b758efc899..961afa73f66f5 100644
    // ---------------------------------------------------------------------------
    // Requests from the browser...
 diff --git a/content/zygote/zygote_main_linux.cc b/content/zygote/zygote_main_linux.cc
-index c7ee91878e6dd..9c2c7a04bd968 100644
+index 7565fb0641dc4..d99a94618b72d 100644
 --- a/content/zygote/zygote_main_linux.cc
 +++ b/content/zygote/zygote_main_linux.cc
-@@ -35,6 +35,7 @@
+@@ -36,6 +36,7 @@
  #include "content/public/common/zygote/zygote_fork_delegate_linux.h"
  #include "content/zygote/zygote_linux.h"
  #include "sandbox/linux/services/credentials.h"
@@ -306,7 +306,7 @@ index c7ee91878e6dd..9c2c7a04bd968 100644
  #include "sandbox/linux/services/init_process_reaper.h"
  #include "sandbox/linux/services/libc_interceptor.h"
  #include "sandbox/linux/services/namespace_sandbox.h"
-@@ -135,6 +136,7 @@ static void EnterNamespaceSandbox(sandbox::policy::SandboxLinux* linux_sandbox,
+@@ -136,6 +137,7 @@ static void EnterNamespaceSandbox(sandbox::policy::SandboxLinux* linux_sandbox,
  
  static void EnterLayerOneSandbox(sandbox::policy::SandboxLinux* linux_sandbox,
                                   const bool using_layer1_sandbox,
@@ -314,7 +314,7 @@ index c7ee91878e6dd..9c2c7a04bd968 100644
                                   base::OnceClosure post_fork_parent_callback) {
    DCHECK(linux_sandbox);
  
-@@ -154,7 +156,8 @@ static void EnterLayerOneSandbox(sandbox::policy::SandboxLinux* linux_sandbox,
+@@ -155,7 +157,8 @@ static void EnterLayerOneSandbox(sandbox::policy::SandboxLinux* linux_sandbox,
    } else if (sandbox::NamespaceSandbox::InNewUserNamespace()) {
      EnterNamespaceSandbox(linux_sandbox, std::move(post_fork_parent_callback));
    } else {
@@ -324,7 +324,7 @@ index c7ee91878e6dd..9c2c7a04bd968 100644
    }
  }
  
-@@ -178,8 +181,11 @@ bool ZygoteMain(
+@@ -179,8 +182,11 @@ bool ZygoteMain(
        linux_sandbox->setuid_sandbox_client()->IsSuidSandboxChild();
    const bool using_namespace_sandbox =
        sandbox::NamespaceSandbox::InNewUserNamespace();
@@ -337,7 +337,7 @@ index c7ee91878e6dd..9c2c7a04bd968 100644
  
    if (using_setuid_sandbox) {
      linux_sandbox->setuid_sandbox_client()->CloseDummyFile();
-@@ -206,7 +212,7 @@ bool ZygoteMain(
+@@ -207,7 +213,7 @@ bool ZygoteMain(
  
    // Turn on the first layer of the sandbox if the configuration warrants it.
    EnterLayerOneSandbox(
@@ -346,7 +346,7 @@ index c7ee91878e6dd..9c2c7a04bd968 100644
        base::BindOnce(CloseFds, linux_sandbox->GetFileDescriptorsToClose()));
  
    const int sandbox_flags = linux_sandbox->GetStatus();
-@@ -218,6 +224,10 @@ bool ZygoteMain(
+@@ -219,6 +225,10 @@ bool ZygoteMain(
        !!(sandbox_flags & sandbox::policy::SandboxLinux::kUserNS);
    CHECK_EQ(using_namespace_sandbox, namespace_sandbox_engaged);
  
@@ -358,7 +358,7 @@ index c7ee91878e6dd..9c2c7a04bd968 100644
                  base::GlobalDescriptors::Descriptor(
                      static_cast<uint32_t>(kSandboxIPCChannel), GetSandboxFD()));
 diff --git a/sandbox/linux/BUILD.gn b/sandbox/linux/BUILD.gn
-index 478194aaf43a8..c97710907565e 100644
+index 1fe96111cefaa..9b381d90e4e43 100644
 --- a/sandbox/linux/BUILD.gn
 +++ b/sandbox/linux/BUILD.gn
 @@ -303,6 +303,10 @@ if (is_linux || is_chromeos) {
@@ -1207,10 +1207,10 @@ index 0000000000000..167bbc85945ad
 +
 +#endif  // SANDBOX_LINUX_SERVICES_FLATPAK_SANDBOX_H_
 diff --git a/sandbox/policy/BUILD.gn b/sandbox/policy/BUILD.gn
-index 1a3c7c6cf8b15..4c1b121160df6 100644
+index 6abd7aea6d8ad..d0e81c5cd0ad5 100644
 --- a/sandbox/policy/BUILD.gn
 +++ b/sandbox/policy/BUILD.gn
-@@ -118,6 +118,9 @@ component("policy") {
+@@ -116,6 +116,9 @@ component("policy") {
        "//sandbox/linux:suid_sandbox_client",
      ]
    }
@@ -1221,10 +1221,10 @@ index 1a3c7c6cf8b15..4c1b121160df6 100644
      sources += [
        "linux/bpf_ime_policy_linux.cc",
 diff --git a/sandbox/policy/linux/sandbox_linux.cc b/sandbox/policy/linux/sandbox_linux.cc
-index 714cb2e115b84..e85a3fb68ee90 100644
+index 7e1dfcd1732a7..2e8f59fc8ae52 100644
 --- a/sandbox/policy/linux/sandbox_linux.cc
 +++ b/sandbox/policy/linux/sandbox_linux.cc
-@@ -35,6 +35,7 @@
+@@ -36,6 +36,7 @@
  #include "sandbox/constants.h"
  #include "sandbox/linux/seccomp-bpf-helpers/sigsys_handlers.h"
  #include "sandbox/linux/services/credentials.h"
@@ -1232,7 +1232,7 @@ index 714cb2e115b84..e85a3fb68ee90 100644
  #include "sandbox/linux/services/libc_interceptor.h"
  #include "sandbox/linux/services/namespace_sandbox.h"
  #include "sandbox/linux/services/proc_util.h"
-@@ -220,6 +221,9 @@ void SandboxLinux::PreinitializeSandbox() {
+@@ -221,6 +222,9 @@ void SandboxLinux::PreinitializeSandbox() {
    const int yama_status = Yama::GetStatus();
    yama_is_enforcing_ = (yama_status & Yama::STATUS_PRESENT) &&
                         (yama_status & Yama::STATUS_ENFORCING);
@@ -1242,7 +1242,7 @@ index 714cb2e115b84..e85a3fb68ee90 100644
    pre_initialized_ = true;
  }
  
-@@ -258,6 +262,10 @@ int SandboxLinux::GetStatus() {
+@@ -259,6 +263,10 @@ int SandboxLinux::GetStatus() {
          sandbox_status_flags_ |= kPIDNS;
        if (NamespaceSandbox::InNewNetNamespace())
          sandbox_status_flags_ |= kNetNS;
@@ -1317,5 +1317,5 @@ index 60484255e653b..797f3b9ad6cd8 100644
  }
  
 -- 
-2.51.2
+2.54.0
 

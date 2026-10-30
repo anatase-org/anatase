@@ -64,7 +64,7 @@
 %global system_esbuild 1
 %global esbuild_version 0.28.2
 %if 0%{?rhel}
-%global system_esbuild 0
+%global system_esbuild 1
 %endif
 
 # set nodejs_version
@@ -255,7 +255,7 @@
 %endif
 
 Name:	chromium
-Version: 155.0.8059.84
+Version: 156.0.8078.73
 Release: 1%{?dist}
 Summary: A WebKit (Blink) powered web browser that Google doesn't want you to use
 Url: http://www.chromium.org/Home
@@ -283,6 +283,9 @@ Patch24: glibc-2.42-baud-rate-fix.patch
 
 # fix FTBFS with old pipewire on fedora < 44 and epel
 Patch25: chromium-153-ftbfs-pipewire-api.patch
+
+# Disable Eula popup
+Patch26: chromium-disable-eula-popup.patch
 
 # disable enterprise_companion_integration_tests due to Unresolved dependencies
 Patch31: chromium-145-disable-enterprise_companion_integration_tests.patch
@@ -318,13 +321,13 @@ Patch311: chromium-123-fstack-protector-strong.patch
 # ERROR at //build/rust/crubit/BUILD.gn:12:5:
 # Unable to load third_party/rust-toolchain/lib/third_party/crubit/support/rs_std/BUILD.gn
 # "$crubit_src_dir/support/rs_std:rs_std_cpp",
-# Patch from https://github.com/ungoogled-software/ungoogled-chromium/pull/3966
-Patch312: chromium-154-ftbfs-crubit.patch
+# Patch from https://github.com/ungoogled-software/ungoogled-chromium/pull/4003
+Patch312: chromium-ftbfs-crubit.patch
 
 # Fix FTBFS:
 # ERROR Unresolved dependencies
-# Patch from https://github.com/ungoogled-software/ungoogled-chromium/pull/3966
-Patch313: chromium-154-ftbfs-private-verification-tokens.patch
+# Patch from https://github.com/ungoogled-software/ungoogled-chromium/pull/4003
+Patch313: chromium-ftbfs-private-verification-tokens.patch
 
 # error with old rustc
 Patch315: chromium-145-rustc-ftbfs.patch
@@ -593,7 +596,10 @@ BuildRequires: libevdev-devel
 # esbuild is needed
 %if %{system_esbuild}
 BuildRequires: golang-github-evanw-esbuild
+# Workaround, since the new esbuild is not yet included in f45
+%if 0%{?fedora}
 BuildRequires: nodejs-esbuild
+%endif
 %endif
 
 # There is a hardcoded check for nss 3.26 in the chromium code (crypto/nss_util.cc)
@@ -785,6 +791,7 @@ Qt6 UI for chromium.
 %patch -P24 -p1 -b .glibc-2.42-baud-rate-fix
 %endif
 %patch -P25 -p1 -b .ftbfs-pipewire-api
+%patch -P26 -p1 -b .disable-eula-popup
 %patch -P31 -p1 -b .disable-enterprise_companion_integration_tests
 
 %patch -P92 -p1 -b .nodejs-checkversion
@@ -955,7 +962,9 @@ ln -sfn ../../../../../node-%{nodejs_version}-linux-%{nodejs_arch}/bin/node thir
 mkdir -p third_party/devtools-frontend/src/third_party/esbuild
 %if %{system_esbuild}
 ln -sfn $(which esbuild) third_party/devtools-frontend/src/third_party/esbuild/esbuild
+%if 0%{?fedora}
 cp -a /usr/lib/node_modules/*esbuild* third_party/devtools-frontend/src/node_modules/
+%endif
 %else
 %ifarch x86_64
 tar xf %{SOURCE28} -C third_party/devtools-frontend/src/third_party/
@@ -1282,7 +1291,7 @@ pushd %{chromebuilddir}
 %endif
 	cp -a chrom*.pak resources.pak %{buildroot}%{chromium_path}
 	cp --remove-destination locales/*.pak %{buildroot}%{chromium_path}/locales/
-	cp -a MEIPreload/ PrivacySandboxAttestationsPreloaded/ %{buildroot}%{chromium_path}/
+	cp -a MEIPreload/ %{buildroot}%{chromium_path}/
 %if %{build_chrome_management_service}
 	cp -a chrome_management_service %{buildroot}%{chromium_path}/chrome-management-service
 %endif
@@ -1380,7 +1389,6 @@ fi
 %license LICENSE
 %dir %{_sysconfdir}/%{name}/policies/
 %dir %{chromium_path}/MEIPreload/
-%dir %{chromium_path}/PrivacySandboxAttestationsPreloaded/
 %config(noreplace) %{_sysconfdir}/%{name}/chromium.conf
 %config %{_sysconfdir}/%{name}/master_preferences
 %config %{_sysconfdir}/%{name}/policies/managed/disable-ai.json
@@ -1394,7 +1402,6 @@ fi
 %{chromium_path}/chrome-management-service
 %endif
 %{chromium_path}/MEIPreload/*
-%{chromium_path}/PrivacySandboxAttestationsPreloaded/*
 %{chromium_path}/chrome-sandbox
 %{_mandir}/man1/chromium-browser.*
 %{_datadir}/icons/hicolor/*/apps/chromium-browser.png
@@ -1503,6 +1510,417 @@ fi
 %endif
 
 %changelog
+* Wed Oct 28 2026 Than Ngo <than@redhat.com> - 156.0.8078.73-1
+- Update to 156.0.8078.73, include 52 security fixes
+  * CVE-2026-118304: Improper input validation in SVG
+  * CVE-2026-118305: Memory corruption in Turbolev
+  * CVE-2026-118306: Memory corruption in FileSystem
+  * CVE-2026-118307: Use after free in Paint
+  * CVE-2026-118308: Use after free in SVG
+  * CVE-2026-118309: Improper input validation in UI
+  * CVE-2026-118310: Improper input validation in Views
+  * CVE-2026-118311: Memory corruption in Media
+  * CVE-2026-118312: Memory corruption in Paint
+  * CVE-2026-118313: Use after free in Video
+  * CVE-2026-118314: Improper input validation in UI
+  * CVE-2026-118315: Improper input validation in SVG
+  * CVE-2026-118316: Improper input validation in V8
+  * CVE-2026-118317: Memory corruption in HTML
+  * CVE-2026-118318: Improper access control in V8
+  * CVE-2026-118319: Memory corruption in Skia
+  * CVE-2026-118320: Memory corruption in V8
+  * CVE-2026-118321: Improper input validation in Core
+  * CVE-2026-118322: Memory corruption in ANGLE
+  * CVE-2026-118327: Memory corruption in Media
+  * CVE-2026-118328: Improper input validation in WebRTC
+  * CVE-2026-118329: Improper input validation in ANGLE
+  * CVE-2026-118330: Use after free in Browser
+  * CVE-2026-118331: Improper input validation in FileAPI
+  * CVE-2026-118332: Improper input validation in Compositing
+  * CVE-2026-118333: Missing authorization in Video
+  * CVE-2026-118334: Use after free in ImageCapture
+  * CVE-2026-118335: Improper input validation in Metrics
+  * CVE-2026-118336: Improper input validation in Headless
+  * CVE-2026-118337: Improper access control in Forms
+  * CVE-2026-118338: Use after free in Animation
+  * CVE-2026-118339: Use after free in Animation
+  * CVE-2026-118340: Memory corruption in Skia
+  * CVE-2026-118341: Use after free in Modularization
+  * CVE-2026-118342: Out of bounds write in Editing
+  * CVE-2026-118343: Improper input validation in ReadingList
+  * CVE-2026-118344: Use after free in Layout
+  * CVE-2026-118345: Use after free in PDFium
+  * CVE-2026-118346: Use after free in Compositing
+  * CVE-2026-118347: Use after free in FileSystem
+  * CVE-2026-118348: Improper input validation in Skia
+  * CVE-2026-118349: Memory corruption in Payments
+  * CVE-2026-118350: Use after free in Turbolev
+  * CVE-2026-118351: Memory corruption in Skia
+  * CVE-2026-118352: Memory corruption in Cache
+  * CVE-2026-118353: Use after free in Paint
+  * CVE-2026-118354: Improper input validation in Skia
+  * CVE-2026-118355: Improper input validation in Command
+  * CVE-2026-118356: Use after free in WTF
+  * CVE-2026-118357: Use after free in FileSystem
+  * CVE-2026-118358: Memory corruption in WebAudio
+  * CVE-2026-118359: Memory corruption in V8
+
+* Wed Oct 21 2026 Than Ngo <than@redhat.com> - 156.0.8078.47-1
+- Update to 156.0.8078.47, include 353 security fixes
+  * CVE-2026-112992: Memory corruption in Canvas
+  * CVE-2026-112993: Use after free in Input
+  * CVE-2026-112994: Memory corruption in Browser
+  * CVE-2026-112995: Use after free in Animation
+  * CVE-2026-112996: Memory corruption in Loader
+  * CVE-2026-112997: Memory corruption in CSS
+  * CVE-2026-112998: Memory corruption in Views
+  * CVE-2026-112999: Use after free in API
+  * CVE-2026-113000: Memory corruption in Paint
+  * CVE-2026-113001: Use after free in Workers
+  * CVE-2026-113002: Memory corruption in Transactions Platform
+  * CVE-2026-113003: Memory corruption in HID
+  * CVE-2026-113004: Memory corruption in Sync
+  * CVE-2026-113005: Memory corruption in Bluetooth
+  * CVE-2026-113006: Out of bounds read in Navigation
+  * CVE-2026-113007: Memory corruption in Permissions
+  * CVE-2026-113008: Memory corruption in Transactions Platform
+  * CVE-2026-113009: Use after free in WindowControlsOverlay
+  * CVE-2026-113010: Out of bounds read in Extensions
+  * CVE-2026-113011: Use after free in CredentialProvider
+  * CVE-2026-113012: Improper input validation in GPU
+  * CVE-2026-113013: Memory corruption in DevTools
+  * CVE-2026-113014: Use after free in PerformanceAPIs
+  * CVE-2026-113015: Use after free in Workers
+  * CVE-2026-113016: Improper input validation in Extensions
+  * CVE-2026-113017: Use after free in Views
+  * CVE-2026-113018: Memory corruption in IME
+  * CVE-2026-113019: Use after free in Turbolev
+  * CVE-2026-113020: Improper input validation in Date
+  * CVE-2026-113021: Use after free in WebAppInstalls
+  * CVE-2026-113022: Memory corruption in PDFium
+  * CVE-2026-113023: Improper input validation in Extensions
+  * CVE-2026-113024: Use after free in WebAppInstalls
+  * CVE-2026-113025: Use after free in Input
+  * CVE-2026-113026: Memory corruption in PDF
+  * CVE-2026-113027: Memory corruption in WebFonts
+  * CVE-2026-113028: Use after free in Media
+  * CVE-2026-113029: Improper access control in ANGLE
+  * CVE-2026-113030: Improper access control in V8
+  * CVE-2026-113031: Memory corruption in Media
+  * CVE-2026-113032: Memory corruption in Omnibox
+  * CVE-2026-113033: Use after free in Streaming
+  * CVE-2026-113034: Memory corruption in FileSystem
+  * CVE-2026-113035: Out of bounds read in API
+  * CVE-2026-113036: Memory corruption in HTML
+  * CVE-2026-113037: Use after free in WebSockets
+  * CVE-2026-113038: Memory corruption in DevTools
+  * CVE-2026-113039: Use after free in Bookmarks
+  * CVE-2026-113040: Improper input validation in Proxy
+  * CVE-2026-113041: Use after free in Actor
+  * CVE-2026-113042: Use after free in Extensions
+  * CVE-2026-113043: Use after free in iOSWeb
+  * CVE-2026-113044: Use after free in V8
+  * CVE-2026-113045: Out of bounds read in Offline
+  * CVE-2026-113046: Improper input validation in Passwords
+  * CVE-2026-113047: Memory corruption in BrowserTag
+  * CVE-2026-113048: Memory corruption in DevTools
+  * CVE-2026-113049: Memory corruption in Core
+  * CVE-2026-113050: Out of bounds read in HID
+  * CVE-2026-113051: Memory corruption in CSS
+  * CVE-2026-113052: Memory corruption in V8
+  * CVE-2026-113053: Use after free in Cookies
+  * CVE-2026-113054: Out of bounds read in SiteIsolation
+  * CVE-2026-113055: Type confusion in FullScreen
+  * CVE-2026-113056: Memory corruption in PerformanceAPIs
+  * CVE-2026-113057: Improper access control in ComputePressure
+  * CVE-2026-113058: Use after free in WebUI
+  * CVE-2026-113059: Memory corruption in Sensor
+  * CVE-2026-113060: Improper input validation in Bluetooth
+  * CVE-2026-113061: Memory corruption in Chromoting
+  * CVE-2026-113062: Improper input validation in API
+  * CVE-2026-113063: Improper input validation in Chromoting
+  * CVE-2026-113064: Memory corruption in OptimizationGuide
+  * CVE-2026-113065: Use after free in Media
+  * CVE-2026-113066: Memory corruption in Fonts
+  * CVE-2026-113067: Use after free in Chromoting
+  * CVE-2026-113068: Use after free in Input
+  * CVE-2026-113069: Memory corruption in Compositing
+  * CVE-2026-113070: Out of bounds read in GetUserMedia
+  * CVE-2026-113071: Use after free in Notifications
+  * CVE-2026-113072: Memory corruption in CSS
+  * CVE-2026-113073: Use after free in Browser
+  * CVE-2026-113074: Use after free in Media
+  * CVE-2026-113075: Use after free in DevTools
+  * CVE-2026-113076: Use after free in Toolbar
+  * CVE-2026-113077: Memory corruption in Core
+  * CVE-2026-113078: Improper input validation in Compositing
+  * CVE-2026-113079: Use after free in SiteIsolation
+  * CVE-2026-113080: Use after free in WebAppInstalls
+  * CVE-2026-113081: Use after free in Compositing
+  * CVE-2026-113082: Memory corruption in ANGLE
+  * CVE-2026-113083: Memory corruption in Actor
+  * CVE-2026-113084: Improper input validation in Permissions
+  * CVE-2026-113085: Use after free in Media
+  * CVE-2026-113086: Improper input validation in Input
+  * CVE-2026-113087: Use after free in Actor
+  * CVE-2026-113088: Memory corruption in Mobile
+  * CVE-2026-113089: Improper input validation in PrintPreview
+  * CVE-2026-113090: Memory corruption in Interstitials
+  * CVE-2026-113091: Use after free in PerformanceAPIs
+  * CVE-2026-113092: Use after free in Passwords
+  * CVE-2026-113093: Memory corruption in DisplayLocking
+  * CVE-2026-113094: Memory corruption in API
+  * CVE-2026-113095: Out of bounds read in Focus
+  * CVE-2026-113096: Memory corruption in Text
+  * CVE-2026-113097: Use after free in FileSystem
+  * CVE-2026-113098: Memory corruption in CacheStorage
+  * CVE-2026-113099: Improper input validation in Omnibox
+  * CVE-2026-113100: Memory corruption in Audio
+  * CVE-2026-113101: Use after free in SiteIsolation
+  * CVE-2026-113102: Out of bounds read in FileSystem
+  * CVE-2026-113103: Use after free in WebProtect
+  * CVE-2026-113104: Memory corruption in Frames
+  * CVE-2026-113105: Use after free in Extensions
+  * CVE-2026-113106: Memory corruption in Skia
+  * CVE-2026-113107: Use after free in Media
+  * CVE-2026-113108: Use after free in Script
+  * CVE-2026-113109: Memory corruption in API
+  * CVE-2026-113110: Memory corruption in ShadowDOM
+  * CVE-2026-113111: Use after free in Compositing
+  * CVE-2026-113112: Use after free in Extensions
+  * CVE-2026-113113: Use after free in Extensions
+  * CVE-2026-113114: Use after free in SignIn
+  * CVE-2026-113115: Use after free in Transactions Platform
+  * CVE-2026-113116: Use after free in DevTools
+  * CVE-2026-113117: Improper input validation in ANGLE
+  * CVE-2026-113118: Memory corruption in Extensions
+  * CVE-2026-113119: Use after free in Network
+  * CVE-2026-113120: Improper input validation in Media
+  * CVE-2026-113121: Memory corruption in ContextMenu
+  * CVE-2026-113122: Memory corruption in Loader
+  * CVE-2026-113123: Use after free in GPU
+  * CVE-2026-113124: Memory corruption in DataTransfer
+  * CVE-2026-113125: Memory corruption in DevTools
+  * CVE-2026-113126: Memory corruption in PolicyContainer
+  * CVE-2026-113127: Memory corruption in Browser
+  * CVE-2026-113128: Missing authorization in Animation
+  * CVE-2026-113129: Improper access control in Extensions
+  * CVE-2026-113130: Use after free in Actor
+  * CVE-2026-113131: Memory corruption in Bluetooth
+  * CVE-2026-113132: Memory corruption in DevTools
+  * CVE-2026-113133: Memory corruption in PlatformIntegration
+  * CVE-2026-113134: Memory corruption in ANGLE
+  * CVE-2026-113135: Memory corruption in PictureInPicture
+  * CVE-2026-113136: Memory corruption in DevTools
+  * CVE-2026-113137: Memory corruption in Extensions
+  * CVE-2026-113138: Memory corruption in WebAppInstalls
+  * CVE-2026-113139: Memory corruption in Autofill
+  * CVE-2026-113140: Use after free in ANGLE
+  * CVE-2026-113141: Use after free in Transactions Platform
+  * CVE-2026-113142: Memory corruption in Extensions
+  * CVE-2026-113143: Memory corruption in ANGLE
+  * CVE-2026-113144: Memory corruption in Speech
+  * CVE-2026-113145: Memory corruption in Messages
+  * CVE-2026-113146: Memory corruption in PerformanceAPIs
+  * CVE-2026-113147: Improper input validation in WebShare
+  * CVE-2026-113148: Memory corruption in WebUI
+  * CVE-2026-113149: Memory corruption in FullScreen
+  * CVE-2026-113150: Memory corruption in Bindings
+  * CVE-2026-113151: Out of bounds read in Actor
+  * CVE-2026-113152: Memory corruption in SignIn
+  * CVE-2026-113153: Memory corruption in SiteIsolation
+  * CVE-2026-113154: Memory corruption in Canvas
+  * CVE-2026-113155: Use after free in Glic
+  * CVE-2026-113156: Use after free in Messages
+  * CVE-2026-113157: Information leak in ANGLE
+  * CVE-2026-113158: Use after free in Streaming
+  * CVE-2026-113159: Improper access control in DevTools
+  * CVE-2026-113160: Use after free in Turbolev
+  * CVE-2026-113161: Use after free in WebRTC
+  * CVE-2026-113162: Improper input validation in Actor
+  * CVE-2026-113163: Use after free in WebGL
+  * CVE-2026-113164: Memory corruption in Voice
+  * CVE-2026-113165: Use after free in Core
+  * CVE-2026-113166: Memory corruption in History
+  * CVE-2026-113167: Memory corruption in Network
+  * CVE-2026-113168: Use after free in Permissions
+  * CVE-2026-113169: Memory corruption in WebAppInstalls
+  * CVE-2026-113170: Use after free in Autofill
+  * CVE-2026-113171: Memory corruption in Prompts
+  * CVE-2026-113172: Memory corruption in ServiceWorker
+  * CVE-2026-113173: Improper input validation in UI
+  * CVE-2026-113174: Use after free in Extensions
+  * CVE-2026-113175: Improper input validation in FileSystem
+  * CVE-2026-113176: Memory corruption in Omnibox
+  * CVE-2026-113177: Use after free in FileSystem
+  * CVE-2026-113178: Memory corruption in Views
+  * CVE-2026-113179: Use after free in Paint
+  * CVE-2026-113180: Memory corruption in ContentCapture
+  * CVE-2026-113181: Use after free in Navigation
+  * CVE-2026-113182: Memory corruption in Passwords
+  * CVE-2026-113183: Memory corruption in FedCM
+  * CVE-2026-113184: Memory corruption in Scheduling
+  * CVE-2026-113185: Memory corruption in Extensions
+  * CVE-2026-113186: Memory corruption in DevTools
+  * CVE-2026-113187: Use after free in DOM
+  * CVE-2026-113188: Memory corruption in GPU
+  * CVE-2026-113189: Use after free in Core
+  * CVE-2026-113190: Use after free in ServiceWorker
+  * CVE-2026-113191: Use after free in Internals
+  * CVE-2026-113192: Memory corruption in V8
+  * CVE-2026-113193: Memory corruption in V8
+  * CVE-2026-113194: Memory corruption in Core
+  * CVE-2026-113195: Improper input validation in Downloads
+  * CVE-2026-113196: Improper access control in Mobile
+  * CVE-2026-113197: Use after free in Forms
+  * CVE-2026-113198: Use after free in Extensions
+  * CVE-2026-113199: Out of bounds read in Payments
+  * CVE-2026-113200: Use after free in ANGLE
+  * CVE-2026-113201: Memory corruption in Google Lens
+  * CVE-2026-113202: Use after free in BrowserTag
+  * CVE-2026-113203: Use after free in CSS
+  * CVE-2026-113204: Use after free in TrustedWebActivities
+  * CVE-2026-113205: Use after free in Variations
+  * CVE-2026-113206: Memory corruption in Omnibox
+  * CVE-2026-113207: Use after free in SiteIsolation
+  * CVE-2026-113208: Use after free in ContextualSearch
+  * CVE-2026-113209: Memory corruption in Navigation
+  * CVE-2026-113210: Use after free in ANGLE
+  * CVE-2026-113211: Memory corruption in ServiceWorker
+  * CVE-2026-113212: Memory corruption in PDF
+  * CVE-2026-113213: Memory corruption in DevTools
+  * CVE-2026-113214: Improper input validation in FullScreen
+  * CVE-2026-113215: Use after free in Extensions
+  * CVE-2026-113216: Use after free in Navigation
+  * CVE-2026-113217: Use after free in WebAppInstalls
+  * CVE-2026-113218: Use after free in DataTransfer
+  * CVE-2026-113219: Memory corruption in Contacts
+  * CVE-2026-113220: Memory corruption in Extensions
+  * CVE-2026-113221: Use after free in Google Lens
+  * CVE-2026-113222: Use after free in V8
+  * CVE-2026-113223: Memory corruption in DevTools
+  * CVE-2026-113224: Memory corruption in WebAppInstalls
+  * CVE-2026-113225: Memory corruption in Browser
+  * CVE-2026-113226: Memory corruption in Model
+  * CVE-2026-113227: Use after free in Editing
+  * CVE-2026-113228: Use after free in Network
+  * CVE-2026-113229: Use after free in Loader
+  * CVE-2026-113230: Improper input validation in Browser
+  * CVE-2026-113231: Improper input validation in Extensions
+  * CVE-2026-113232: Memory corruption in Search
+  * CVE-2026-113233: Out of bounds read in Core
+  * CVE-2026-113234: Memory corruption in ANGLE
+  * CVE-2026-113235: Improper input validation in Passwords
+  * CVE-2026-113236: Use after free in Navigation
+  * CVE-2026-113237: Memory corruption in Chromoting
+  * CVE-2026-113238: Memory corruption in CustomTabs
+  * CVE-2026-113239: Range error in SiteIsolation
+  * CVE-2026-113240: Use after free in Chromecast
+  * CVE-2026-113241: Memory corruption in Toolbar
+  * CVE-2026-113242: Memory corruption in ANGLE
+  * CVE-2026-113243: Memory corruption in DOM
+  * CVE-2026-113244: Improper input validation in UI
+  * CVE-2026-113245: Memory corruption in DevTools
+  * CVE-2026-113246: Memory corruption in iOSWebView
+  * CVE-2026-113247: Memory corruption in DevTools
+  * CVE-2026-113248: Memory corruption in FileSystem
+  * CVE-2026-113249: Improper input validation in Mobile
+  * CVE-2026-113250: Use after free in ANGLE
+  * CVE-2026-113251: Use after free in PDF
+  * CVE-2026-113252: Improper input validation in ANGLE
+  * CVE-2026-113253: Use after free in Canvas
+  * CVE-2026-113254: Memory corruption in DevTools
+  * CVE-2026-113255: Use after free in CustomTabs
+  * CVE-2026-113256: Use after free in Permissions
+  * CVE-2026-113257: Memory corruption in Media
+  * CVE-2026-113258: Memory corruption in Chromoting
+  * CVE-2026-113259: Use after free in Frames
+  * CVE-2026-113260: Memory corruption in Core
+  * CVE-2026-113261: Use after free in WebAppInstalls
+  * CVE-2026-113262: Use after free in Extensions
+  * CVE-2026-113263: Use after free in Core
+  * CVE-2026-113264: Improper input validation in Extensions
+  * CVE-2026-113265: Memory corruption in BFCache
+  * CVE-2026-113266: Memory corruption in ANGLE
+  * CVE-2026-113267: Memory corruption in Video
+  * CVE-2026-113268: Memory corruption in Navigation
+  * CVE-2026-113269: Memory corruption in BrowserTag
+  * CVE-2026-113270: Use after free in Internals
+  * CVE-2026-113271: Use after free in Accessibility
+  * CVE-2026-113272: Memory corruption in Extensions
+  * CVE-2026-113273: Memory corruption in ANGLE
+  * CVE-2026-113274: Use after free in ReadingMode
+  * CVE-2026-113275: Use after free in API
+  * CVE-2026-113276: Memory corruption in Passwords
+  * CVE-2026-113277: Out of bounds read in CustomTabs
+  * CVE-2026-113278: Use after free in Extensions
+  * CVE-2026-113279: Memory corruption in Accessibility
+  * CVE-2026-113280: Memory corruption in Paint
+  * CVE-2026-113281: Memory corruption in SiteIsolation
+  * CVE-2026-113282: Use after free in Views
+  * CVE-2026-113283: Memory corruption in CredentialProvider
+  * CVE-2026-113284: Memory corruption in XML
+  * CVE-2026-113285: Memory corruption in ANGLE
+  * CVE-2026-113286: Memory corruption in Google Lens
+  * CVE-2026-113287: Use after free in Prompts
+  * CVE-2026-113288: Memory corruption in Core
+  * CVE-2026-113289: Improper input validation in PerformanceAPIs
+  * CVE-2026-113290: Use after free in Input
+  * CVE-2026-113291: Memory corruption in FullScreen
+  * CVE-2026-113292: Improper input validation in Omnibox
+  * CVE-2026-113293: Use after free in ANGLE
+  * CVE-2026-113294: Improper input validation in Loader
+  * CVE-2026-113295: Out of bounds read in ANGLE
+  * CVE-2026-113296: Memory corruption in Actor
+  * CVE-2026-113297: Improper access control in Ozone
+  * CVE-2026-113298: Use after free in Transactions Platform
+  * CVE-2026-113299: Memory corruption in WebProtect
+  * CVE-2026-113300: Out of bounds write in Forms
+  * CVE-2026-113301: Memory corruption in WebAppInstalls
+  * CVE-2026-113302: Use after free in Extensions
+  * CVE-2026-113303: Memory corruption in WebRTC
+  * CVE-2026-113304: Memory corruption in GPU
+  * CVE-2026-113305: Use after free in Privacy
+  * CVE-2026-113306: Improper input validation in Network
+  * CVE-2026-113307: Memory corruption in Extensions
+  * CVE-2026-113308: Use after free in Core
+  * CVE-2026-113309: Out of bounds read in Media
+  * CVE-2026-113310: Out of bounds read in Bluetooth
+  * CVE-2026-113311: Use after free in ServiceWorker
+  * CVE-2026-113312: Memory corruption in Autofill
+  * CVE-2026-113313: Memory corruption in DevTools
+  * CVE-2026-113314: Use after free in Media
+  * CVE-2026-113315: Memory corruption in ANGLE
+  * CVE-2026-113316: Improper input validation in Views
+  * CVE-2026-113317: Memory corruption in Accessibility
+  * CVE-2026-113318: Memory corruption in ServiceWorker
+  * CVE-2026-113319: Use after free in Accessibility
+  * CVE-2026-113320: Memory corruption in Navigation
+  * CVE-2026-113321: Use after free in Extensions
+  * CVE-2026-113322: Memory corruption in Dawn
+  * CVE-2026-113323: Use after free in Chrome for iOS
+  * CVE-2026-113324: Use after free in GPU
+  * CVE-2026-113325: Memory corruption in SignIn
+  * CVE-2026-113326: Memory corruption in Core
+  * CVE-2026-113327: Use after free in Chromecast
+  * CVE-2026-113328: Improper input validation in Privacy
+  * CVE-2026-113329: Out of bounds read in Installer
+  * CVE-2026-113330: Memory corruption in CustomTabs
+  * CVE-2026-113331: Memory corruption in Controls
+  * CVE-2026-113332: Memory corruption in GPU
+  * CVE-2026-113333: Memory corruption in Extensions
+  * CVE-2026-113334: Improper input validation in ANGLE
+  * CVE-2026-113335: Memory corruption in Extensions
+  * CVE-2026-113336: Memory corruption in Compositing
+  * CVE-2026-113337: Memory corruption in Scroll
+  * CVE-2026-113338: Use after free in Turbolev
+  * CVE-2026-113339: Use after free in SVG
+  * CVE-2026-113340: Memory corruption in ANGLE
+  * CVE-2026-113341: Memory corruption in Skia
+  * CVE-2026-113342: Memory corruption in Network
+  * CVE-2026-113343: Memory corruption in Sandbox
+  * CVE-2026-113344: Use after free in Performance
+
 * Fri Oct 16 2026 Than Ngo <than@redhat.com> - 155.0.8059.84-1
 - Update to 155.0.8059.84, includes 10 security fixes
   * CVE-2026-110913: Memory corruption in DOM
