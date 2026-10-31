@@ -1,5 +1,5 @@
 Name:    kwin
-Version: 6.8.2
+Version: 6.8.1
 Release: 2%{?dist}
 Summary: KDE Window manager
 

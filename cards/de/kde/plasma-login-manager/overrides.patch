@@ -1,4 +1,121 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: David Edmundson <kde@davidedmundson.co.uk>
+Date: Wed, 21 Oct 2026 09:20:23 +0000
+Subject: [PATCH] Avoid autologin when explicitly switching to the greeter
+
+switchToGreeter should never run autologin on the newly created
+display. Solved by splitting the autologin setup out of the display
+creation.
+
+
+(cherry picked from commit 464992ce046941ddb7e2a60dfdb3fcd6f9fef9f7)
+
+Co-authored-by: David Edmundson <kde@davidedmundson.co.uk>
+---
+ src/daemon/Seat.cpp        | 22 ++++++++++++++--------
+ src/daemon/Seat.h          |  3 ++-
+ src/daemon/SeatManager.cpp |  3 ++-
+ 3 files changed, 18 insertions(+), 10 deletions(-)
+
+diff --git a/src/daemon/Seat.cpp b/src/daemon/Seat.cpp
+index 60f704ff..0a466b6f 100644
+--- a/src/daemon/Seat.cpp
++++ b/src/daemon/Seat.cpp
+@@ -45,7 +45,9 @@ Seat::Seat(const QString &name, QObject *parent)
+     : QObject(parent)
+     , m_name(name)
+ {
+-    createDisplay();
++    auto display = createDisplay();
++    setupAutoLogin(display);
++    display->start();
+ }
+
+ const QString &Seat::name() const
+@@ -137,10 +139,8 @@ std::optional<int> Seat::vtForSession(const QString &sessionId) const
+     return QStringView(session.tTY()).mid(3).toInt(); // we need to convert ttyN to N
+ }
+
+-void Seat::createDisplay()
++Display *Seat::createDisplay()
+ {
+-    PlasmaLogin::config()->load();
+-
+     // create a new display
+     qDebug() << "Adding new display...";
+     Display *display = new Display(this);
+@@ -151,6 +151,13 @@ void Seat::createDisplay()
+     // add display to the list
+     m_displays << display;
+
++    return display;
++}
++
++void Seat::setupAutoLogin(Display *display)
++{
++    PlasmaLogin::config()->load();
++
+     // Per-seat autologin overrides the global [Autologin] keys for a dedicated seat.
+     // Resolve it here, after the configuration has been reloaded, rather than caching it
+     // in Display's constructor.
+@@ -176,9 +183,6 @@ void Seat::createDisplay()
+         autologinSession = PlasmaLogin::config()->autologinSession();
+     }
+     display->setAutoLogin(autologinUser, autologinSession);
+-
+-    // start the display
+-    display->start();
+ }
+
+ void Seat::displayStopped()
+@@ -196,7 +200,9 @@ void Seat::displayStopped()
+     if (m_displays.isEmpty()) {
+         OrgFreedesktopLogin1ManagerInterface manager(Logind::serviceName(), Logind::managerPath(), QDBusConnection::systemBus());
+         if (!Logind::isAvailable() || !manager.preparingForShutdown()) {
+-            createDisplay();
++            auto display = createDisplay();
++            setupAutoLogin(display);
++            display->start();
+         }
+     }
+     // If there is still a session running on some display,
+diff --git a/src/daemon/Seat.h b/src/daemon/Seat.h
+index 09f61589..6dfcb113 100644
+--- a/src/daemon/Seat.h
++++ b/src/daemon/Seat.h
+@@ -34,7 +34,7 @@ public:
+     explicit Seat(const QString &name, QObject *parent = 0);
+
+     const QString &name() const;
+-    void createDisplay();
++    Display *createDisplay();
+     bool canTTY();
+     bool tryLockFirstLogin();
+     VirtualTerminal::Terminal availableVt() const;
+@@ -47,6 +47,7 @@ private slots:
+
+ private:
+     bool isTtyInUse(const QString &tty) const;
++    void setupAutoLogin(Display *display);
+
+     QString m_name;
+
+diff --git a/src/daemon/SeatManager.cpp b/src/daemon/SeatManager.cpp
+index e0467582..e48b4334 100644
+--- a/src/daemon/SeatManager.cpp
++++ b/src/daemon/SeatManager.cpp
+@@ -182,7 +182,8 @@ void SeatManager::switchToGreeter(const QString &name)
+     }
+
+     // switch to greeter
+-    m_seats.value(name)->createDisplay();
++    auto display = m_seats.value(name)->createDisplay();
++    display->start();
+ }
+
+ void PLASMALOGIN::SeatManager::logindSecureAttentionKey(const QString &name, const QDBusObjectPath &objectPath)
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
 Date: Mon, 13 Jul 2026 20:03:45 +0200
 Subject: drop soft reboot breaking autologin
