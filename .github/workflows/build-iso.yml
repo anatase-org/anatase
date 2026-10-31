@@ -7,6 +7,10 @@ on:
         description: Image build commit to check out
         required: false
         type: string
+      source_branch:
+        description: Branch to check out and use to select the channel
+        required: false
+        type: string
   workflow_dispatch:
     inputs:
       source_sha:
@@ -14,17 +18,47 @@ on:
         required: false
         type: string
 
+  workflow_run:
+    workflows: [Build Anatase]
+    types: [completed]
+    branches: [main, master, testing]
+
 permissions:
+  actions: read
   contents: read
   id-token: write
 
-concurrency:
-  group: build-iso-${{ github.ref_name == 'testing' && 'testing' || 'rolling' }}
-  cancel-in-progress: true
-
 jobs:
+  published:
+    name: Verify Anatase image publication
+    if: >-
+      ${{ github.event.workflow_run.conclusion == 'success' &&
+          (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch') }}
+    runs-on: ubuntu-26.04
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - name: Check image publication jobs
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          ready=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/jobs?per_page=100" \
+            --paginate --slurp | jq -r '
+            [.[].jobs[]] |
+            any(.name == "Publish multi-platform images" and .conclusion == "success") and
+            any((.name | endswith(" / Image · anatase")) and .conclusion == "success")')
+          echo "ready=$ready" >> "$GITHUB_OUTPUT"
+
   iso:
     name: Build ${{ matrix.arch }} ISO
+    needs: published
+    if: ${{ !cancelled() && (github.event_name != 'workflow_run' || needs.published.outputs.ready == 'true') }}
+    concurrency:
+      group: build-iso-${{ (inputs.source_branch || github.event.workflow_run.head_branch || github.ref_name) == 'testing' && 'testing' || 'rolling' }}-${{ matrix.arch }}
+      cancel-in-progress: true
     runs-on: ${{ matrix.arch == 'aarch64' && 'ubuntu-26.04-arm' || 'ubuntu-26.04' }}
     environment: prod
     strategy:
@@ -33,14 +67,14 @@ jobs:
         arch: [x86_64, aarch64]
     env:
       ARCH: ${{ matrix.arch }}
-      CHANNEL: ${{ github.ref_name == 'testing' && 'testing' || 'rolling' }}
-      INTERIM_PREFIX: ${{ github.ref_name == 'testing' && 'testing-' || '' }}
+      CHANNEL: ${{ (inputs.source_branch || github.event.workflow_run.head_branch || github.ref_name) == 'testing' && 'testing' || 'rolling' }}
+      INTERIM_PREFIX: ${{ (inputs.source_branch || github.event.workflow_run.head_branch || github.ref_name) == 'testing' && 'testing-' || '' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ inputs.source_sha || github.sha }}
+          ref: ${{ inputs.source_sha || inputs.source_branch || github.event.workflow_run.head_branch || github.sha }}
           fetch-depth: 1
           token: ${{ secrets.ANATASE_READ }}
           persist-credentials: false
@@ -122,16 +156,21 @@ jobs:
 
   disk:
     name: Build aarch64 disk image
+    needs: published
+    if: ${{ !cancelled() && (github.event_name != 'workflow_run' || needs.published.outputs.ready == 'true') }}
+    concurrency:
+      group: build-disk-${{ (inputs.source_branch || github.event.workflow_run.head_branch || github.ref_name) == 'testing' && 'testing' || 'rolling' }}-aarch64
+      cancel-in-progress: true
     runs-on: ubuntu-26.04-arm
     environment: prod
     env:
-      CHANNEL: ${{ github.ref_name == 'testing' && 'testing' || 'rolling' }}
+      CHANNEL: ${{ (inputs.source_branch || github.event.workflow_run.head_branch || github.ref_name) == 'testing' && 'testing' || 'rolling' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ inputs.source_sha || github.sha }}
+          ref: ${{ inputs.source_sha || inputs.source_branch || github.event.workflow_run.head_branch || github.sha }}
           fetch-depth: 1
           token: ${{ secrets.ANATASE_READ }}
           persist-credentials: false
