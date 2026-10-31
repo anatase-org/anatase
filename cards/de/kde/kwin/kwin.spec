@@ -243,6 +243,7 @@ sed -i \
 %files
 %{_bindir}/kwin
 %{_bindir}/kwin_wayland_wrapper
+%{_sysconfdir}/xdg/kwinrulesrc
 %caps(cap_sys_nice=ep) %{_kf6_bindir}/kwin_wayland
 %{_userunitdir}/plasma-kwin_wayland.service
 %dir %{_sysconfdir}/xdg/Xwayland-session.d
