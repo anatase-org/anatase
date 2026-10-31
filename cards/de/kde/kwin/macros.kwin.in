@@ -1,0 +1,4 @@
+%_kwin @@NAME@@
+%_kwin_epoch @@EPOCH@@
+%_kwin_version @@VERSION@@
+%_kwin_evr @@EVR@@

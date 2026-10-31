@@ -7,16 +7,16 @@ yeah, bypass, then again once your drive is unlocked it is unlocked and it makes
 
 Interim solution even so
 ---
- src/daemon/DaemonApp.cpp | 22 +---------------------
- 1 file changed, 1 insertion(+), 21 deletions(-)
+ src/daemon/DaemonApp.cpp | 25 +------------------------
+ 1 file changed, 1 insertion(+), 24 deletions(-)
 
 diff --git a/src/daemon/DaemonApp.cpp b/src/daemon/DaemonApp.cpp
-index f2171ad30601..d8a99efbb611 100644
+index 8bbe4bb6..fa9ea6a6 100644
 --- a/src/daemon/DaemonApp.cpp
 +++ b/src/daemon/DaemonApp.cpp
-@@ -92,27 +92,7 @@ bool DaemonApp::tryLockFirstLogin()
+@@ -95,30 +95,7 @@ bool DaemonApp::isFirstBoot()
+         return m_isFirstBoot.value();
      }
-     m_firstloginLock = true;
  
 -    QDBusMessage msg = QDBusMessage::createMethodCall(QStringLiteral("org.freedesktop.systemd1"),
 -                                                      QStringLiteral("/org/freedesktop/systemd1"),
@@ -29,16 +29,19 @@ index f2171ad30601..d8a99efbb611 100644
 -
 -    if (reply.type() == QDBusMessage::ErrorMessage) {
 -        qWarning() << "DBus error:" << reply.errorName() << "-" << reply.errorMessage();
--        return true;
+-        m_isFirstBoot = true;
+-        return m_isFirstBoot.value();
 -    }
 -
 -    const QVariant soft_reboot_count = qvariant_cast<QDBusVariant>(reply.arguments().at(0)).variant();
 -    if (!soft_reboot_count.isValid()) {
 -        qWarning() << "DBus variant is invalid:" << reply;
--        return true;
+-        m_isFirstBoot = true;
+-        return m_isFirstBoot.value();
 -    }
 -
--    return soft_reboot_count.toUInt() == 0;
+-    m_isFirstBoot = soft_reboot_count.toUInt() == 0;
+-    return m_isFirstBoot.value();
 +    return true;
  };
  }
@@ -54,7 +57,7 @@ Subject: use our theme, not breeze light
  1 file changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/src/frontend/startkde/lookandfeelsettings.kcfg b/src/frontend/startkde/lookandfeelsettings.kcfg
-index ad9d359fdb1b..445fddcfeb7a 100644
+index ad9d359f..445fddcf 100644
 --- a/src/frontend/startkde/lookandfeelsettings.kcfg
 +++ b/src/frontend/startkde/lookandfeelsettings.kcfg
 @@ -7,15 +7,15 @@
@@ -79,32 +82,6 @@ index ad9d359fdb1b..445fddcfeb7a 100644
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
-Date: Sun, 9 Aug 2026 02:54:01 +0200
-Subject: catch sighup so plasmalogin does not crash
-
----
- src/helper/HelperApp.cpp | 3 ++-
- 1 file changed, 2 insertions(+), 1 deletion(-)
-
-diff --git a/src/helper/HelperApp.cpp b/src/helper/HelperApp.cpp
-index 61553d39e07c..acaacb9ac37d 100644
---- a/src/helper/HelperApp.cpp
-+++ b/src/helper/HelperApp.cpp
-@@ -44,9 +44,10 @@ HelperApp::HelperApp(int &argc, char **argv)
- {
-     qInstallMessageHandler(HelperMessageHandler);
-     auto sig = KSignalHandler::self();
-+    sig->watchSignal(SIGHUP);
-     sig->watchSignal(SIGTERM);
-     QObject::connect(sig, &KSignalHandler::signalReceived, m_session, [](int s) {
--        if (s == SIGTERM) {
-+        if (s == SIGHUP || s == SIGTERM) {
-             QCoreApplication::instance()->exit(-1);
-         }
-     });
-
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Antheas Kapenekakis <git@antheas.dev>
 Date: Thu, 20 Aug 2026 00:18:31 +0200
 Subject: make controller presses translate to enter to attempt a login
 
@@ -113,13 +90,13 @@ Subject: make controller presses translate to enter to attempt a login
  src/frontend/greeter/CMakeLists.txt      |  2 +
  src/frontend/greeter/controllerinput.cpp | 92 ++++++++++++++++++++++++
  src/frontend/greeter/controllerinput.h   | 25 +++++++
- src/frontend/greeter/main.cpp            | 17 +++++
- 5 files changed, 138 insertions(+)
+ src/frontend/greeter/main.cpp            | 16 +++++
+ 5 files changed, 137 insertions(+)
  create mode 100644 src/frontend/greeter/controllerinput.cpp
  create mode 100644 src/frontend/greeter/controllerinput.h
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 160989f6f8f6..35fc0eeb9d01 100644
+index 650b60e7..5ab1e03e 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -58,6 +58,8 @@ pkg_check_modules(SYSTEMD REQUIRED "systemd")
@@ -132,28 +109,28 @@ index 160989f6f8f6..35fc0eeb9d01 100644
      pkg_get_variable(SYSTEMD_SYSTEM_UNIT_DIR systemd systemdsystemunitdir)
  endif()
 diff --git a/src/frontend/greeter/CMakeLists.txt b/src/frontend/greeter/CMakeLists.txt
-index be8ea32e05d1..ce3c2602f590 100644
+index 9084f28f..ee13c678 100644
 --- a/src/frontend/greeter/CMakeLists.txt
 +++ b/src/frontend/greeter/CMakeLists.txt
-@@ -10,6 +10,7 @@ set(LOGIN_GREETER_SRCS
-     backend/SocketWriter.cpp
+@@ -9,6 +9,7 @@ set(LOGIN_GREETER_SRCS
+     backend/GreeterProxy.cpp
      mockbackend/MockGreeterProxy.cpp
      blurscreenbridge.cpp
 +    controllerinput.cpp
      greetereventfilter.cpp
  )
  
-@@ -56,6 +57,7 @@ target_link_libraries(plasma-login-greeter PRIVATE
-     LayerShellQt::Interface
+@@ -57,6 +58,7 @@ target_link_libraries(plasma-login-greeter PRIVATE
      PW::KWorkspace
      KF6::ScreenDpms
+     plasmalogin-common
 +    PkgConfig::LIBUDEV
  )
  
  ecm_finalize_qml_module(plasma-login-greeter)
 diff --git a/src/frontend/greeter/controllerinput.cpp b/src/frontend/greeter/controllerinput.cpp
 new file mode 100644
-index 000000000000..fbe369067138
+index 00000000..fbe36906
 --- /dev/null
 +++ b/src/frontend/greeter/controllerinput.cpp
 @@ -0,0 +1,92 @@
@@ -251,7 +228,7 @@ index 000000000000..fbe369067138
 +}
 diff --git a/src/frontend/greeter/controllerinput.h b/src/frontend/greeter/controllerinput.h
 new file mode 100644
-index 000000000000..fda3933dc244
+index 00000000..fda3933d
 --- /dev/null
 +++ b/src/frontend/greeter/controllerinput.h
 @@ -0,0 +1,25 @@
@@ -281,22 +258,24 @@ index 000000000000..fda3933dc244
 +    QList<int> m_deviceFds;
 +};
 diff --git a/src/frontend/greeter/main.cpp b/src/frontend/greeter/main.cpp
-index 699e2ad0c39a..ecd71d3f5ccc 100644
+index cbb37eb8..8b5e1fba 100644
 --- a/src/frontend/greeter/main.cpp
 +++ b/src/frontend/greeter/main.cpp
-@@ -7,9 +7,11 @@
+@@ -7,11 +7,13 @@
  #include <QCommandLineOption>
  #include <QCommandLineParser>
  #include <QGuiApplication>
 +#include <QKeyEvent>
  #include <QObject>
  #include <QQmlContext>
+ #include <QQuickView>
  #include <QScreen>
+ #include <QSurfaceFormat>
 +#include <QWindow>
  
+ #include <KLocalizedQmlContext>
  #include <KLocalizedString>
- #include <KWindowSystem>
-@@ -22,6 +24,7 @@
+@@ -23,6 +25,7 @@
  #include "mockbackend/MockGreeterProxy.h"
  
  #include "blurscreenbridge.h"
@@ -304,12 +283,13 @@ index 699e2ad0c39a..ecd71d3f5ccc 100644
  #include "greetereventfilter.h"
  #include "models/sessionmodel.h"
  #include "models/usermodel.h"
-@@ -35,7 +38,20 @@ public:
+@@ -36,8 +39,20 @@ public:
      explicit LoginGreeter(QObject *parent = nullptr)
          : QObject(parent)
-         , m_engine(new PlasmaQuick::SharedQmlEngine)
+         , m_engine(PlasmaQuick::globalEngine())
 +        , m_controllerInput(new ControllerInput(this))
      {
+         KLocalization::setupLocalizedContext(m_engine.get());
 +        connect(m_controllerInput, &ControllerInput::buttonPressed, this, [] {
 +            QWindow *window = qGuiApp->focusWindow();
 +            if (!window) {
@@ -321,18 +301,17 @@ index 699e2ad0c39a..ecd71d3f5ccc 100644
 +            QKeyEvent releaseEvent(QEvent::KeyRelease, Qt::Key_Return, Qt::NoModifier, QStringLiteral("\r"));
 +            QCoreApplication::sendEvent(window, &releaseEvent);
 +        });
-+
+ 
          connect(qApp, &QGuiApplication::screenAdded, this, [this](QScreen *screen) {
              createWindowForScreen(screen);
-         });
-@@ -92,6 +108,7 @@ private:
+@@ -83,6 +98,7 @@ private:
+         window->show();
      }
  
-     PlasmaQuick::SharedQmlEngine m_engine;
 +    ControllerInput *m_controllerInput;
      static bool s_testMode;
+     std::shared_ptr<QQmlEngine> m_engine;
  };
- 
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
@@ -340,32 +319,27 @@ Date: Mon, 24 Aug 2026 16:44:38 +0200
 Subject: support one-shot autologin overrides
 
 ---
- src/daemon/Display.cpp | 72 ++++++++++++++++++++++++++++++++++++++++--
- src/daemon/Display.h   |  1 +
- 2 files changed, 70 insertions(+), 3 deletions(-)
+ src/daemon/Seat.cpp | 68 ++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 67 insertions(+), 1 deletion(-)
 
-diff --git a/src/daemon/Display.cpp b/src/daemon/Display.cpp
-index 92feddb249b0..d9dfbe254966 100644
---- a/src/daemon/Display.cpp
-+++ b/src/daemon/Display.cpp
-@@ -18,6 +18,7 @@
- 
- #include "Display.h"
- 
-+#include "Constants.h"
- #include "DaemonApp.h"
- #include "DisplayManager.h"
- #include "Greeter.h"
-@@ -31,6 +32,8 @@
- #include <QLocalSocket>
- #include <QTimer>
- 
-+#include <optional>
-+
- #include <pwd.h>
- #include <sys/time.h>
+diff --git a/src/daemon/Seat.cpp b/src/daemon/Seat.cpp
+index 0a466b6f..959d2de4 100644
+--- a/src/daemon/Seat.cpp
++++ b/src/daemon/Seat.cpp
+@@ -28,6 +28,7 @@
+ #include "Constants.h"
+ #include "config.h"
+ #include <KConfig>
++#include <KConfigGroup>
+ #include <KSharedConfig>
+ #include <QDir>
+ #include <QFileInfo>
+@@ -37,10 +38,68 @@
+ #include <Login1Session.h>
+ #include <functional>
+ #include <optional>
++#include <pwd.h>
  #include <unistd.h>
-@@ -54,6 +57,63 @@ static int s_ttyFailures = 0;
  
  namespace PLASMALOGIN
  {
@@ -373,7 +347,7 @@ index 92feddb249b0..d9dfbe254966 100644
 +{
 +struct NextSessionRequest {
 +    QString user;
-+    Session session;
++    QString session;
 +};
 +
 +std::optional<NextSessionRequest> takeNextSessionRequest()
@@ -422,48 +396,31 @@ index 92feddb249b0..d9dfbe254966 100644
 +        return std::nullopt;
 +    }
 +
-+    return NextSessionRequest{user, session};
++    return NextSessionRequest{user, sessionName};
 +}
 +} // namespace
 +
- bool isTtyInUse(const QString &desiredTty)
+ Seat::Seat(const QString &name, QObject *parent)
+     : QObject(parent)
+     , m_name(name)
+@@ -158,12 +217,19 @@ void Seat::setupAutoLogin(Display *display)
  {
-     if (Logind::isAvailable()) {
-@@ -127,8 +187,14 @@ Display::Display(Seat *parent)
-     });
-     connect(m_greeter, &Greeter::displayServerFailed, this, &Display::displayServerFailed);
+     PlasmaLogin::config()->load();
  
--    // Load autologin configuration (whether to autologin, user, session, session type)
--    if ((PlasmaLogin::config()->autologinRelogin() || daemonApp->tryLockFirstLogin()) && !PlasmaLogin::config()->autologinUser().isEmpty()) {
-+    // A next-session request overrides the persistent autologin configuration once.
++    const bool firstLogin = tryLockFirstLogin();
++    // A next-session request overrides persistent autologin settings once.
++    // Keep it here so explicitly switching to the greeter never consumes it.
 +    if (const auto request = takeNextSessionRequest()) {
-+        m_autologinUser = request->user;
-+        m_autologinSession = request->session;
-+        daemonApp->tryLockFirstLogin();
-+    } else if ((PlasmaLogin::config()->autologinRelogin() || daemonApp->tryLockFirstLogin()) && !PlasmaLogin::config()->autologinUser().isEmpty()) {
-+        // Load autologin configuration (whether to autologin, user, session, session type)
-+        m_autologinUser = PlasmaLogin::config()->autologinUser();
-         // determine session type
-         QString autologinSession = PlasmaLogin::config()->autologinSession();
-         m_autologinSession = Session::create(Session::WaylandSession, autologinSession);
-@@ -174,7 +240,7 @@ bool Display::start()
-     // (rootful X + X11 autologin session).
-     if (m_autologinSession.isValid()) {
-         m_auth->setAutologin(true);
--        if (startAuth(PlasmaLogin::config()->autologinUser(), QString(), m_autologinSession)) {
-+        if (startAuth(m_autologinUser, QString(), m_autologinSession)) {
-             return true;
-         } else {
-             return handleAutologinFailure();
-diff --git a/src/daemon/Display.h b/src/daemon/Display.h
-index bdfa1cd35f0b..ec2af1571de1 100644
---- a/src/daemon/Display.h
-+++ b/src/daemon/Display.h
-@@ -82,6 +82,7 @@ private:
-     QString m_passPhrase;
-     QString m_sessionName;
-     QString m_reuseSessionId;
-+    QString m_autologinUser;
- 
-     Session m_autologinSession;
- 
++        display->setAutoLogin(request->user, request->session);
++        return;
++    }
++
+     // Per-seat autologin overrides the global [Autologin] keys for a dedicated seat.
+     // Resolve it here, after the configuration has been reloaded, rather than caching it
+     // in Display's constructor.
+     QString autologinUser;
+     QString autologinSession;
+-    const bool firstLogin = tryLockFirstLogin();
+     const KConfigGroup autologinGroup = PlasmaLogin::config()->config()->group(QStringLiteral("Autologin"));
+     if (autologinGroup.hasGroup(m_name)) {
+         const KConfigGroup seatGroup = autologinGroup.group(m_name);

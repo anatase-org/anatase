@@ -1,17 +1,21 @@
 Name:    kwin
-Version: 6.7.5
-Release: 1%{?dist}
+Version: 6.8.2
+Release: 2%{?dist}
 Summary: KDE Window manager
 
 License: BSD-2-Clause AND BSD-3-Clause AND CC0-1.0 AND GPL-2.0-only AND GPL-2.0-or-later AND GPL-3.0-only AND GPL-3.0-or-later AND LGPL-2.0-only AND LGPL-2.0-or-later AND LGPL-2.1-only AND LGPL-2.1-or-later AND LGPL-3.0-only AND (GPL-2.0-only OR GPL-3.0-only) AND (LGPL-2.1-only OR LGPL-3.0-only) AND MIT
-URL:     https://userbase.kde.org/KWin
+URL:     https://invent.kde.org/plasma/kwin
 
 %global plasma_version %(echo %{version} | cut -d. -f1-3)
 
 Source0: http://download.kde.org/%{stable_kf6}/plasma/%{maj_ver_kf6}.%{min_ver_kf6}.%{bug_ver_kf6}/%{name}-%{version}.tar.xz
 Source1: http://download.kde.org/%{stable_kf6}/plasma/%{maj_ver_kf6}.%{min_ver_kf6}.%{bug_ver_kf6}/%{name}-%{version}.tar.xz.sig
 
+# macros
+Source10: macros.kwin.in
+
 ## upstream patches
+
 
 ## proposed patches
 Patch:          overrides.patch
@@ -143,13 +147,9 @@ Provides:  %{name}-wayland%{?_isa} = %{version}-%{release}
 # by kwin-wayland
 Obsoletes:      %{name}-wayland-nvidia < 5.20.2-2
 Provides:       %{name}-wayland-nvidia = %{version}-%{release}
-# Obsolete -x11 for Plasma 6
-%if 0%{?fedora}
-Obsoletes:      %{name}-x11 < 5.92.0
-%else
-Obsoletes:      %{name}-x11 < %{version}-%{release}
-Conflicts:      %{name}-x11 < %{version}-%{release}
-%endif
+# Obsolete -x11 for Plasma 6.8
+Obsoletes:      %{name}-x11 < 6.7.90
+Conflicts:      %{name}-x11 < 6.7.90
 %if ! 0%{?rhel} >= 10
 Requires:       (kwayland-integration%{?_isa} if kf5-kwindowsystem%{?_isa})
 %endif
@@ -164,7 +164,7 @@ Requires:       xorg-x11-server-Xwayland
 
 
 %package        common
-Summary:        Common files for KWin X11 and KWin Wayland
+Summary:        Common files for KWin
 Requires:       %{name}-libs%{?_isa} = %{version}-%{release}
 Requires:       kwayland%{?_isa}
 # Split of X11 variant into subpackage
@@ -229,11 +229,20 @@ mkdir -p %{buildroot}%{_sysconfdir}/xdg/Xwayland-session.d
 # temporary(?) hack to allow initial-setup to use /usr/bin/kwin too
 ln -sr %{buildroot}%{_kf6_bindir}/kwin_wayland %{buildroot}%{_bindir}/kwin
 
+# rpm macros
+install -p -m644 -D %{SOURCE10} \
+  %{buildroot}%{_rpmmacrodir}/macros.kwin
+sed -i \
+  -e "s|@@NAME@@|%{name}|g" \
+  -e "s|@@EPOCH@@|%{?epoch}%{!?epoch:0}|g" \
+  -e "s|@@VERSION@@|%{version}|g" \
+  -e "s|@@EVR@@|%{?epoch:%{epoch:}}%{version}-%{release}|g" \
+  %{buildroot}%{_rpmmacrodir}/macros.kwin
+
 
 %files
 %{_bindir}/kwin
 %{_bindir}/kwin_wayland_wrapper
-%{_datadir}/kwin-wayland/
 %caps(cap_sys_nice=ep) %{_kf6_bindir}/kwin_wayland
 %{_userunitdir}/plasma-kwin_wayland.service
 %dir %{_sysconfdir}/xdg/Xwayland-session.d
@@ -244,7 +253,6 @@ ln -sr %{buildroot}%{_kf6_bindir}/kwin_wayland %{buildroot}%{_bindir}/kwin
 %{_kf6_qtplugindir}/kwin/
 %{_kf6_qtplugindir}/kf6/packagestructure/kwin_*.so
 %{_qt6_qmldir}/org/kde/kwin/
-%{_kf6_libdir}/kconf_update_bin/kwin5_update_default_rules
 %{_kf6_libdir}/kconf_update_bin/kwin-6.0-delete-desktop-switching-shortcuts
 %{_kf6_libdir}/kconf_update_bin/kwin-6.0-remove-breeze-tabbox-default
 %{_kf6_libdir}/kconf_update_bin/kwin-6.0-reset-active-mouse-screen
@@ -265,6 +273,7 @@ ln -sr %{buildroot}%{_kf6_bindir}/kwin_wayland %{buildroot}%{_bindir}/kwin
 %{_datadir}/knsrcfiles/*.knsrc
 %{_datadir}/krunner/dbusplugins/kwin-runner-windows.desktop
 %{_datadir}/applications/*.desktop
+%{_kf6_datadir}/kwin/
 %{_bindir}/kwindowprop
 
 %files libs
@@ -278,12 +287,40 @@ ln -sr %{buildroot}%{_kf6_bindir}/kwin_wayland %{buildroot}%{_bindir}/kwin
 %{_includedir}/kwin
 %{_libdir}/cmake/KWin
 %{_libdir}/libkwin.so
+%{_rpmmacrodir}/macros.kwin
 
 %files doc -f %{name}-doc.lang
 %license LICENSES/*.txt
 
 
 %changelog
+* Sat Oct 31 2026 Neal Gompa <ngompa@fedoraproject.org> - 6.8.2-2
+- Add RPM macros for kwin versioning to devel package
+
+* Tue Oct 27 2026 Steve Cossette <steve@ninjasinpajamas.com> - 6.8.2-1
+- 6.8.2
+
+* Fri Oct 23 2026 Jan Grulich <jgrulich@redhat.com> - 6.8.1-3
+- Rebuild (qt6)
+
+* Thu Oct 22 2026 Neal Gompa <ngompa@fedoraproject.org> - 6.8.1-2
+- Obsolete kwin-x11
+
+* Tue Oct 20 2026 Steve Cossette <steve@ninjasinpajamas.com> - 6.8.1-1
+- 6.8.1
+
+* Fri Oct 09 2026 Steve Cossette <farchord@gmail.com> - 6.8.0-1
+- 6.8.0
+
+* Thu Sep 24 2026 Steve Cossette <farchord@gmail.com> - 6.7.91-1
+- 6.7.91
+
+* Wed Sep 16 2026 Steve Cossette <farchord@gmail.com> - 6.7.90-2
+- Fix for kwin crashing on user switching
+
+* Thu Sep 10 2026 Steve Cossette <farchord@gmail.com> - 6.7.90-1
+- 6.7.90
+
 * Tue Sep 08 2026 Steve Cossette <farchord@gmail.com> - 6.7.5-1
 - 6.7.5
 

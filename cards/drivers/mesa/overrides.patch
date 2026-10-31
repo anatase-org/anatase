@@ -251,10 +251,10 @@ gamescope the game could get stuck in low power states.
  1 file changed, 4 insertions(+)
 
 diff --git a/src/amd/vulkan/00-radv-defaults.conf b/src/amd/vulkan/00-radv-defaults.conf
-index c847ca597db..68bfec5266c 100644
+index 0ea65931ff1..5bedd7c2484 100644
 --- a/src/amd/vulkan/00-radv-defaults.conf
 +++ b/src/amd/vulkan/00-radv-defaults.conf
-@@ -315,6 +315,10 @@ Application bugs worked around in this file:
+@@ -316,6 +316,10 @@ Application bugs worked around in this file:
              <option name="vk_zero_vram" value="true"/>
          </application>
  
@@ -264,7 +264,7 @@ index c847ca597db..68bfec5266c 100644
 +
          <application name="No Man's Sky" application_name_match="No Man's Sky">
              <option name="radv_app_layer" value="no_mans_sky" />
-         </application>
+             <option name="radv_force_exact_glsl_fma" value="true" />
 
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Antheas Kapenekakis <git@antheas.dev>
@@ -287,7 +287,7 @@ Signed-off-by: Samuel Pitoiset <samuel.pitoiset@gmail.com>
  2 files changed, 41 insertions(+), 2 deletions(-)
 
 diff --git a/src/gallium/frontends/dri/loader_dri3_helper.c b/src/gallium/frontends/dri/loader_dri3_helper.c
-index 6b80ead53de..a398e157c5c 100644
+index 0d6628becb2..f5f3906bc3d 100644
 --- a/src/gallium/frontends/dri/loader_dri3_helper.c
 +++ b/src/gallium/frontends/dri/loader_dri3_helper.c
 @@ -297,6 +297,30 @@ dri3_update_max_num_back(struct loader_dri3_drawable *draw)
@@ -349,7 +349,7 @@ index 6b80ead53de..a398e157c5c 100644
     dri3_update_max_num_back(draw);
  
     /* Create a new drawable */
-@@ -1087,6 +1119,12 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
+@@ -1091,6 +1123,12 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
     if (draw->type == LOADER_DRI3_DRAWABLE_WINDOW) {
        dri3_fence_reset(draw->conn, back);
  

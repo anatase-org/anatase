@@ -8,7 +8,7 @@ Subject: use the user's settings, dont override
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/envmanager/config.h b/envmanager/config.h
-index c2c967ddc95a..2f35a260de0a 100644
+index c2c967ddc..2f35a260d 100644
 --- a/envmanager/config.h
 +++ b/envmanager/config.h
 @@ -27,10 +27,10 @@ const QMap<QString, QMap<QString, QVariant>> APPLICATIONS_BLACKLIST_DEFAULT_SETT
@@ -35,7 +35,7 @@ Subject: disable first run wizard
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/initialstart/settings.cpp b/initialstart/settings.cpp
-index e415cd3f973e..68ff44ec6d0a 100644
+index e415cd3f9..68ff44ec6 100644
 --- a/initialstart/settings.cpp
 +++ b/initialstart/settings.cpp
 @@ -18,7 +18,7 @@ Settings::Settings(QObject *parent)
@@ -60,25 +60,25 @@ Subject: use our image
  3 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/containments/taskpanel/qml/NavigationPanelComponent.qml b/containments/taskpanel/qml/NavigationPanelComponent.qml
-index 763460455523..9c1285483852 100644
+index 216ce2a49..52764abbd 100644
 --- a/containments/taskpanel/qml/NavigationPanelComponent.qml
 +++ b/containments/taskpanel/qml/NavigationPanelComponent.qml
-@@ -86,7 +86,7 @@ MobileShell.NavigationPanel {
+@@ -87,7 +87,7 @@ MobileShell.NavigationPanel {
          id: homeAction
  
          enabled: true
 -        iconSource: "start-here-kde"
 +        iconSource: "start-here"
+         accessibleText: i18nc("@action:button", "Home")
  
          onTriggered: {
-             MobileShellState.ShellDBusClient.openHomeScreen();
 diff --git a/kcms/navigation/ui/TutorialPhone.qml b/kcms/navigation/ui/TutorialPhone.qml
-index 52014b70a218..7f05c29be0f9 100644
+index 09fc90119..5bbb17652 100644
 --- a/kcms/navigation/ui/TutorialPhone.qml
 +++ b/kcms/navigation/ui/TutorialPhone.qml
-@@ -44,7 +44,7 @@ Item {
-         Kirigami.Icon {
-             visible: root.showBackground
+@@ -131,7 +131,7 @@ Item {
+             id: homeScreenBackground
+             opacity: 0
  
 -            source: "start-here-kde"
 +            source: "start-here"
@@ -86,10 +86,10 @@ index 52014b70a218..7f05c29be0f9 100644
  
              anchors.verticalCenter: phone.verticalCenter
 diff --git a/kwin/mobiletaskswitcher/package/contents/ui/TaskSwitcher.qml b/kwin/mobiletaskswitcher/package/contents/ui/TaskSwitcher.qml
-index e6146392f26a..d9882af6a5da 100644
+index ca3908eff..34a5fe1d6 100644
 --- a/kwin/mobiletaskswitcher/package/contents/ui/TaskSwitcher.qml
 +++ b/kwin/mobiletaskswitcher/package/contents/ui/TaskSwitcher.qml
-@@ -559,7 +559,7 @@ FocusScope {
+@@ -567,7 +567,7 @@ FocusScope {
              // home button
              middleAction: MobileShell.NavigationPanelAction {
                  enabled: true
@@ -110,7 +110,7 @@ Subject: do a dirty load of current env vars so that plasma mobile does not
  1 file changed, 22 insertions(+), 1 deletion(-)
 
 diff --git a/bin/startplasmamobile.in b/bin/startplasmamobile.in
-index 9c4c994de124..96b9ac0a6d10 100755
+index 9c4c994de..96b9ac0a6 100755
 --- a/bin/startplasmamobile.in
 +++ b/bin/startplasmamobile.in
 @@ -16,8 +16,29 @@ export QT_QUICK_CONTROLS_MOBILE=true
@@ -157,7 +157,7 @@ Subject: cleanup quick settings
  3 files changed, 16 insertions(+), 16 deletions(-)
 
 diff --git a/bin/startplasmamobile.in b/bin/startplasmamobile.in
-index 96b9ac0a6d10..498b475f0102 100755
+index 96b9ac0a6..498b475f0 100755
 --- a/bin/startplasmamobile.in
 +++ b/bin/startplasmamobile.in
 @@ -10,7 +10,6 @@
@@ -169,7 +169,7 @@ index 96b9ac0a6d10..498b475f0102 100755
  export QT_QUICK_CONTROLS_MOBILE=true
  export PLASMA_INTEGRATION_USE_PORTAL=1
 diff --git a/components/quicksettingsplugin/quicksettingsconfig.cpp b/components/quicksettingsplugin/quicksettingsconfig.cpp
-index e40a378bf55c..b3f31802acd0 100644
+index e40a378bf..b3f31802a 100644
 --- a/components/quicksettingsplugin/quicksettingsconfig.cpp
 +++ b/components/quicksettingsplugin/quicksettingsconfig.cpp
 @@ -32,22 +32,23 @@ QList<QString> QuickSettingsConfig::enabledQuickSettings() const
@@ -206,7 +206,7 @@ index e40a378bf55c..b3f31802acd0 100644
  
  void QuickSettingsConfig::setEnabledQuickSettings(QList<QString> &list)
 diff --git a/components/quicksettingsplugin/savedquicksettings.cpp b/components/quicksettingsplugin/savedquicksettings.cpp
-index cf0f1cd87326..c0a546b42931 100644
+index cf0f1cd87..c0a546b42 100644
 --- a/components/quicksettingsplugin/savedquicksettings.cpp
 +++ b/components/quicksettingsplugin/savedquicksettings.cpp
 @@ -144,12 +144,12 @@ void SavedQuickSettings::refreshModel()
@@ -239,7 +239,7 @@ Subject: make power menu show all options
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/quicksettings/powermenu/powermenuutil.cpp b/quicksettings/powermenu/powermenuutil.cpp
-index 43450a0c24db..da5228f5169d 100644
+index 43450a0c2..da5228f51 100644
 --- a/quicksettings/powermenu/powermenuutil.cpp
 +++ b/quicksettings/powermenu/powermenuutil.cpp
 @@ -16,5 +16,5 @@ PowerMenuUtil::PowerMenuUtil(QObject *parent)
@@ -261,7 +261,7 @@ Subject: this var causes dolphin to change layout
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/bin/startplasmamobile.in b/bin/startplasmamobile.in
-index 498b475f0102..b822e53392d8 100755
+index 498b475f0..b822e5339 100755
 --- a/bin/startplasmamobile.in
 +++ b/bin/startplasmamobile.in
 @@ -13,7 +13,7 @@ export EGL_PLATFORM=wayland
@@ -274,7 +274,7 @@ index 498b475f0102..b822e53392d8 100755
  # Load distro Plasma defaults before adding the mobile overlay. Fedora's
  # kde-settings profile is added here, and Plasma skips it if XDG_CONFIG_DIRS is
 diff --git a/envmanager/settings.cpp b/envmanager/settings.cpp
-index 5eda53bfa79e..6509bd7d47ae 100644
+index 5eda53bfa..6509bd7d4 100644
 --- a/envmanager/settings.cpp
 +++ b/envmanager/settings.cpp
 @@ -29,7 +29,7 @@ const QString DESKTOP_KWINRC_FILE = u"kwinrc"_s;
@@ -297,7 +297,7 @@ Subject: Make default action sleep on plasma mobile
  1 file changed, 13 insertions(+), 1 deletion(-)
 
 diff --git a/bin/startplasmamobile.in b/bin/startplasmamobile.in
-index b822e53392d8..69b93b1b6155 100755
+index b822e5339..69b93b1b6 100755
 --- a/bin/startplasmamobile.in
 +++ b/bin/startplasmamobile.in
 @@ -36,8 +36,20 @@ if [ -d "$config_home/kdedefaults" ]; then
@@ -333,7 +333,7 @@ Subject: disable tablet mode to unify all devices (pointer in win5 counts)
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/envmanager/config.h b/envmanager/config.h
-index 2f35a260de0a..d070f750ad55 100644
+index 2f35a260d..d070f750a 100644
 --- a/envmanager/config.h
 +++ b/envmanager/config.h
 @@ -70,7 +70,7 @@ QMap<QString, QMap<QString, QVariant>> getKwinrcSettings(KSharedConfig::Ptr m_mo

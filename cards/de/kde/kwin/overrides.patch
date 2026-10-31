@@ -8,10 +8,10 @@ Subject: Tweak scaling for handhelds
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/outputconfigurationstore.cpp b/src/outputconfigurationstore.cpp
-index 2f6a76caf43e..37537b66f84c 100644
+index bbe442b717..62559d18f3 100644
 --- a/src/outputconfigurationstore.cpp
 +++ b/src/outputconfigurationstore.cpp
-@@ -817,7 +817,7 @@ double OutputConfigurationStore::chooseScale(BackendOutput *output, const QSize
+@@ -890,7 +890,7 @@ double OutputConfigurationStore::chooseScale(BackendOutput *output, const QSize
          } else {
              // phone screens: even closer than laptops
              targetDpi = 150;
