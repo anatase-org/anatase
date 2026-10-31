@@ -58,8 +58,6 @@ jobs:
   publish:
     name: Publish multi-platform images
     environment: prod
-    outputs:
-      anatase: ${{ steps.image.outputs.anatase }}
     needs:
       - x86
       - arm
@@ -199,13 +197,3 @@ jobs:
         run: |
           .github/discord-notify.sh \
             "$LUDOS_CHANNEL" "$VERSION" "$RELEASE_URL"
-
-
-  iso:
-    name: Build ISOs and ARM disk image
-    needs: publish
-    if: ${{ needs.publish.outputs.anatase == 'true' }}
-    uses: ./.github/workflows/build-iso.yml
-    with:
-      source_sha: ${{ github.sha }}
-    secrets: inherit
