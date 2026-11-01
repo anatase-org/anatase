@@ -227,8 +227,17 @@ class UI:
             cropped.resize((cropped.width * 2, cropped.height * 2)).save(buffer, format="PNG")
             passes.append((buffer.getvalue(), offset, "6"))
         for raw, offset, psm in passes:
-            output = subprocess.run(["tesseract", "stdin", "stdout", "-l", "eng", "--psm", psm, "tsv"],
-                                    input=raw, capture_output=True, timeout=30)
+            try:
+                # OCR shares small CI runners with QEMU; OpenMP workers can
+                # spend longer contending for CPUs than recognizing the image.
+                output = subprocess.run(["tesseract", "stdin", "stdout", "-l", "eng", "--psm", psm, "tsv"],
+                                        input=raw, capture_output=True, timeout=30,
+                                        env={**os.environ, "OMP_THREAD_LIMIT": "1"})
+            except subprocess.TimeoutExpired as exc:
+                # A slow frame is retryable within the enclosing UI deadline.
+                # Keep its screenshot and an explanation even without OCR.
+                prefix.with_suffix(".json").write_text(json.dumps({"ocr_error": "Tesseract timed out after 30 seconds"}))
+                raise TimeoutError(f"OCR timed out for {screenshot.name}") from exc
             if output.returncode:
                 raise RuntimeError(f"OCR failed: {output.stderr.decode(errors='replace')}")
             lines = {}
@@ -632,15 +641,25 @@ class Harness:
 
     def boot_live(self):
         last_action = None
+        linux_started = False
 
         def progress():
-            nonlocal last_action
+            nonlocal last_action, linux_started
             try:
                 self.agent.timeout = 1
                 self.install_helper()
                 return True
             except (OSError, RuntimeError, TimeoutError):
                 self.agent.close()
+            # After enrollment, Linux's dense boot console has no firmware
+            # controls to drive. Poll QGA instead of repeatedly OCRing it.
+            if self.enrollment_seen and not linux_started:
+                serial = (self.directory / "serial.log").read_text(errors="replace")
+                if re.search(r"\b(?:initrd|dracut)[\w.-]*\.(?:service|target)\b", serial):
+                    linux_started = True
+                    self.log("Linux is booting; waiting for the live guest agent")
+            if linux_started:
+                return False
             text = self.ui.capture("enrollment", accessibility=False)
             if not self.enrollment_seen and self.ui.find(r"select boot device"):
                 serial = (self.directory / "serial.log").read_text(errors="replace")

@@ -27,6 +27,10 @@ sudo dnf install python3-pillow tesseract tesseract-langpack-eng
 ```
 
 OCR runs directly through the host's Tesseract installation.
+It uses one OpenMP worker to share CI CPUs with QEMU. A slow OCR frame is
+retried within the enclosing UI deadline, with its screenshot and timeout
+record retained. Once the enrolled ISO reaches Linux's boot console, the
+harness polls the guest agent without OCRing the boot messages.
 The test never installs host packages automatically.
 The guest needs its bundled QEMU Guest Agent, Python/Pillow, dbus-python,
 pyatspi, and normal desktop/system tools; a missing capability fails explicitly.

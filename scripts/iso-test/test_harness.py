@@ -327,6 +327,46 @@ class Acceptance(unittest.TestCase):
             self.assertEqual(actual.size, expected.size)
             self.assertEqual(actual.tobytes(), expected.tobytes())
 
+    def test_ocr_timeout_retries_within_ui_deadline_and_preserves_evidence(self):
+        from PIL import Image
+
+        h = self.make_harness()
+        h.qmp.call = Mock(side_effect=lambda command, arguments:
+                          Image.new("RGB", (32, 32)).save(arguments["filename"]))
+        frames = 0
+
+        def ready():
+            nonlocal frames
+            h.ui.capture("ocr-retry", accessibility=False)
+            frames += 1
+            return True
+
+        with patch("host.subprocess.run", side_effect=[subprocess.TimeoutExpired("tesseract", 30),
+                   Mock(returncode=0, stdout=b"", stderr=b"")]) as ocr, patch("host.time.sleep"):
+            h.wait(ready, 5, "control after a slow frame")
+        self.assertEqual(frames, 1)
+        self.assertEqual(ocr.call_count, 2)
+        self.assertEqual(ocr.call_args.kwargs["env"]["OMP_THREAD_LIMIT"], "1")
+        evidence = json.loads((h.directory / "00001-ocr-retry.json").read_text())
+        self.assertIn("timed out", evidence["ocr_error"])
+        self.assertTrue((h.directory / "00001-ocr-retry.png").is_file())
+
+    def test_live_boot_polls_agent_without_ocr_of_linux_console_after_enrollment(self):
+        h = self.make_harness(arm=True, accel="tcg")
+        h.enrollment_seen = True
+        (h.directory / "serial.log").write_text("Starting dracut-initqueue.service - dracut initqueue hook...\n")
+        h.install_helper = Mock(side_effect=[TimeoutError("agent not ready"), True])
+        h.bootstrap_agent = Mock()
+        h.wait_session = Mock()
+        boot = {"time": "2026-11-01", "cmdline": "rd.live.image"}
+        h.guest = Mock(side_effect=[{"enabled": True}, boot])
+        h.ui.capture = Mock()
+        with patch("host.time.sleep"):
+            self.assertEqual(h.boot_live(), boot)
+        self.assertEqual(h.install_helper.call_count, 2)
+        h.ui.capture.assert_called_once_with("live-desktop")
+        self.assertEqual(h.report["secure_boot"], {"enabled": True})
+
     def test_remaining_apps_are_checked_after_one_fails(self):
         h = self.make_harness()
         refs = ["app/org.anatase.Calculator/x86_64/stable", "app/org.anatase.TextEditor/x86_64/stable"]
