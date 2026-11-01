@@ -170,12 +170,6 @@ def preflight(args):
         raise RuntimeError("QEMU_ACCEL must be kvm or tcg")
     if accel == "kvm" and not kvm:
         raise RuntimeError("KVM is unavailable for this architecture; use QEMU_ACCEL=tcg")
-    accel_reason = None
-    if args.arm and template.suffix != ".json" and accel == "kvm":
-        if "QEMU_ACCEL" in os.environ:
-            raise RuntimeError("ARM pflash Secure Boot needs QEMU_ACCEL=tcg, or qemuvars firmware and a JSON template for KVM")
-        accel = "tcg"
-        accel_reason = "ARM pflash Secure Boot needs secure-world emulation; qemuvars firmware/JSON variables allow KVM"
     base = Path(setting("ISO_TEST_OUTPUT", ROOT / "cache/iso-tests")).resolve()
     # Inspect the nearest existing ancestor before creating anything.
     ancestor = base
@@ -189,7 +183,7 @@ def preflight(args):
     if base == Path("/tmp") or Path("/tmp") in base.parents:
         raise RuntimeError("ISO_TEST_OUTPUT must not be under /tmp")
     return {"binary": binary, "image_binary": image_binary,
-            "firmware": code, "template": template, "accel": accel, "accel_reason": accel_reason, "base": base}
+            "firmware": code, "template": template, "accel": accel, "base": base}
 
 
 class UI:
@@ -515,9 +509,9 @@ class Harness:
         else:
             firmware_args = ["-drive", f"if=pflash,format=raw,unit=0,readonly=on,file={config['firmware']}",
                              "-drive", f"if=pflash,format=raw,unit=1,file={variables}"]
-            if self.args.arm:
-                machine += ",secure=on"
-            else:
+            # ARM UEFI Secure Boot uses the enrolled variable store, without
+            # TrustZone: Ubuntu's AAVMF firmware cannot enter from EL3.
+            if not self.args.arm:
                 if "smm=" not in machine:
                     machine += ",smm=on"
                 firmware_args += ["-global", "driver=cfi.pflash01,property=secure,value=on"]
@@ -538,8 +532,10 @@ class Harness:
         width, height = DISPLAY_RESOLUTION
         graphics = (["-device", f"{device},edid=on,xres={width},yres={height}"]
                     if vga == "virtio" else ["-vga", vga])
+        # Ubuntu's edk2 2025.11 hangs with the LPA2 exposed by ARM's max CPU.
+        cpu = "host" if config["accel"] == "kvm" else ("neoverse-n1" if self.args.arm else "max")
         args = [config["binary"], "-name", "anatase-iso-test", "-machine", machine,
-                "-accel", config["accel"], "-cpu", setting("QEMU_CPU", "host" if config["accel"] == "kvm" else "max"),
+                "-accel", config["accel"], "-cpu", setting("QEMU_CPU", cpu),
                 "-m", setting("VM_MEMORY", 8192), "-smp", setting("VM_CPUS", 4), *firmware_args,
                 "-drive", f"if=none,id=install0,file={disk},format=raw,cache=writeback,discard=unmap,detect-zeroes=unmap",
                 "-device", f"virtio-blk-pci,drive=install0,serial={TARGET_SERIAL},bootindex=2",
@@ -1150,7 +1146,7 @@ Fedora OCR/Python dependencies (QEMU and firmware must also be installed):
 Defaults: headless software graphics at 1280x800, Secure Boot, 8 GiB RAM, 4 CPUs,
 40 GiB sparse disk; KVM when usable, TCG otherwise. Each run owns fresh disk
 and firmware state under cache/iso-tests/ and retains results.json and logs.
-ARM pflash Secure Boot uses TCG; qemuvars firmware/JSON variables allow KVM.
+ARM uses neoverse-n1 under TCG to avoid Ubuntu's edk2 LPA2 firmware hang.
 The live desktop authorizes test-only QEMU Guest Agent instrumentation via
 pkexec; SELinux remains enforcing for the desktop and sandboxed applications.
 

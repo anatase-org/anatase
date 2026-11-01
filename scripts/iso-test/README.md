@@ -44,9 +44,11 @@ including with the GL override. GTK runs disable automatic zoom-to-fit so the
 window requests the guest's native content size; window decorations and host
 display scaling still apply. Set `QEMU_DISPLAY=gtk,zoom-to-fit=on` to opt into
 scaling. Native guests use KVM when available; otherwise QEMU uses TCG and
-reports it. ARM pflash
-Secure Boot requires TCG; newer qemuvars firmware with JSON variables also
-supports KVM. QEMU provides user-mode networking.
+reports it. ARM uses `neoverse-n1` under TCG to avoid the edk2 2025.11
+firmware hang with `-cpu max`. ARM firmware runs without TrustZone (`secure=on`
+would hang Ubuntu's AAVMF at EL3); UEFI Secure Boot uses the enrolled variable
+store and is verified inside the guest. Both pflash and qemuvars firmware use
+KVM when available. QEMU provides user-mode networking.
 
 Use `scripts/test_iso.sh --help` for all overrides. Common examples:
 

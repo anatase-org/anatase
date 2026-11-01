@@ -101,13 +101,65 @@ class Channels(unittest.TestCase):
 
 
 class Acceptance(unittest.TestCase):
-    def make_harness(self):
+    def make_harness(self, *, arm=False, accel="kvm"):
         cache = host.ROOT / "cache/iso-test-unit"
         cache.mkdir(parents=True, exist_ok=True)
         directory = tempfile.TemporaryDirectory(dir=cache)
         self.addCleanup(directory.cleanup)
-        return host.Harness(argparse.Namespace(arm=False, iso=Path("test.iso")),
-                            {"base": Path(directory.name), "accel": "kvm"})
+        return host.Harness(argparse.Namespace(arm=arm, iso=Path("test.iso")),
+                            {"base": Path(directory.name), "accel": accel})
+
+    def test_arm_pflash_allows_native_kvm_without_trustzone(self):
+        for overrides in ({}, {"QEMU_ACCEL": "kvm"}):
+            with self.subTest(overrides=overrides), patch.dict("os.environ", overrides, clear=True), \
+                    patch.object(host, "firmware", return_value=(Path("code.fd"), Path("vars.fd"))), \
+                    patch.object(host.platform, "machine", return_value="aarch64"), \
+                    patch.object(host.os, "access", return_value=True), \
+                    patch.object(host.shutil, "which", return_value="available"), \
+                    patch.object(host.shutil, "disk_usage", return_value=Mock(free=30 * 1024**3)), \
+                    patch.object(host, "run", side_effect=["eng", '{"filesystems":[{"fstype":"ext4"}]}']):
+                config = host.preflight(argparse.Namespace(arm=True, iso=Path(__file__)))
+                self.assertEqual(config["accel"], "kvm")
+
+    def test_qemu_cpu_and_secure_boot_firmware_configuration(self):
+        cases = [(True, "tcg", ".fd", {}, "neoverse-n1"),
+                 (True, "kvm", ".fd", {}, "host"),
+                 (True, "tcg", ".json", {}, "neoverse-n1"),
+                 (True, "kvm", ".json", {}, "host"),
+                 (False, "tcg", ".fd", {}, "max"),
+                 (False, "kvm", ".fd", {}, "host"),
+                 (True, "tcg", ".fd", {"QEMU_CPU": "cortex-a57", "QEMU_MACHINE": "virt,gic-version=3"},
+                  "cortex-a57")]
+        for arm, accel, suffix, overrides, cpu in cases:
+            with self.subTest(arm=arm, accel=accel, suffix=suffix, overrides=overrides), \
+                    patch.dict("os.environ", overrides, clear=True):
+                h = self.make_harness(arm=arm, accel=accel)
+                template = h.directory / ("template" + suffix)
+                template.write_text("fresh enrolled firmware variables")
+                h.config.update(binary="qemu", image_binary="qemu-img", firmware=Path("secure-boot.fd"),
+                                template=template)
+                h.wait = Mock()
+                process = Mock()
+                process.poll.return_value = 0
+                self.addCleanup(h.cleanup)
+                with patch.object(host, "run"), patch.object(host.subprocess, "Popen", return_value=process):
+                    h.launch_vm()
+                argv = json.loads((h.directory / "qemu-command.json").read_text())
+                self.assertEqual(argv[argv.index("-cpu") + 1], cpu)
+                machine = argv[argv.index("-machine") + 1]
+                self.assertNotIn("secure=on", machine)
+                if arm:
+                    self.assertEqual(machine, overrides.get("QEMU_MACHINE", "virt"))
+                else:
+                    self.assertIn("smm=on", machine)
+                    self.assertIn("driver=cfi.pflash01,property=secure,value=on", argv)
+                variables = h.directory / ("vars" + suffix)
+                self.assertEqual(variables.read_text(), template.read_text())
+                if suffix == ".fd":
+                    self.assertIn("if=pflash,format=raw,unit=0,readonly=on,file=secure-boot.fd", argv)
+                    self.assertIn(f"if=pflash,format=raw,unit=1,file={variables}", argv)
+                else:
+                    self.assertIn(f"uefi-vars-sysbus,jsonfile={variables}", argv)
 
     def test_failure_report_survives_diagnostics_failure(self):
         h = self.make_harness()
