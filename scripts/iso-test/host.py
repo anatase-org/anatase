@@ -437,6 +437,7 @@ class Harness:
         raise TimeoutError(f"Timed out waiting for {description}" + (f": {error}" if error else ""))
 
     def stage(self, name, operation, *, fatal=True):
+        self.log(name)
         record = {"name": name, "status": "running", "started": datetime.now(timezone.utc).isoformat()}
         self.records.append(record)
         self.save()
@@ -559,8 +560,10 @@ class Harness:
         self.qemu_log = (self.directory / "qemu.log").open("wb")
         self.process = subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=self.qemu_log,
                                         stderr=subprocess.STDOUT, start_new_session=True)
+        self.log(f"{self.report['arch']} using {config['accel']}; artifacts: {self.directory}")
         if config.get("accel_reason"):
             self.report["accel_reason"] = config["accel_reason"]
+            self.log(config["accel_reason"])
         self.wait(lambda: self.qmp.call("query-status"), 30, "QMP")
         return {"pid": self.process.pid, "disk": str(disk), "variables": str(variables)}
 
@@ -1129,8 +1132,7 @@ class Harness:
         finally:
             self.cleanup()
             self.save()
-        if self.report["status"] == "failed":
-            self.log(f"FAILED: {self.directory / 'results.json'}")
+        self.log(f"{self.report['status'].upper()}: {self.directory / 'results.json'}")
         return 0 if self.report["status"] == "passed" else 1
 
 

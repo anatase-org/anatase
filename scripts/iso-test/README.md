@@ -77,8 +77,9 @@ Unknown applications/extensions or unavailable selectors fail rather than skip.
 Application failures are recorded individually, and remaining applications are
 still attempted. Runtime extensions are checked through their consuming browser.
 
-Only failures print to stdout. Health failures print their errors and unexpected
-crash summaries; successful checks and allowed crashes stay quiet. Other failed
+Stage names, VM/acceleration status, and the final result print to stdout.
+Detailed output is limited to failures: health failures print their errors and
+unexpected crash summaries; successful check details and allowed crashes stay quiet. Other failed
 stages/applications include short screen, journal error, and application/installer
 log excerpts (20–30 lines each). QEMU/serial excerpts are shown when the guest
 helper has not connected. Full diagnostics remain in the run directory and
