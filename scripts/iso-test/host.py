@@ -1006,7 +1006,7 @@ class Harness:
             "org.anatase.ImageViewer": ([f"{fixture_root}/fixture.png"], r"Image Viewer|Gwenview|fixture.png", "image"),
             "org.anatase.DocumentViewer": ([f"{fixture_root}/fixture.pdf"], r"Document Viewer|Okular|fixture.pdf", "pdf"),
             "org.anatase.ArchiveManager": ([f"{fixture_root}/fixture.zip"], r"Archive Manager|Ark|fixture.zip", "archive"),
-            "org.anatase.DiskUsageAnalyzer": ([fixture_root], r"Disk Usage Analyzer|Filelight|anatase-iso-test", "disk"),
+            "org.anatase.DiskUsageAnalyzer": ([], r"Disk Usage Analyzer|Filelight", "disk"),
             "org.anatase.Browser": ([f"file://{fixture_root}/page.html", "--force-renderer-accessibility"],
                                     r"Anatase ISO Test", "browser"),
         }
@@ -1047,6 +1047,15 @@ class Harness:
         elif kind == "archive":
             self.ui.wait(r"fixture\.txt", timeout=self.app_timeout, label="archive-contents")
         elif kind == "disk":
+            # Filelight can finish a tiny command-line scan before showing its
+            # results page. Exercise the folder picker, as a desktop user would.
+            self.ui.wait(r"^(?:Choose|Other) Folder(?:…|\.{3})$", timeout=self.app_timeout,
+                         label="scan-choose-folder")
+            self.ui.key("ctrl", "o")
+            self.ui.wait(r"Select Folder to Scan", timeout=self.app_timeout, label="scan-folder-picker")
+            self.ui.key("ctrl", "l")
+            self.ui.type(fixture_root + "\n")
+            self.ui.click(r"^(?:Open|Select Folder)$", timeout=self.app_timeout, label="scan-folder-selected")
             def scanned():
                 self.ui.capture("directory-scanned")
                 expected = ("5 files shown", "fixture.png", "fixture.zip", "fixture.pdf", "page.html", "fixture.txt")
