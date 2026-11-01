@@ -53,7 +53,7 @@ jobs:
           echo "ready=$ready" >> "$GITHUB_OUTPUT"
 
   iso:
-    name: Build ${{ matrix.arch }} ISO
+    name: Build and test ${{ matrix.arch }} ISO
     needs: published
     if: ${{ !cancelled() && (github.event_name != 'workflow_run' || needs.published.outputs.ready == 'true') }}
     concurrency:
@@ -153,6 +153,61 @@ jobs:
           venv/bin/ludos registry file upload \
             "cache/iso/${CHANNEL}-${ARCH}/installer.iso" \
             "iso/${object_name}" "$download_name" --sign
+
+      - name: Reclaim build storage before ISO test
+        run: |
+          podman rm --all --force
+          podman system prune --all --build --volumes --force
+          # Keep the uploaded ISO locally; the extracted build copies are no
+          # longer needed and would compete with the test VM's disk for space.
+          output="cache/iso/${CHANNEL}-${ARCH}"
+          test -r "$output/installer.iso"
+          find "$output" -mindepth 1 -maxdepth 1 ! -name installer.iso -exec rm -rf -- {} +
+          df -h .
+
+      - name: Install ISO test dependencies
+        run: |
+          packages=(acl python3 python3-pil tesseract-ocr tesseract-ocr-eng qemu-utils)
+          if [[ "$ARCH" == "aarch64" ]]; then
+            packages+=(qemu-system-arm qemu-efi-aarch64)
+          else
+            packages+=(qemu-system-x86 ovmf)
+          fi
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends "${packages[@]}"
+          if [[ -c /dev/kvm ]]; then
+            sudo setfacl -m "u:$(id -u):rw" /dev/kvm
+          fi
+
+      - name: Test uploaded ISO in QEMU
+        id: iso_test
+        timeout-minutes: 300
+        env:
+          # Use Ubuntu's Python so apt-installed Pillow is available.
+          PYTHON: /usr/bin/python3
+          PYTHONUNBUFFERED: "1"
+          QEMU_DISPLAY: none
+          QEMU_GL: "0"
+          # Leave time for diagnostics and artifact upload before job timeout.
+          ISO_TEST_TIMEOUT: "17400"
+        run: |
+          args=()
+          if [[ "$ARCH" == "aarch64" ]]; then
+            args+=(--arm)
+          fi
+          scripts/test_iso.sh "${args[@]}" "cache/iso/${CHANNEL}-${ARCH}/installer.iso"
+
+      - name: Retain ISO test diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: iso-test-${{ env.CHANNEL }}-${{ matrix.arch }}
+          path: |
+            cache/iso-tests/**/*.json
+            cache/iso-tests/**/*.log
+            cache/iso-tests/**/*.png
+          if-no-files-found: ignore
+          retention-days: 7
 
   disk:
     name: Build aarch64 disk image
