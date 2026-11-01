@@ -107,14 +107,15 @@ python3 -m unittest discover -s scripts/iso-test -v
 These checks supplement complete acceptance runs with real ISOs; they do not
 replace them.
 
-The `Build Anatase ISO` workflow tests both architectures after uploading each
-ISO, so a failed test still leaves the ISO available for offline checks. Each
+The `Build Anatase ISO` workflow tests x86_64 after uploading its ISO, so a
+failed test still leaves the ISO available for offline checks. The x86_64 test
 job first removes its build containers, images, volumes, and intermediate ISO
 files while keeping `installer.iso`, then installs native Ubuntu dependencies.
 Tests use `/usr/bin/python3`, headless software graphics, KVM where available,
-and TCG otherwise. CI explicitly selects Ubuntu's Microsoft-enrolled OVMF/AAVMF
-code and variables template for each architecture. Failures fail the job and
+and TCG otherwise. CI explicitly selects Ubuntu's Microsoft-enrolled OVMF
+code and variables template. Failures fail the job and
 print diagnostics to its console.
 JSON reports, logs, and screenshots are also retained as `iso-test-<channel>-<arch>`
-artifacts for seven days; VM disks are excluded from uploads. The separate ARM
-disk-image build is unchanged.
+artifacts for seven days; VM disks are excluded from uploads. ARM ISO and disk
+images are still built and uploaded, without running the ARM ISO tests in CI.
+Local ARM testing remains available through `scripts/test_iso.sh --arm ISO`.
