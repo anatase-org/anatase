@@ -30,6 +30,7 @@ flatpak:
     --system-talk-name=org.bluez
     --system-talk-name=org.freedesktop.Avahi
     --system-talk-name=org.freedesktop.UPower
+    --talk-name=org.a11y.Bus
     --talk-name=com.canonical.AppMenu.Registrar
     --talk-name=org.freedesktop.FileManager1
     --talk-name=org.freedesktop.Notifications
