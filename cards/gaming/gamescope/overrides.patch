@@ -15476,3 +15476,26 @@ index b4d7e296..da34dc67 100644
  	bool copying;
  };
  
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Sun, 1 Nov 2026 22:13:00 +0100
+Subject: flip internal pq enable
+
+---
+ src/main.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/main.cpp b/src/main.cpp
+index d37f13a4..2835c2e2 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -624,7 +624,7 @@ static bool IsInDebugSession()
+ #endif
+ 
+ bool steamMode = false;
+-bool disableInternalPq = true;
++bool disableInternalPq = false;
+ bool g_bLaunchMangoapp = false;
+ 
+ static void UpdateCompatEnvVars()
