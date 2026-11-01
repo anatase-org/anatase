@@ -545,7 +545,8 @@ class Harness:
                 "-drive", f"if=none,id=installer_iso,file={self.args.iso.resolve()},format=raw,media=cdrom,readonly=on",
                 "-device", "virtio-scsi-pci,id=installer_scsi", "-device",
                 "scsi-cd,bus=installer_scsi.0,drive=installer_iso,bootindex=1,id=installer_cd",
-                "-netdev", "user,id=net0", "-device", "virtio-net-pci,netdev=net0",
+                # Boot from the ISO/disk, without an optional PXE ROM dependency.
+                "-netdev", "user,id=net0", "-device", "virtio-net-pci,netdev=net0,romfile=",
                 "-device", "qemu-xhci", "-device", "usb-kbd", "-device", "usb-tablet",
                 *graphics, "-display", display,
                 "-device", "virtio-serial-pci", "-chardev",
