@@ -51,7 +51,7 @@ machine_with_smm() {
 }
 
 file_size() {
-    stat -c '%s' "$1"
+    stat -L -c '%s' "$1"
 }
 
 display_with_gl() {

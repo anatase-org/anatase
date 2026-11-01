@@ -432,6 +432,27 @@ class Acceptance(unittest.TestCase):
         h.qmp.call.assert_called_once_with("query-status")
 
 
+class FirmwareFiles(unittest.TestCase):
+    def test_ubuntu_secure_boot_code_symlinks_use_target_sizes(self):
+        cache = host.ROOT / "cache/iso-test-unit"
+        cache.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=cache) as directory:
+            root = Path(directory)
+            for arm, code_size, vars_size in ((False, 3653632, 540672), (True, 64 * 1024**2, 64 * 1024**2)):
+                with self.subTest(arm=arm):
+                    code = root / f"code-{arm}.secboot.fd"
+                    variables = root / f"vars-{arm}.ms.fd"
+                    # Sparse fixtures stay on disk and match Ubuntu's flash sizes.
+                    for path, size in ((code, code_size), (variables, vars_size)):
+                        with path.open("wb") as stream:
+                            stream.truncate(size)
+                    alias = root / f"code-{arm}.ms.fd"
+                    alias.symlink_to(code.name)
+                    with patch.dict("os.environ", {"QEMU_OVMF_CODE": str(alias),
+                                                   "QEMU_OVMF_VARS_TEMPLATE": str(variables)}):
+                        self.assertEqual(host.firmware(arm), (code.resolve(), variables.resolve()))
+
+
 class FilesystemHealth(unittest.TestCase):
     def test_coredump_exception_is_limited_to_setup_and_greeter_portal_sigabrt(self):
         entries = [

@@ -105,7 +105,9 @@ ISO, so a failed test still leaves the ISO available for offline checks. Each
 job first removes its build containers, images, volumes, and intermediate ISO
 files while keeping `installer.iso`, then installs native Ubuntu dependencies.
 Tests use `/usr/bin/python3`, headless software graphics, KVM where available,
-and TCG otherwise. Failures fail the job and print diagnostics to its console.
+and TCG otherwise. CI explicitly selects Ubuntu's Microsoft-enrolled OVMF/AAVMF
+code and variables template for each architecture. Failures fail the job and
+print diagnostics to its console.
 JSON reports, logs, and screenshots are also retained as `iso-test-<channel>-<arch>`
 artifacts for seven days; VM disks are excluded from uploads. The separate ARM
 disk-image build is unchanged.
