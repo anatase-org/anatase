@@ -156,7 +156,7 @@ class Acceptance(unittest.TestCase):
             else:
                 self.assertIn(expected, output.getvalue())
 
-    def test_allowed_coredumps_are_saved_without_console_output(self):
+    def test_status_is_printed_without_allowed_coredump_details(self):
         h = self.make_harness()
         h.guest = Mock(return_value={"coredumps": [{"allowed": True, "exe": "portal", "pid": 123,
                                                     "user": "plasmalogin", "sig": 6}],
@@ -165,7 +165,7 @@ class Acceptance(unittest.TestCase):
         with redirect_stdout(output):
             result = h.stage("Installed health", h.collect_health)
         self.assertEqual(result["status"], "passed")
-        self.assertEqual(output.getvalue(), "")
+        self.assertEqual(output.getvalue(), "==> Installed health\n")
         self.assertTrue(result["result"]["coredumps"][0]["allowed"])
         self.assertIn("Stack trace: known greeter abort", result["result"]["coredump_info"])
 
