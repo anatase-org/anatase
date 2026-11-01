@@ -188,6 +188,8 @@ jobs:
           PYTHONUNBUFFERED: "1"
           QEMU_DISPLAY: none
           QEMU_GL: "0"
+          QEMU_OVMF_CODE: ${{ matrix.arch == 'aarch64' && '/usr/share/AAVMF/AAVMF_CODE.ms.fd' || '/usr/share/OVMF/OVMF_CODE_4M.ms.fd' }}
+          QEMU_OVMF_VARS_TEMPLATE: ${{ matrix.arch == 'aarch64' && '/usr/share/AAVMF/AAVMF_VARS.ms.fd' || '/usr/share/OVMF/OVMF_VARS_4M.ms.fd' }}
           # Leave time for diagnostics and artifact upload before job timeout.
           ISO_TEST_TIMEOUT: "17400"
         run: |

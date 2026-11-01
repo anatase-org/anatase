@@ -123,7 +123,7 @@ def firmware(arm):
                     break
     else:
         output = run(["bash", "-c", '''set -euo pipefail
-file_size() { stat -c '%s' "$1"; }
+file_size() { stat -L -c '%s' "$1"; }
 source "$1/scripts/ovmf.sh"
 ovmf_select_firmware 1 "$2" "$3"
 printf '%s\\n%s\\n' "$ovmf_code" "$ovmf_template"
@@ -135,7 +135,7 @@ printf '%s\\n%s\\n' "$ovmf_code" "$ovmf_template"
     if not template.endswith(".json"):
         try:
             run(["bash", "-c", '''set -euo pipefail
-file_size() { stat -c '%s' "$1"; }
+file_size() { stat -L -c '%s' "$1"; }
 source "$1/scripts/ovmf.sh"
 ovmf_vars_matches_code "$2" "$3" "$4"
 ''', "iso-test", ROOT, code, template, "1" if arm else "0"])
