@@ -15476,3 +15476,374 @@ index b4d7e296..da34dc67 100644
  	bool copying;
  };
  
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 2 Nov 2026 13:03:00 +0100
+Subject: use the connectors' MaxCLL/MaxFall data as fallback instead of 0
+
+---
+ src/Backends/DRMBackend.cpp | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
+index ba30f245..7912eb05 100644
+--- a/src/Backends/DRMBackend.cpp
++++ b/src/Backends/DRMBackend.cpp
+@@ -2583,8 +2583,9 @@ namespace gamescope
+ 			hdr_output_metadata defaultHDRMetadata{};
+ 			hdr_metadata_infoframe *pInfoframe = &defaultHDRMetadata.hdmi_metadata_type1;
+ 
+-			// The mastering display and content light levels describe the source, not
+-			// this connector. Leave them zero (unknown) until the app supplies them.
++			// Use the panel's light levels as a fallback until the app supplies metadata.
++			pInfoframe->max_cll = m_Mutable.HDR.uMaxContentLightLevel;
++			pInfoframe->max_fall = m_Mutable.HDR.uMaxFrameAverageLuminance;
+ 			pInfoframe->eotf = HDMI_EOTF_ST2084;
+ 			pInfoframe->metadata_type = 0;
+ 
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Mon, 2 Nov 2026 13:03:30 +0100
+Subject: add dmi quirk for gamma22
+
+---
+ src/Backends/DRMBackend.cpp |   6 +-
+ src/Utils/Dmi.cpp           |  60 ++++++++++++++
+ src/Utils/Dmi.h             |   7 ++
+ src/main.cpp                |   6 +-
+ src/meson.build             |   1 +
+ tests/meson.build           |   8 ++
+ tests/test_dmi.cpp          | 155 ++++++++++++++++++++++++++++++++++++
+ 7 files changed, 237 insertions(+), 6 deletions(-)
+ create mode 100644 src/Utils/Dmi.cpp
+ create mode 100644 src/Utils/Dmi.h
+ create mode 100644 tests/test_dmi.cpp
+
+diff --git a/src/Backends/DRMBackend.cpp b/src/Backends/DRMBackend.cpp
+index 7912eb05..8d8e11c8 100644
+--- a/src/Backends/DRMBackend.cpp
++++ b/src/Backends/DRMBackend.cpp
+@@ -2551,10 +2551,8 @@ namespace gamescope
+ 			if ( pColorimetry->bt2020_rgb && pHDRStaticMetadata->pq )
+ 			{
+ 				m_Mutable.HDR.bExposeHDRSupport = true;
+-				if (disableInternalPq && GetScreenType() == GAMESCOPE_SCREEN_TYPE_INTERNAL)
+-					// Current handheld internal displays have issues
+-					// with PQ, e.g., Ayaneo 3, Steam Deck etc.
+-					// Use Gamma 2.2 as the safest option for now.
++				if ( disableInternalPq && GetScreenType() == GAMESCOPE_SCREEN_TYPE_INTERNAL )
++					// DMI-quirked internal panels need Gamma 2.2 despite advertising PQ.
+ 					m_Mutable.HDR.eOutputEncodingEOTF = EOTF_Gamma22;
+ 				else
+ 					m_Mutable.HDR.eOutputEncodingEOTF = EOTF_PQ;
+diff --git a/src/Utils/Dmi.cpp b/src/Utils/Dmi.cpp
+new file mode 100644
+index 00000000..4bf03f50
+--- /dev/null
++++ b/src/Utils/Dmi.cpp
+@@ -0,0 +1,60 @@
++#include "Dmi.h"
++
++#include <fstream>
++#include <optional>
++#include <string>
++
++namespace gamescope::Dmi
++{
++    struct InternalPqQuirk
++    {
++        const char *pszSysVendor;
++        const char *pszProductName;
++        const char *pszBoardName;
++    };
++
++    // Match all specified fields exactly, like Linux DMI_EXACT_MATCH entries.
++    // These panels advertise PQ in their EDID but need Gamma 2.2 output.
++    static constexpr InternalPqQuirk s_InternalPqQuirks[] = {
++        { "AYANEO",      "AYANEO 3",               nullptr },
++        { "KONKR",       "KONKR FIT",              nullptr },
++        { "ZOTAC",       nullptr,                  "G0A1W" },
++        { "ZOTAC",       nullptr,                  "G1A1W" },
++        { "ONE-NETBOOK", "ONEXPLAYER F1 OLED",     nullptr },
++        { "ONE-NETBOOK", "ONEXPLAYER F1Pro",       nullptr },
++        { "ONE-NETBOOK", "ONEXPLAYER F1 EVA-02",   nullptr },
++    };
++
++    static std::optional<std::string> ReadField( const char *pszDmiPath, const char *pszField )
++    {
++        std::ifstream file( std::string( pszDmiPath ) + "/" + pszField );
++        std::string value;
++        // getline removes the sysfs newline, preserving firmware spaces and case.
++        if ( !std::getline( file, value ) || value.empty() )
++            return std::nullopt;
++
++        return value;
++    }
++
++    static bool MatchesField( const std::optional<std::string> &value, const char *pszExpected )
++    {
++        return !pszExpected || ( value && *value == pszExpected );
++    }
++
++    bool ShouldDisableInternalPq( const char *pszDmiPath )
++    {
++        const auto sysVendor = ReadField( pszDmiPath, "sys_vendor" );
++        const auto productName = ReadField( pszDmiPath, "product_name" );
++        const auto boardName = ReadField( pszDmiPath, "board_name" );
++
++        for ( const auto &quirk : s_InternalPqQuirks )
++        {
++            if ( MatchesField( sysVendor, quirk.pszSysVendor ) &&
++                 MatchesField( productName, quirk.pszProductName ) &&
++                 MatchesField( boardName, quirk.pszBoardName ) )
++                return true;
++        }
++
++        return false;
++    }
++}
+diff --git a/src/Utils/Dmi.h b/src/Utils/Dmi.h
+new file mode 100644
+index 00000000..1bbbd3d4
+--- /dev/null
++++ b/src/Utils/Dmi.h
+@@ -0,0 +1,7 @@
++#pragma once
++
++namespace gamescope::Dmi
++{
++    // Missing DMI data is a non-match, including on systems without SMBIOS.
++    bool ShouldDisableInternalPq( const char *pszDmiPath = "/sys/class/dmi/id" );
++}
+diff --git a/src/main.cpp b/src/main.cpp
+index d37f13a4..14882186 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -31,6 +31,7 @@
+ #include "Utils/Version.h"
+ #include "Utils/Process.h"
+ #include "Utils/Defer.h"
++#include "Utils/Dmi.h"
+ 
+ #include "backends.h"
+ #include "refresh_rate.h"
+@@ -210,7 +211,7 @@ const char usage[] =
+ 	"  --sdr-gamut-wideness           Set the 'wideness' of the gamut for SDR comment. 0 - 1.\n"
+ 	"  --hdr-sdr-content-nits         set the luminance of SDR content in nits. Default: 400 nits.\n"
+ 	"  --hdr-itm-enabled              enable SDR->HDR inverse tone mapping. only works for SDR input.\n"
+-	"  --hdr-pq-internal-enable       enable PQ transform even on internal displays (e.g. Legion Go 2)\n"
++	"  --hdr-pq-internal-enable       bypass the DMI quirk disabling PQ on affected internal displays\n"
+ 	"  --hdr-itm-sdr-nits             set the luminance of SDR content in nits used as the input for the inverse tone mapping process.\n"
+ 	"                                 Default: 100 nits, Max: 1000 nits\n"
+ 	"  --hdr-itm-target-nits          set the target luminace of the inverse tone mapping process.\n"
+@@ -624,7 +625,7 @@ static bool IsInDebugSession()
+ #endif
+ 
+ bool steamMode = false;
+-bool disableInternalPq = true;
++bool disableInternalPq = false;
+ bool g_bLaunchMangoapp = false;
+ 
+ static void UpdateCompatEnvVars()
+@@ -739,6 +740,7 @@ int main(int argc, char **argv)
+ {
+ 	g_argc = argc;
+ 	g_argv = argv;
++	disableInternalPq = gamescope::Dmi::ShouldDisableInternalPq();
+ 
+ 	// Force disable this horrible broken layer.
+ 	setenv("DISABLE_LAYER_AMD_SWITCHABLE_GRAPHICS_1", "1", 1);
+diff --git a/src/meson.build b/src/meson.build
+index b46c8286..f5074b35 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -254,6 +254,7 @@ src = [
+   'Utils/TempFiles.cpp',
+   'Utils/Version.cpp',
+   'Utils/Process.cpp',
++  'Utils/Dmi.cpp',
+   'Script/Script.cpp',
+   'BufferMemo.cpp',
+   'steamcompmgr.cpp',
+diff --git a/tests/meson.build b/tests/meson.build
+index 99fa5f34..a60bf85c 100644
+--- a/tests/meson.build
++++ b/tests/meson.build
+@@ -10,6 +10,14 @@ test_frame_generation_config = executable(
+ )
+ test('frame-generation-config', test_frame_generation_config)
+ 
++test_dmi = executable(
++	'test_dmi',
++	[srcdir / 'Utils/Dmi.cpp', 'test_dmi.cpp'],
++	include_directories: [srcdir],
++	cpp_args: gamescope_cpp_args,
++)
++test('dmi', test_dmi)
++
+ if catch2_dep.found()
+ 	unittest_src = []
+ 	foreach src : gamescope_core_src + ['Script/Script.cpp', 'convar_script.cpp']
+diff --git a/tests/test_dmi.cpp b/tests/test_dmi.cpp
+new file mode 100644
+index 00000000..c34a01c0
+--- /dev/null
++++ b/tests/test_dmi.cpp
+@@ -0,0 +1,155 @@
++#include "Utils/Dmi.h"
++
++#include <cstdio>
++#include <cstdlib>
++#include <filesystem>
++#include <fstream>
++#include <string>
++
++#include <unistd.h>
++
++static void Require( bool bCondition, const char *pszMessage )
++{
++    if ( !bCondition )
++    {
++        std::fprintf( stderr, "%s\n", pszMessage );
++        std::exit( 1 );
++    }
++}
++
++class DmiFixture
++{
++public:
++    DmiFixture()
++    {
++        char szTemplate[] = "dmi-test-XXXXXX";
++        const char *pszPath = mkdtemp( szTemplate );
++        Require( pszPath != nullptr, "Failed to create DMI fixture" );
++        path = pszPath;
++    }
++
++    ~DmiFixture()
++    {
++        std::error_code error;
++        std::filesystem::remove_all( path, error );
++    }
++
++    void SetField( const char *pszField, const char *pszValue )
++    {
++        const auto fieldPath = path / pszField;
++        std::filesystem::remove_all( fieldPath );
++        if ( !pszValue )
++            return;
++
++        std::ofstream file( fieldPath );
++        file << pszValue;
++        file.close();
++        Require( bool( file ), "Failed to write DMI fixture" );
++    }
++
++    void Expect( bool bExpected ) const
++    {
++        Require( gamescope::Dmi::ShouldDisableInternalPq( path.c_str() ) == bExpected,
++                 "Unexpected DMI quirk result" );
++    }
++
++    std::filesystem::path path;
++};
++
++int main()
++{
++    struct Device
++    {
++        const char *pszVendor;
++        const char *pszField;
++        const char *pszValue;
++    };
++
++    const Device affected[] = {
++        { "AYANEO",      "product_name", "AYANEO 3" },
++        { "KONKR",       "product_name", "KONKR FIT" },
++        { "ZOTAC",       "board_name",   "G0A1W" },
++        { "ZOTAC",       "board_name",   "G1A1W" },
++        { "ONE-NETBOOK", "product_name", "ONEXPLAYER F1 OLED" },
++        { "ONE-NETBOOK", "product_name", "ONEXPLAYER F1Pro" },
++        { "ONE-NETBOOK", "product_name", "ONEXPLAYER F1 EVA-02" },
++    };
++    const char *unavailableValues[] = { nullptr, "", "\n", "Wrong value\n" };
++
++    for ( const auto &device : affected )
++    {
++        DmiFixture fixture;
++        fixture.SetField( "sys_vendor", device.pszVendor );
++        fixture.SetField( device.pszField, device.pszValue );
++        fixture.Expect( true ); // An unrelated DMI field may be absent.
++
++        const std::string vendorLine = std::string( device.pszVendor ) + "\n";
++        const std::string valueLine = std::string( device.pszValue ) + "\n";
++        fixture.SetField( "sys_vendor", vendorLine.c_str() );
++        fixture.SetField( device.pszField, valueLine.c_str() );
++        fixture.Expect( true );
++
++        for ( const char *pszVendor : unavailableValues )
++        {
++            fixture.SetField( "sys_vendor", pszVendor );
++            fixture.Expect( false );
++        }
++        fixture.SetField( "sys_vendor", device.pszVendor );
++
++        for ( const char *pszValue : unavailableValues )
++        {
++            fixture.SetField( device.pszField, pszValue );
++            fixture.Expect( false );
++        }
++    }
++
++    // Exact matches must preserve case and firmware spaces, with no prefix matching.
++    const Device unaffected[] = {
++        { "ONE-NETBOOK", "product_name", "ONEXPLAYER 3" },
++        { "Valve",       "product_name", "Galileo" },
++        { "Valve",       "product_name", "Jupiter" },
++        { "ONE-NETBOOK", "product_name", "ONEXPLAYER F1" },
++        { "ONE-NETBOOK", "product_name", "ONEXPLAYER F1L" },
++        { "ONE-NETBOOK", "product_name", "ONEXPLAYER F1 EVA-01" },
++        { "AYANEO",      "product_name", "AYANEO 3 Pro" },
++        { "AYANEO",      "product_name", "AYANEO 30" },
++        { "AYANEO",      "product_name", "ayaneo 3" },
++        { "ayaneo",      "product_name", "AYANEO 3" },
++        { "AYANEO ",     "product_name", "AYANEO 3" },
++        { "AYANEO",      "product_name", " AYANEO 3" },
++        { "AYANEO",      "product_name", "AYANEO 3 " },
++        { "ZOTAC",       "board_name",   "G1A1W-01" },
++        { "ZOTAC",       "product_name", "G0A1W" },
++    };
++    for ( const auto &device : unaffected )
++    {
++        DmiFixture fixture;
++        fixture.SetField( "sys_vendor", device.pszVendor );
++        fixture.SetField( device.pszField, device.pszValue );
++        fixture.Expect( false );
++    }
++
++    DmiFixture fixture;
++    fixture.Expect( false ); // Empty DMI directory.
++    const auto missingPath = fixture.path / "missing";
++    Require( !gamescope::Dmi::ShouldDisableInternalPq( missingPath.c_str() ),
++             "Missing DMI directory must not match" );
++
++    fixture.SetField( "product_name", "AYANEO 3\n" );
++    // A symlink loop makes the field unreadable even when tests run as root.
++    std::filesystem::create_symlink( "sys_vendor", fixture.path / "sys_vendor" );
++    fixture.Expect( false );
++    fixture.SetField( "sys_vendor", "AYANEO\n" );
++    fixture.SetField( "product_name", nullptr );
++    std::filesystem::create_directory( fixture.path / "product_name" );
++    fixture.Expect( false ); // Opening or reading a field can fail.
++
++    fixture.SetField( "product_name", "AYANEO 3\n" );
++    if ( geteuid() != 0 )
++    {
++        std::filesystem::permissions( fixture.path / "sys_vendor", std::filesystem::perms::none );
++        fixture.Expect( false );
++    }
++
++    return 0;
++}
