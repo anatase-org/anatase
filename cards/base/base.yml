@@ -10,7 +10,7 @@ packages:
   - bc
   - coreutils
   - curl
-  - default-editor
+  - nano-default-editor
   - file
   - filesystem
   - glibc
