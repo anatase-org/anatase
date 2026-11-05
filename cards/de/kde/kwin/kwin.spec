@@ -1,6 +1,6 @@
 Name:    kwin
 Version: 6.8.2
-Release: 2%{?dist}
+Release: 3%{?dist}
 Summary: KDE Window manager
 
 License: BSD-2-Clause AND BSD-3-Clause AND CC0-1.0 AND GPL-2.0-only AND GPL-2.0-or-later AND GPL-3.0-only AND GPL-3.0-or-later AND LGPL-2.0-only AND LGPL-2.0-or-later AND LGPL-2.1-only AND LGPL-2.1-or-later AND LGPL-3.0-only AND (GPL-2.0-only OR GPL-3.0-only) AND (LGPL-2.1-only OR LGPL-3.0-only) AND MIT
@@ -16,6 +16,9 @@ Source10: macros.kwin.in
 
 ## upstream patches
 
+# compositor: handle possibly missing render device
+# https://invent.kde.org/plasma/kwin/-/commit/c9d720793bbcef9483ab290673032d39441c0e6f
+Patch0:  c9d720793bbcef9483ab290673032d39441c0e6f.patch
 
 ## proposed patches
 Patch:          overrides.patch
@@ -294,6 +297,9 @@ sed -i \
 
 
 %changelog
+* Tue Nov 03 2026 Steve Cossette <farchord@gmail.com> - 6.8.2-3
+- Fix for a kwin crash
+
 * Sat Oct 31 2026 Neal Gompa <ngompa@fedoraproject.org> - 6.8.2-2
 - Add RPM macros for kwin versioning to devel package
 
