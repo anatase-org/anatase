@@ -10,6 +10,11 @@ on:
         required: false
         type: boolean
         default: false
+      tree_shake:
+        description: Tree-shake published Flatpaks and images after building
+        required: false
+        type: boolean
+        default: false
   push:
     branches:
       - main
@@ -29,6 +34,7 @@ permissions:
   id-token: write
 
 env:
+  IMAGE_VERSIONS_TO_KEEP: "4"
   LUDOS_CHANNEL: ${{ github.ref_name == 'testing' && 'testing' || 'rolling' }}
   LUDOS_INTERIM_PREFIX: ${{ github.ref_name == 'testing' && 'testing-' || '' }}
 
@@ -141,13 +147,26 @@ jobs:
             --source-tag "${LUDOS_INTERIM_PREFIX}x86_64"
             --source-tag "${LUDOS_INTERIM_PREFIX}aarch64"
           )
-          tags=(--tag "$LUDOS_CHANNEL")
-          if [[ "$LUDOS_CHANNEL" == "rolling" ]]; then
-            tags+=(--tag latest)
-          fi
-          while IFS= read -r image; do
+          while IFS=$'\t' read -r image version; do
+            tags=(--tag "$LUDOS_CHANNEL")
+            if [[ "$LUDOS_CHANNEL" == "rolling" ]]; then
+              tags+=(--tag latest --tag "rolling-$version")
+            fi
             venv/bin/ludos registry oci index "$image" \
               "${tags[@]}" "${sources[@]}"
+          done < <(jq -r '.[] | [.name, .version] | @tsv' publish-images.json)
+
+      - name: Prune rolling image versions
+        if: ${{ env.LUDOS_CHANNEL == 'rolling' }}
+        env:
+          LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
+          LUDOS_S3_KEY: ${{ secrets.LUDOS_S3_KEY }}
+          LUDOS_S3_SECRET: ${{ secrets.LUDOS_S3_SECRET }}
+        run: |
+          while IFS= read -r image; do
+            venv/bin/ludos registry oci prune "$image" \
+              --pattern 'rolling-[0-9]*' --rule descending \
+              --number "$IMAGE_VERSIONS_TO_KEEP"
           done < <(jq -r '.[].name' publish-images.json)
 
       - name: Archive image manifests
@@ -197,3 +216,42 @@ jobs:
         run: |
           .github/discord-notify.sh \
             "$LUDOS_CHANNEL" "$VERSION" "$RELEASE_URL"
+
+  cleanup:
+    name: Tree-shake published Flatpaks and images
+    environment: prod
+    needs:
+      - x86
+      - arm
+      - publish
+    if: >-
+      ${{
+        (!cancelled()) &&
+        (github.event_name == 'schedule' ||
+          (github.event_name == 'workflow_dispatch' && inputs.tree_shake)) &&
+        needs.x86.result == 'success' &&
+        needs.arm.result == 'success' &&
+        (needs.publish.result == 'success' || needs.publish.result == 'skipped')
+      }}
+    runs-on: ubuntu-26.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          token: ${{ secrets.ANATASE_READ }}
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Install ludos
+        run: ./ludos/prepare.sh flatpaks
+
+      - name: Tree-shake Flatpaks and images
+        env:
+          LUDOS_S3_API: ${{ secrets.LUDOS_S3_API }}
+          LUDOS_S3_KEY: ${{ secrets.LUDOS_S3_KEY }}
+          LUDOS_S3_SECRET: ${{ secrets.LUDOS_S3_SECRET }}
+        run: |
+          venv/bin/ludos registry flatpak tree-shake anatase.yml
+          venv/bin/ludos registry oci tree-shake anatase
+          venv/bin/ludos registry oci tree-shake base

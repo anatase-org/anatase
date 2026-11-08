@@ -18,6 +18,9 @@ permissions:
   contents: write
   id-token: write
 
+env:
+  IMAGE_VERSIONS_TO_KEEP: "4"
+
 concurrency:
   group: promote
 
@@ -127,6 +130,23 @@ jobs:
               )
           fi
           venv/bin/ludos ci promote "${args[@]}"
+
+      - name: Tag Stable image versions
+        if: ${{ inputs.images }}
+        run: |
+          while IFS=$'\t' read -r image version; do
+            venv/bin/ludos ci promote "$image.yml" --images \
+              --prefix rolling- --from stable --to "$version"
+          done < <(jq -r '.[] | [.name, .version] | @tsv' publish-images.json)
+
+      - name: Prune Stable image versions
+        if: ${{ inputs.images }}
+        run: |
+          while IFS= read -r image; do
+            venv/bin/ludos registry oci prune "$image" \
+              --pattern '[0-9]*' --rule descending \
+              --number "$IMAGE_VERSIONS_TO_KEEP"
+          done < <(jq -r '.[].name' publish-images.json)
 
       - name: Promote rolling ISOs and ARM disk image
         if: ${{ inputs.images }}
