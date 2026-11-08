@@ -71,6 +71,9 @@ BuildRequires: cmake(libssh)
 BuildRequires: pkgconfig(x11)
 BuildRequires: appstream
 BuildRequires: xorg-x11-server-Xvfb dbus-x11
+# ProcessInfoTest uses which; TerminalInterfaceTest runs top.
+BuildRequires: which
+BuildRequires: procps-ng
 %endif
 
 # translations moved here

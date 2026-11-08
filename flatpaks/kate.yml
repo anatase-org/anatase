@@ -42,7 +42,7 @@ specs:
       branch: f$releasever
   - spec: kde/konsole/konsole.spec
     files:
-      - konsole-history_location_default.patch
+      - "*.patch"
       - konsole.spec
       - konsolerc
     packages:

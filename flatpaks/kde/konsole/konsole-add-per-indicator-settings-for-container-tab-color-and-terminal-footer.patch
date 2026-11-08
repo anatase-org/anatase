@@ -1,0 +1,390 @@
+From 92af472f0e9dc59baf00e41279e150e5047ff0a5 Mon Sep 17 00:00:00 2001
+From: Markus Hoffmann <markus@thehoffs.at>
+Date: Fri, 28 Aug 2026 18:54:57 +0200
+Subject: [PATCH] Add per-indicator settings for container tab color and
+ terminal footer
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Introduces two independent settings under Tab Bar → Appearance:
+
+- ShowContainerTabColor (default: on): color-codes the tab with a
+  per-container color when the foreground process is inside a container
+  such as Distrobox or Toolbox.
+- ShowContainerStatusBar (default: on): shows a label at the bottom of
+  the terminal area with the container type and name.
+
+Both settings take effect immediately when toggled; no restart needed.
+User-explicitly-set tab colors are never suppressed: when the container
+indicator is off its auto-assigned color is skipped rather than
+invalidated, so a sibling pane's explicit color survives in a split.
+
+Adds two unit tests to ViewManagerTest covering the suppression of
+auto-container colors and the preservation of user-set colors.
+
+Documents the container awareness feature in the handbook.
+---
+ doc/manual/index.docbook          | 78 +++++++++++++++++++++++++++++++
+ src/autotests/ViewManagerTest.cpp | 64 +++++++++++++++++++++++++
+ src/autotests/ViewManagerTest.h   |  2 +
+ src/settings/TabBarSettings.ui    | 58 ++++++++++++++++++++++-
+ src/settings/konsole.kcfg         | 10 ++++
+ src/widgets/ViewContainer.cpp     | 23 ++++++++-
+ 6 files changed, 232 insertions(+), 3 deletions(-)
+
+diff --git a/doc/manual/index.docbook b/doc/manual/index.docbook
+index 511dde2b2..7fc5c2f7c 100644
+--- a/doc/manual/index.docbook
++++ b/doc/manual/index.docbook
+@@ -520,6 +520,84 @@ Cycling between the three displayed modes can also be done by a keyboard shortcu
+ </itemizedlist>
+ </sect1>
+ 
++<sect1 id="container-awareness">
++<title>Container Awareness</title>
++
++<para>
++&konsole; can detect when the foreground process is running inside a Linux container such as
++<application>Distrobox</application>, <application>Toolbox</application>, or
++<application>Kapsule</application>, and provides visual feedback to help you keep track of
++which terminal is running inside which container.
++</para>
++
++<sect2 id="container-indicators">
++<title>Visual Indicators</title>
++
++<para>When a container is detected, &konsole; shows two indicators:</para>
++
++<itemizedlist>
++<listitem><para>
++<emphasis>Colored tab</emphasis> — the tab receives a unique color derived from the container
++identity. Each container consistently gets the same color across sessions, so you can tell at a
++glance which tab belongs to which container.
++</para></listitem>
++
++<listitem><para>
++<emphasis>Container label</emphasis> — a small bar appears at the bottom of the terminal area
++showing the container type and name (for example, <guilabel>Distrobox: fedora-41</guilabel>).
++The label disappears automatically when the foreground process returns to the host.
++</para></listitem>
++</itemizedlist>
++
++<para>
++Both indicators can be enabled or disabled independently in
++<menuchoice><guimenu>Settings</guimenu><guimenuitem>Configure &konsole;…</guimenuitem>
++<guimenuitem>Tab Bar / Splitters</guimenuitem></menuchoice>:
++</para>
++
++<itemizedlist>
++<listitem><para>
++<guilabel>Color-code tab when inside a container</guilabel> — toggles the colored tab. On by default.
++</para></listitem>
++<listitem><para>
++<guilabel>Show container label in terminal footer</guilabel> — toggles the footer label. On by default.
++</para></listitem>
++</itemizedlist>
++</sect2>
++
++<sect2 id="container-new-tab">
++<title>Opening a Tab Inside a Container</title>
++
++<para>
++The <guimenu>File</guimenu> menu and the <guibutton>New Tab</guibutton> button offer a
++submenu listing all available containers. Selecting a container opens a new tab that
++enters that container immediately. A <guilabel>Host</guilabel> entry is also provided
++to explicitly open a tab on the host system regardless of any profile default.
++</para>
++</sect2>
++
++<sect2 id="container-profile">
++<title>Profile Settings</title>
++
++<para>
++Two container-related options are available per profile in the
++<guilabel>General</guilabel> tab of <guilabel>Edit Profile</guilabel>:
++</para>
++
++<itemizedlist>
++<listitem><para>
++<guilabel>Always start in container</guilabel> — choose a specific container that new sessions
++using this profile will always enter automatically.
++</para></listitem>
++<listitem><para>
++<guilabel>Enter same container as current session</guilabel> — new tabs opened from an existing
++container session will enter the same container instead of starting on the host.
++</para></listitem>
++</itemizedlist>
++</sect2>
++
++</sect1>
++
+ </chapter>
+ 
+ <chapter id="commandreference">
+diff --git a/src/autotests/ViewManagerTest.cpp b/src/autotests/ViewManagerTest.cpp
+index 1ce355bc9..50205de07 100644
+--- a/src/autotests/ViewManagerTest.cpp
++++ b/src/autotests/ViewManagerTest.cpp
+@@ -15,6 +15,8 @@
+ #include "../session/Session.h"
+ #include "../session/SessionController.h"
+ #include "../widgets/ViewContainer.h"
++#include "../KonsoleSettings.h"
++#include <QSignalSpy>
+ #include <QStandardPaths>
+ 
+ using namespace Konsole;
+@@ -134,6 +136,68 @@ void ViewManagerTest::testContainerMenuLaunchKeepsPendingColor()
+     QCOMPARE(session->color(), ContainerSessionState::colorForContainerKey(key));
+ }
+ 
++void ViewManagerTest::testContainerTabColorSettingHidesAutoColor()
++{
++    auto mw = MainWindow();
++
++    TestContainerDetector detector;
++    ContainerInfo container;
++    container.detector = &detector;
++    container.name = QStringLiteral("fedora-41");
++    container.displayName = QStringLiteral("fedora-41");
++    container.iconName = QStringLiteral("distrobox");
++
++    const bool invoked = QMetaObject::invokeMethod(&mw, "newInContainer", Qt::DirectConnection, Q_ARG(Konsole::ContainerInfo, container));
++    QVERIFY(invoked);
++
++    Session *session = mw.viewManager()->activeViewController()->session();
++    auto *viewContainer = mw.viewManager()->activeContainer();
++
++    QVERIFY(!session->isTabColorSetByUser());
++    QVERIFY(session->color().isValid());
++
++    QSignalSpy colorSpy(viewContainer, &TabbedViewContainer::setColor);
++
++    // Setting ON: config refresh must emit the container color
++    KonsoleSettings::setShowContainerTabColor(true);
++    Q_EMIT KonsoleSettings::self()->configChanged();
++    QVERIFY(!colorSpy.isEmpty());
++    QVERIFY(colorSpy.last().at(1).value<QColor>().isValid());
++
++    colorSpy.clear();
++
++    // Setting OFF: config refresh must suppress the auto color
++    KonsoleSettings::setShowContainerTabColor(false);
++    Q_EMIT KonsoleSettings::self()->configChanged();
++    QVERIFY(!colorSpy.isEmpty());
++    QVERIFY(!colorSpy.last().at(1).value<QColor>().isValid());
++
++    KonsoleSettings::setShowContainerTabColor(true);
++}
++
++void ViewManagerTest::testContainerTabColorSettingPreservesUserColor()
++{
++    auto mw = MainWindow();
++    mw.viewManager()->newSession(mw.viewManager()->defaultProfile(), m_testDir->path());
++
++    Session *session = mw.viewManager()->activeViewController()->session();
++    auto *viewContainer = mw.viewManager()->activeContainer();
++
++    session->setColor(QColor(Qt::red));
++    session->tabColorSetByUser(true);
++
++    QSignalSpy colorSpy(viewContainer, &TabbedViewContainer::setColor);
++
++    // Setting OFF must NOT suppress a user-explicitly-set color
++    KonsoleSettings::setShowContainerTabColor(false);
++    Q_EMIT KonsoleSettings::self()->configChanged();
++    QVERIFY(!colorSpy.isEmpty());
++    QCOMPARE(colorSpy.last().at(1).value<QColor>(), QColor(Qt::red));
++
++    KonsoleSettings::setShowContainerTabColor(true);
++    session->tabColorSetByUser(false);
++}
++
+ QTEST_MAIN(ViewManagerTest)
+ 
+ #include "moc_ViewManagerTest.cpp"
+diff --git a/src/autotests/ViewManagerTest.h b/src/autotests/ViewManagerTest.h
+index 48879405d..febee30e8 100644
+--- a/src/autotests/ViewManagerTest.h
++++ b/src/autotests/ViewManagerTest.h
+@@ -21,6 +21,8 @@ private Q_SLOTS:
+     void testSaveLayout();
+     void testLoadLayout();
+     void testContainerMenuLaunchKeepsPendingColor();
++    void testContainerTabColorSettingHidesAutoColor();
++    void testContainerTabColorSettingPreservesUserColor();
+ 
+ private:
+     QTemporaryDir *m_testDir;
+diff --git a/src/settings/TabBarSettings.ui b/src/settings/TabBarSettings.ui
+index 13bfaed7f..ddcb56ea1 100644
+--- a/src/settings/TabBarSettings.ui
++++ b/src/settings/TabBarSettings.ui
+@@ -296,13 +296,33 @@
+           </widget>
+          </item>
+          <item row="18" column="1" colspan="2">
++          <widget class="QCheckBox" name="kcfg_ShowContainerTabColor">
++           <property name="toolTip">
++            <string>When running inside a container (e.g. Distrobox or Toolbox), color-code the tab with a container-specific color</string>
++           </property>
++           <property name="text">
++            <string>Color-code tab when inside a container</string>
++           </property>
++          </widget>
++         </item>
++         <item row="19" column="1" colspan="2">
++          <widget class="QCheckBox" name="kcfg_ShowContainerStatusBar">
++           <property name="toolTip">
++            <string>When running inside a container (e.g. Distrobox or Toolbox), show a label with the container name at the bottom of the terminal</string>
++           </property>
++           <property name="text">
++            <string>Show container label in terminal footer</string>
++           </property>
++          </widget>
++         </item>
++         <item row="20" column="1" colspan="2">
+           <widget class="QCheckBox" name="kcfg_TabBarUseUserStyleSheet">
+            <property name="text">
+             <string>Use user-defined stylesheet:</string>
+            </property>
+           </widget>
+          </item>
+-         <item row="19" column="1">
++         <item row="21" column="1">
+           <spacer>
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+@@ -318,7 +338,7 @@
+            </property>
+           </spacer>
+          </item>
+-         <item row="19" column="2">
++         <item row="21" column="2">
+           <widget class="KUrlRequester" name="kcfg_TabBarUserStyleSheetFile">
+            <property name="enabled">
+             <bool>false</bool>
+@@ -579,6 +599,8 @@
+   <tabstop>HideSearchTabsButton</tabstop>
+   <tabstop>kcfg_NewTabButton</tabstop>
+   <tabstop>kcfg_ExpandTabWidth</tabstop>
++  <tabstop>kcfg_ShowContainerTabColor</tabstop>
++  <tabstop>kcfg_ShowContainerStatusBar</tabstop>
+   <tabstop>kcfg_TabBarUseUserStyleSheet</tabstop>
+   <tabstop>kcfg_TabBarUserStyleSheetFile</tabstop>
+   <tabstop>kcfg_CloseTabOnMiddleMouseButton</tabstop>
+@@ -609,6 +631,38 @@
+     </hint>
+    </hints>
+   </connection>
++  <connection>
++   <sender>AlwaysHideTabBar</sender>
++   <signal>toggled(bool)</signal>
++   <receiver>kcfg_ShowContainerTabColor</receiver>
++   <slot>setDisabled(bool)</slot>
++   <hints>
++    <hint type="sourcelabel">
++     <x>20</x>
++     <y>20</y>
++    </hint>
++    <hint type="destinationlabel">
++     <x>20</x>
++     <y>20</y>
++    </hint>
++   </hints>
++  </connection>
++  <connection>
++   <sender>AlwaysHideTabBar</sender>
++   <signal>toggled(bool)</signal>
++   <receiver>kcfg_ShowContainerStatusBar</receiver>
++   <slot>setDisabled(bool)</slot>
++   <hints>
++    <hint type="sourcelabel">
++     <x>20</x>
++     <y>20</y>
++    </hint>
++    <hint type="destinationlabel">
++     <x>20</x>
++     <y>20</y>
++    </hint>
++   </hints>
++  </connection>
+   <connection>
+    <sender>AlwaysHideTabBar</sender>
+    <signal>toggled(bool)</signal>
+diff --git a/src/settings/konsole.kcfg b/src/settings/konsole.kcfg
+index adcb67a29..8ddc29b10 100644
+--- a/src/settings/konsole.kcfg
++++ b/src/settings/konsole.kcfg
+@@ -204,6 +204,16 @@
+       <label>Expand the tab widths</label>
+       <default>false</default>
+     </entry>
++    <entry name="ShowContainerTabColor" type="Bool">
++      <label>Color-code tab when running inside a container</label>
++      <tooltip>When running inside a container (e.g. Distrobox or Toolbox), color-code the tab with a container-specific color</tooltip>
++      <default>true</default>
++    </entry>
++    <entry name="ShowContainerStatusBar" type="Bool">
++      <label>Show container label in terminal footer</label>
++      <tooltip>When running inside a container (e.g. Distrobox or Toolbox), show a label with the container name at the bottom of the terminal</tooltip>
++      <default>true</default>
++    </entry>
+   </group>
+   <group name="PrintOptions">
+     <entry name="PrinterFriendly" type="Bool">
+diff --git a/src/widgets/ViewContainer.cpp b/src/widgets/ViewContainer.cpp
+index 86ef4e4ef..d9884ccba 100644
+--- a/src/widgets/ViewContainer.cpp
++++ b/src/widgets/ViewContainer.cpp
+@@ -300,6 +300,13 @@ void TabbedViewContainer::konsoleConfigChanged()
+     tabBar()->setExpanding(KonsoleSettings::expandTabWidth());
+     tabBar()->update();
+ 
++    for (int i = 0; i < count(); ++i) {
++        if (auto *splitter = viewSplitterAt(i)) {
++            Q_EMIT setColor(i, effectiveTabColor(splitter));
++        }
++    }
++    updateActiveContainerBadge();
++
+     if (KonsoleSettings::tabBarUseUserStyleSheet()) {
+         setCssFromFile(KonsoleSettings::tabBarUserStyleSheetFile());
+         _stylesheetSet = true;
+@@ -688,10 +695,17 @@ QColor TabbedViewContainer::effectiveTabColor(ViewSplitter *splitter) const
+     bool hasChosen = false;
+     bool mixed = false;
+ 
++    const bool indicatorEnabled = KonsoleSettings::showContainerTabColor();
+     for (TerminalDisplay *display : displays) {
+         auto *controller = display != nullptr ? display->sessionController() : nullptr;
+         auto session = controller != nullptr ? controller->session() : QPointer<Session>{};
+-        const QColor color = session != nullptr ? session->color() : QColor();
++        QColor color = session != nullptr ? session->color() : QColor();
++
++        // When the container tab-color indicator is disabled, skip auto-assigned
++        // container colors so a sibling pane's user-set color is preserved.
++        if (color.isValid() && session != nullptr && !session->isTabColorSetByUser() && !indicatorEnabled) {
++            continue;
++        }
+ 
+         if (!hasChosen) {
+             chosen = color;
+@@ -944,6 +958,13 @@ void TabbedViewContainer::updateContainerBadgeForDisplay(TerminalDisplay *displa
+         return;
+     }
+ 
++    if (!KonsoleSettings::showContainerStatusBar()) {
++        if (_containerBadgeWidgets.contains(display)) {
++            _containerBadgeWidgets.value(display)->setVisible(false);
++        }
++        return;
++    }
++
+     ensureContainerBadge(display);
+ 
+     auto *badgeWidget = _containerBadgeWidgets.value(display, nullptr);
+-- 
+GitLab
+
