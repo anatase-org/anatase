@@ -1,7 +1,7 @@
 kde/kate:
   upstream-sha: ff885ae59d778a34f8baceb5999a6356e7949637
 kde/konsole:
-  upstream-sha: b0b655b726a7b4082e62f8ad3c02b09a41ea2a15
+  upstream-sha: 1ff399c0d84b6785e803d73dc69fbf0c4ceec43b
 kde/markdownpart:
   upstream-sha: c3eb1d51b0e469aa778466453fbaf72af44c7b52
 kde/svgpart:

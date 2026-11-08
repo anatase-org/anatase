@@ -256,7 +256,7 @@ index 56faa9c7af384..927cfc692c3cd 100644
 +  bool use_flatpak_sandbox_;
    std::string sandbox_binary_;
  
-   // This lock protects the |zygote_pids_| set.
+   base::Lock zygote_pids_lock_;
 diff --git a/content/zygote/zygote_linux.cc b/content/zygote/zygote_linux.cc
 index da555a1907755..495559675b911 100644
 --- a/content/zygote/zygote_linux.cc

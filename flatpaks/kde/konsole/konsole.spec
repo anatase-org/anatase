@@ -9,7 +9,7 @@
 Name:    konsole
 Summary: KDE Terminal emulator
 Version: 26.08.2
-Release: 1%{?dist}
+Release: 2%{?dist}
 
 License: CC0-1.0 AND GPL-2.0-only AND GPL-2.0-or-later AND GPL-3.0-only AND LGPL-2.0-only AND LGPL-2.1-only AND LGPL-3.0-only AND (GPL-2.0-only OR GPL-3.0-only) AND (LGPL-2.1-only OR LGPL-3.0-only)
 URL:     https://www.kde.org/applications/system/konsole/
@@ -18,6 +18,9 @@ Source0: https://download.kde.org/%{stable_kf6}/release-service/%{version}/src/%
 ## upstreamable patches
 
 ## upstream patches
+# Add per-indicator settings for container tab color and terminal footer
+# https://invent.kde.org/utilities/konsole/-/merge_requests/1216
+Patch0:  konsole-add-per-indicator-settings-for-container-tab-color-and-terminal-footer.patch
 
 ## downstream patches
 Patch200: konsole-history_location_default.patch
@@ -139,6 +142,10 @@ xvfb-run -a bash -c "%ctest" || :
 
 
 %changelog
+* Thu Nov 05 2026 Jan Grulich <jgrulich@redhat.com> - 26.08.2-2
+- Upstream backport:
+  Add per-indicator settings for container tab color and terminal footer
+
 * Thu Oct 08 2026 Steve Cossette <farchord@gmail.com> - 26.08.2-1
 - 26.08.2
 

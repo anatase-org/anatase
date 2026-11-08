@@ -13,6 +13,10 @@
 %global system_build_flags 0
 
 %global numjobs %{_smp_build_ncpus}
+%ifarch x86_64
+# FTBFS workaround for OOM on x86_64
+%global numjobs 16
+%endif
 
 # official builds have less debugging and go faster... but we have to shut some things off.
 %global official_build 1
@@ -22,16 +26,6 @@
 %if 0%{?rhel}
 # no libcxx in el
 %global use_custom_libcxx 1
-%endif
-
-# enable|disble bootstrap
-%global bootstrap 0
-# workaround for old gn on el9 and el10.2, it causes build errors:
-#  unknown function filter_labels_include()
-# ERROR at //third_party/devtools-frontend/src/scripts/build/typescript/ts_library_split.gni:316:21: Assignment had no effect.
-#    public_inputs = filter_include(_all_sources, [ "*.ts" ])
-%if 0%{?rhel} == 9 || (0%{?rhel} == 10 && 0%{?rhel_minor_version} < 3)
-%global bootstrap 1
 %endif
 
 # Fancy build status, so we at least know, where we are..
@@ -74,6 +68,12 @@
 %endif
 %ifarch aarch64
 %global nodejs_arch arm64
+%endif
+
+%global system_gn 1
+# epel9 needs newer gn
+%if 0%{?rhel} == 9
+%global system_gn 0
 %endif
 
 # enable gtk4 for fedora and el>9
@@ -255,7 +255,7 @@
 %endif
 
 Name:	chromium
-Version: 156.0.8078.73
+Version: 156.0.8078.79
 Release: 1%{?dist}
 Summary: A WebKit (Blink) powered web browser that Google doesn't want you to use
 Url: http://www.chromium.org/Home
@@ -487,7 +487,7 @@ BuildRequires:	libXtst-devel
 BuildRequires:	xcb-proto
 BuildRequires:	mesa-libgbm-devel
 
-%if ! %{bootstrap}
+%if %{system_gn}
 BuildRequires: gn
 %endif
 
@@ -504,7 +504,7 @@ BuildRequires:	pipewire-devel
 # for /usr/bin/appstream-util
 BuildRequires: libappstream-glib
 
-%if %{bootstrap}
+%if ! %{system_gn}
 # gn needs these
 BuildRequires: libstdc++-static
 %endif
@@ -596,7 +596,7 @@ BuildRequires: libevdev-devel
 # esbuild is needed
 %if %{system_esbuild}
 BuildRequires: golang-github-evanw-esbuild
-# Workaround, since the new esbuild is not yet included in f45
+# DevTools also needs the esbuild JavaScript module.
 %if 0%{?fedora}
 BuildRequires: nodejs-esbuild
 %endif
@@ -787,7 +787,7 @@ Qt6 UI for chromium.
 %if ! %{bundlelibpng}
 %patch -P23 -p1 -b .build-error-libpng_for_testonly
 %endif
-%if 0%{?fedora} || 0%{?rhel} && 0%{?rhel} > 10
+%if 0%{?fedora} || (0%{?rhel} > 10)
 %patch -P24 -p1 -b .glibc-2.42-baud-rate-fix
 %endif
 %patch -P25 -p1 -b .ftbfs-pipewire-api
@@ -983,10 +983,10 @@ popd
 # Remove bundle gn and replace it with a system gn or bootstrap gn as it is x86_64 and causes
 # FTBFS on other arch like aarch64/ppc64le
 mkdir -p buildtools/linux64/
-%if %{bootstrap}
-ln -sf ../../%{chromebuilddir}/gn buildtools/linux64/gn 
-%else
+%if %{system_gn}
 ln -sf $(which gn) buildtools/linux64/gn
+%else
+ln -sf ../../%{chromebuilddir}/gn buildtools/linux64/gn
 %endif
 
 # Remove bundle gperf and replace it with system gperf
@@ -1240,10 +1240,10 @@ if python3 -c 'import google ; print google.__path__' 2> /dev/null ; then \
     exit 1 ; \
 fi
 
-%if %{bootstrap}
-tools/gn/bootstrap/bootstrap.py --gn-gen-args="$CHROMIUM_CORE_GN_DEFINES $CHROMIUM_BROWSER_GN_DEFINES"
-%else
+%if %{system_gn}
 mkdir -p %{chromebuilddir} && cp -a $(which gn) %{chromebuilddir}/
+%else
+tools/gn/bootstrap/bootstrap.py --gn-gen-args="$CHROMIUM_CORE_GN_DEFINES $CHROMIUM_BROWSER_GN_DEFINES"
 %endif
 
 %{chromebuilddir}/gn --script-executable=%{chromium_pybin} gen --args="$CHROMIUM_CORE_GN_DEFINES $CHROMIUM_BROWSER_GN_DEFINES" %{chromebuilddir}
@@ -1510,6 +1510,30 @@ fi
 %endif
 
 %changelog
+* Fri Oct 30 2026 Than Ngo <than@redhat.com> - 156.0.8078.79-1
+- Update to 156.0.8078.73, include 21 security fixes
+  * CVE-2026-119260: Use after free in Frames
+  * CVE-2026-119261: Improper input validation in Skia
+  * CVE-2026-119262: Improper input validation in V8
+  * CVE-2026-119263: Memory corruption in GarbageCollection
+  * CVE-2026-119264: Memory corruption in Dawn
+  * CVE-2026-119265: Memory corruption in Quota
+  * CVE-2026-119266: Use after free in Quota
+  * CVE-2026-119267: Memory corruption in DOM
+  * CVE-2026-119268: Integer overflow in Editing
+  * CVE-2026-119269: Use after free in Blink
+  * CVE-2026-119270: Improper input validation in CacheStorage
+  * CVE-2026-119271: Use after free in Skia
+  * CVE-2026-119272: Out of bounds read in FileSystem
+  * CVE-2026-76024: Memory corruption in MediaStream
+  * CVE-2026-76025: Use after free in FileSystem
+  * CVE-2026-76026: Memory corruption in Autofill
+  * CVE-2026-76027: Memory corruption in CacheStorage
+  * CVE-2026-76028: Use after free in FileSystem
+  * CVE-2026-76029: Memory corruption in Network
+  * CVE-2026-76030: Memory corruption in FileSystem
+  * CVE-2026-76031: Use after free in Input
+
 * Wed Oct 28 2026 Than Ngo <than@redhat.com> - 156.0.8078.73-1
 - Update to 156.0.8078.73, include 52 security fixes
   * CVE-2026-118304: Improper input validation in SVG
