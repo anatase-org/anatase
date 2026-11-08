@@ -376,6 +376,7 @@ switcherooctl launch flatpak run \
         --filesystem=/run/vpower:ro \
         --env="TMPDIR=$steam_tmp" \
         --env="IBUS_ADDRESS=$IBUS_ADDRESS" \
+        --env='VK_LOADER_DRIVERS_DISABLE=*lvp*' \
         "${steam_background_args[@]}" \
         org.anatase.Steam \
         -steamos3 \
