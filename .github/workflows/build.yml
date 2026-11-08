@@ -11,7 +11,7 @@ on:
         type: boolean
         default: false
       tree_shake:
-        description: Tree-shake published Flatpaks and images after building
+        description: Tree-shake
         required: false
         type: boolean
         default: false
@@ -243,6 +243,31 @@ jobs:
 
       - name: Install ludos
         run: ./ludos/prepare.sh flatpaks
+
+      - name: Enable arm64 execution
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+        with:
+          platforms: arm64
+
+      - name: Login to GHCR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          auth_file="$RUNNER_TEMP/containers/auth.json"
+          mkdir -p "$(dirname "$auth_file")"
+          echo "REGISTRY_AUTH_FILE=$auth_file" >> "$GITHUB_ENV"
+          echo "$GH_TOKEN" | podman login ghcr.io \
+            --authfile "$auth_file" \
+            --username "${{ github.actor }}" \
+            --password-stdin
+
+      - name: Clean GHCR intermediate caches
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          venv/bin/ludos cleanup --ci ghcr \
+            --arch x86_64 --arch aarch64 \
+            anatase.yml base.yml
 
       - name: Tree-shake Flatpaks and images
         env:
