@@ -76,7 +76,6 @@ jobs:
         with:
           ref: ${{ inputs.source_sha || inputs.source_branch || github.event.workflow_run.head_branch || github.sha }}
           fetch-depth: 1
-          token: ${{ secrets.ANATASE_READ }}
           persist-credentials: false
           submodules: recursive
 
@@ -224,7 +223,6 @@ jobs:
         with:
           ref: ${{ inputs.source_sha || inputs.source_branch || github.event.workflow_run.head_branch || github.sha }}
           fetch-depth: 1
-          token: ${{ secrets.ANATASE_READ }}
           persist-credentials: false
           submodules: recursive
 
