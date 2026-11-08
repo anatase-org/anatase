@@ -18,10 +18,46 @@ case "$timeout_seconds" in
         ;;
 esac
 
+# Only return a replacement count when detection succeeds and a cap is needed.
+# Keep this in a subshell so helper failures cannot interrupt the runner.
+limit_workers() (
+    set -o pipefail
+    LC_ALL=C lscpu --online --parse=SOCKET,CORE | LC_ALL=C awk -F, -v requested="$1" '
+        FILENAME == "-" {
+            if ($0 ~ /^#/ || $0 ~ /^[[:space:]]*$/) next
+            if (NF != 2 || $1 !~ /^[0-9]+$/ || $2 !~ /^[0-9]+$/) invalid = 1
+            else cores[$1, $2] = 1
+            next
+        }
+        /^MemTotal:/ {
+            split($0, memory, /[[:space:]]+/)
+            if (memory[2] ~ /^[0-9]+$/ && memory[3] == "kB") ram = memory[2]
+        }
+        END {
+            if (invalid || !length(cores) || !ram) exit 1
+            # Physical cores and MemTotal only: exclude SMT siblings and swap.
+            cap = int(ram / 2097152)
+            if (cap < 1) cap = 1
+            if (cap > length(cores)) cap = length(cores)
+            if (requested > cap) printf "%.0f\n", cap
+        }
+    ' - /proc/meminfo
+)
+
 arguments=()
 while (( $# )); do
     if [[ $1 == --timeout-seconds && $# -ge 2 ]]; then
         arguments+=("$1" "$timeout_seconds")
+        shift 2
+    elif [[ $1 == --num-threads && $# -ge 2 && $2 =~ ^[0-9]+$ ]]; then
+        if worker_cap=$(limit_workers "$2" 2>/dev/null) && \
+                [[ $worker_cap =~ ^[1-9][0-9]*$ ]]; then
+            printf 'anatase-fossilize-replay-wrapper: reducing --num-threads from %s to %s\n' \
+                "$2" "$worker_cap" >&2
+            arguments+=("$1" "$worker_cap")
+        else
+            arguments+=("$1" "$2")
+        fi
         shift 2
     else
         arguments+=("$1")
