@@ -1,0 +1,7 @@
+// Remote login sessions need the same sleep inhibitor permission as local ones.
+polkit.addRule(function(action, subject) {
+    if (action.id === "org.freedesktop.login1.inhibit-block-sleep" &&
+        subject.session && !subject.local) {
+        return polkit.Result.YES;
+    }
+});

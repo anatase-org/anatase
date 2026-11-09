@@ -11,6 +11,7 @@ files:
   - ssh-agent.conf
   - plasma-core-ssh-agent.conf
   - override-zsh.sh
+  - 80-anatase-ssh-inhibit.rules
   - systemd-f45-hotfix.cil
 
 build-deps:
@@ -45,6 +46,10 @@ postprocess: |
 
   # Temporary F45 policy fixes; remove when Fedora ships both upstream rules.
   semodule -n -s targeted -X 200 -i /files/systemd-f45-hotfix.cil
+
+  # Permit automatic sleep inhibitors from logged-in remote sessions.
+  install -Dm0644 /files/80-anatase-ssh-inhibit.rules \
+      /usr/share/polkit-1/rules.d/80-anatase-ssh-inhibit.rules
 
   # Various configs
   install -dm0755 /usr/share/dnf/plugins
