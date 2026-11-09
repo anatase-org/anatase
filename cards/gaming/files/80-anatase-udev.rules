@@ -30,6 +30,10 @@ ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="28
 # enabled. The receiver itself does not expose power/wakeup.
 # https://www.answeroverflow.com/m/1320873947344015523
 
+# Allow autosuspend for the EGIS fingerprint reader used by Ally devices.
+# This fixes touching the fingerprint sensor waking up the device.
+ACTION=="add", SUBSYSTEM=="usb", TEST=="power/control", ATTR{idVendor}=="1c7a", ATTR{idProduct}=="0588", ATTR{power/control}="auto"
+
 # Linux 7.0 exposes XG Mobile control through the standardized asus-armoury
 # firmware-attributes device. When that device appears, enable the eGPU only if
 # firmware reports that the dock is connected and activation is still disabled.
