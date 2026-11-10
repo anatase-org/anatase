@@ -1,5 +1,8 @@
 #!/bin/bash
 
+readonly MEMORY_PER_WORKER_KIB=$((3 * 1024 * 1024))
+readonly DEFAULT_TIMEOUT_SECONDS=30
+
 original_app="${FOSSILIZE_REPLAY_WRAPPER_ORIGINAL_APP:-}"
 if [[ -z $original_app || ! -x $original_app ]]; then
     printf 'anatase-fossilize-replay-wrapper: original replay executable is unavailable\n' >&2
@@ -9,12 +12,12 @@ fi
 # Steam currently gives workers ten seconds without a completed pipeline before
 # Fossilize kills and restarts them. Complex pipelines can legitimately take
 # longer, making the replay repeatedly discard useful compiler work.
-timeout_seconds="${ANATASE_FOSSILIZE_REPLAY_TIMEOUT_SECONDS:-60}"
+timeout_seconds="${ANATASE_FOSSILIZE_REPLAY_TIMEOUT_SECONDS:-$DEFAULT_TIMEOUT_SECONDS}"
 case "$timeout_seconds" in
     ''|*[!0-9]*)
-        printf 'anatase-fossilize-replay-wrapper: invalid timeout %q; using 60 seconds\n' \
-            "$timeout_seconds" >&2
-        timeout_seconds=60
+        printf 'anatase-fossilize-replay-wrapper: invalid timeout %q; using %s seconds\n' \
+            "$timeout_seconds" "$DEFAULT_TIMEOUT_SECONDS" >&2
+        timeout_seconds=$DEFAULT_TIMEOUT_SECONDS
         ;;
 esac
 
@@ -22,7 +25,8 @@ esac
 # Keep this in a subshell so helper failures cannot interrupt the runner.
 limit_workers() (
     set -o pipefail
-    LC_ALL=C lscpu --online --parse=SOCKET,CORE | LC_ALL=C awk -F, -v requested="$1" '
+    LC_ALL=C lscpu --online --parse=SOCKET,CORE | LC_ALL=C awk -F, \
+        -v requested="$1" -v memory_per_worker_kib="$MEMORY_PER_WORKER_KIB" '
         FILENAME == "-" {
             if ($0 ~ /^#/ || $0 ~ /^[[:space:]]*$/) next
             if (NF != 2 || $1 !~ /^[0-9]+$/ || $2 !~ /^[0-9]+$/) invalid = 1
@@ -36,7 +40,7 @@ limit_workers() (
         END {
             if (invalid || !length(cores) || !ram) exit 1
             # Physical cores and MemTotal only: exclude SMT siblings and swap.
-            cap = int(ram / 2097152)
+            cap = int(ram / memory_per_worker_kib)
             if (cap < 1) cap = 1
             if (cap > length(cores)) cap = length(cores)
             if (requested > cap) printf "%.0f\n", cap

@@ -119,7 +119,7 @@ class FossilizeReplayWrapperTests(unittest.TestCase):
                 "<cache with spaces.foz>",
                 "<--master-process>",
                 "<--timeout-seconds>",
-                "<60>",
+                "<30>",
                 "<--quiet-slave>",
             ],
         )
@@ -136,8 +136,8 @@ class FossilizeReplayWrapperTests(unittest.TestCase):
         completed = self.run_wrapper(
             "cache.foz", "--timeout-seconds", "10", timeout="soon"
         )
-        self.assertIn("<60>", completed.stdout.splitlines())
-        self.assertIn("using 60 seconds", completed.stderr)
+        self.assertIn("<30>", completed.stdout.splitlines())
+        self.assertIn("using 30 seconds", completed.stderr)
 
     def test_leaves_invocation_without_timeout_unchanged(self) -> None:
         completed = self.run_wrapper("cache.foz", "--progress")
@@ -168,8 +168,8 @@ class FossilizeReplayWrapperTests(unittest.TestCase):
             "--num-threads", "15",
             meminfo="MemTotal: 11848908 kB\nMemAvailable: 524288 kB\nSwapTotal: 67108864 kB\n",
         )
-        self.assertEqual(completed.stdout.splitlines()[-1], "<5>")
-        self.assertIn("from 15 to 5", completed.stderr)
+        self.assertEqual(completed.stdout.splitlines()[-1], "<3>")
+        self.assertIn("from 15 to 3", completed.stderr)
 
     def test_minimum_cap_is_one_worker(self) -> None:
         completed = self.run_wrapper(
@@ -240,7 +240,7 @@ class FossilizeReplayWrapperTests(unittest.TestCase):
         self.assertEqual(
             completed.stdout.splitlines(),
             ["wrapper=unset", "original=unset", "<--num-threads>", "<16>",
-             "<--timeout-seconds>", "<60>"],
+             "<--timeout-seconds>", "<30>"],
         )
         self.assertEqual(completed.stderr, "")
 
@@ -255,7 +255,7 @@ class FossilizeReplayWrapperTests(unittest.TestCase):
             [
                 "wrapper=unset", "original=unset", "<cache with spaces.foz>",
                 "<--master-process>", "<--num-threads>", "<8>",
-                "<--timeout-seconds>", "<60>", "<--quiet-slave>",
+                "<--timeout-seconds>", "<30>", "<--quiet-slave>",
                 "<--num-threads>", "<2>",
             ],
         )
