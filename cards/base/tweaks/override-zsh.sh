@@ -32,8 +32,7 @@ if [ "${ANATASE_SSH_NOSLEEP:-1}" != 0 ] \
     && [ -n "${SSH_CONNECTION:-}${SSH_CLIENT:-}${SSH_TTY:-}" ] \
     && command -v systemd-inhibit >/dev/null 2>&1; then
     exec systemd-inhibit \
-        --no-ask-password \
-        --what=sleep \
+        --what=idle \
         --mode=block \
         --who=sshd \
         --why="SSH session active" \
