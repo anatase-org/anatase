@@ -56,10 +56,10 @@
 %endif
 
 %if !0%{?rhel}
+%global with_gfxstream 1
 %global with_libunwind 1
 %global with_lmsensors 1
 %global with_virtio    1
-%global with_vulkan_layers_anti_lag 1
 %endif
 
 %ifarch %{valgrind_arches}
@@ -68,7 +68,7 @@
 %bcond_with valgrind
 %endif
 
-%global vulkan_drivers swrast%{?base_vulkan}%{?intel_platform_vulkan}%{?asahi_platform_vulkan}%{?extra_platform_vulkan}%{?with_nvk:,nouveau}%{?with_virtio:,virtio}%{?with_d3d12:,microsoft-experimental}
+%global vulkan_drivers swrast%{?base_vulkan}%{?intel_platform_vulkan}%{?asahi_platform_vulkan}%{?extra_platform_vulkan}%{?with_nvk:,nouveau}%{?with_virtio:,virtio}%{?with_gfxstream:,gfxstream}%{?with_d3d12:,microsoft-experimental}
 
 %if 0%{?with_nvk} && 0%{?rhel}
 %global vendor_nvk_crates 1
@@ -81,7 +81,7 @@
 
 Name:           mesa
 Summary:        Mesa graphics libraries
-Version:        26.2.6
+Version:        26.3.0
 Release:        %autorelease
 License:        MIT AND BSD-3-Clause AND SGI-B-2.0
 URL:            https://mesa3d.org
@@ -116,7 +116,13 @@ Source13:       https://crates.io/api/v1/crates/syn/%{rust_syn_ver}/download#/sy
 Source14:       https://crates.io/api/v1/crates/unicode-ident/%{rust_unicode_ident_ver}/download#/unicode-ident-%{rust_unicode_ident_ver}.tar.gz
 Source15:       https://crates.io/api/v1/crates/rustc-hash/%{rustc_hash_ver}/download#/rustc-hash-%{rustc_hash_ver}.tar.gz
 
-BuildRequires:  meson >= 1.3.0
+%if 0%{?with_virtio}
+# Fedora 45 does not package the protocol separately yet.
+%global venus_protocol_ver 1.1.3
+Source20:       https://gitlab.freedesktop.org/virgl/venus-protocol/-/archive/v%{venus_protocol_ver}/venus-protocol-v%{venus_protocol_ver}.tar.gz
+%endif
+
+BuildRequires:  meson >= 1.4.0
 BuildRequires:  gcc
 BuildRequires:  gcc-c++
 BuildRequires:  gettext
@@ -338,6 +344,9 @@ Development tools for translating SPIR-V shader code to DXIL for Direct3D 12
 
 %package vulkan-drivers
 Summary:        Mesa Vulkan drivers
+%if 0%{?with_virtio}
+Provides:       bundled(venus-protocol) = %{venus_protocol_ver}
+%endif
 Requires:       vulkan%{_isa}
 Requires:       %{name}-filesystem%{?_isa} = %{?epoch:%{epoch}:}%{version}-%{release}
 Obsoletes:      mesa-vulkan-devel < %{?epoch:%{epoch}:}%{version}-%{release}
@@ -349,6 +358,11 @@ The drivers with support for the Vulkan API.
 %prep
 %autosetup -n %{name}-%{ver} -p1
 cp %{SOURCE1} docs/
+
+%if 0%{?with_virtio}
+mkdir -p subprojects/venus-protocol-%{venus_protocol_ver}
+tar -xf %{SOURCE20} -C subprojects/venus-protocol-%{venus_protocol_ver} --strip-components=1
+%endif
 
 # Extract Rust crates meson cache directory
 %if 0%{?vendor_nvk_crates}
@@ -446,7 +460,7 @@ rewrite_wrap_file rustc-hash
   -Dgallium-rusticl=true \
 %endif
   -Dvulkan-drivers=%{?vulkan_drivers} \
-  -Dvulkan-layers=device-select%{?with_vulkan_layers_anti_lag:,anti-lag} \
+  -Dvulkan-layers=device-select \
   -Dgles1=enabled \
   -Dgles2=enabled \
   -Dopengl=true \
@@ -696,18 +710,19 @@ ln -s libGLX_mesa.so.0 %{buildroot}%{_libdir}/libGLX_system.so.0
 %{_datadir}/drirc.d/00-lavapipe-defaults.conf
 %{_libdir}/libVkLayer_MESA_device_select.so
 %{_datadir}/vulkan/implicit_layer.d/VkLayer_MESA_device_select.json
-%if 0%{?with_vulkan_layers_anti_lag}
-%{_libdir}/libVkLayer_MESA_anti_lag.so
-%{_datadir}/vulkan/implicit_layer.d/VkLayer_MESA_anti_lag.json
-%endif
 %if 0%{?with_virtio}
 %{_libdir}/libvulkan_virtio.so
 %{_datadir}/vulkan/icd.d/virtio_icd.*.json
 %{_datadir}/drirc.d/00-venus-defaults.conf
 %endif
+%if 0%{?with_gfxstream}
+%{_libdir}/libvulkan_gfxstream.so
+%{_datadir}/vulkan/icd.d/gfxstream_vk_icd.*.json
+%endif
 %if 0%{?with_vulkan_hw}
 %{_libdir}/libvulkan_radeon.so
 %{_datadir}/drirc.d/00-radv-defaults.conf
+%{_datadir}/drirc.d/01-radv-performance.conf
 %{_datadir}/vulkan/icd.d/radeon_icd.*.json
 %if 0%{?with_nvk}
 %{_libdir}/libvulkan_nouveau.so
