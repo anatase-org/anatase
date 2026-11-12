@@ -13,7 +13,7 @@ Subject: [NA]: Update readme + CI
  create mode 100755 sync.sh
 
 diff --git a/.gitignore b/.gitignore
-index 4e8c2af2b9c5..ab6af6b986bd 100644
+index 4e8c2af..ab6af6b 100644
 --- a/.gitignore
 +++ b/.gitignore
 @@ -1,2 +1,3 @@
@@ -22,7 +22,7 @@ index 4e8c2af2b9c5..ab6af6b986bd 100644
  /tarpaulin-report.html
 diff --git a/Containerfile b/Containerfile
 new file mode 100644
-index 000000000000..538e5abf408c
+index 0000000..538e5ab
 --- /dev/null
 +++ b/Containerfile
 @@ -0,0 +1,19 @@
@@ -47,7 +47,7 @@ index 000000000000..538e5abf408c
 +ENTRYPOINT [ "env" ]
 \ No newline at end of file
 diff --git a/README.md b/README.md
-index 1f892b76f1f2..5d866b62ac02 100644
+index 1f892b7..5d866b6 100644
 --- a/README.md
 +++ b/README.md
 @@ -1,144 +1,3 @@
@@ -198,7 +198,7 @@ index 1f892b76f1f2..5d866b62ac02 100644
 +Simple fork of [Steamos-manager](https://gitlab.steamos.cloud/holo/steamos-manager) that allows stubbing tdp calls with Handheld Daemon, plus some other minor fixups.
 diff --git a/sync.sh b/sync.sh
 new file mode 100755
-index 000000000000..b24cdda3eb84
+index 0000000..b24cdda
 --- /dev/null
 +++ b/sync.sh
 @@ -0,0 +1,26 @@
@@ -249,7 +249,7 @@ handheld daemon to disable power features if they are detected.
  3 files changed, 305 insertions(+), 37 deletions(-)
 
 diff --git a/steamos-manager/src/gpu.rs b/steamos-manager/src/gpu.rs
-index a828071f60bd..03e39b7966fa 100644
+index a828071..03e39b7 100644
 --- a/steamos-manager/src/gpu.rs
 +++ b/steamos-manager/src/gpu.rs
 @@ -15,13 +15,15 @@ use std::ops::RangeInclusive;
@@ -416,7 +416,7 @@ index a828071f60bd..03e39b7966fa 100644
      let config = config
          .as_ref()
 diff --git a/steamos-manager/src/manager/user.rs b/steamos-manager/src/manager/user.rs
-index 083389fdc7c9..4f1f4b83466c 100644
+index 083389f..4f1f4b8 100644
 --- a/steamos-manager/src/manager/user.rs
 +++ b/steamos-manager/src/manager/user.rs
 @@ -49,10 +49,7 @@ use crate::manager::{MANAGER_PATH, RemoteInterface, RemoteInterfaceConfig, Remot
@@ -533,7 +533,7 @@ index 083389fdc7c9..4f1f4b83466c 100644
  
      match gpu_performance_level_driver().await {
 diff --git a/steamos-manager/src/power.rs b/steamos-manager/src/power.rs
-index 52554283ee48..168fa6c19faa 100644
+index 5255428..168fa6c 100644
 --- a/steamos-manager/src/power.rs
 +++ b/steamos-manager/src/power.rs
 @@ -10,6 +10,7 @@ use async_trait::async_trait;
@@ -723,7 +723,7 @@ Signed-off-by: Antheas Kapenekakis <git@antheas.dev>
  2 files changed, 6 insertions(+)
 
 diff --git a/data/system/steamos-manager.service b/data/system/steamos-manager.service
-index e49ea157d6a3..08f77ccab1e0 100644
+index e49ea15..08f77cc 100644
 --- a/data/system/steamos-manager.service
 +++ b/data/system/steamos-manager.service
 @@ -2,6 +2,10 @@
@@ -738,7 +738,7 @@ index e49ea157d6a3..08f77ccab1e0 100644
  StartLimitBurst=5
  
 diff --git a/data/user/steamos-manager.service b/data/user/steamos-manager.service
-index c6dc9febe6c9..670e643df7df 100644
+index c6dc9fe..670e643 100644
 --- a/data/user/steamos-manager.service
 +++ b/data/user/steamos-manager.service
 @@ -1,5 +1,7 @@
@@ -760,7 +760,7 @@ Subject: fix: align HDMI CEC setters with zbus interface
  1 file changed, 9 insertions(+), 10 deletions(-)
 
 diff --git a/steamos-manager/src/manager/user.rs b/steamos-manager/src/manager/user.rs
-index 4f1f4b83466c..dec2233c3eb3 100644
+index 4f1f4b8..dec2233 100644
 --- a/steamos-manager/src/manager/user.rs
 +++ b/steamos-manager/src/manager/user.rs
 @@ -627,13 +627,13 @@ impl HdmiCec2 {
@@ -852,7 +852,7 @@ Subject: fix: use Fedora libdir for steamos-manager services
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/data/system/steamos-manager.service b/data/system/steamos-manager.service
-index 08f77ccab1e0..5336a76b1442 100644
+index 08f77cc..5336a76 100644
 --- a/data/system/steamos-manager.service
 +++ b/data/system/steamos-manager.service
 @@ -13,7 +13,7 @@ StartLimitBurst=5
@@ -865,7 +865,7 @@ index 08f77ccab1e0..5336a76b1442 100644
  RestartSec=1
  RestartMaxDelaySec=10
 diff --git a/data/user/steamos-manager.service b/data/user/steamos-manager.service
-index 670e643df7df..2c6fdb868701 100644
+index 670e643..2c6fdb8 100644
 --- a/data/user/steamos-manager.service
 +++ b/data/user/steamos-manager.service
 @@ -9,7 +9,7 @@ StartLimitBurst=5
@@ -889,7 +889,7 @@ Subject: remove inputplumber handling
  2 files changed, 5 deletions(-)
 
 diff --git a/steamos-manager/src/daemon/root.rs b/steamos-manager/src/daemon/root.rs
-index 7a7121533fec..69bf42ffff01 100644
+index 7a71215..69bf42f 100644
 --- a/steamos-manager/src/daemon/root.rs
 +++ b/steamos-manager/src/daemon/root.rs
 @@ -19,7 +19,6 @@ use zbus::connection::Connection;
@@ -911,7 +911,7 @@ index 7a7121533fec..69bf42ffff01 100644
          daemon.add_service(sysfs);
  
 diff --git a/steamos-manager/src/lib.rs b/steamos-manager/src/lib.rs
-index 17e607bff42d..ed2908f974d1 100644
+index 17e607b..ed2908f 100644
 --- a/steamos-manager/src/lib.rs
 +++ b/steamos-manager/src/lib.rs
 @@ -27,7 +27,6 @@ pub use steamos_manager_proxy as proxy;
@@ -933,7 +933,7 @@ Subject: drop wifi interfaces
  1 file changed, 12 insertions(+), 30 deletions(-)
 
 diff --git a/steamos-manager/src/manager/user.rs b/steamos-manager/src/manager/user.rs
-index dec2233c3eb3..ddfec3107186 100644
+index dec2233..ddfec31 100644
 --- a/steamos-manager/src/manager/user.rs
 +++ b/steamos-manager/src/manager/user.rs
 @@ -1876,7 +1876,7 @@ pub(crate) async fn create_interfaces(
@@ -1042,7 +1042,7 @@ Subject: drop session management
  1 file changed, 3 insertions(+), 7 deletions(-)
 
 diff --git a/steamos-manager/src/manager/user.rs b/steamos-manager/src/manager/user.rs
-index ddfec3107186..2d4229859fde 100644
+index ddfec31..2d42298 100644
 --- a/steamos-manager/src/manager/user.rs
 +++ b/steamos-manager/src/manager/user.rs
 @@ -2001,7 +2001,7 @@ pub(crate) async fn create_interfaces(
@@ -1084,7 +1084,7 @@ Subject: drop storage management and reset
  1 file changed, 6 insertions(+), 14 deletions(-)
 
 diff --git a/steamos-manager/src/manager/user.rs b/steamos-manager/src/manager/user.rs
-index 2d4229859fde..293d2808200c 100644
+index 2d42298..293d280 100644
 --- a/steamos-manager/src/manager/user.rs
 +++ b/steamos-manager/src/manager/user.rs
 @@ -208,8 +208,6 @@ struct RemoteInterface1 {
@@ -1166,7 +1166,7 @@ Subject: drop other hardware methods
  1 file changed, 15 insertions(+), 20 deletions(-)
 
 diff --git a/steamos-manager/src/manager/user.rs b/steamos-manager/src/manager/user.rs
-index 293d2808200c..8843f0d5b0d5 100644
+index 293d280..8843f0d 100644
 --- a/steamos-manager/src/manager/user.rs
 +++ b/steamos-manager/src/manager/user.rs
 @@ -1686,7 +1686,7 @@ async fn create_platform_interfaces(
@@ -1287,7 +1287,7 @@ Subject: drop cec handling
  1 file changed, 11 insertions(+), 23 deletions(-)
 
 diff --git a/steamos-manager/src/manager/user.rs b/steamos-manager/src/manager/user.rs
-index 8843f0d5b0d5..a3c2fbeae2be 100644
+index 8843f0d..a3c2fbe 100644
 --- a/steamos-manager/src/manager/user.rs
 +++ b/steamos-manager/src/manager/user.rs
 @@ -1950,23 +1950,13 @@ pub(crate) async fn create_interfaces(
@@ -1368,7 +1368,7 @@ Subject: drop firmware update methods
  1 file changed, 7 insertions(+), 9 deletions(-)
 
 diff --git a/steamos-manager/src/manager/user.rs b/steamos-manager/src/manager/user.rs
-index a3c2fbeae2be..96a4e0ea5875 100644
+index a3c2fbe..96a4e0e 100644
 --- a/steamos-manager/src/manager/user.rs
 +++ b/steamos-manager/src/manager/user.rs
 @@ -1646,7 +1646,7 @@ impl Service for ScreenReaderSetupService {
@@ -1443,7 +1443,7 @@ Subject: drop ftrace, it also does not have a selinux policy
  3 files changed, 9 deletions(-)
 
 diff --git a/data/system/steamos-manager.service b/data/system/steamos-manager.service
-index 5336a76b1442..6e97c829cdc0 100644
+index 5336a76..6e97c82 100644
 --- a/data/system/steamos-manager.service
 +++ b/data/system/steamos-manager.service
 @@ -1,7 +1,5 @@
@@ -1455,7 +1455,7 @@ index 5336a76b1442..6e97c829cdc0 100644
  Wants=hhdl.service
  After=hhd.service
 diff --git a/steamos-manager/src/daemon/root.rs b/steamos-manager/src/daemon/root.rs
-index 69bf42ffff01..87d6710bdaec 100644
+index 69bf42f..87d6710 100644
 --- a/steamos-manager/src/daemon/root.rs
 +++ b/steamos-manager/src/daemon/root.rs
 @@ -21,7 +21,6 @@ use crate::daemon::{Daemon, DaemonCommand, DaemonContext, channel};
@@ -1478,7 +1478,7 @@ index 69bf42ffff01..87d6710bdaec 100644
          daemon.add_service(sysfs);
  
 diff --git a/steamos-manager/src/sls/mod.rs b/steamos-manager/src/sls/mod.rs
-index 2ecba2a92997..f2da031b2ec4 100644
+index 2ecba2a..f2da031 100644
 --- a/steamos-manager/src/sls/mod.rs
 +++ b/steamos-manager/src/sls/mod.rs
 @@ -1,6 +1,4 @@
@@ -1499,7 +1499,7 @@ Subject: ds_inhibit: Wait for controller input enumeration
  1 file changed, 85 insertions(+), 8 deletions(-)
 
 diff --git a/steamos-manager/src/ds_inhibit.rs b/steamos-manager/src/ds_inhibit.rs
-index db897ce51c3a..b3c2bcd09e3b 100644
+index db897ce..b3c2bcd 100644
 --- a/steamos-manager/src/ds_inhibit.rs
 +++ b/steamos-manager/src/ds_inhibit.rs
 @@ -23,6 +23,12 @@ struct HidNode {
@@ -1647,3 +1647,308 @@ index db897ce51c3a..b3c2bcd09e3b 100644
      #[tokio::test]
      async fn inhibitor_open_close() {
          let h = testing::start();
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Thu, 12 Nov 2026 09:08:10 +0100
+Subject: add retries for checking hhd
+
+---
+ steamos-manager/src/gpu.rs          | 38 ++++++-------
+ steamos-manager/src/manager/user.rs | 10 ++--
+ steamos-manager/src/power.rs        | 83 ++++++++++++++++++++++-------
+ 3 files changed, 87 insertions(+), 44 deletions(-)
+
+diff --git a/steamos-manager/src/gpu.rs b/steamos-manager/src/gpu.rs
+index 03e39b7..b52a567 100644
+--- a/steamos-manager/src/gpu.rs
++++ b/steamos-manager/src/gpu.rs
+@@ -23,7 +23,7 @@ use tokio::process::Command;
+ use tracing::{debug, error};
+ 
+ use crate::hardware::{device_config, device_type};
+-use crate::power::{HHD_CMD, HhdStatus, find_hwmon};
++use crate::power::{HHD_CMD, HhdStatus, find_hwmon, get_hhd_status};
+ use crate::{path, write_synced};
+ 
+ pub(crate) const AMDGPU_HWMON_NAME: &str = "amdgpu";
+@@ -152,25 +152,6 @@ pub(crate) async fn gpu_power_profile_driver() -> Result<Box<dyn GpuPowerProfile
+     })
+ }
+ 
+-async fn get_hhd_status() -> HhdStatus {
+-    let output = Command::new(HHD_CMD)
+-        .arg("steamos-gpu")
+-        .arg("get")
+-        .output()
+-        .await;
+-
+-    if output.is_err() {
+-        return HhdStatus::Inactive;
+-    }
+-
+-    let code = output.unwrap().status.code().unwrap_or(0);
+-    match code {
+-        1 => HhdStatus::Inactive,
+-        2 => HhdStatus::Conflicts,
+-        _ => HhdStatus::Active,
+-    }
+-}
+-
+ #[derive(Debug)]
+ pub(crate) struct HhdPerformanceLevelDriver {
+     manual: AtomicBool,
+@@ -187,6 +168,9 @@ impl GpuPerformanceLevelDriver for HhdPerformanceLevelDriver {
+     }
+ 
+     async fn get_available_performance_levels(&self) -> Result<Vec<GpuPerformanceLevel>> {
++        if self.get_clocks_range().await.is_err() {
++            return Ok(Vec::new());
++        }
+         Ok(vec![
+             GpuPerformanceLevel::Intel(IntelPerformanceLevel::Auto),
+             GpuPerformanceLevel::Intel(IntelPerformanceLevel::Manual),
+@@ -280,7 +264,7 @@ impl GpuPerformanceLevelDriver for HhdPerformanceLevelDriver {
+ }
+ 
+ pub(crate) async fn gpu_performance_level_driver() -> Result<Box<dyn GpuPerformanceLevelDriver>> {
+-    let hhd_status = get_hhd_status().await;
++    let hhd_status = get_hhd_status("steamos-gpu").await;
+ 
+     if hhd_status == HhdStatus::Active {
+         debug!("Using handheld daemon for TDP limiting");
+@@ -292,6 +276,18 @@ pub(crate) async fn gpu_performance_level_driver() -> Result<Box<dyn GpuPerforma
+     }
+ 
+     let config = device_config().await?;
++    if hhd_status == HhdStatus::NotReady
++        && config
++            .as_ref()
++            .and_then(|config| config.gpu_performance.as_ref())
++            .is_none()
++    {
++        // Keep an unready HHD driver so subsequent property requests can
++        // discover its controls without restarting SteamOS Manager.
++        return Ok(Box::new(HhdPerformanceLevelDriver {
++            manual: AtomicBool::new(false),
++        }));
++    }
+     let config = config
+         .as_ref()
+         .and_then(|config| config.gpu_performance.as_ref())
+diff --git a/steamos-manager/src/manager/user.rs b/steamos-manager/src/manager/user.rs
+index 96a4e0e..4532bd5 100644
+--- a/steamos-manager/src/manager/user.rs
++++ b/steamos-manager/src/manager/user.rs
+@@ -449,7 +449,7 @@ impl FanControl1 {
+ 
+ #[remote(name = "com.steampowered.SteamOSManager1.GpuPerformanceLevel1")]
+ impl GpuPerformanceLevel1 {
+-    #[zbus(property(emits_changed_signal = "const"))]
++    #[zbus(property(emits_changed_signal = "false"))]
+     async fn available_gpu_performance_levels(&self) -> fdo::Result<Vec<String>> {
+         self.driver
+             .get_available_performance_levels()
+@@ -515,7 +515,7 @@ impl GpuPerformanceLevel1 {
+         Ok(self.manual_gpu_clock_changed(&ctx).await?)
+     }
+ 
+-    #[zbus(property(emits_changed_signal = "const"))]
++    #[zbus(property(emits_changed_signal = "false"))]
+     async fn manual_gpu_clock_min(&self) -> fdo::Result<u32> {
+         Ok(*self
+             .driver
+@@ -525,7 +525,7 @@ impl GpuPerformanceLevel1 {
+             .start())
+     }
+ 
+-    #[zbus(property(emits_changed_signal = "const"))]
++    #[zbus(property(emits_changed_signal = "false"))]
+     async fn manual_gpu_clock_max(&self) -> fdo::Result<u32> {
+         Ok(*self
+             .driver
+@@ -1324,7 +1324,7 @@ impl TdpLimit1 {
+             .map_err(|_| fdo::Error::Failed(String::from("Failed to set TDP limit")))
+     }
+ 
+-    #[zbus(property(emits_changed_signal = "const"))]
++    #[zbus(property(emits_changed_signal = "false"))]
+     async fn tdp_limit_min(&self) -> u32 {
+         let (tx, rx) = oneshot::channel();
+         if self
+@@ -1341,7 +1341,7 @@ impl TdpLimit1 {
+         }
+     }
+ 
+-    #[zbus(property(emits_changed_signal = "const"))]
++    #[zbus(property(emits_changed_signal = "false"))]
+     async fn tdp_limit_max(&self) -> u32 {
+         let (tx, rx) = oneshot::channel();
+         if self
+diff --git a/steamos-manager/src/power.rs b/steamos-manager/src/power.rs
+index 168fa6c..13816ef 100644
+--- a/steamos-manager/src/power.rs
++++ b/steamos-manager/src/power.rs
+@@ -172,7 +172,7 @@ pub(crate) trait TdpLimitManager: Send + Sync {
+ }
+ 
+ pub(crate) async fn tdp_limit_manager(system: &Connection) -> Result<Box<dyn TdpLimitManager>> {
+-    let hhd_status = get_hhd_status().await;
++    let hhd_status = get_hhd_status("steamos-tdp").await;
+ 
+     if hhd_status == HhdStatus::Active {
+         debug!("Using handheld daemon for TDP limiting");
+@@ -201,6 +201,10 @@ pub(crate) async fn tdp_limit_manager(system: &Connection) -> Result<Box<dyn Tdp
+                 proxy: None,
+             }),
+         })
++    } else if hhd_status == HhdStatus::NotReady {
++        // Preserve the helper for later range requests instead of permanently
++        // selecting the inactive remote fallback while HHD is starting.
++        Ok(Box::new(HhdTdpManager {}))
+     } else {
+         Ok(Box::new(RemoteInterfaceLimitManager {
+             connection: system.clone(),
+@@ -677,35 +681,37 @@ impl<'proxy> TdpLimitManager for RemoteInterfaceLimitManager<'proxy> {
+ #[derive(PartialEq, Debug)]
+ pub(crate) enum HhdStatus {
+     Inactive,
++    NotReady,
+     Active,
+     Conflicts,
+ }
+ 
+ pub(crate) const HHD_CMD: &str = "hhd.steamos"; // "/home/bazzite/hhd-dev/hhd/venv/bin/hhd.steamos";
+ 
+-async fn get_hhd_status() -> HhdStatus {
+-    let output = Command::new(HHD_CMD)
+-        .arg("steamos-tdp")
+-        .arg("get")
+-        .output()
+-        .await;
+-
+-    if output.is_err() {
+-        return HhdStatus::Inactive;
+-    }
++pub(crate) async fn get_hhd_status(control: &str) -> HhdStatus {
++    let mut command = Command::new(HHD_CMD);
++    command.arg(control).arg("get");
++    probe_hhd_status(&mut command).await
++}
+ 
+-    let code = output.unwrap().status.code().unwrap_or(0);
+-    match code {
+-        1 => HhdStatus::Inactive,
+-        2 => HhdStatus::Conflicts,
+-        _ => HhdStatus::Active,
++async fn probe_hhd_status(command: &mut Command) -> HhdStatus {
++    // Probe once per request. A helper that exists but cannot contact HHD yet
++    // must not permanently disable the driver; later queries try it again.
++    match command.output().await {
++        Ok(output) => match output.status.code() {
++            Some(0) => HhdStatus::Active,
++            Some(1) => HhdStatus::NotReady,
++            Some(2) => HhdStatus::Conflicts,
++            _ => HhdStatus::Inactive,
++        },
++        Err(_) => HhdStatus::Inactive,
+     }
+ }
+ 
+ pub(crate) async fn enable_power_features() -> bool {
+-    let hhd_status = get_hhd_status().await;
++    let hhd_status = get_hhd_status("steamos-tdp").await;
+     info!("Handheld daemon TDP status: {:?}", hhd_status);
+-    hhd_status == HhdStatus::Inactive
++    matches!(hhd_status, HhdStatus::Inactive | HhdStatus::NotReady)
+ }
+ 
+ impl HhdTdpManager {}
+@@ -1169,6 +1175,47 @@ pub(crate) mod test {
+     use tokio::time::sleep;
+     use zbus::{fdo, interface};
+ 
++    #[tokio::test]
++    async fn hhd_probe_not_ready_is_retried_only_on_the_next_request() {
++        let directory = tempfile::tempdir().unwrap();
++        let marker = directory.path().join("probed");
++        let mut command = Command::new("sh");
++        command.args([
++            "-c",
++            "if [ -e \"$1\" ]; then exit 0; fi; touch \"$1\"; exit 1",
++            "hhd-probe",
++        ]);
++        command.arg(&marker);
++
++        assert_eq!(probe_hhd_status(&mut command).await, HhdStatus::NotReady);
++        assert!(marker.exists());
++        assert_eq!(probe_hhd_status(&mut command).await, HhdStatus::Active);
++    }
++
++    #[tokio::test]
++    async fn hhd_probe_missing_helper_is_inactive() {
++        let directory = tempfile::tempdir().unwrap();
++        let mut command = Command::new(directory.path().join("missing-helper"));
++
++        assert_eq!(probe_hhd_status(&mut command).await, HhdStatus::Inactive);
++    }
++
++    #[tokio::test]
++    async fn hhd_probe_reports_conflicts() {
++        let mut command = Command::new("sh");
++        command.args(["-c", "exit 2"]);
++
++        assert_eq!(probe_hhd_status(&mut command).await, HhdStatus::Conflicts);
++    }
++
++    #[tokio::test]
++    async fn hhd_probe_failed_helper_is_not_active() {
++        let mut command = Command::new("sh");
++        command.args(["-c", "kill -TERM $$"]);
++
++        assert_eq!(probe_hhd_status(&mut command).await, HhdStatus::Inactive);
++    }
++
+     #[derive(Debug, Default, Clone)]
+     pub struct Nodes {
+         cpu_boost: bool,
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Thu, 12 Nov 2026 09:08:16 +0100
+Subject: fix sync script
+
+---
+ sync.sh | 10 ++++------
+ 1 file changed, 4 insertions(+), 6 deletions(-)
+
+diff --git a/sync.sh b/sync.sh
+index b24cdda..1357182 100755
+--- a/sync.sh
++++ b/sync.sh
+@@ -7,20 +7,18 @@ set -e
+ 
+ HOST=$1
+ RSYNC="rsync -rv --exclude .git --exclude venv --exclude __pycache__'"
+-USER=${2:-bazzite}
+ 
+ cargo build -p steamos-manager
+ $RSYNC target/debug/steamos-manager $HOST:
+ 
+ ssh $HOST /bin/bash << EOF
+     sudo rpm-ostree usroverlay --hotfix
+-    sudo mv steamos-manager /usr/bin/steamos-manager
+-    sudo chmod +x /usr/bin/steamos-manager
+-    sudo chcon -R -u system_u -r object_r --type=bin_t /usr/bin/steamos-manager
++    sudo install -o root -g root -m0755 steamos-manager /usr/lib64/steamos-manager
++    sudo restorecon /usr/lib64/steamos-manager
+ 
+     sudo systemctl stop steamos-manager.service
+     systemctl --user stop steamos-manager.service
+     sudo systemctl start steamos-manager.service
+     systemctl --user start steamos-manager.service
+-    bazzite-session-select gamescope
+-EOF
+\ No newline at end of file
++    sudo systemctl restart plasmalogin
++EOF
