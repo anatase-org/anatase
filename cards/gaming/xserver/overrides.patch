@@ -415,7 +415,7 @@ index 17ca8fcb0..d1e2bb8f9 100644
  #mesondefine XWL_HAS_EI_PORTAL
 +#mesondefine XWL_HAS_EI_TEXT
 diff --git a/meson.build b/meson.build
-index 244c58fed..291810699 100644
+index baceb9cd6..54ad93adb 100644
 --- a/meson.build
 +++ b/meson.build
 @@ -223,6 +223,7 @@ liboeffis_dep = dependency('liboeffis-1.0', version: '>= 1.0.0', required: get_o
