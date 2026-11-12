@@ -34,6 +34,27 @@ shift
 # cache. Add these paths in the payload so the client can still find its
 # libraries when a game container replaces Flatpak's shared linker cache.
 exec "$delegate" "${options[@]}" -- /bin/sh -c '
+    # The containerized client prefixes host paths with /run/host/root, but
+    # Flatpak subsandboxes only inherit the explicitly shared paths at their
+    # original locations. Alias the shared Game Mode directories so Steam
+    # updates the files used by MangoApp and Gamescope instead of private copies.
+    # Link directories, not files: Steam can replace configs with rename().
+    if [ "$(cat /run/host/container-manager 2>/dev/null)" = flatpak ]; then
+        for shared_dir in "${XDG_RUNTIME_DIR:-}" "${GAMESCOPE_MODE_SAVE_FILE%/*}"; do
+            case $shared_dir in
+                /*) ;;
+                *) continue ;;
+            esac
+            [ -d "$shared_dir" ] || continue
+            host_dir="/run/host/root$shared_dir"
+            if [ ! -e "$host_dir" ] && [ ! -L "$host_dir" ]; then
+                mkdir -p -- "${host_dir%/*}" &&
+                    ln -sT -- "$shared_dir" "$host_dir" ||
+                    printf "anatase-steam: cannot share %s at %s\n" "$shared_dir" "$host_dir" >&2
+            fi
+        done
+    fi
+
     # LD_LIBRARY_PATH takes precedence over the client libraries RUNPATH.
     # Keep bundled client libraries ahead of the added system directories.
     case ${1-} in
