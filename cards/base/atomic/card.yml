@@ -173,6 +173,7 @@ files:
   - flatpak/flathub.filter
   - flatpak/flathub.flatpakrepo
   - dracut_cleanup_shadow.sh
+  - anatase-growfs.service
   - systemd-remount-fs.conf
   - udev/70-anatase-sysfs.rules
 
@@ -237,6 +238,14 @@ postprocess: |
     systemctl --user --global preset-all || true
 
     install -dm0755 /usr/lib/systemd/system-preset /usr/lib/tmpfiles.d
+
+    # Add service for SD card images to expand the btrfs partition
+    install -Dm0644 /files/anatase-growfs.service \
+        /usr/lib/systemd/system/anatase-growfs.service
+    cat > /usr/lib/systemd/system-preset/80-anatase-growfs.preset <<'EOF'
+    enable anatase-growfs.service
+    EOF
+    systemctl preset anatase-growfs.service
 
     # Remove the rules trying to create the symlinked dirs and emitting errors
     rm -f /usr/lib/tmpfiles.d/home.conf

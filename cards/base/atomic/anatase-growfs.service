@@ -1,0 +1,19 @@
+[Unit]
+Description=Grow Anatase disk image filesystem
+ConditionPathExists=/run/ostree-booted
+ConditionPathExists=/etc/repart.d/50-ludos-root.conf
+ConditionPathIsReadWrite=/var
+Requires=systemd-repart.service
+After=systemd-repart.service local-fs.target
+RequiresMountsFor=/var
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# The backing Btrfs filesystem is writable through /var; / is composefs and
+# /sysroot is read-only. The GPT no-auto flag prevents automatic growfs setup.
+ExecStart=/usr/bin/btrfs filesystem resize max /var
+TimeoutSec=infinity
+
+[Install]
+WantedBy=multi-user.target
