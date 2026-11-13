@@ -370,6 +370,7 @@ done
 # This is soso from a power energy perspective. However, since steam does
 # not provide GPU controls we are kind of stuck here.
 # host-os:ro is needed for Steam in RT3 to access gamescope files
+# TODO: Remove host-os after a few months, fixed in the flatpak
 switcherooctl launch flatpak run \
         --socket=x11-passthrough \
         "${sysfs_bind_args[@]}" \
