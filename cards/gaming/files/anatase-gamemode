@@ -142,6 +142,8 @@ export VKD3D_SWAPCHAIN_LATENCY_FRAMES=3
 # Default Proton games to OpenGL on Raspberry Pi.
 if grep -q '^Raspberry Pi' /proc/device-tree/model 2>/dev/null; then
     export PROTON_USE_WINED3D="${PROTON_USE_WINED3D:-1}"
+    # Avoid a second WineD3D command-stream thread under emulation.
+    export WINE_D3D_CONFIG="${WINE_D3D_CONFIG:-csmt=0}"
 else
     export WINEDLLOVERRIDES=dxgi=n
 fi
