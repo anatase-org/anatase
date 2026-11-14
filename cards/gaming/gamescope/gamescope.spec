@@ -7,7 +7,7 @@
 
 Name:           gamescope
 Epoch:          1
-Version:        an0.1
+Version:        an0.2
 Release:        %autorelease
 Summary:        Micro-compositor for video games on Wayland
 # Automatically converted from old format: BSD - review is highly recommended.
