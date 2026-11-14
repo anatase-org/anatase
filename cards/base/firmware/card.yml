@@ -16,6 +16,7 @@ build-deps:
   - sccache
 
 files:
+  - dracut/30-anatase-qcom-firmware.conf
   # Book4 UCM configs
   - alsa/backport-soundwire.py
   - alsa/ucm2/codecs/tas2783/init.conf
@@ -94,6 +95,9 @@ specs:
 
 postprocess: |
     set -eux
+
+    install -Dm0644 /files/dracut/30-anatase-qcom-firmware.conf \
+        /usr/lib/dracut/dracut.conf.d/30-anatase-qcom-firmware.conf
 
     python3 /files/alsa/backport-soundwire.py
     install -Dm0644 /files/alsa/ucm2/codecs/tas2783/init.conf \
