@@ -2,21 +2,22 @@
 set -eo pipefail
 
 efi_root=/boot/efi
-payload=/usr/lib/ludos/efi
+efi_payload=/usr/lib/ludos/efi
+sd_payload=/usr/lib/ludos/sd
 boot_mount=$efi_root
 source /usr/libexec/grub-boot-remount
-uboot_tmp=
+payload_tmp=
 cleanup() {
-    if [ -n "$uboot_tmp" ]; then
-        rm -f -- "$uboot_tmp" || true
+    if [ -n "$payload_tmp" ]; then
+        rm -f -- "$payload_tmp" || true
     fi
     remount_boot_ro
 }
 trap cleanup EXIT
 trap 'exit 1' HUP INT TERM
 
-if [ ! -d "$payload" ]; then
-    echo "missing Anatase EFI payload directory: $payload" >&2
+if [ ! -d "$efi_payload" ] && [ ! -d "$sd_payload" ]; then
+    echo "missing Anatase EFI and SD payload directories" >&2
     exit 1
 fi
 
@@ -25,29 +26,32 @@ if ! mountpoint -q "$efi_root"; then
     exit 1
 fi
 
-while IFS= read -r -d '' source; do
-    relative=${source#"${payload}/"}
-    destination=${efi_root}/${relative}
-    if [ "$relative" = rpi-u-boot.bin ]; then
-        # Conventional UEFI installs do not use the Raspberry Pi bootloader.
-        [ -f "$destination" ] || continue
-        if cmp -s -- "$source" "$destination"; then
+copy_payload() {
+    local payload=$1 source relative destination
+    [ -d "$payload" ] || return 0
+
+    while IFS= read -r -d '' source; do
+        relative=${source#"${payload}/"}
+        destination=${efi_root}/${relative}
+        if [ "$relative" = config.txt ] && { [ -e "$destination" ] || [ -L "$destination" ]; }; then
+            # Keep the SD card's user configuration.
             continue
         fi
+        cmp -s -- "$source" "$destination" && continue
 
         remount_boot_rw
-        # Flush a complete sibling file before replacing the bootloader.
-        uboot_tmp=$(mktemp "${destination}.XXXXXX")
-        cp --no-preserve=mode,ownership,timestamps -- "$source" "$uboot_tmp"
-        sync "$uboot_tmp"
-        mv -fT -- "$uboot_tmp" "$destination"
-        uboot_tmp=
-        sync "$efi_root"
-    elif [ ! -e "$destination" ] && [ ! -L "$destination" ]; then
-        # Preserve existing firmware configuration and unrelated EFI files.
-        remount_boot_rw
         mkdir -p -- "$(dirname -- "$destination")"
-        cp --no-preserve=mode,ownership,timestamps -- "$source" "$destination"
+        # Flush a complete sibling file before replacing any boot asset.
+        payload_tmp=$(mktemp "${destination}.XXXXXX")
+        cp --no-preserve=mode,ownership,timestamps -- "$source" "$payload_tmp"
+        sync "$payload_tmp"
+        mv -fT -- "$payload_tmp" "$destination"
+        payload_tmp=
         sync "$efi_root"
-    fi
-done < <(find "$payload" -type f -print0)
+    done < <(find "$payload" -type f -print0)
+}
+
+copy_payload "$efi_payload"
+if [ -f "$efi_root/config.txt" ]; then
+    copy_payload "$sd_payload"
+fi

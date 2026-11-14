@@ -1,8 +1,9 @@
 [Unit]
-Description=Install extra GRUB boot files
+Description=Install extra EFI and SD boot files
 After=local-fs.target
 RequiresMountsFor=/boot/efi
-ConditionDirectoryNotEmpty=/usr/lib/ludos/efi
+ConditionDirectoryNotEmpty=|/usr/lib/ludos/efi
+ConditionDirectoryNotEmpty=|/usr/lib/ludos/sd
 ConditionPathIsMountPoint=/boot/efi
 
 [Service]

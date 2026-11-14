@@ -55,8 +55,9 @@ class ExtraFilesTests(unittest.TestCase):
         if not Path('/run/.containerenv').exists():
             self.fail('Run this test in a disposable Podman container, as documented above.')
         self.payload = Path('/usr/lib/ludos/efi')
+        self.sd_payload = Path('/usr/lib/ludos/sd')
         self.esp = Path('/boot/efi')
-        for path in (self.payload, self.esp):
+        for path in (self.payload, self.sd_payload, self.esp):
             shutil.rmtree(path, ignore_errors=True)
             path.mkdir(parents=True)
         self.work = tempfile.TemporaryDirectory(prefix='efi-test-', dir='/var/tmp')
@@ -93,44 +94,65 @@ class ExtraFilesTests(unittest.TestCase):
         self.assertEqual(list(self.esp.glob('rpi-u-boot.bin.*')), [])
 
     def test_missing_payload_files_and_directories(self):
-        self.write(self.payload, 'rpi-u-boot.bin', b'new')
-        for name in ('ANATASE-KEY-ENROLLME.der', 'overlays/a file.dtbo'):
+        for name in ('ANATASE-KEY-ENROLLME.der', 'EFI/anatase/tool.efi'):
             self.write(self.payload, name, name.encode())
+        for name in ('config.txt', 'rpi-u-boot.bin', 'overlays/a file.dtbo'):
+            self.write(self.sd_payload, name, b'sd only')
         self.run_service()
         for source in self.payload.rglob('*'):
-            if source.is_file() and source.name != 'rpi-u-boot.bin':
+            if source.is_file():
                 self.assertEqual((self.esp / source.relative_to(self.payload)).read_bytes(),
                                  source.read_bytes())
-        self.assertFalse((self.esp / 'rpi-u-boot.bin').exists())
+        for source in self.sd_payload.rglob('*'):
+            self.assertFalse((self.esp / source.relative_to(self.sd_payload)).exists())
         self.assertIn('-o remount,rw /boot/efi', self.log.read_text())
         self.assertTrue(self.log.read_text().endswith('-o remount,ro /boot/efi\n'))
 
     def test_unchanged_payload_does_not_remount_or_write(self):
-        for name in ('rpi-u-boot.bin', 'ANATASE-KEY-ENROLLME.der'):
-            self.write(self.payload, name, b'same')
+        self.write(self.payload, 'ANATASE-KEY-ENROLLME.der', b'same')
+        self.write(self.esp, 'ANATASE-KEY-ENROLLME.der', b'same')
+        for name in ('config.txt', 'rpi-u-boot.bin', 'bcm2712-rpi-500.dtb'):
+            self.write(self.sd_payload, name, b'same')
             self.write(self.esp, name, b'same')
         self.run_service()
         self.assertEqual(self.log.read_text(), '')
 
-    def test_changed_uboot_preserves_configuration_and_other_files(self):
-        self.write(self.payload, 'rpi-u-boot.bin', b'new')
-        self.write(self.esp, 'rpi-u-boot.bin', b'old')
-        for name in ('config.txt', 'ANATASE-KEY-ENROLLME.der', 'overlays/existing.dtbo'):
-            self.write(self.payload, name, b'default')
-            self.write(self.esp, name, b'custom')
+    def test_sd_updates_bootloader_dtbs_and_firmware_but_preserves_config(self):
+        managed = ('rpi-u-boot.bin', 'bcm2712-rpi-500.dtb',
+                   'overlays/existing.dtbo', 'start4.elf')
+        for name in managed:
+            self.write(self.sd_payload, name, b'new')
+            self.write(self.esp, name, b'old')
+        self.write(self.sd_payload, 'overlays/a new file.dtbo', b'added')
+        self.write(self.sd_payload, 'config.txt', b'default')
+        self.write(self.esp, 'config.txt', b'custom')
+        self.write(self.payload, 'ANATASE-KEY-ENROLLME.der', b'default')
+        self.write(self.esp, 'ANATASE-KEY-ENROLLME.der', b'custom')
         self.write(self.esp, 'unrelated.efi', b'keep')
         self.run_service()
-        self.assertEqual((self.esp / 'rpi-u-boot.bin').read_bytes(), b'new')
-        for name in ('config.txt', 'ANATASE-KEY-ENROLLME.der', 'overlays/existing.dtbo'):
-            self.assertEqual((self.esp / name).read_bytes(), b'custom')
+        for name in managed:
+            self.assertEqual((self.esp / name).read_bytes(), b'new')
+        self.assertEqual((self.esp / 'overlays/a new file.dtbo').read_bytes(), b'added')
+        self.assertEqual((self.esp / 'config.txt').read_bytes(), b'custom')
+        self.assertEqual((self.esp / 'ANATASE-KEY-ENROLLME.der').read_bytes(), b'default')
         self.assertEqual((self.esp / 'unrelated.efi').read_bytes(), b'keep')
         operations = self.log.read_text().splitlines()
-        self.assertTrue(operations[1].startswith('sync /boot/efi/rpi-u-boot.bin.'))
-        self.assertTrue(operations[2].startswith('mv -fT -- /boot/efi/rpi-u-boot.bin.'))
-        self.assertEqual(operations[3], 'sync /boot/efi')
+        move_index = next(i for i, op in enumerate(operations)
+                          if op.startswith('mv -fT -- /boot/efi/rpi-u-boot.bin.'))
+        self.assertTrue(operations[move_index - 1].startswith('sync /boot/efi/rpi-u-boot.bin.'))
+        self.assertEqual(operations[move_index + 1], 'sync /boot/efi')
+
+    def test_changed_efi_files_update_without_sd_config(self):
+        for name in ('ANATASE-KEY-ENROLLME.der', 'EFI/anatase/tool.efi'):
+            self.write(self.payload, name, b'new')
+            self.write(self.esp, name, b'old')
+        self.run_service()
+        for name in ('ANATASE-KEY-ENROLLME.der', 'EFI/anatase/tool.efi'):
+            self.assertEqual((self.esp / name).read_bytes(), b'new')
 
     def test_failures_preserve_old_bootloader_and_restore_readonly(self):
-        self.write(self.payload, 'rpi-u-boot.bin', b'new')
+        self.write(self.sd_payload, 'rpi-u-boot.bin', b'new')
+        self.write(self.esp, 'config.txt', b'custom')
         for failure in ('cp', 'sync', 'mv'):
             with self.subTest(failure=failure):
                 self.write(self.esp, 'rpi-u-boot.bin', b'old')
@@ -140,13 +162,32 @@ class ExtraFilesTests(unittest.TestCase):
                 self.assertTrue(self.log.read_text().endswith('-o remount,ro /boot/efi\n'))
 
     def test_bootloader_is_not_added_to_conventional_efi_installs(self):
-        self.write(self.payload, 'rpi-u-boot.bin', b'new')
+        self.write(self.sd_payload, 'rpi-u-boot.bin', b'new')
+        self.write(self.sd_payload, 'config.txt', b'default')
         self.run_service()
+        self.assertFalse((self.esp / 'config.txt').exists())
         self.assertFalse((self.esp / 'rpi-u-boot.bin').exists())
         self.assertEqual(self.log.read_text(), '')
 
+    def test_sd_payload_is_skipped_without_config_even_if_bootloader_exists(self):
+        self.write(self.sd_payload, 'rpi-u-boot.bin', b'new')
+        self.write(self.sd_payload, 'bcm2712-rpi-500.dtb', b'new')
+        self.write(self.esp, 'rpi-u-boot.bin', b'old')
+        self.run_service()
+        self.assertEqual((self.esp / 'rpi-u-boot.bin').read_bytes(), b'old')
+        self.assertFalse((self.esp / 'bcm2712-rpi-500.dtb').exists())
+        self.assertEqual(self.log.read_text(), '')
+
+    def test_sd_only_payload_adds_missing_bootloader_when_config_exists(self):
+        shutil.rmtree(self.payload)
+        self.write(self.sd_payload, 'rpi-u-boot.bin', b'new')
+        self.write(self.esp, 'config.txt', b'custom')
+        self.run_service()
+        self.assertEqual((self.esp / 'rpi-u-boot.bin').read_bytes(), b'new')
+        self.assertEqual((self.esp / 'config.txt').read_bytes(), b'custom')
+
     def test_unmounted_esp_is_rejected_without_writes(self):
-        self.write(self.payload, 'rpi-u-boot.bin', b'new')
+        self.write(self.sd_payload, 'rpi-u-boot.bin', b'new')
         self.env['TEST_MOUNTED'] = 'no'
         self.run_service(success=False)
         self.assertEqual(list(self.esp.iterdir()), [])
