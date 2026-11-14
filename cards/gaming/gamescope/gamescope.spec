@@ -4,16 +4,15 @@
 %global fidelityfx_shortcommit %(c=%{fidelityfx_commit}; echo ${c:0:7})
 %global reshade_commit 696b14cd6006ae9ca174e6164450619ace043283
 %global reshade_shortcommit %(c=%{reshade_commit}; echo ${c:0:7})
-%global vkroots_commit 5106d8a0df95de66cc58dc1ea37e69c99afc9540
-%global vkroots_shortcommit %(c=%{vkroots_commit}; echo ${c:0:7})
 
 Name:           gamescope
-Version:        3.16.23.3
+Epoch:          1
+Version:        an0.1
 Release:        %autorelease
 Summary:        Micro-compositor for video games on Wayland
 # Automatically converted from old format: BSD - review is highly recommended.
 License:        LicenseRef-Callaway-BSD
-URL:            https://github.com/ValveSoftware/gamescope
+URL:            https://github.com/anatase-org/gamescope
 # luajit is not available on ppc64le:
 # https://bugzilla.redhat.com/show_bug.cgi?id=2339416
 ExcludeArch:    ppc64le
@@ -22,19 +21,15 @@ Source0:        %{url}/archive/%{version}/%{name}-%{version}.tar.gz
 # Create stb.pc to satisfy dependency('stb')
 Source1:        stb.pc
 Source2:        https://github.com/misyltoad/reshade/archive/%{reshade_commit}/reshade-%{reshade_shortcommit}.tar.gz
-Source3:        https://github.com/misyltoad/vkroots/archive/%{vkroots_commit}/vkroots-%{vkroots_shortcommit}.tar.gz
 Source4:        https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK/archive/%{fidelityfx_commit}/FidelityFX-SDK-%{fidelityfx_shortcommit}.tar.gz
 # Fedora's libdisplay-info predates DisplayID 2 CTA-861 block support.
 Source5:        https://gitlab.freedesktop.org/emersion/libdisplay-info/-/releases/%{libdisplay_info_version}/downloads/libdisplay-info-%{libdisplay_info_version}.tar.xz
 
 # https://github.com/misyltoad/reshade/pull/1:
 Patch:          0001-cstdint.patch
-# Allow to use system wlroots
-# We use/package rest from the forks, I've tried to verify that wlroots match relevant commits
-# We'll hold on rebases of gamescope if tags diverge in the future
+# Allow the system wlroots, libliftoff, and vkroots packages.
 Patch:          Allow-to-use-system-wlroots.patch
 Patch:          Use-system-stb-glm.patch
-Patch:          overrides.patch
 
 BuildRequires:  cmake
 BuildRequires:  gcc
@@ -44,6 +39,9 @@ BuildRequires:  glm-devel
 BuildRequires:  meson >= 0.54.0
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(vulkan)
+# The vkroots.pc file has no version.
+BuildRequires:  vkroots-devel >= 0^20260908git20733b9
+BuildRequires:  vulkan-headers >= 1.4.335
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-protocols) >= 1.17
 BuildRequires:  pkgconfig(wayland-scanner)
@@ -52,6 +50,7 @@ BuildRequires:  pkgconfig(xcb)
 
 %ifnarch %{ix86}
 BuildRequires:  google-benchmark-devel
+BuildRequires:  pkgconfig(catch2)
 BuildRequires:  libXcursor-devel
 BuildRequires:  libXmu-devel
 BuildRequires:  pkgconfig(hwdata)
@@ -67,7 +66,7 @@ BuildRequires:  pkgconfig(luajit)
 # BuildRequires:  pkgconfig(openvr) >= 2.12
 BuildRequires:  pkgconfig(sdl2)
 BuildRequires:  pkgconfig(wayland-server)
-BuildRequires:  pkgconfig(wlroots-0.18)
+BuildRequires:  pkgconfig(wlroots-0.20)
 BuildRequires:  pkgconfig(xcomposite)
 BuildRequires:  pkgconfig(xdamage)
 BuildRequires:  pkgconfig(xext)
@@ -92,7 +91,6 @@ BuildRequires:  stb_image_write-static
 BuildRequires:  /usr/bin/glslangValidator
 %endif
 
-Provides:       bundled(vkroots) = 0^20240429git5106d8a
 Provides:       bundled(FidelityFX-SDK) = 1.1.4
 %ifnarch %{ix86}
 Provides:       bundled(libdisplay-info) = %{libdisplay_info_version}
@@ -112,26 +110,23 @@ Recommends:     mesa-vulkan-drivers
 %{name} is the micro-compositor optimized for running video games on Wayland.
 
 %prep
-%autosetup -p1 -N
+%autosetup -n %{name}-%{version} -p1 -N
 # Install stub pkgconfig file
 mkdir -p pkgconfig
 cp %{SOURCE1} pkgconfig/stb.pc
+# Fedora installs the header-only vkroots pkgconfig file under /usr/lib,
+# outside the native 64-bit pkgconfig search path.
+cp /usr/lib/pkgconfig/vkroots.pc pkgconfig/vkroots.pc
 
 # Replace spirv-headers include with the system directory
 sed -i 's^../thirdparty/SPIRV-Headers/include/spirv/^/usr/include/spirv/^' src/meson.build
 
-# Push in subprojects from sources instead of submodules
+# Push in reshade from sources instead of its submodule.
 tar -xzf %{SOURCE2} --strip-components=1 -C src/reshade
-tar -xzf %{SOURCE3} --strip-components=1 -C subprojects/vkroots
-
-# RPM's patch tool treats the libdisplay-info gitlink update as a text hunk.
-rm -rf subprojects/libdisplay-info
-echo 'Subproject commit 47a5590e9c4eb35d67651b8c05a55f1a48259329' > subprojects/libdisplay-info
 
 %autopatch -p1
 
-# Replace the gitlink created by overrides.patch with the pinned source archive.
-rm -f subprojects/FidelityFX-SDK
+# Populate the pinned FidelityFX source archive.
 mkdir -p subprojects/FidelityFX-SDK
 tar -xzf %{SOURCE4} --strip-components=1 -C subprojects/FidelityFX-SDK
 
@@ -139,11 +134,6 @@ tar -xzf %{SOURCE4} --strip-components=1 -C subprojects/FidelityFX-SDK
 rm -rf subprojects/libdisplay-info
 mkdir -p subprojects/libdisplay-info
 tar -xJf %{SOURCE5} --strip-components=1 -C subprojects/libdisplay-info
-
-%ifarch %{ix86}
-# Meson otherwise uses the x86_64 build machine for both layer filenames.
-sed -i 's/build_machine\.cpu_family()/host_machine.cpu_family()/g' layer/meson.build
-%endif
 
 %build
 export PKG_CONFIG_PATH=pkgconfig

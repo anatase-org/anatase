@@ -1,6 +1,3 @@
-gamescope:
-  upstream-sha: dd282d499805bdbb55591245e94d550e0adbecaf
-  patch-sha: 38b6a9dc4406d4210f0abad679c1fdba7e13dc3a
 mangohud:
   upstream-sha: c0d68d0976ab1e61d2361ea2a8429346bc89b5a7
   patch-sha: 992103e4fb744897826de04ea00a2f71e7018214
