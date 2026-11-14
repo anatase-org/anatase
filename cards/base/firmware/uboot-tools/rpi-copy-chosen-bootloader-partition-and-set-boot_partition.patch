@@ -1,0 +1,256 @@
+From patchwork Tue Aug  4 13:39:15 2026
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+X-Patchwork-Submitter: Gregor Herburger <gregor.herburger@linutronix.de>
+X-Patchwork-Id: 2280865
+X-Patchwork-Delegate: pbrobinson@gmail.com
+Return-Path: <u-boot-bounces@lists.u-boot-project.org>
+X-Original-To: incoming@patchwork.ozlabs.org
+Delivered-To: patchwork-incoming@legolas.ozlabs.org
+Authentication-Results: legolas.ozlabs.org;
+	dkim=fail reason="signature verification failed" (2048-bit key;
+ unprotected) header.d=lists.u-boot-project.org
+ header.i=@lists.u-boot-project.org header.a=rsa-sha256 header.s=default
+ header.b=DFFhfbAr;
+	dkim-atps=neutral
+Authentication-Results: legolas.ozlabs.org;
+ spf=pass (sender SPF authorized) smtp.mailfrom=lists.u-boot-project.org
+ (client-ip=2605:bc80:3010::136; helo=smtp3.osuosl.org;
+ envelope-from=u-boot-bounces@lists.u-boot-project.org;
+ receiver=patchwork.ozlabs.org)
+Received: from smtp3.osuosl.org (smtp3.osuosl.org [IPv6:2605:bc80:3010::136])
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+	 key-exchange x25519 server-signature ECDSA (secp384r1) server-digest SHA384)
+	(No client certificate requested)
+	by legolas.ozlabs.org (Postfix) with ESMTPS id 4hDvm8025rz1xqD
+	for <incoming@patchwork.ozlabs.org>; Tue, 04 Aug 2026 23:39:35 +1000 (AEST)
+Received: from localhost (localhost [127.0.0.1])
+	by smtp3.osuosl.org (Postfix) with ESMTP id 2536960600;
+	Tue,  4 Aug 2026 13:39:34 +0000 (UTC)
+X-Virus-Scanned: amavis at osuosl.org
+Received: from smtp3.osuosl.org ([127.0.0.1])
+ by localhost (smtp3.osuosl.org [127.0.0.1]) (amavis, port 10024) with ESMTP
+ id T9Kb3BtsvOX4; Tue,  4 Aug 2026 13:39:33 +0000 (UTC)
+X-Comment: SPF check N/A for local connections - client-ip=140.211.166.142;
+ helo=lists1.osuosl.org;
+ envelope-from=u-boot-bounces@lists.u-boot-project.org; receiver=<UNKNOWN>
+DKIM-Filter: OpenDKIM Filter v2.11.0 smtp3.osuosl.org 4350560615
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+	d=lists.u-boot-project.org ; s=default; t=1785850773;
+	bh=Tj3LONeiWXn0Cn5KPSYhoff9avwde4nWUGEguAWdLbE=;
+	h=From:Date:Subject:To:Cc:List-Id:List-Unsubscribe:List-Archive:
+	 List-Post:List-Help:List-Subscribe:From;
+	b=DFFhfbArDuHrxJEuZryw3QEVVVcavwAril7tcxulQVs6jkVOCAjh7GEuhkq8EyLIq
+	 suopR14b5dkKpVbbSr23u2v9jRgpynJQ5WBq6kIJSqjmZt58tZeMbaX76PRHjOs8+s
+	 QHatP0Vxf1ny0BOpVlZLZ/LlAsQhypNhW6/qjH0X9OLeNq0IFjSZ5faD3z463b62m0
+	 yMuPrAXa/kuPPInxGG6HsCPkRzFH3x9hM15r7ipSbXODTRXaVBSVScp03eAeo6zw/d
+	 nll/wcjCEe/78XX5o1Tsug951g7H8meDRnGQHJZtvbEmHdDB1wkTXYdFI2EGwnDxsz
+	 W3dcHoUveJgqQ==
+Received: from lists1.osuosl.org (lists1.osuosl.org [140.211.166.142])
+	by smtp3.osuosl.org (Postfix) with ESMTP id 4350560615;
+	Tue,  4 Aug 2026 13:39:33 +0000 (UTC)
+X-Original-To: u-boot@lists.u-boot-project.org
+Delivered-To: u-boot@lists.u-boot-project.org
+Received: from smtp1.osuosl.org (smtp1.osuosl.org [140.211.166.138])
+ by lists1.osuosl.org (Postfix) with ESMTP id 3009E2BF
+ for <u-boot@lists.u-boot-project.org>; Tue,  4 Aug 2026 13:39:31 +0000 (UTC)
+Received: from localhost (localhost [127.0.0.1])
+ by smtp1.osuosl.org (Postfix) with ESMTP id 222DC8086C
+ for <u-boot@lists.u-boot-project.org>; Tue,  4 Aug 2026 13:39:31 +0000 (UTC)
+X-Virus-Scanned: amavis at osuosl.org
+Received: from smtp1.osuosl.org ([127.0.0.1])
+ by localhost (smtp1.osuosl.org [127.0.0.1]) (amavis, port 10024) with ESMTP
+ id W5OoNRat257d for <u-boot@lists.u-boot-project.org>;
+ Tue,  4 Aug 2026 13:39:30 +0000 (UTC)
+X-Greylist: delayed 94239 seconds by postgrey-1.37 at util1.osuosl.org;
+ Tue, 04 Aug 2026 13:39:29 UTC
+DMARC-Filter: OpenDMARC Filter v1.4.2 smtp1.osuosl.org 1B0B580827
+DKIM-Filter: OpenDKIM Filter v2.11.0 smtp1.osuosl.org 1B0B580827
+Received-SPF: Pass (mailfrom) identity=mailfrom;
+ client-ip=2a0a:51c0:0:12e:550::1; helo=galois.linutronix.de;
+ envelope-from=gregor.herburger@linutronix.de; receiver=<UNKNOWN>
+Received: from galois.linutronix.de (Galois.linutronix.de
+ [IPv6:2a0a:51c0:0:12e:550::1])
+ by smtp1.osuosl.org (Postfix) with ESMTPS id 1B0B580827
+ for <u-boot@lists.u-boot-project.org>; Tue,  4 Aug 2026 13:39:29 +0000 (UTC)
+From: Gregor Herburger <gregor.herburger@linutronix.de>
+Date: Tue, 04 Aug 2026 15:39:15 +0200
+Subject: [PATCH v3] rpi: copy /chosen/bootloader partition and set
+ boot_partition
+MIME-Version: 1.0
+Message-Id: <20260804-tryboot2-v3-1-b0bc282a923b@linutronix.de>
+X-B4-Tracking: v=1; b=H4sIAILrcWoC/22OywrCMBBFf0WyNpKHbYor/0O6SNOJjWgiSRpaS
+ v/dpCKCyKwO3HvmLiiANxDQabcgD8kE42wGvt8hNUh7BWz6zIgRVpOGcBz93DkXGW5UxRjlooZ
+ Kohx/etBm2lSX9s1h7G6gYumXhPbugePgQX6VgjQfJU4U5+OSHiVIpQU9340do3fWTIceimIwI
+ To/b3MTK6/+LEssezhRRFDNAGj142nXdX0BG/Mh6/kAAAA=
+X-Change-ID: 20260803-tryboot2-8c5221376e5a
+To: u-boot@lists.u-boot-project.org
+Cc: Matthias Brugger <mbrugger@suse.com>,
+  Peter Robinson <pbrobinson@gmail.com>, Tom Rini <trini@konsulko.com>,
+	=?utf-8?q?Filip_Kokosi=C5=84ski?= <filip.kokosinski@gmail.com>,
+  Ilias Apalodimas <ilias.apalodimas@linaro.org>,
+  Gregor Herburger <gregor.herburger@linutronix.de>
+X-Developer-Signature: v=1; a=ed25519-sha256; t=1785850764; l=3191;
+ i=gregor.herburger@linutronix.de; s=20260226; h=from:subject:message-id;
+ bh=4mVT/kFDHBnjUUlqljWBZ+t7aLa+t+gE+t/hUJ4uc5g=;
+ b=TBKoGScdkXGUfpGLvpVtYHkg4LDoOR/8M/do2dqU2QlR+9Z9YFNN6x88pDC7UIDeXrJS+Hpeg
+ e3YsfK6fOcoBgXOuzz3Aabmmn9//OQN7WG6Vz15rSxX0uVZ96TFcvf5
+X-Developer-Key: i=gregor.herburger@linutronix.de; a=ed25519;
+ pk=u72Lv7+/lS5CC1hmSrb17lv/6CK7HBh4Lvz77PHA5LM=
+X-Mailman-Original-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+ d=linutronix.de; s=2020; t=1785850765;
+ h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+ to:to:cc:cc:mime-version:mime-version:content-type:content-type:
+ content-transfer-encoding:content-transfer-encoding;
+ bh=Tj3LONeiWXn0Cn5KPSYhoff9avwde4nWUGEguAWdLbE=;
+ b=plU5oAFojHvTlDhOGINsdXnnc0AnS9OY0C4LB9dSy9uyrPKBBpLWGWj3xmNoX87lLZlhO9
+ z0H+R5gqw5NfxbTVYFHqZnW+pW4xJQFW9fMYSU8/k2RRg9JEqP+NrZ8Y720ujlycxn05vP
+ sF7cD+TEsxvyBhnbRyq82obvpdQIYj0D6T3UkHyz0U4G+5k8dVhhv/mqGaSfY8xW4cCl5G
+ gIE2QIsuzB4g4pQoW70DrLd7cyqqDM0iDrrXFZL2a7DlnYgbe1ULVXMl05UMMQGfBkHmog
+ pt8e+zvO4AVA3G8CKcUQhhWOZm7uycUpdrNuyPKg9K7JB6MEd9dHbucVa+v8Yg==
+X-Mailman-Original-DKIM-Signature: v=1; a=ed25519-sha256; c=relaxed/relaxed;
+ d=linutronix.de; s=2020e; t=1785850765;
+ h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+ to:to:cc:cc:mime-version:mime-version:content-type:content-type:
+ content-transfer-encoding:content-transfer-encoding;
+ bh=Tj3LONeiWXn0Cn5KPSYhoff9avwde4nWUGEguAWdLbE=;
+ b=NAMrZHs0ETYIMiwBHLvCoR3NOcg/kwkAxVRq6Q/pdhfkQJjxtHU3mZFV520QjbE1yeix0S
+ nJyAqHgyKVlRiZCw==
+X-Mailman-Original-Authentication-Results: smtp1.osuosl.org;
+ dmarc=pass (p=none dis=none)
+ header.from=linutronix.de
+X-Mailman-Original-Authentication-Results: smtp1.osuosl.org;
+ dkim=pass (2048-bit key, unprotected) header.d=linutronix.de
+ header.i=@linutronix.de header.a=rsa-sha256 header.s=2020 header.b=plU5oAFo;
+ dkim=pass header.d=linutronix.de header.i=@linutronix.de
+ header.a=ed25519-sha256 header.s=2020e header.b=NAMrZHs0
+X-BeenThere: u-boot@lists.u-boot-project.org
+X-Mailman-Version: 2.1.30
+Precedence: list
+List-Id: U-Boot discussion <u-boot.lists.u-boot-project.org>
+List-Unsubscribe: <https://lists.u-boot-project.org/mailman/options/u-boot>,
+ <mailto:u-boot-request@lists.u-boot-project.org?subject=unsubscribe>
+List-Archive: <http://lists.u-boot-project.org/pipermail/u-boot/>
+List-Post: <mailto:u-boot@lists.u-boot-project.org>
+List-Help: <mailto:u-boot-request@lists.u-boot-project.org?subject=help>
+List-Subscribe: <https://lists.u-boot-project.org/mailman/listinfo/u-boot>,
+ <mailto:u-boot-request@lists.u-boot-project.org?subject=subscribe>
+Errors-To: u-boot-bounces@lists.u-boot-project.org
+Sender: "U-Boot" <u-boot-bounces@lists.u-boot-project.org>
+
+The Raspberry Pi has the "tryboot" feature where it can boot from a
+different partition enabling failsafe A/B updates. After boot the
+firmware sets 'partition' property in /chosen/bootloader.
+
+Copy the /chosen/bootloader node to the device tree.
+
+Set the env variable boot_partition accordingly to allow boards to
+create a bootcmd based on the boot partition.
+
+Reviewed-by: Matthias Brugger <mbrugger@suse.com>
+Signed-off-by: Gregor Herburger <gregor.herburger@linutronix.de>
+---
+Changes in v3:
+- Copy the complete '/chosen/bootloader' node instead of only the
+  partition property
+- Link to v2: https://patch.msgid.link/20260803-tryboot2-v2-1-30c071f2ee15@linutronix.de
+
+Changes in v2:
+- update Reviewed-by tag
+---
+ board/raspberrypi/rpi/rpi.c | 51 +++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 51 insertions(+)
+
+
+---
+base-commit: baa64b2f892890f00a377eac4a3e685472bb56b5
+change-id: 20260803-tryboot2-8c5221376e5a
+
+Best regards,
+--  
+Gregor Herburger <gregor.herburger@linutronix.de>
+
+diff --git a/board/raspberrypi/rpi/rpi.c b/board/raspberrypi/rpi/rpi.c
+index 1da5df92351c..ba8a2c1ba4cf 100644
+--- a/board/raspberrypi/rpi/rpi.c
++++ b/board/raspberrypi/rpi/rpi.c
+@@ -480,6 +480,20 @@ static void set_serial_number(void)
+ 	env_set("serial#", serial_string);
+ }
+ 
++static void set_boot_partition_fdt(void)
++{
++	void *fdtp = (void *)gd->fdt_blob;
++	u32 partition;
++
++	partition = fdt_getprop_u32_default(fdtp, "/chosen/bootloader", "partition", 1);
++	if (!partition) {
++		printf("Failed to the get partition property.\n");
++		return;
++	}
++
++	env_set_ulong("boot_partition", partition);
++}
++
+ int misc_init_r(void)
+ {
+ 	set_fdt_addr();
+@@ -489,6 +503,7 @@ int misc_init_r(void)
+ 	set_board_info();
+ #endif
+ 	set_serial_number();
++	set_boot_partition_fdt();
+ 
+ 	return 0;
+ }
+@@ -579,6 +594,39 @@ int board_fdt_blob_setup(void **fdtp)
+ 	return 0;
+ }
+ 
++int copy_node_all_properties(void *dst, void *src, const char *path, const char *node)
++{
++	int src_parent, dst_parent;
++	int src_node, dst_node;
++	int prop;
++	int len;
++
++	src_parent = fdt_path_offset(src, path);
++	dst_parent = fdt_path_offset(dst, path);
++	if (src_parent < 0 || dst_parent < 0)
++		return -1;
++
++	src_node = fdt_subnode_offset(src, src_parent, node);
++	if (src_node < 0)
++		return -1;
++
++	dst_node = fdt_find_or_add_subnode(dst, dst_parent, node);
++	if (dst_node < 0)
++		return -1;
++
++	fdt_for_each_property_offset(prop, src, src_node) {
++		const char *name;
++		const void *value = fdt_getprop_by_offset(src, prop, &name, &len);
++
++		if (!value || !name)
++			continue;
++
++		fdt_setprop(dst, dst_node, name, value, len);
++	}
++
++	return 0;
++}
++
+ int copy_property(void *dst, void *src, char *path, char *property)
+ {
+ 	int dst_offset, src_offset;
+@@ -641,6 +689,9 @@ void  update_fdt_from_fw(void *fdt, void *fw_fdt)
+ 
+ 	/* copy uart clk as provided by the firmware */
+ 	copy_property(fdt, fw_fdt, "/clocks/clk-uart", "clock-frequency");
++
++	/* Copy the bootloader node */
++	copy_node_all_properties(fdt, fw_fdt, "/chosen", "bootloader");
+ }
+ 
+ int ft_board_setup(void *blob, struct bd_info *bd)

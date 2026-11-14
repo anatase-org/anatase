@@ -1,0 +1,18 @@
+Keep Raspberry Pi diagnostics and input available without a boot countdown
+or the U-Boot logo. Override Fedora's automatic boot menu and keyed autoboot
+defaults for this board only.
+
+diff --git a/configs/rpi_arm64_defconfig b/configs/rpi_arm64_defconfig
+--- a/configs/rpi_arm64_defconfig
++++ b/configs/rpi_arm64_defconfig
+@@ -13,6 +13,10 @@ CONFIG_EFI_CAPSULE_FIRMWARE_RAW=y
+ CONFIG_EFI_HTTP_BOOT=y
+ CONFIG_BOOTSTD_DEFAULTS=y
+ CONFIG_OF_BOARD_SETUP=y
++CONFIG_BOOTDELAY=0
++# CONFIG_AUTOBOOT_KEYED is not set
++# CONFIG_AUTOBOOT_MENU_SHOW is not set
++# CONFIG_VIDEO_LOGO is not set
+ CONFIG_FDT_SIMPLEFB=y
+ CONFIG_USE_PREBOOT=y
+ CONFIG_PREBOOT="pci enum; usb start;"

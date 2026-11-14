@@ -3,7 +3,6 @@ version: 1
 packages:
   - aarch64:
       - bcm283x-firmware
-      - uboot-images-armv8
 
 build-deps:
   - bash
@@ -59,6 +58,19 @@ specs:
     packages:
       - x86_64:
           - steamdeck-audio
+
+  - spec: uboot-tools/uboot-tools.spec
+    files:
+      - uboot-tools.spec
+      - '*.patch'
+      - '*-boards'
+    packages:
+      - aarch64:
+          - uboot-images-armv8
+    upstream:
+      type: dist-git
+      url: https://src.fedoraproject.org/rpms/uboot-tools
+      branch: rawhide
 
 postprocess: |
     set -eux
