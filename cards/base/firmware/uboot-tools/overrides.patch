@@ -5,7 +5,7 @@ defaults for this board only.
 diff --git a/configs/rpi_arm64_defconfig b/configs/rpi_arm64_defconfig
 --- a/configs/rpi_arm64_defconfig
 +++ b/configs/rpi_arm64_defconfig
-@@ -13,6 +13,10 @@ CONFIG_EFI_CAPSULE_FIRMWARE_RAW=y
+@@ -14,6 +14,10 @@ CONFIG_EFI_CAPSULE_FIRMWARE_RAW=y
  CONFIG_EFI_HTTP_BOOT=y
  CONFIG_BOOTSTD_DEFAULTS=y
  CONFIG_OF_BOARD_SETUP=y
@@ -15,4 +15,4 @@ diff --git a/configs/rpi_arm64_defconfig b/configs/rpi_arm64_defconfig
 +# CONFIG_VIDEO_LOGO is not set
  CONFIG_FDT_SIMPLEFB=y
  CONFIG_USE_PREBOOT=y
- CONFIG_PREBOOT="pci enum; usb start;"
+ CONFIG_PREBOOT="pci enum; usb start; nvme scan;"
