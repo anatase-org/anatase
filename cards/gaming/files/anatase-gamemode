@@ -179,8 +179,9 @@ export QT_QPA_PLATFORM_THEME=kde
 
 export ENABLE_GAMESCOPE_WSI=1
 export GAMESCOPE_LIMITER_FILE="$(mktemp "$tmpdir/gamescope-limiter.XXXXXXXX")"
-export XCURSOR_THEME=steam
-export XCURSOR_SCALE=256
+# Request the largest installed cursor image
+export XCURSOR_THEME=default
+export XCURSOR_SIZE=256
 
 # HHD Support + Legion Go Dual DInput Support
 export SDL_GAMECONTROLLERCONFIG=$(cat <<-END
@@ -192,13 +193,6 @@ export SDL_GAMECONTROLLERCONFIG=$(cat <<-END
 $SDL_GAMECONTROLLERCONFIG
 END
 )
-
-# Chromium uses GTK's cursor setting instead of XCURSOR_THEME.
-kwriteconfig6 \
-    --file gtk-3.0/settings.ini \
-    --group Settings \
-    --key gtk-cursor-theme-name \
-    steam
 
 board_name="$(cat /sys/class/dmi/id/board_name 2>/dev/null || true)"
 if [[ $board_name = Galileo ]]; then
