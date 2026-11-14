@@ -1,6 +1,8 @@
 version: 1
 
 packages:
+  - alsa-ucm
+  - python3
   - aarch64:
       - bcm283x-firmware
 
@@ -12,6 +14,24 @@ build-deps:
   - rpmdevtools
   - ccache
   - sccache
+
+files:
+  # Book4 UCM configs
+  - alsa/backport-soundwire.py
+  - alsa/ucm2/codecs/tas2783/init.conf
+  - alsa/ucm2/sof-soundwire/tas2783.conf
+  - alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-1.0-NP750XQB_KA3SE.conf
+  - alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-2.1-NP940XMA_KB1SE.conf
+  - alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge-HiFi.conf
+  - alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge14-HiFi.conf
+  # RetroidPocket/alsa-ucm-conf, retroidpocket/v1.2.16:
+  # 81c23071ff104ce3477e7ad1155be840d101d1b5
+  - alsa/ucm2/RetroidPocket/ELIZA/ELIZA-RetroidPocket-I2S.conf
+  - alsa/ucm2/RetroidPocket/ELIZA/HiFi.conf
+  - alsa/ucm2/RetroidPocket/SM8550/SM8550-RetroidPocket-I2S.conf
+  - alsa/ucm2/RetroidPocket/SM8550/HiFi.conf
+  - alsa/ucm2/conf.d/eliza/ELIZA-RetroidPocket-I2S.conf
+  - alsa/ucm2/conf.d/sm8550/SM8550-RetroidPocket-I2S.conf
 
 specs:
   - spec: linux-firmware.spec
@@ -74,6 +94,35 @@ specs:
 
 postprocess: |
     set -eux
+
+    python3 /files/alsa/backport-soundwire.py
+    install -Dm0644 /files/alsa/ucm2/codecs/tas2783/init.conf \
+        /usr/share/alsa/ucm2/codecs/tas2783/init.conf
+    install -Dm0644 /files/alsa/ucm2/sof-soundwire/tas2783.conf \
+        /usr/share/alsa/ucm2/sof-soundwire/tas2783.conf
+
+    install -Dm0644 /files/alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-1.0-NP750XQB_KA3SE.conf \
+        /usr/share/alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-1.0-NP750XQB_KA3SE.conf
+    install -Dm0644 /files/alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-2.1-NP940XMA_KB1SE.conf \
+        /usr/share/alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-2.1-NP940XMA_KB1SE.conf
+    install -Dm0644 /files/alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge-HiFi.conf \
+        /usr/share/alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge-HiFi.conf
+    install -Dm0644 /files/alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge14-HiFi.conf \
+        /usr/share/alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge14-HiFi.conf
+
+    # Retroid RP6/Nova and Duo audio profiles, staged like the Book4 overrides.
+    install -Dm0644 /files/alsa/ucm2/RetroidPocket/ELIZA/ELIZA-RetroidPocket-I2S.conf \
+        /usr/share/alsa/ucm2/RetroidPocket/ELIZA/ELIZA-RetroidPocket-I2S.conf
+    install -Dm0644 /files/alsa/ucm2/RetroidPocket/ELIZA/HiFi.conf \
+        /usr/share/alsa/ucm2/RetroidPocket/ELIZA/HiFi.conf
+    install -Dm0644 /files/alsa/ucm2/RetroidPocket/SM8550/SM8550-RetroidPocket-I2S.conf \
+        /usr/share/alsa/ucm2/RetroidPocket/SM8550/SM8550-RetroidPocket-I2S.conf
+    install -Dm0644 /files/alsa/ucm2/RetroidPocket/SM8550/HiFi.conf \
+        /usr/share/alsa/ucm2/RetroidPocket/SM8550/HiFi.conf
+    install -Dm0644 /files/alsa/ucm2/conf.d/eliza/ELIZA-RetroidPocket-I2S.conf \
+        /usr/share/alsa/ucm2/conf.d/eliza/ELIZA-RetroidPocket-I2S.conf
+    install -Dm0644 /files/alsa/ucm2/conf.d/sm8550/SM8550-RetroidPocket-I2S.conf \
+        /usr/share/alsa/ucm2/conf.d/sm8550/SM8550-RetroidPocket-I2S.conf
 
     if [ "$arch" = "aarch64" ]; then
         # Keep SD-card firmware separate from the EFI payload used by ISOs.
