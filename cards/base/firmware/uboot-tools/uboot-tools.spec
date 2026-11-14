@@ -79,9 +79,6 @@ BuildRequires:  SDL2-devel
 BuildRequires:  swig
 %if %{with toolsonly}
 %ifarch aarch64
-BuildRequires:  arm-trusted-firmware-armv8
-BuildRequires:  optee-os-firmware-armv8
-BuildRequires:  crust-firmware
 BuildRequires:  python3-pyelftools
 BuildRequires:  xxd
 %endif
@@ -142,60 +139,20 @@ export OPENSBI=%{_datadir}/%{opensbi}/generic/firmware/fw_dynamic.bin
 %endif
 
 %ifarch aarch64 riscv64 x86_64
-for board in $(cat %{_arch}-boards)
+# Anatase only needs Raspberry Pi firmware on aarch64.
+%ifarch aarch64
+boards=rpi_arm64
+%else
+boards=$(cat %{_arch}-boards)
+%endif
+for board in $boards
 do
   echo "Building board: $board"
   mkdir builds/$(echo $board)/
 
-  # ATF selection, needs improving, suggestions of ATF SoC to Board matrix welcome
-  sun50i=(a64-olinuxino a64-olinuxino-emmc amarula_a64_relic bananapi_m64 nanopi_a64 oceanic_5205_5inmfd orangepi_win pine64-lts pine64_plus pine64_plus pinebook pinephone pinephone pinetab sopine_baseboard teres_i)
-  if [[ " ${sun50i[*]} " == *" $board "* ]]; then
-    echo "Board: $board using sun50i_a64"
-    cp /usr/share/arm-trusted-firmware/sun50i_a64/bl31.bin builds/$(echo $board)/atf-bl31
-    cp /usr/share/crust-firmware/a64/scp.bin builds/$(echo $board)/
-  fi
-  sun50h5=(bananapi_m2_plus_h5 emlid_neutis_n5_devboard libretech_all_h3_cc_h5 libretech_all_h3_it_h5 libretech_all_h5_cc_h5 nanopi_neo2 nanopi_neo_plus2 nanopi_r1s_h5 orangepi_pc2 orangepi_prime orangepi_zero_plus2 orangepi_zero_plus)
-  if [[ " ${sun50h5[*]} " == *" $board "* ]]; then
-    echo "Board: $board using sun50i_h6"
-    cp /usr/share/arm-trusted-firmware/sun50i_a64/bl31.bin builds/$(echo $board)/atf-bl31
-    cp /usr/share/crust-firmware/h5/scp.bin builds/$(echo $board)/
-  fi
-  sun50h6=(beelink_gs1 emlid_neutis_n5_devboard orangepi_3 orangepi_lite2 orangepi_one_plus pine_h64 tanix_tx6)
-  if [[ " ${sun50h6[*]} " == *" $board "* ]]; then
-    echo "Board: $board using sun50i_h6"
-    cp /usr/share/arm-trusted-firmware/sun50i_h6/bl31.bin builds/$(echo $board)/atf-bl31
-    cp /usr/share/crust-firmware/h6/scp.bin builds/$(echo $board)/
-  fi
-  sun50i_h616=(anbernic_rg35xx_h700 orangepi_zero2 orangepi_zero2w orangepi_zero3 transpeed-8k618-t x96_mate)
-  if [[ " ${sun50i_h616[*]} " == *" $board "* ]]; then
-    echo "Board: $board using sun50i_h616"
-    cp /usr/share/arm-trusted-firmware/sun50i_h616/bl31.bin builds/$(echo $board)/atf-bl31
-  fi
-  rk3328=(evb-rk3328 generic-rk3328 nanopi-r2c-plus-rk3328 nanopi-r2c-rk3328 nanopi-r2s-rk3328 nanopi-r2s-plus-rk3328 orangepi-r1-plus-lts-rk3328 orangepi-r1-plus-rk3328 roc-cc-rk3328 rock64-rk3328 rock-pi-e-rk3328 rock-pi-e-v3-rk3328)
-  if [[ " ${rk3328[*]} " == *" $board "* ]]; then
-    echo "Board: $board using rk3328"
-    cp /usr/share/arm-trusted-firmware/rk3328/bl31.elf builds/$(echo $board)/atf-bl31
-  fi
-  rk3368=(evb-px5 geekbox)
-  if [[ " ${rk3368[*]} " == *" $board "* ]]; then
-    echo "Board: $board using rk3368"
-    cp /usr/share/arm-trusted-firmware/rk3368/bl31.elf builds/$(echo $board)/atf-bl31
-  fi
-  rk3399=(eaidk-610-rk3399 evb-rk3399 ficus-rk3399 firefly-rk3399 generic-rk3399 khadas-edge-captain-rk3399 khadas-edge-rk3399 khadas-edge-v-rk3399 leez-rk3399 nanopc-t4-rk3399 nanopi-m4-2gb-rk3399 nanopi-m4b-rk3399 nanopi-m4-rk3399 nanopi-neo4-rk3399 nanopi-r4s-rk3399 orangepi-rk3399 pinebook-pro-rk3399 pinephone-pro-rk3399 puma-rk3399 rock-4c-plus-rk3399 rock-4se-rk3399 rock960-rk3399 rock-pi-4c-rk3399 rock-pi-4-rk3399 rock-pi-n10-rk3399pro rockpro64-rk3399 roc-pc-mezzanine-rk3399 roc-pc-rk3399)
-  if [[ " ${rk3399[*]} " == *" $board "* ]]; then
-    echo "Board: $board using rk3399"
-    cp /usr/share/arm-trusted-firmware/rk3399/* builds/$(echo $board)/
-    cp builds/$(echo $board)/bl31.elf builds/$(echo $board)/atf-bl31
-  fi
-  zynqmp=(xilinx_zynqmp_kria xilinx_zynqmp_virt)
-  if [[ " ${zynqmp[*]} " == *" $board "* ]]; then
-    echo "Board: $board using zynqmp"
-    cp /usr/share/arm-trusted-firmware/zynqmp/bl31.bin builds/$(echo $board)/atf-bl31
-  fi
-  # End ATF
 
   make $(echo $board)_defconfig O=builds/$(echo $board)/
-  BL31=builds/$(echo $board)/atf-bl31 %make_build HOSTCC="gcc $RPM_OPT_FLAGS" CROSS_COMPILE="" O=builds/$(echo $board)/
+  %make_build HOSTCC="gcc $RPM_OPT_FLAGS" CROSS_COMPILE="" O=builds/$(echo $board)/
 
 done
 
@@ -230,8 +187,6 @@ do
  done
 done
 
-# For Apple M-series we also need the nodtb variant
-install -pD -m 0644 builds/apple_m1/u-boot-nodtb.bin %{buildroot}%{_datadir}/uboot/apple_m1/u-boot-nodtb.bin
 %endif
 
 %ifarch riscv64
