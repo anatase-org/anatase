@@ -1,6 +1,20 @@
 --- a/bin_steam.sh
 +++ b/bin_steam.sh
-@@ -116,9 +116,10 @@
+@@ -23,6 +23,13 @@
+ }
+ 
+ export STEAMSCRIPT_VERSION=1.0.0.87
++
++# flatpak enter strips HOME, but the native client needs it to find
++# the running client's token when forwarding commands.
++if [ -z "${HOME:-}" ]; then
++	unset HOME
++	export HOME=~
++fi
+ 
+ # Set up domain for script localization
+ export TEXTDOMAIN=steam
+@@ -116,9 +123,10 @@
  
  function detect_platform()
  {
@@ -14,7 +28,7 @@
  }
  
  function setup_variables()
-@@ -138,6 +139,9 @@
+@@ -138,6 +146,9 @@
  	LAUNCHSTEAMDIR="$(readlink -e -q "$STEAMDATALINK" || true)"
  	# Normally 'ubuntu12_32'
  	LAUNCHSTEAMPLATFORM="$(detect_platform)"
@@ -24,8 +38,8 @@
  	# Often in /usr/lib/steam
  	LAUNCHSTEAMBOOTSTRAPFILE="$bootstrapdir/bootstraplinux_$LAUNCHSTEAMPLATFORM.tar.xz"
  	if [ ! -f "$LAUNCHSTEAMBOOTSTRAPFILE" ]; then
-@@ -203,7 +207,7 @@
-	# this script we assume that ~/.steam/steam and ~/.steam/root
+@@ -229,7 +240,7 @@
+ 	# this script we assume that ~/.steam/steam and ~/.steam/root
  	# are the same: they only differ in developer use-cases which
  	# also bypass this script
 -	local srt="${STEAM_RUNTIME_SCOUT:-"$data/ubuntu12_32/steam-runtime"}"
@@ -33,7 +47,7 @@
  	local argv="$2"
  
  	if [[ -n "$data" && -x "$data/$STEAMBOOTSTRAP" ]]; then
-@@ -217,6 +221,10 @@
+@@ -243,6 +254,10 @@
  
  function forward_command_line()
  {
@@ -44,7 +58,7 @@
  	if ! [ -p "$STEAMCONFIG/steam.pipe" ]; then
  		return 1
  	fi
-@@ -282,6 +290,13 @@
+@@ -308,6 +323,13 @@
  fi
  
  # go to the install directory and run the client
