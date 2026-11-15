@@ -107,7 +107,7 @@ Subject: Update desktop welcome text + translations
  36 files changed, 71 insertions(+), 71 deletions(-)
 
 diff --git a/po/ar/org.kde.plasmasetup.po b/po/ar/org.kde.plasmasetup.po
-index d8cb584..410812f 100644
+index 383706e..3f14e60 100644
 --- a/po/ar/org.kde.plasmasetup.po
 +++ b/po/ar/org.kde.plasmasetup.po
 @@ -347,8 +347,8 @@ msgstr "مرحبًا في<br/><b>بلازما الجوال</b>"
@@ -137,7 +137,7 @@ index 03fb0a9..3c8d91b 100644
  #: src/qml/LandingComponent.qml:150
  #, kde-format
 diff --git a/po/ca/org.kde.plasmasetup.po b/po/ca/org.kde.plasmasetup.po
-index 8d5f850..1ad8542 100644
+index 9313175..9f30c23 100644
 --- a/po/ca/org.kde.plasmasetup.po
 +++ b/po/ca/org.kde.plasmasetup.po
 @@ -352,8 +352,8 @@ msgstr "Us donem la benvinguda al<br/><b>Plasma Mobile</b>"
@@ -287,10 +287,10 @@ index 3e3ee18..a2c5289 100644
  #: src/qml/LandingComponent.qml:150
  #, kde-format
 diff --git a/po/gl/org.kde.plasmasetup.po b/po/gl/org.kde.plasmasetup.po
-index 63f0ab8..74a21f0 100644
+index 324c690..fa6d1c4 100644
 --- a/po/gl/org.kde.plasmasetup.po
 +++ b/po/gl/org.kde.plasmasetup.po
-@@ -351,8 +351,8 @@ msgstr "Benvida a<br/><b>Plasma Mobile</b>"
+@@ -347,8 +347,8 @@ msgstr "Benvida a<br/><b>Plasma Mobile</b>"
  
  #: src/qml/LandingComponent.qml:136
  #, kde-format
