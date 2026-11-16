@@ -58,7 +58,7 @@
  	if ! [ -p "$STEAMCONFIG/steam.pipe" ]; then
  		return 1
  	fi
-@@ -308,6 +323,13 @@
+@@ -308,6 +323,22 @@
  fi
  
  # go to the install directory and run the client
@@ -68,6 +68,15 @@
 +	ln -fns "$LAUNCHSTEAMDIR/linuxarm64" "$STEAMCONFIG/sdkarm64"
 +	export LD_LIBRARY_PATH="$LAUNCHSTEAMDIR/steamrtarm64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 +	cd "$LAUNCHSTEAMDIR/steamrtarm64"
++	# We bypass steam.sh on ARM, so handle its update/restart status here.
++	while true; do
++		status=0
++		"$LAUNCHSTEAMDIR/$STEAMBOOTSTRAP" ${log_opened+-srt-logger-opened} "$@" || status=$?
++		if [ "$status" -ne 42 ]; then
++			exit "$status"
++		fi
++		log "Restarting Steam by request..."
++	done
 +else
 +	cd "$LAUNCHSTEAMDIR"
 +fi
