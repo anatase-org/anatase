@@ -1,0 +1,19 @@
+[Unit]
+Description=Refresh image caches after an Anatase deployment change
+Documentation=https://gitlab.com/fedora/ostree/sig/-/work_items/103
+Documentation=https://gitlab.com/fedora/ostree/sig/-/work_items/62
+ConditionPathIsReadWrite=/var
+ConditionPathExists=/run/ostree-booted
+After=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+StateDirectory=anatase/image-maintenance
+Environment=MAN_NO_LOCALE_WARNING=1
+ExecStart=/usr/libexec/anatase-image-maintenance
+Nice=19
+IOWeight=10
+
+[Install]
+WantedBy=multi-user.target

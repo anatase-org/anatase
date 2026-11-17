@@ -57,11 +57,12 @@ postprocess: |
     EOF
     fi
 
-    # The Galaxy Book4 Edge eDP panel depends on the PMK8550 PWM provider.
-    # Include it before LUKS unlock so Plymouth can display the password prompt.
-    if find /usr/lib/modules -type f -name 'leds-qcom-lpg.ko*' -print -quit | grep -q .; then
+    # Preload the Galaxy Book4 Edge display stack before LUKS unlock.
+    # Device-tree clock, PHY and panel suppliers are not module dependencies.
+    if [ "$arch" = "aarch64" ]; then
         cat > /usr/lib/dracut/dracut.conf.d/20-atomic-qcom-display.conf <<'EOF'
     force_drivers+=" leds-qcom-lpg pwm_bl "
+    force_drivers+=" dispcc-x1e80100 gpucc-x1e80100 nvmem-qfprom phy-qcom-edp phy-qcom-qmp-combo panel-samsung-atna33xc20 msm "
     EOF
     fi
 

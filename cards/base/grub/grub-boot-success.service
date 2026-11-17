@@ -8,4 +8,4 @@ Type=oneshot
 ExecStart=/usr/libexec/grub-boot-success
 
 [Install]
-WantedBy=hibernate.target hybrid-sleep.target suspend-then-hibernate.target halt.target reboot.target shutdown.target
+WantedBy=hibernate.target hybrid-sleep.target suspend-then-hibernate.target

@@ -139,7 +139,14 @@ echo "1x1" > "$RADV_FORCE_VRS_CONFIG_FILE"
 export GAMESCOPE_NV12_COLORSPACE=k_EStreamColorspace_BT601
 export STEAM_GAMESCOPE_HDR_SUPPORTED=1
 export VKD3D_SWAPCHAIN_LATENCY_FRAMES=3
-export WINEDLLOVERRIDES=dxgi=n
+# Default Proton games to OpenGL on Raspberry Pi.
+if grep -q '^Raspberry Pi' /proc/device-tree/model 2>/dev/null; then
+    export PROTON_USE_WINED3D="${PROTON_USE_WINED3D:-1}"
+    # Avoid a second WineD3D command-stream thread under emulation.
+    export WINE_D3D_CONFIG="${WINE_D3D_CONFIG:-csmt=0}"
+else
+    export WINEDLLOVERRIDES=dxgi=n
+fi
 export STEAM_ENABLE_DYNAMIC_BACKLIGHT=1
 # We will probably not port this
 # export STEAM_ENABLE_FAN_CONTROL=1
@@ -172,8 +179,9 @@ export QT_QPA_PLATFORM_THEME=kde
 
 export ENABLE_GAMESCOPE_WSI=1
 export GAMESCOPE_LIMITER_FILE="$(mktemp "$tmpdir/gamescope-limiter.XXXXXXXX")"
-export XCURSOR_THEME=steam
-export XCURSOR_SCALE=256
+# Request the largest installed cursor image
+export XCURSOR_THEME=default
+export XCURSOR_SIZE=256
 
 # HHD Support + Legion Go Dual DInput Support
 export SDL_GAMECONTROLLERCONFIG=$(cat <<-END
@@ -185,13 +193,6 @@ export SDL_GAMECONTROLLERCONFIG=$(cat <<-END
 $SDL_GAMECONTROLLERCONFIG
 END
 )
-
-# Chromium uses GTK's cursor setting instead of XCURSOR_THEME.
-kwriteconfig6 \
-    --file gtk-3.0/settings.ini \
-    --group Settings \
-    --key gtk-cursor-theme-name \
-    steam
 
 board_name="$(cat /sys/class/dmi/id/board_name 2>/dev/null || true)"
 if [[ $board_name = Galileo ]]; then

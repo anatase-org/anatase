@@ -152,13 +152,6 @@ specs:
       file: overrides.patch
 
 files:
-  - alsa/backport-soundwire.py
-  - alsa/ucm2/codecs/tas2783/init.conf
-  - alsa/ucm2/sof-soundwire/tas2783.conf
-  - alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-1.0-NP750XQB_KA3SE.conf
-  - alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-2.1-NP940XMA_KB1SE.conf
-  - alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge-HiFi.conf
-  - alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge14-HiFi.conf
   - keys/anatase-mok-ca.crt
   - keys/anatase-gpg.pub.asc
   - keys/anatase-cosign-root.pem
@@ -173,26 +166,14 @@ files:
   - flatpak/flathub.filter
   - flatpak/flathub.flatpakrepo
   - dracut_cleanup_shadow.sh
+  - anatase-growfs.service
+  - anatase-image-maintenance
+  - anatase-image-maintenance.service
   - systemd-remount-fs.conf
   - udev/70-anatase-sysfs.rules
 
 postprocess: |
     set -eux
-
-    python3 /files/alsa/backport-soundwire.py
-    install -Dm0644 /files/alsa/ucm2/codecs/tas2783/init.conf \
-        /usr/share/alsa/ucm2/codecs/tas2783/init.conf
-    install -Dm0644 /files/alsa/ucm2/sof-soundwire/tas2783.conf \
-        /usr/share/alsa/ucm2/sof-soundwire/tas2783.conf
-
-    install -Dm0644 /files/alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-1.0-NP750XQB_KA3SE.conf \
-        /usr/share/alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-1.0-NP750XQB_KA3SE.conf
-    install -Dm0644 /files/alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-2.1-NP940XMA_KB1SE.conf \
-        /usr/share/alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-2.1-NP940XMA_KB1SE.conf
-    install -Dm0644 /files/alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge-HiFi.conf \
-        /usr/share/alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge-HiFi.conf
-    install -Dm0644 /files/alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge14-HiFi.conf \
-        /usr/share/alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge14-HiFi.conf
 
     install -Dm0644 /files/udev/70-anatase-sysfs.rules \
         /usr/lib/udev/rules.d/70-anatase-sysfs.rules
@@ -237,6 +218,14 @@ postprocess: |
     systemctl --user --global preset-all || true
 
     install -dm0755 /usr/lib/systemd/system-preset /usr/lib/tmpfiles.d
+
+    # Add service for SD card images to expand the btrfs partition
+    install -Dm0644 /files/anatase-growfs.service \
+        /usr/lib/systemd/system/anatase-growfs.service
+    cat > /usr/lib/systemd/system-preset/80-anatase-growfs.preset <<'EOF'
+    enable anatase-growfs.service
+    EOF
+    systemctl preset anatase-growfs.service
 
     # Remove the rules trying to create the symlinked dirs and emitting errors
     rm -f /usr/lib/tmpfiles.d/home.conf
@@ -369,44 +358,10 @@ postprocess: |
     # Atomic Desktop Maintenance
     #
 
-    cat > /usr/lib/systemd/system/fedora-atomic-desktop-appstream-cache-refresh.service <<'EOF'
-    [Unit]
-    Description=Refresh appstream cache on Atomic Desktops
-    Documentation=https://gitlab.com/fedora/ostree/sig/-/work_items/103
-    ConditionPathIsReadWrite=/var
-    ConditionPathExists=/run/ostree-booted
-    After=local-fs.target
-
-    [Service]
-    Type=oneshot
-    RemainAfterExit=yes
-    ExecStart=/usr/bin/appstreamcli refresh --force
-    Nice=19
-    IOWeight=10
-
-    [Install]
-    WantedBy=multi-user.target
-    EOF
-
-    cat > /usr/lib/systemd/system/fedora-atomic-desktop-mandb-update.service <<'EOF'
-    [Unit]
-    Description=Update mandb cache on Atomic Desktops
-    Documentation=https://gitlab.com/fedora/ostree/sig/-/work_items/62
-    ConditionPathIsReadWrite=/var
-    ConditionPathExists=/run/ostree-booted
-    After=local-fs.target
-
-    [Service]
-    Type=oneshot
-    RemainAfterExit=yes
-    Environment=MAN_NO_LOCALE_WARNING=1
-    ExecStart=/usr/bin/mandb -q
-    Nice=19
-    IOWeight=10
-
-    [Install]
-    WantedBy=multi-user.target
-    EOF
+    install -Dm0755 /files/anatase-image-maintenance \
+        /usr/libexec/anatase-image-maintenance
+    install -Dm0644 /files/anatase-image-maintenance.service \
+        /usr/lib/systemd/system/anatase-image-maintenance.service
 
     cat >> /usr/lib/systemd/system-preset/81-atomic-desktop.preset <<'EOF'
 
@@ -414,16 +369,11 @@ postprocess: |
     # also pulls network-online.target into every boot through Wants=.
     disable dnf-makecache.timer
 
-    # See: https://gitlab.com/fedora/ostree/sig/-/work_items/103
-    enable fedora-atomic-desktop-appstream-cache-refresh.service
-
-    # See: https://gitlab.com/fedora/ostree/sig/-/work_items/62
-    enable fedora-atomic-desktop-mandb-update.service
+    enable anatase-image-maintenance.service
     EOF
 
     systemctl preset dnf-makecache.timer || true
-    systemctl preset fedora-atomic-desktop-appstream-cache-refresh.service || true
-    systemctl preset fedora-atomic-desktop-mandb-update.service || true
+    systemctl preset anatase-image-maintenance.service || true
 
     #
     # Installer fixups
@@ -441,14 +391,22 @@ postprocess: |
 
     # Generate proper initramfs under /usr/lib/modules/${kver}/
     rm -rf /boot/initramfs-*.img
+    initramfs_limit=$((320 * 1024 * 1024))
     for kernel in /usr/lib/modules/*/vmlinuz; do
         [ -e "${kernel}" ] || continue
         kver=${kernel%/vmlinuz}
         kver=${kver##*/}
+        initramfs="/usr/lib/modules/${kver}/initramfs.img"
         /usr/bin/dracut --no-hostonly --kver "${kver}" \
             --reproducible --zstd -v --force \
-            "/usr/lib/modules/${kver}/initramfs.img"
-        chmod 0600 "/usr/lib/modules/${kver}/initramfs.img"
+            "${initramfs}"
+        initramfs_size=$(stat -c %s "${initramfs}")
+        if [ "${initramfs_size}" -gt "${initramfs_limit}" ]; then
+            printf 'error: %s is %s bytes. Maximum initramfs size is 320 MiB (%s bytes)\n' \
+                "${initramfs}" "${initramfs_size}" "${initramfs_limit}" >&2
+            exit 1
+        fi
+        chmod 0600 "${initramfs}"
     done
 
     # Move boot into /usr/lib/ostree-boot

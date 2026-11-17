@@ -1,0 +1,15 @@
+[Unit]
+Description=Mark boot as successful before unmounting filesystems
+# An active service's stop ordering keeps these mounts available to ExecStop.
+# Starting a new oneshot during shutdown races with their unmount jobs.
+RequiresMountsFor=/boot /var /sysroot
+After=ostree-remount.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/true
+ExecStop=/usr/libexec/grub-boot-success
+
+[Install]
+WantedBy=multi-user.target

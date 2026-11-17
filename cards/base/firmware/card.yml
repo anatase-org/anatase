@@ -1,9 +1,10 @@
 version: 1
 
 packages:
+  - alsa-ucm
+  - python3
   - aarch64:
       - bcm283x-firmware
-      - uboot-images-armv8
 
 build-deps:
   - bash
@@ -13,6 +14,25 @@ build-deps:
   - rpmdevtools
   - ccache
   - sccache
+
+files:
+  - dracut/30-anatase-qcom-firmware.conf
+  # Book4 UCM configs
+  - alsa/backport-soundwire.py
+  - alsa/ucm2/codecs/tas2783/init.conf
+  - alsa/ucm2/sof-soundwire/tas2783.conf
+  - alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-1.0-NP750XQB_KA3SE.conf
+  - alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-2.1-NP940XMA_KB1SE.conf
+  - alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge-HiFi.conf
+  - alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge14-HiFi.conf
+  # RetroidPocket/alsa-ucm-conf, retroidpocket/v1.2.16:
+  # 81c23071ff104ce3477e7ad1155be840d101d1b5
+  - alsa/ucm2/RetroidPocket/ELIZA/ELIZA-RetroidPocket-I2S.conf
+  - alsa/ucm2/RetroidPocket/ELIZA/HiFi.conf
+  - alsa/ucm2/RetroidPocket/SM8550/SM8550-RetroidPocket-I2S.conf
+  - alsa/ucm2/RetroidPocket/SM8550/HiFi.conf
+  - alsa/ucm2/conf.d/eliza/ELIZA-RetroidPocket-I2S.conf
+  - alsa/ucm2/conf.d/sm8550/SM8550-RetroidPocket-I2S.conf
 
 specs:
   - spec: linux-firmware.spec
@@ -60,16 +80,71 @@ specs:
       - x86_64:
           - steamdeck-audio
 
+  - spec: uboot-tools/uboot-tools.spec
+    files:
+      - uboot-tools.spec
+      - '*.patch'
+      - '*-boards'
+    packages:
+      - aarch64:
+          - uboot-images-armv8
+    upstream:
+      type: dist-git
+      url: https://src.fedoraproject.org/rpms/uboot-tools
+      branch: rawhide
+
 postprocess: |
     set -eux
 
+    install -Dm0644 /files/dracut/30-anatase-qcom-firmware.conf \
+        /usr/lib/dracut/dracut.conf.d/30-anatase-qcom-firmware.conf
+
+    python3 /files/alsa/backport-soundwire.py
+    install -Dm0644 /files/alsa/ucm2/codecs/tas2783/init.conf \
+        /usr/share/alsa/ucm2/codecs/tas2783/init.conf
+    install -Dm0644 /files/alsa/ucm2/sof-soundwire/tas2783.conf \
+        /usr/share/alsa/ucm2/sof-soundwire/tas2783.conf
+
+    install -Dm0644 /files/alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-1.0-NP750XQB_KA3SE.conf \
+        /usr/share/alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-1.0-NP750XQB_KA3SE.conf
+    install -Dm0644 /files/alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-2.1-NP940XMA_KB1SE.conf \
+        /usr/share/alsa/ucm2/conf.d/x1e80100/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-2.1-NP940XMA_KB1SE.conf
+    install -Dm0644 /files/alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge-HiFi.conf \
+        /usr/share/alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge-HiFi.conf
+    install -Dm0644 /files/alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge14-HiFi.conf \
+        /usr/share/alsa/ucm2/Qualcomm/x1e80100/GalaxyBook4Edge14-HiFi.conf
+
+    # Retroid RP6/Nova and Duo audio profiles, staged like the Book4 overrides.
+    install -Dm0644 /files/alsa/ucm2/RetroidPocket/ELIZA/ELIZA-RetroidPocket-I2S.conf \
+        /usr/share/alsa/ucm2/RetroidPocket/ELIZA/ELIZA-RetroidPocket-I2S.conf
+    install -Dm0644 /files/alsa/ucm2/RetroidPocket/ELIZA/HiFi.conf \
+        /usr/share/alsa/ucm2/RetroidPocket/ELIZA/HiFi.conf
+    install -Dm0644 /files/alsa/ucm2/RetroidPocket/SM8550/SM8550-RetroidPocket-I2S.conf \
+        /usr/share/alsa/ucm2/RetroidPocket/SM8550/SM8550-RetroidPocket-I2S.conf
+    install -Dm0644 /files/alsa/ucm2/RetroidPocket/SM8550/HiFi.conf \
+        /usr/share/alsa/ucm2/RetroidPocket/SM8550/HiFi.conf
+    install -Dm0644 /files/alsa/ucm2/conf.d/eliza/ELIZA-RetroidPocket-I2S.conf \
+        /usr/share/alsa/ucm2/conf.d/eliza/ELIZA-RetroidPocket-I2S.conf
+    install -Dm0644 /files/alsa/ucm2/conf.d/sm8550/SM8550-RetroidPocket-I2S.conf \
+        /usr/share/alsa/ucm2/conf.d/sm8550/SM8550-RetroidPocket-I2S.conf
+
     if [ "$arch" = "aarch64" ]; then
-        # Stage Fedora's firmware, device trees, overlays and configuration
-        # before the atomic card moves /boot into /usr/lib/ostree-boot.
-        install -dm0755 /usr/lib/ludos/efi
-        cp -R /boot/efi/. /usr/lib/ludos/efi/
+        # Keep SD-card firmware separate from the EFI payload used by ISOs.
+        # Stage it before the atomic card moves /boot into /usr/lib/ostree-boot.
+        install -dm0755 /usr/lib/ludos/sd
+        cp -R /boot/efi/. /usr/lib/ludos/sd/
 
         # Fedora's config.txt selects this filename for both Pi 4 and Pi 5.
         install -m0644 /usr/share/uboot/rpi_arm64/u-boot.bin \
-            /usr/lib/ludos/efi/rpi-u-boot.bin
+            /usr/lib/ludos/sd/rpi-u-boot.bin
+
+        # Hash sorted relative filenames and contents, excluding the marker itself.
+        (
+            set -o pipefail
+            cd /usr/lib/ludos/sd
+            find . -type f ! -path ./version.txt -print0 \
+                | LC_ALL=C sort -z \
+                | xargs -0 -r sha256sum --zero \
+                | sha256sum | cut -d ' ' -f1 > version.txt
+        )
     fi

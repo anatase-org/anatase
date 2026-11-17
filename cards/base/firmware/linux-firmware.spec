@@ -4,7 +4,7 @@
 %define _binaries_in_noarch_packages_terminate_build 0
 
 Name:		linux-firmware
-Version:	20261019.an01
+Version:	20261019.an02
 Release:	1%{?dist}
 Summary:	Firmware files used by the Linux kernel
 License:	GPL-1.0-or-later AND GPL-2.0-or-later AND MIT AND LicenseRef-Fedora-Firmware
@@ -257,7 +257,7 @@ Firmware for various compoents in Mediatek SoCs, in particular SCP.
 
 %package -n qcom-firmware
 Summary:	Firmware for Qualcomm SoCs
-License:	LicenseRef-Fedora-Firmware
+License:	BSD-3-Clause AND LicenseRef-Fedora-Firmware
 Requires:	linux-firmware-whence = %{version}-%{release}
 Requires:	atheros-firmware = %{version}-%{release}
 %description -n qcom-firmware
@@ -696,6 +696,8 @@ end
 
 %files -n qcom-firmware
 %license LICENSES/LICENSE.qcom LICENSES/LICENSE.qcom_yamato LICENSES/NOTICE.qcom
+%license LICENSES/LICENSE.qcom-2
+%license LICENSES/LICENCE.linaro
 %dir %{_firmwarepath}/qcom
 %{_firmwarepath}/a300_p*
 %{_firmwarepath}/qcom/eliza/

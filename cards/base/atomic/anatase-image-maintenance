@@ -1,0 +1,42 @@
+#!/bin/bash
+set -euo pipefail
+
+# Read the booted image's version, independently of local /etc overrides.
+source /usr/lib/os-release
+
+# Keep only the last successful version: /var caches are shared, so rolling
+# back must refresh them too. Both workarounds must succeed before recording it.
+marker=${STATE_DIRECTORY:?}/image-version
+if [ -n "${BUILD_ID:-}" ] && [ -f "$marker" ] && [ "$(<"$marker")" = "$BUILD_ID" ]; then
+    echo "Maintenance already completed for image $BUILD_ID"
+    exit 0
+fi
+
+# A failed refresh can partially change the cache, invalidating its old marker.
+rm -f -- "$marker"
+if [ -z "${BUILD_ID:-}" ]; then
+    echo "Image has no BUILD_ID; running maintenance without a version marker" >&2
+fi
+
+/usr/bin/appstreamcli refresh --force &
+appstream_pid=$!
+/usr/bin/mandb -q &
+mandb_pid=$!
+
+# Reap both jobs even if one fails; neither may outlive the version marker.
+status=0
+wait "$appstream_pid" || status=$?
+wait "$mandb_pid" || status=$?
+if [ "$status" -ne 0 ]; then
+    exit "$status"
+fi
+
+if [ -z "${BUILD_ID:-}" ]; then
+    exit 0
+fi
+
+# Publish the marker only after success, without leaving a partial version.
+marker_tmp=$(mktemp "${marker}.XXXXXX")
+trap 'rm -f -- "$marker_tmp"' EXIT
+printf '%s\n' "$BUILD_ID" > "$marker_tmp"
+mv -f -- "$marker_tmp" "$marker"
