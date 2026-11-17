@@ -114,9 +114,6 @@ Recommends:     mesa-vulkan-drivers
 # Install stub pkgconfig file
 mkdir -p pkgconfig
 cp %{SOURCE1} pkgconfig/stb.pc
-# Fedora installs the header-only vkroots pkgconfig file under /usr/lib,
-# outside the native 64-bit pkgconfig search path.
-cp /usr/lib/pkgconfig/vkroots.pc pkgconfig/vkroots.pc
 
 # Replace spirv-headers include with the system directory
 sed -i 's^../thirdparty/SPIRV-Headers/include/spirv/^/usr/include/spirv/^' src/meson.build
