@@ -178,8 +178,8 @@ packages:
   - thermald
   - usb_modeswitch
   - usbutils
-  - alsa-sof-firmware
   - x86_64:
+    - alsa-sof-firmware
     - intel-lpmd
     - microcode_ctl
 
