@@ -26,32 +26,48 @@ if ! mountpoint -q "$efi_root"; then
     exit 1
 fi
 
+copy_file() {
+    local source=$1 destination=$2
+    cmp -s -- "$source" "$destination" && return 0
+
+    remount_boot_rw
+    mkdir -p -- "$(dirname -- "$destination")"
+    # Flush a complete sibling file before replacing any boot asset.
+    payload_tmp=$(mktemp "${destination}.XXXXXX")
+    cp --no-preserve=mode,ownership,timestamps -- "$source" "$payload_tmp"
+    sync "$payload_tmp"
+    mv -fT -- "$payload_tmp" "$destination"
+    payload_tmp=
+    sync "$efi_root"
+}
+
 copy_payload() {
-    local payload=$1 source relative destination
+    local payload=$1 version=${2:-} source relative destination
     [ -d "$payload" ] || return 0
+
+    if [ -n "$version" ] && cmp -s -- "$payload/$version" "$efi_root/$version"; then
+        return 0
+    fi
 
     while IFS= read -r -d '' source; do
         relative=${source#"${payload}/"}
         destination=${efi_root}/${relative}
+        [ "$relative" = "$version" ] && continue
         if [ "$relative" = config.txt ] && { [ -e "$destination" ] || [ -L "$destination" ]; }; then
             # Keep the SD card's user configuration.
             continue
         fi
-        cmp -s -- "$source" "$destination" && continue
-
-        remount_boot_rw
-        mkdir -p -- "$(dirname -- "$destination")"
-        # Flush a complete sibling file before replacing any boot asset.
-        payload_tmp=$(mktemp "${destination}.XXXXXX")
-        cp --no-preserve=mode,ownership,timestamps -- "$source" "$payload_tmp"
-        sync "$payload_tmp"
-        mv -fT -- "$payload_tmp" "$destination"
-        payload_tmp=
-        sync "$efi_root"
+        copy_file "$source" "$destination"
     done < <(find "$payload" -type f -print0)
+    wait "$!"
+
+    # Publish the version only after every boot asset has been installed safely.
+    if [ -n "$version" ] && [ -f "$payload/$version" ]; then
+        copy_file "$payload/$version" "$efi_root/$version"
+    fi
 }
 
 copy_payload "$efi_payload"
 if [ -f "$efi_root/config.txt" ]; then
-    copy_payload "$sd_payload"
+    copy_payload "$sd_payload" version.txt
 fi
