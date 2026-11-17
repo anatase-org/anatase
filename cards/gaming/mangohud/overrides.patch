@@ -710,3 +710,105 @@ index a5993aa56511..7c8e6d5a98ea 100644
     if (en[OVERLAY_PARAM_ENABLED_dx_api]) {
        if (engine == EngineTypes::VKD3D)
           return "DX12";
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Tue, 17 Nov 2026 21:50:31 +0100
+Subject: mangoapp: wait for frame dimensions before resuming
+
+The frame throttle waits after the resume render, so enabling the
+horizontal HUD before a visible frame resizes the X11 window to 0x0 and
+aborts. Wait before rendering on resume and keep the current window size
+for missing or zero dimensions.
+
+Publish the dimension pair under mangoapp_m before setting new_frame and
+notifying the renderer, and take the same mutex when reading it.
+---
+ src/app/main.cpp | 50 ++++++++++++++++++++++++++++--------------------
+ 1 file changed, 29 insertions(+), 21 deletions(-)
+
+diff --git a/src/app/main.cpp b/src/app/main.cpp
+index 93be59888c6c..3331da6d1925 100644
+--- a/src/app/main.cpp
++++ b/src/app/main.cpp
+@@ -286,14 +286,14 @@ static void msg_read_thread(){
+                     {
+                         {
+                             std::unique_lock<std::mutex> lk(mangoapp_m);
++                            if (message_has_field(msg_size, offsetof(mangoapp_msg_v1, outputHeight),
++                                                  sizeof(mangoapp_v1->outputHeight))) {
++                                screenWidth = mangoapp_v1->outputWidth;
++                                screenHeight = mangoapp_v1->outputHeight;
++                            }
+                             new_frame = true;
+                         }
+                         mangoapp_cv.notify_one();
+-                        if (message_has_field(msg_size, offsetof(mangoapp_msg_v1, outputHeight),
+-                                              sizeof(mangoapp_v1->outputHeight))) {
+-                            screenWidth = mangoapp_v1->outputWidth;
+-                            screenHeight = mangoapp_v1->outputHeight;
+-                        }
+                     }
+                 }
+             } else {
+@@ -370,10 +370,18 @@ static bool render(GLFWwindow* window, overlay_params& real_params) {
+     int w, h;
+     glfwGetWindowSize(window, &w, &h);
+     window_size_changed = w != window_size.x || h != window_size.y;
+-    if (real_params.enabled[OVERLAY_PARAM_ENABLED_horizontal])
+-    // trying to reduce height will break direct scanout in some cases
+-    // just leave it for now, we'll revisit it in server
+-    glfwSetWindowSize(window, screenWidth, screenHeight);
++    if (real_params.enabled[OVERLAY_PARAM_ENABLED_horizontal]) {
++        uint32_t width, height;
++        {
++            std::lock_guard<std::mutex> lk(mangoapp_m);
++            width = screenWidth;
++            height = screenHeight;
++        }
++        // Keep the current size until Gamescope supplies valid dimensions.
++        // Reducing the height can break direct scanout.
++        if (width > 0 && height > 0)
++            glfwSetWindowSize(window, width, height);
++    }
+ 
+     ImGui::EndFrame();
+ 
+@@ -450,6 +458,18 @@ int main(int, char**)
+         real_params = get_params();
+         check_keybinds(*real_params);
+         if (!real_params->no_display){
++            // Wait before the resume render, which also uses the frame's dimensions.
++            {
++                std::unique_lock<std::mutex> lk(mangoapp_m);
++                mangoapp_cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
++                    return new_frame || real_params->no_display;
++                });
++                // no_display can flip mid-wait so re-check
++                if (real_params->no_display || !new_frame)
++                    continue;
++                new_frame = false;
++            }
++
+             if (mangoapp_paused){
+                 glfwShowWindow(window);
+                 render(window, *real_params);
+@@ -463,18 +483,6 @@ int main(int, char**)
+                         gpu->resume();
+             }
+ 
+-            // throttle to one render per game frame, else we render flat-out
+-            {
+-                std::unique_lock<std::mutex> lk(mangoapp_m);
+-                mangoapp_cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
+-                    return new_frame || real_params->no_display;
+-                });
+-                // no_display can flip mid-wait so re-check
+-                if (real_params->no_display || !new_frame)
+-                    continue;
+-                new_frame = false;
+-            }
+-
+             {
+                 if (render(window, *real_params)) {
+                     // If we need to resize our window, give it another couple of rounds for the
