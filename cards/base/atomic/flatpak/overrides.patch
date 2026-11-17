@@ -1388,3 +1388,386 @@ index 00000000..5d6728b0
 +exec 3<&-
 +
 +done_testing
+
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Antheas Kapenekakis <git@antheas.dev>
+Date: Tue, 17 Nov 2026 19:07:51 +0100
+Subject: Fix explicit OCI image reinstalls and protect host-managed runtimes
+
+Explicit image reinstalls retain the installed origin for future updates, but must not apply its signature policy to the supplied image. Mark only explicit installs as trusted; keep remote, sideload and system-helper signature checks, and return an error for missing verification identities.
+
+Treat symlinked runtime deployments as host-managed. Skip dependency updates and prevent install, update and uninstall paths from replacing or marking the host runtime. Handle ENOTEMPTY when a running app keeps an earlier removed deployment occupied. Cover these cases with runtime and signed OCI regression tests.
+---
+ common/flatpak-dir-private.h          |  2 ++
+ common/flatpak-dir.c                  | 48 ++++++++++++++++++++++++-
+ common/flatpak-image-source-private.h |  3 ++
+ common/flatpak-image-source.c         | 15 ++++++++
+ common/flatpak-oci-registry.c         | 24 ++++++++-----
+ common/flatpak-oci-signatures.c       |  5 +++
+ common/flatpak-transaction.c          | 15 ++++++++
+ tests/meson.build                     |  2 ++
+ tests/test-host-runtime.sh            | 52 +++++++++++++++++++++++++++
+ tests/test-oci-registry.sh            | 20 +++++++++++
+ 10 files changed, 176 insertions(+), 10 deletions(-)
+ create mode 100755 tests/test-host-runtime.sh
+
+diff --git a/common/flatpak-dir-private.h b/common/flatpak-dir-private.h
+index c7a47a8c..5e2adf99 100644
+--- a/common/flatpak-dir-private.h
++++ b/common/flatpak-dir-private.h
+@@ -505,6 +505,8 @@ GFile *               flatpak_dir_get_unmaintained_extension_dir_if_exists  (Fla
+                                                                              GCancellable                  *cancellable);
+ gboolean              flatpak_dir_ref_is_masked                             (FlatpakDir                    *self,
+                                                                              const char                    *ref);
++gboolean              flatpak_dir_ref_is_externally_managed                 (FlatpakDir                    *self,
++                                                                             FlatpakDecomposed             *ref);
+ gboolean              flatpak_dir_ref_is_pinned                             (FlatpakDir                    *self,
+                                                                              const char                    *ref);
+ FlatpakDecomposed *   flatpak_dir_find_remote_ref                           (FlatpakDir                    *self,
+diff --git a/common/flatpak-dir.c b/common/flatpak-dir.c
+index 25321ef6..b12dc144 100644
+--- a/common/flatpak-dir.c
++++ b/common/flatpak-dir.c
+@@ -3905,6 +3905,28 @@ flatpak_dir_get_deploy_dir (FlatpakDir *self,
+   return g_file_resolve_relative_path (self->basedir, flatpak_decomposed_get_ref (ref));
+ }
+ 
++/* Flatpak creates real directories for its deployments. A runtime whose
++ * active deployment is a symlink is supplied and maintained by the host. */
++gboolean
++flatpak_dir_ref_is_externally_managed (FlatpakDir        *self,
++                                       FlatpakDecomposed *ref)
++{
++  g_autoptr(GFile) deploy_base = NULL;
++  g_autoptr(GFile) deployment = NULL;
++  g_autofree char *active = NULL;
++
++  if (!flatpak_decomposed_is_runtime (ref))
++    return FALSE;
++
++  active = flatpak_dir_read_active (self, ref, NULL);
++  if (active == NULL)
++    return FALSE;
++
++  deploy_base = flatpak_dir_get_deploy_dir (self, ref);
++  deployment = g_file_get_child (deploy_base, active);
++  return g_file_query_file_type (deployment, G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, NULL) == G_FILE_TYPE_SYMBOLIC_LINK;
++}
++
+ char *
+ flatpak_dir_get_deploy_subdir (FlatpakDir          *self,
+                                const char          *checksum,
+@@ -10572,6 +10594,13 @@ flatpak_dir_deploy_install (FlatpakDir        *self,
+     goto out;
+ 
+   old_deploy_dir = flatpak_dir_get_if_deployed (self, ref, NULL, cancellable);
++  if (flatpak_dir_ref_is_externally_managed (self, ref))
++    {
++      flatpak_fail_error (error, FLATPAK_ERROR_ALREADY_INSTALLED,
++                          _("%s is managed by the host system"), flatpak_decomposed_get_ref (ref));
++      goto out;
++    }
++
+   if (old_deploy_dir != NULL)
+     {
+       old_active = flatpak_dir_read_active (self, ref, cancellable);
+@@ -10705,6 +10734,10 @@ flatpak_dir_deploy_update (FlatpakDir        *self,
+                          cancellable, error))
+     return FALSE;
+ 
++  if (flatpak_dir_ref_is_externally_managed (self, ref))
++    return flatpak_fail_error (error, FLATPAK_ERROR_PERMISSION_DENIED,
++                               _("%s is managed by the host system"), flatpak_decomposed_get_ref (ref));
++
+   old_deploy_data = flatpak_dir_get_deploy_data (self, ref,
+                                                  FLATPAK_DEPLOY_VERSION_ANY,
+                                                  cancellable, error);
+@@ -11881,6 +11914,9 @@ flatpak_dir_needs_update_for_commit_and_subpaths (FlatpakDir        *self,
+ 
+   g_assert (target_commit != NULL);
+ 
++  if (flatpak_dir_ref_is_externally_managed (self, ref))
++    return FALSE;
++
+   /* Never update from disabled remotes */
+   if (!ostree_repo_remote_get_url (self->repo, remote, &url, NULL))
+     return FALSE;
+@@ -12294,6 +12330,10 @@ flatpak_dir_uninstall (FlatpakDir                 *self,
+                          cancellable, error))
+     return FALSE;
+ 
++  if (flatpak_dir_ref_is_externally_managed (self, ref))
++    return flatpak_fail_error (error, FLATPAK_ERROR_PERMISSION_DENIED,
++                               _("%s is managed by the host system"), flatpak_decomposed_get_ref (ref));
++
+   deploy_data = flatpak_dir_get_deploy_data (self, ref, FLATPAK_DEPLOY_VERSION_ANY,
+                                              cancellable, error);
+   if (deploy_data == NULL)
+@@ -12646,6 +12686,11 @@ flatpak_dir_undeploy (FlatpakDir        *self,
+   deploy_base = flatpak_dir_get_deploy_dir (self, ref);
+ 
+   checkoutdir = g_file_get_child (deploy_base, active_id);
++  if (flatpak_decomposed_is_runtime (ref) &&
++      g_file_query_file_type (checkoutdir, G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, cancellable) == G_FILE_TYPE_SYMBOLIC_LINK)
++    return flatpak_fail_error (error, FLATPAK_ERROR_PERMISSION_DENIED,
++                               _("%s is managed by the host system"), flatpak_decomposed_get_ref (ref));
++
+   if (!g_file_query_exists (checkoutdir, cancellable))
+     {
+       g_set_error (error, FLATPAK_ERROR, FLATPAK_ERROR_NOT_INSTALLED,
+@@ -12706,7 +12751,8 @@ flatpak_dir_undeploy (FlatpakDir        *self,
+                                cancellable, &local_error))
+         break;
+ 
+-      if (!g_error_matches (local_error, G_IO_ERROR, G_IO_ERROR_EXISTS) || retry >= 10)
++      if ((!g_error_matches (local_error, G_IO_ERROR, G_IO_ERROR_EXISTS) &&
++           !g_error_matches (local_error, G_IO_ERROR, G_IO_ERROR_NOT_EMPTY)) || retry >= 10)
+         {
+           g_propagate_error (error, g_steal_pointer (&local_error));
+           return FALSE;
+diff --git a/common/flatpak-image-source-private.h b/common/flatpak-image-source-private.h
+index 1259c134..ed5250b1 100644
+--- a/common/flatpak-image-source-private.h
++++ b/common/flatpak-image-source-private.h
+@@ -56,6 +56,9 @@ FlatpakImageSource *flatpak_image_source_new_for_location (const char   *locatio
+ void flatpak_image_source_set_delta_url (FlatpakImageSource *self,
+                                          const char         *delta_url);
+ 
++void     flatpak_image_source_set_explicit_install (FlatpakImageSource *self);
++gboolean flatpak_image_source_is_explicit_install  (FlatpakImageSource *self);
++
+ FlatpakOciRegistry *flatpak_image_source_get_registry       (FlatpakImageSource *self);
+ const char         *flatpak_image_source_get_oci_repository (FlatpakImageSource *self);
+ const char         *flatpak_image_source_get_digest         (FlatpakImageSource *self);
+diff --git a/common/flatpak-image-source.c b/common/flatpak-image-source.c
+index eab92a1b..79ab885a 100644
+--- a/common/flatpak-image-source.c
++++ b/common/flatpak-image-source.c
+@@ -32,6 +32,7 @@ struct _FlatpakImageSource
+   char *repository;
+   char *digest;
+   char *delta_url;
++  gboolean explicit_install;
+ 
+   FlatpakOciManifest *manifest;
+   size_t manifest_size;
+@@ -40,6 +41,20 @@ struct _FlatpakImageSource
+ 
+ G_DEFINE_TYPE (FlatpakImageSource, flatpak_image_source, G_TYPE_OBJECT)
+ 
++/* Explicit image installs are trusted by the installing user, like local
++ * bundles. Sideloaded images used to satisfy a remote operation are not. */
++void
++flatpak_image_source_set_explicit_install (FlatpakImageSource *self)
++{
++  self->explicit_install = TRUE;
++}
++
++gboolean
++flatpak_image_source_is_explicit_install (FlatpakImageSource *self)
++{
++  return self->explicit_install;
++}
++
+ static void
+ flatpak_image_source_finalize (GObject *object)
+ {
+diff --git a/common/flatpak-oci-registry.c b/common/flatpak-oci-registry.c
+index 1e8a76a0..3bdd039f 100644
+--- a/common/flatpak-oci-registry.c
++++ b/common/flatpak-oci-registry.c
+@@ -3374,16 +3374,22 @@ flatpak_pull_from_oci (OstreeRepo            *repo,
+ 
+   g_assert (g_str_has_prefix (digest, "sha256:"));
+ 
+-  signatures = load_signatures (image_source, cancellable, error);
+-  if (!signatures)
+-    return FALSE;
++  /* Keeping an existing origin for future updates must not apply that
++   * remote's signature policy to an explicitly installed image. This flag
++   * is never set for sideloads, nor passed across the system-helper boundary. */
++  if (!flatpak_image_source_is_explicit_install (image_source))
++    {
++      signatures = load_signatures (image_source, cancellable, error);
++      if (!signatures)
++        return NULL;
+ 
+-  if (!flatpak_oci_signatures_verify (signatures, repo, remote,
+-                                      sigcheck_registry_uri,
+-                                      sigcheck_repository,
+-                                      digest,
+-                                      error))
+-    return FALSE;
++      if (!flatpak_oci_signatures_verify (signatures, repo, remote,
++                                          sigcheck_registry_uri,
++                                          sigcheck_repository,
++                                          digest,
++                                          error))
++        return NULL;
++    }
+ 
+   manifest_ref = flatpak_image_source_get_ref (image_source);
+   if (manifest_ref == NULL)
+diff --git a/common/flatpak-oci-signatures.c b/common/flatpak-oci-signatures.c
+index 6d84a01d..d9dbc32f 100644
+--- a/common/flatpak-oci-signatures.c
++++ b/common/flatpak-oci-signatures.c
+@@ -398,6 +398,11 @@ flatpak_oci_signatures_verify (FlatpakOciSignatures *self,
+       return TRUE;
+     }
+ 
++  if (registry_url == NULL || repository_name == NULL)
++    return flatpak_fail_error (error, FLATPAK_ERROR_UNTRUSTED,
++                               "%s: missing OCI registry identity for signature verification",
++                               remote_name);
++
+   uri = g_uri_parse (registry_url, FLATPAK_HTTP_URI_FLAGS | G_URI_FLAGS_PARSE_RELAXED, error);
+   if (uri == NULL)
+     return FALSE;
+diff --git a/common/flatpak-transaction.c b/common/flatpak-transaction.c
+index 98ed559f..d6159dff 100644
+--- a/common/flatpak-transaction.c
++++ b/common/flatpak-transaction.c
+@@ -2569,6 +2569,9 @@ add_new_dep_op (FlatpakTransaction           *self,
+   FlatpakTransactionPrivate *priv = flatpak_transaction_get_instance_private (self);
+   g_autofree char *dep_remote = NULL;
+ 
++  if (flatpak_dir_ref_is_externally_managed (priv->dir, dep_ref))
++    return TRUE;
++
+   if (!ref_is_installed (self, dep_ref))
+     {
+       g_info ("Installing dependency %s of %s", flatpak_decomposed_get_pref (dep_ref),
+@@ -2726,6 +2729,16 @@ flatpak_transaction_add_ref (FlatpakTransaction             *self,
+ 
+   pref = flatpak_decomposed_get_pref (ref);
+ 
++  if (flatpak_dir_ref_is_externally_managed (priv->dir, ref))
++    {
++      if (kind == FLATPAK_TRANSACTION_OPERATION_UPDATE)
++        return TRUE;
++
++      return flatpak_fail_error (error,
++                                 kind == FLATPAK_TRANSACTION_OPERATION_INSTALL ? FLATPAK_ERROR_ALREADY_INSTALLED : FLATPAK_ERROR_PERMISSION_DENIED,
++                                 _("%s is managed by the host system"), pref);
++    }
++
+   /* install or update */
+   if (kind == FLATPAK_TRANSACTION_OPERATION_UPDATE)
+     {
+@@ -4991,6 +5004,8 @@ flatpak_transaction_resolve_images (FlatpakTransaction *self,
+       if (!image_source)
+         return FALSE;
+ 
++      flatpak_image_source_set_explicit_install (image_source);
++
+       ref_label = flatpak_image_source_get_ref (image_source);
+       ref = flatpak_decomposed_new_from_ref (ref_label, error);
+       if (ref == NULL)
+diff --git a/tests/meson.build b/tests/meson.build
+index 949ad83e..ca2312e2 100644
+--- a/tests/meson.build
++++ b/tests/meson.build
+@@ -384,6 +384,7 @@ tests = {
+     'system,oldsummary',
+   ]},
+   'history': {},
++  'host-runtime': {'wrap': ['user', 'system']},
+   'sideload': {'wrap': ['user', 'system']},
+   'default-remotes': {},
+   'metadata-validation': {},
+@@ -440,6 +441,7 @@ foreach testcase : wrapped_tests
+     'test-oci-registry.sh' : 60,
+     'test-repo.sh' : 300,
+     'test-run.sh' : 90,
++    'test-host-runtime.sh' : 90,
+     'test-summaries.sh' : 60,
+     'test-unused.sh' : 90,
+     'test-update-portal.sh' : 90,
+diff --git a/tests/test-host-runtime.sh b/tests/test-host-runtime.sh
+new file mode 100755
+index 00000000..9aba0f76
+--- /dev/null
++++ b/tests/test-host-runtime.sh
+@@ -0,0 +1,52 @@
++#!/bin/bash
++set -euo pipefail
++
++. "$(dirname "$0")/libtest.sh"
++skip_without_bwrap
++setup_repo
++
++${FLATPAK} ${U} install -y test-repo org.test.Hello >&2
++runtime=$(${FLATPAK} ${U} info --show-location org.test.Platform)
++active=$(readlink "$(dirname "$runtime")/active")
++mv "$runtime" "$TEST_DATA_DIR/host-runtime"
++ln -s "$TEST_DATA_DIR/host-runtime" "$runtime"
++echo host-managed > "$runtime/files/host-managed"
++
++assert_host_runtime () {
++    assert_streq "$(readlink "$runtime")" "$TEST_DATA_DIR/host-runtime"
++    assert_streq "$(readlink "$(dirname "$runtime")/active")" "$active"
++    assert_file_has_content "$runtime/files/host-managed" '^host-managed$'
++    assert_not_has_file "$runtime/files/.updated"
++    assert_not_has_file "$runtime/files/.removed"
++}
++
++# A dependency update must not download or deploy a replacement, even when
++# the remote publishes a newer runtime commit.
++make_updated_runtime
++make_updated_app
++${FLATPAK} ${U} update -y org.test.Hello >&2
++# A running older instance can leave this destination occupied. Linux rename
++# reports ENOTEMPTY for that collision, and reinstall must move it aside.
++app_commit=$(${FLATPAK} ${U} info --show-commit org.test.Hello)
++mkdir -p "$FL_DIR/.removed/org.test.Hello-$app_commit"
++touch "$FL_DIR/.removed/org.test.Hello-$app_commit/sentinel"
++${FLATPAK} ${U} install -y --reinstall test-repo org.test.Hello >&2
++${FLATPAK} ${U} update -y org.test.Platform >&2
++assert_host_runtime
++run org.test.Hello > hello-out
++assert_file_has_content hello-out '^Hello world, from a sandboxUPDATED$'
++ok "host runtime satisfies dependencies without being updated"
++
++# The CLI can report ALREADY_INSTALLED as a successful skip. In either case
++# it must explain host ownership and leave the deployment untouched.
++${FLATPAK} ${U} install -y --reinstall test-repo org.test.Platform > out 2>&1 || true
++assert_file_has_content out 'managed by the host system'
++assert_host_runtime
++if ${FLATPAK} ${U} uninstall -y --force-remove org.test.Platform > out 2>&1; then
++    assert_not_reached "Removed host runtime"
++fi
++assert_file_has_content out 'managed by the host system'
++assert_host_runtime
++ok "host runtime cannot be reinstalled or removed"
++
++done_testing
+diff --git a/tests/test-oci-registry.sh b/tests/test-oci-registry.sh
+index 3805e90b..81b09bd5 100755
+--- a/tests/test-oci-registry.sh
++++ b/tests/test-oci-registry.sh
+@@ -423,4 +423,24 @@ ${FLATPAK} ${U} install -y oci-registry-sig org.test.Hello >&2
+ 
+ ok "signed images"
+ 
++# Explicit local image installs retain the signed origin for future updates,
++# but do not attempt to verify the unsigned local image against that origin.
++# The system helper intentionally requires signed remote content, so exercise
++# the direct user install here (root system installs use the same code path).
++if [ x${USE_SYSTEMDIR-} != xyes ]; then
++    (cd oci/app-image && tar cf - .) > oci/app-image.tar
++    for image in oci:oci/app-image oci-archive:oci/app-image.tar; do
++        ${FLATPAK} ${U} install -y --noninteractive --reinstall --no-deps --image "$image" >&2
++        assert_streq "$(${FLATPAK} ${U} info --show-origin org.test.Hello)" oci-registry-sig
++    done
++    # An unsigned replacement fetched through the remote still fails.
++    GPGARGS=$FL_GPGARGS make_updated_app oci "" master UNSIGNED
++    ${FLATPAK} build-bundle --oci "${FL_GPGARGS}" repos/oci oci/app-image org.test.Hello >&2
++    $client add hello latest "$(pwd)/oci/app-image"
++    if ${FLATPAK} ${U} update -y org.test.Hello >&2; then
++        assert_not_reached "Accepted unsigned remote update after local image install"
++    fi
++    ok "explicit image reinstall retains signed origin and remote verification"
++fi
++
+ done_testing
