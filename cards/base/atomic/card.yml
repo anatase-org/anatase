@@ -391,14 +391,22 @@ postprocess: |
 
     # Generate proper initramfs under /usr/lib/modules/${kver}/
     rm -rf /boot/initramfs-*.img
+    initramfs_limit=$((320 * 1024 * 1024))
     for kernel in /usr/lib/modules/*/vmlinuz; do
         [ -e "${kernel}" ] || continue
         kver=${kernel%/vmlinuz}
         kver=${kver##*/}
+        initramfs="/usr/lib/modules/${kver}/initramfs.img"
         /usr/bin/dracut --no-hostonly --kver "${kver}" \
             --reproducible --zstd -v --force \
-            "/usr/lib/modules/${kver}/initramfs.img"
-        chmod 0600 "/usr/lib/modules/${kver}/initramfs.img"
+            "${initramfs}"
+        initramfs_size=$(stat -c %s "${initramfs}")
+        if [ "${initramfs_size}" -gt "${initramfs_limit}" ]; then
+            printf 'error: %s is %s bytes. Maximum initramfs size is 320 MiB (%s bytes)\n' \
+                "${initramfs}" "${initramfs_size}" "${initramfs_limit}" >&2
+            exit 1
+        fi
+        chmod 0600 "${initramfs}"
     done
 
     # Move boot into /usr/lib/ostree-boot
