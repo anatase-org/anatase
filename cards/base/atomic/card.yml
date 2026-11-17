@@ -167,6 +167,8 @@ files:
   - flatpak/flathub.flatpakrepo
   - dracut_cleanup_shadow.sh
   - anatase-growfs.service
+  - anatase-image-maintenance
+  - anatase-image-maintenance.service
   - systemd-remount-fs.conf
   - udev/70-anatase-sysfs.rules
 
@@ -356,44 +358,10 @@ postprocess: |
     # Atomic Desktop Maintenance
     #
 
-    cat > /usr/lib/systemd/system/fedora-atomic-desktop-appstream-cache-refresh.service <<'EOF'
-    [Unit]
-    Description=Refresh appstream cache on Atomic Desktops
-    Documentation=https://gitlab.com/fedora/ostree/sig/-/work_items/103
-    ConditionPathIsReadWrite=/var
-    ConditionPathExists=/run/ostree-booted
-    After=local-fs.target
-
-    [Service]
-    Type=oneshot
-    RemainAfterExit=yes
-    ExecStart=/usr/bin/appstreamcli refresh --force
-    Nice=19
-    IOWeight=10
-
-    [Install]
-    WantedBy=multi-user.target
-    EOF
-
-    cat > /usr/lib/systemd/system/fedora-atomic-desktop-mandb-update.service <<'EOF'
-    [Unit]
-    Description=Update mandb cache on Atomic Desktops
-    Documentation=https://gitlab.com/fedora/ostree/sig/-/work_items/62
-    ConditionPathIsReadWrite=/var
-    ConditionPathExists=/run/ostree-booted
-    After=local-fs.target
-
-    [Service]
-    Type=oneshot
-    RemainAfterExit=yes
-    Environment=MAN_NO_LOCALE_WARNING=1
-    ExecStart=/usr/bin/mandb -q
-    Nice=19
-    IOWeight=10
-
-    [Install]
-    WantedBy=multi-user.target
-    EOF
+    install -Dm0755 /files/anatase-image-maintenance \
+        /usr/libexec/anatase-image-maintenance
+    install -Dm0644 /files/anatase-image-maintenance.service \
+        /usr/lib/systemd/system/anatase-image-maintenance.service
 
     cat >> /usr/lib/systemd/system-preset/81-atomic-desktop.preset <<'EOF'
 
@@ -401,16 +369,11 @@ postprocess: |
     # also pulls network-online.target into every boot through Wants=.
     disable dnf-makecache.timer
 
-    # See: https://gitlab.com/fedora/ostree/sig/-/work_items/103
-    enable fedora-atomic-desktop-appstream-cache-refresh.service
-
-    # See: https://gitlab.com/fedora/ostree/sig/-/work_items/62
-    enable fedora-atomic-desktop-mandb-update.service
+    enable anatase-image-maintenance.service
     EOF
 
     systemctl preset dnf-makecache.timer || true
-    systemctl preset fedora-atomic-desktop-appstream-cache-refresh.service || true
-    systemctl preset fedora-atomic-desktop-mandb-update.service || true
+    systemctl preset anatase-image-maintenance.service || true
 
     #
     # Installer fixups
