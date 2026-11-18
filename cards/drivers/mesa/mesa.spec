@@ -490,7 +490,8 @@ rewrite_wrap_file rustc-hash
 
 %if 0%{?with_nvk}
 %cargo_license_summary
-%{cargo_license} > LICENSE.dependencies
+# Independently built multilib packages may resolve different crate versions.
+%{cargo_license} > LICENSE.dependencies.%{_arch}
 %if 0%{?vendor_nvk_crates}
 %cargo_vendor_manifest
 %endif
@@ -700,7 +701,7 @@ ln -s libGLX_mesa.so.0 %{buildroot}%{_libdir}/libGLX_system.so.0
 
 %files vulkan-drivers
 %if 0%{?with_nvk}
-%license LICENSE.dependencies
+%license LICENSE.dependencies.%{_arch}
 %if 0%{?vendor_nvk_crates}
 %license cargo-vendor.txt
 %endif
