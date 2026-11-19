@@ -26,6 +26,7 @@ packages:
 files:
   - files/hhd.conf
   - files/hhd-modprobe.conf
+  - files/controllers.txt
   - gamecontrollerdb.txt::https://raw.githubusercontent.com/mdqinc/SDL_GameControllerDB/refs/heads/master/gamecontrollerdb.txt
 
 specs:
@@ -81,3 +82,4 @@ postprocess: |
 
   # Add controller DB for hhd's external controller support
   install -Dm0644 /files/gamecontrollerdb.txt /usr/share/sdl/gamecontrollerdb.txt
+  cat /files/files/controllers.txt >> /usr/share/sdl/gamecontrollerdb.txt
