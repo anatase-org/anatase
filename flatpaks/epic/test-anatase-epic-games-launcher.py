@@ -24,6 +24,7 @@ class BootstrapTests(unittest.TestCase):
             "import json, os, sys\n"
             "print(json.dumps({'args': sys.argv[1:], 'image': sys.argv[0], "
             "'extract': os.environ.get('APPIMAGE_EXTRACT_AND_RUN'), "
+            "'disable_social_panel': os.environ.get('EGL_DISABLE_SOCIAL_PANEL'), "
             "'tmp': os.environ.get('TMPDIR'), 'cleanup': os.environ.get('NO_CLEANUP')}))\n"
             "sys.exit(int(os.environ.get('TEST_EXIT', '0')))\n"
         )
@@ -38,6 +39,8 @@ class BootstrapTests(unittest.TestCase):
             "NO_CLEANUP": "1",
             "TMPDIR": "/must-not-be-used",
         }
+        self.env.pop("EGL_DISABLE_SOCIAL_PANEL", None)
+        self.env.pop("XDG_SESSION_DESKTOP", None)
         self.image = Path(self.env["XDG_DATA_HOME"]) / "epic-games-launcher" / "EpicGamesLauncher-x86_64.AppImage"
 
     def run_launcher(self, *args, **env):
@@ -59,6 +62,16 @@ class BootstrapTests(unittest.TestCase):
         self.assertEqual(self.image.read_bytes(), self.seed.read_bytes())
         self.assertEqual(self.image.stat().st_mode & 0o777, 0o700)
         self.assertEqual(self.seed.stat().st_mode & 0o777, 0o444)
+
+    def test_social_panel_disabled_only_in_gamemode(self):
+        for desktop, expected in ((None, None), ("", None), ("plasma", None), ("gamemode", "1")):
+            with self.subTest(desktop=desktop):
+                env = {"SteamGamepadUI": "1", "XDG_CURRENT_DESKTOP": "gamescope"}
+                if desktop is not None:
+                    env["XDG_SESSION_DESKTOP"] = desktop
+                result = self.run_launcher(**env)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(json.loads(result.stdout)["disable_social_panel"], expected)
 
     def test_preserves_self_updated_copy_and_flatpak_seed_changes(self):
         self.assertEqual(self.run_launcher().returncode, 0)

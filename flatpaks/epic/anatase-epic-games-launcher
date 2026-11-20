@@ -49,4 +49,9 @@ unset NO_CLEANUP
 # the reaper ancestor to associate windows without passing these IDs to Epic.
 unset SteamAppId SteamGameId SteamOverlayGameId STEAM_COMPAT_APP_ID
 
+# Hide Epic's social panel only in Anatase's game mode session.
+if [[ ${XDG_SESSION_DESKTOP:-} = gamemode ]]; then
+    export EGL_DISABLE_SOCIAL_PANEL=1
+fi
+
 exec "$image" "$@"
