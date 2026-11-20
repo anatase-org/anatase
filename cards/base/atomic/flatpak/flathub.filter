@@ -5,3 +5,6 @@ deny runtime/org.anatase.*
 
 # Steam is provided by the Anatase remote as org.anatase.Steam.
 deny com.valvesoftware.Steam
+
+# Epic Games Launcher is provided by the Anatase remote as org.anatase.EpicGamesLauncher.
+deny com.epicgames.launcher
