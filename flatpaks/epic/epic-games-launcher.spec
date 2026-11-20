@@ -9,18 +9,19 @@
 %global __requires_exclude_from ^%{_datadir}/epic-games-launcher/.*$
 %global __provides_exclude_from ^%{_datadir}/epic-games-launcher/.*$
 %global appstream_id org.anatase.EpicGamesLauncher
-%global upstream_commit g0cb1183
-%global seed_sha256 415c22591542ebe64e2e88e2e705cee5769ba1b2c8d534decee62eef98d1c248
+%global upstream_commit gc4bf6af
+%global seed_sha256 a404d4e02e2f95cd1302a37afcaae1b6907a96f157d258d08086317d5253a2b8
 
 Name:           anatase-epic-games-launcher
-Version:        0.106.0
+Version:        0.120.0
 Release:        1%{?dist}
 Summary:        Self-updating Epic Games Launcher
 License:        LicenseRef-proprietary
 URL:            https://www.launcher.epicgames.com/
 ExclusiveArch:  x86_64
 
-Source0:        https://content-download-egs.distro.on.epicgames.com/Builds/EGLv2/%{version}%%2B%{upstream_commit}/Linux/EpicGamesLauncher-x86_64.AppImage
+# Ludos caches sources by filename; include the version and commit to avoid stale seeds.
+Source0:        https://content-download-egs.distro.on.epicgames.com/Builds/EGLv2/%{version}%%2B%{upstream_commit}/Linux/EpicGamesLauncher-x86_64.AppImage#/EpicGamesLauncher-%{version}-%{upstream_commit}-x86_64.AppImage
 Source1:        anatase-epic-games-launcher
 Source2:        test-anatase-epic-games-launcher.py
 Source3:        %{appstream_id}.metainfo.xml
