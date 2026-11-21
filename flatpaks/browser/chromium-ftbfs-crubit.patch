@@ -1,19 +1,8 @@
-ungoogle chromium patch from https://github.com/ungoogled-software/ungoogled-chromium/pull/4003
 
---- a/chrome/browser/devtools/chrome_devtools_session.cc
-+++ b/chrome/browser/devtools/chrome_devtools_session.cc
-@@ -78,11 +78,6 @@ ChromeDevToolsSession::ChromeDevToolsSes
-       cast_handler_ = std::make_unique<CastHandler>(
-           agent_host->GetWebContents(), dispatcher());
-     }
--    if (IsDomainAvailableToUntrustedClient<StorageHandler>() ||
--        channel->GetClient()->IsTrusted()) {
--      storage_handler_ = std::make_unique<StorageHandler>(
--          agent_host->GetWebContents(), dispatcher());
--    }
-   }
-   if (agent_host->GetWebContents() &&
-       (agent_host->GetType() == content::DevToolsAgentHost::kTypePage ||
+pulled from https://github.com/ungoogled-software/ungoogled-chromium/pull/4003
+
+This is not part of the official ungoogled-chromium patch set
+
 --- a/components/cbor/BUILD.gn
 +++ b/components/cbor/BUILD.gn
 @@ -12,7 +12,7 @@ buildflag_header("buildflags") {
@@ -43,9 +32,264 @@ ungoogle chromium patch from https://github.com/ungoogled-software/ungoogled-chr
      deps += [
        "//components/cbor/rust:cbor_rust_bindings",
        "//components/cbor/rust:cbor_rust_unittests",
+--- a/components/qr_code_generator/BUILD.gn
++++ b/components/qr_code_generator/BUILD.gn
+@@ -2,6 +2,8 @@
+ # Use of this source code is governed by a BSD-style license that can be
+ # found in the LICENSE file.
+ 
++import("//build/buildflag_header.gni")
++import("//build/config/rust.gni")
+ import("//testing/libfuzzer/fuzzer_test.gni")
+ 
+ declare_args() {
+@@ -9,6 +11,7 @@ declare_args() {
+   enable_qr_print = false
+ }
+ 
++# Error type shared between C++ and Rust.
+ source_set("error") {
+   public = [ "error.h" ]
+ }
+@@ -30,6 +33,17 @@ source_set("bitmap_generator") {
+   ]
+ }
+ 
++# TODO(https://crbug.com/533546009): After Crubit bakes and sticks on the
++# Stable release channel, then it should be okay to assume that
++# `enable_cpp_api_from_rust` will be forever true (and remove
++# `cxx::bridge`-related bits of QR code generator in this `BUILD.gn` file, bits
++# in `.cc` files, and the whole `qr_code_generator_ffi_glue.rs` file).
++buildflag_header("cpp_api_from_rust_buildflags") {
++  header = "cpp_api_from_rust_buildflags.h"
++  flags = [ "ENABLE_CPP_API_FROM_RUST=$enable_cpp_api_from_rust" ]
++  visibility = [ ":qr_code_generator" ]
++}
++
+ source_set("qr_code_generator") {
+   # Enforces that `qr_code_generator.h` does not #include headers from private
+   # `deps`, which also stops GN from forwarding the Crubit bindings' hard_deps
+@@ -37,16 +51,35 @@ source_set("qr_code_generator") {
+   check_includes_strict = true
+   public = [ "qr_code_generator.h" ]
+   sources = [ "qr_code_generator.cc" ]
+-  deps = [
+-    "//build/rust/crubit",
+-    "//third_party/rust/qr_code/v2:cpp_api_from_rust",
+-  ]
++  deps = [ ":cpp_api_from_rust_buildflags" ]
++  if (enable_cpp_api_from_rust) {
++    deps += [
++      "//build/rust/crubit",
++      "//third_party/rust/qr_code/v2:cpp_api_from_rust",
++    ]
++  } else {
++    deps += [ ":qr_code_generator_ffi_glue" ]
++  }
+   public_deps = [
+     ":error",
+     "//base",
+   ]
+ }
+ 
++if (!enable_cpp_api_from_rust) {
++  rust_static_library("qr_code_generator_ffi_glue") {
++    allow_unsafe = true  # Needed for FFI that underpins the `cxx` crate.
++    crate_root = "qr_code_generator_ffi_glue.rs"
++    sources = [ "qr_code_generator_ffi_glue.rs" ]
++    cxx_bindings = [ "qr_code_generator_ffi_glue.rs" ]
++    visibility = [ ":qr_code_generator" ]
++    deps = [
++      ":error",
++      "//third_party/rust/qr_code/v2:lib",
++    ]
++  }
++}
++
+ source_set("unit_tests") {
+   testonly = true
+   sources = [
+--- a/components/qr_code_generator/qr_code_generator.cc
++++ b/components/qr_code_generator/qr_code_generator.cc
+@@ -10,10 +10,17 @@
+ 
+ #include "base/check.h"
+ #include "base/check_op.h"
++#include "base/containers/span_rust.h"
+ #include "base/numerics/safe_conversions.h"
++#include "components/qr_code_generator/cpp_api_from_rust_buildflags.h"
++
++#if BUILDFLAG(ENABLE_CPP_API_FROM_RUST)
+ #include "third_party/crubit/support/rs_std/iterator_adapter.h"
+ #include "third_party/crubit/support/rs_std/slice_ref.h"
+ #include "third_party/rust/qr_code/v2/qr_code.h"
++#else
++#include "components/qr_code_generator/qr_code_generator_ffi_glue.rs.h"
++#endif
+ 
+ namespace qr_code_generator {
+ 
+@@ -22,6 +29,7 @@ GeneratedCode::~GeneratedCode() = defaul
+ GeneratedCode::GeneratedCode(GeneratedCode&&) = default;
+ GeneratedCode& GeneratedCode::operator=(GeneratedCode&&) = default;
+ 
++#if BUILDFLAG(ENABLE_CPP_API_FROM_RUST)
+ Error RustErrorToCppError(const ::qr_code::types::QrError& rust_error) {
+   if (rust_error == ::qr_code::types::QrError::MakeDataTooLong()) {
+     return Error::kInputTooLong;
+@@ -63,5 +71,32 @@ base::expected<GeneratedCode, Error> Gen
+   CHECK_EQ(code.data.size(), static_cast<size_t>(code.qr_size * code.qr_size));
+   return code;
+ }
++#else
++base::expected<GeneratedCode, Error> GenerateCode(
++    base::span<const uint8_t> in,
++    std::optional<int> min_version) {
++  rust::Slice<const uint8_t> rs_in = base::SpanToRustSlice(in);
++
++  // `min_version` might come from a fuzzer and therefore we use a lenient
++  // `saturated_cast` instead of a `checked_cast`.
++  int16_t rs_min_version =
++      base::saturated_cast<int16_t>(min_version.value_or(0));
++
++  std::vector<uint8_t> result_pixels;
++  size_t result_width = 0;
++  Error result_error = Error::kUnknownError;
++  bool result_is_success = generate_qr_code_using_rust(
++      rs_in, rs_min_version, result_pixels, result_width, result_error);
++
++  if (!result_is_success) {
++    return base::unexpected(result_error);
++  }
++  GeneratedCode code;
++  code.data = std::move(result_pixels);
++  code.qr_size = base::checked_cast<int>(result_width);
++  CHECK_EQ(code.data.size(), static_cast<size_t>(code.qr_size * code.qr_size));
++  return code;
++}
++#endif
+ 
+ }  // namespace qr_code_generator
+--- a/components/qr_code_generator/qr_code_generator_ffi_glue.rs
++++ b/components/qr_code_generator/qr_code_generator_ffi_glue.rs
+@@ -0,0 +1,106 @@
++// Copyright 2023 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++use cxx::CxxVector;
++use qr_code::types::{Color, EcLevel, QrError};
++use qr_code::{QrCode, Version};
++use std::pin::Pin;
++
++#[cxx::bridge(namespace = "qr_code_generator")]
++mod ffi {
++    #[repr(u8)]
++    enum Error {
++        kUnknownError = 0,
++        kInputTooLong = 1,
++    }
++
++    extern "C++" {
++        include!("components/qr_code_generator/error.h");
++        type Error;
++    }
++
++    extern "Rust" {
++        fn generate_qr_code_using_rust(
++            data: &[u8],
++            min_version: i16,
++            out_pixels: Pin<&mut CxxVector<u8>>,
++            out_qr_size: &mut usize,
++            out_error: &mut Error,
++        ) -> bool;
++    }
++}
++
++/// Translates `data` into a QR code.
++///
++/// `min_version` can request a minimum QR code version.
++fn generate(data: &[u8], min_version: Option<i16>) -> Result<QrCode, QrError> {
++    let mut qr_code = QrCode::new(data)?;
++
++    let actual_version = match qr_code.version() {
++        Version::Micro(_) => panic!("QrCode::new should not generate micro QR codes"),
++        Version::Normal(actual_version) => actual_version,
++    };
++
++    match min_version {
++        None => (),
++        Some(min_version) if actual_version >= min_version => (),
++        Some(min_version) => {
++            // If `actual_version` < `min_version`, then re-encode using `min_version`
++            qr_code = QrCode::with_version(data, Version::Normal(min_version), EcLevel::M)?;
++        }
++    }
++
++    Ok(qr_code)
++}
++
++/// Translates `data` into a QR code.
++///
++/// `min_version` can request a minimum QR code version (e.g. if the caller
++/// requires that the QR code has a certain minimal width and height;  for
++/// example, QR code version 5 translates into 37x37 QR pixels).  Setting
++/// `min_version` to 0 means that the caller doesn't have any QR version
++/// requirements.
++///
++/// On success returns `true` and populates `out_pixels` and `out_qr_size`.  On
++/// failure returns `false` and populates `out_error`.
++pub fn generate_qr_code_using_rust(
++    data: &[u8],
++    min_version: i16,
++    mut out_pixels: Pin<&mut CxxVector<u8>>,
++    out_qr_size: &mut usize,
++    out_error: &mut ffi::Error,
++) -> bool {
++    let min_version = match min_version {
++        0 => None,
++        1..=40 => Some(min_version),
++        _ => {
++            *out_error = ffi::Error::kUnknownError;
++            return false;
++        }
++    };
++
++    match generate(data, min_version) {
++        Err(err) => {
++            *out_error = match err {
++                QrError::DataTooLong => ffi::Error::kInputTooLong,
++                _ => ffi::Error::kUnknownError,
++            };
++            false
++        }
++        Ok(qr_code) => {
++            *out_qr_size = qr_code.width();
++
++            assert!(out_pixels.is_empty());
++            for color in qr_code.into_colors() {
++                let u8_value = match color {
++                    Color::Light => 0,
++                    Color::Dark => 1,
++                };
++                out_pixels.as_mut().push(u8_value);
++            }
++
++            true
++        }
++    }
++}
 --- a/components/web_package/BUILD.gn
 +++ b/components/web_package/BUILD.gn
-@@ -51,8 +51,6 @@ source_set("web_package_rust_impl") {
+@@ -7,6 +7,7 @@ import("//testing/libfuzzer/fuzzer_test.
+ source_set("web_package_headers") {
+   visibility = [ ":*" ]
+   sources = [
++    "input_reader.h",
+     "signed_web_bundles/constants.h",
+     "signed_web_bundles/identity_validator.h",
+     "signed_web_bundles/integrity_block_parser.h",
+@@ -51,8 +52,6 @@ source_set("web_package_rust_impl") {
      "//components/base32",
      "//components/cbor",
      "//components/web_package/mojom",
@@ -54,20 +298,15 @@ ungoogle chromium patch from https://github.com/ungoogled-software/ungoogled-chr
      "//mojo/public/cpp/bindings",
      "//net",
      "//services/network/public/mojom",
-@@ -67,12 +65,10 @@ static_library("web_package") {
-     "signed_web_bundles/signed_web_bundle_signature_stack.cc",
-     "signed_web_bundles/signed_web_bundle_signature_stack_entry.cc",
-     "web_bundle_builder.cc",
--    "web_bundle_parser_factory.cc",
-     "web_bundle_utils.cc",
-   ]
+@@ -61,6 +60,7 @@ source_set("web_package_rust_impl") {
  
-   deps = [
--    ":web_package_rust_impl",
-     "//base",
-     "//components/base32",
-     "//components/cbor",
-@@ -115,7 +111,6 @@ source_set("mojom_mapped_types_rust_impl
+ static_library("web_package") {
+   sources = [
++    "input_reader.cc",
+     "signed_web_bundles/identity_validator.cc",
+     "signed_web_bundles/signed_web_bundle_id.cc",
+     "signed_web_bundles/signed_web_bundle_integrity_block.cc",
+@@ -115,7 +115,6 @@ source_set("mojom_mapped_types_rust_impl
    deps = [
      ":mojom_mapped_types_headers",
      "//base",
@@ -75,15 +314,326 @@ ungoogle chromium patch from https://github.com/ungoogled-software/ungoogled-chr
      "//crypto",
      "//mojo/public/cpp/bindings",
    ]
-@@ -159,8 +154,6 @@ source_set("unit_tests") {
-     ":web_package",
+@@ -160,7 +159,6 @@ source_set("unit_tests") {
      "//base/test:test_support",
      "//components/cbor",
--    "//components/web_package/rust:web_package_rust_unittests",
+     "//components/web_package/rust:web_package_rust_unittests",
 -    "//components/web_package/signed_web_bundles/rust:signed_web_bundles_rust_unittests",
      "//components/web_package/test_support",
      "//mojo/public/cpp/bindings",
      "//mojo/public/cpp/test_support:test_utils",
+--- a/components/web_package/input_reader.cc
++++ b/components/web_package/input_reader.cc
+@@ -0,0 +1,193 @@
++// Copyright 2022 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "components/web_package/input_reader.h"
++
++#include <algorithm>
++#include <utility>
++
++#include "base/numerics/checked_math.h"
++#include "base/strings/string_util.h"
++#include "base/strings/string_view_util.h"
++#include "components/cbor/constants.h"
++#include "components/cbor/values.h"
++
++namespace web_package {
++
++namespace {
++
++// This array must be kept in sync with the `CBORType` enum.
++constexpr std::array kAcceptedCBORTypes = {
++    // clang-format off
++    CBORType::kUnsignedInt,
++    CBORType::kNegativeInt,
++    CBORType::kByteString,
++    CBORType::kTextString,
++    CBORType::kArray,
++    CBORType::kMap,
++    CBORType::kSimpleValue,
++    // clang-format on
++};
++
++std::optional<int64_t> DecodeValueToNegative(uint64_t value) {
++  auto negative_value = -base::CheckedNumeric<int64_t>(value) - 1;
++  if (!negative_value.IsValid()) {
++    return std::nullopt;
++  }
++  return static_cast<int64_t>(negative_value.ValueOrDie());
++}
++
++std::optional<int64_t> DecodeValueToUnsigned(uint64_t value) {
++  auto unsigned_value = base::CheckedNumeric<int64_t>(value);
++  if (!unsigned_value.IsValid()) {
++    return std::nullopt;
++  }
++  return static_cast<int64_t>(unsigned_value.ValueOrDie());
++}
++
++}  // namespace
++
++InputReader::InputReader(base::span<const uint8_t> buf) : buf_(buf) {}
++
++InputReader::~InputReader() = default;
++
++std::optional<uint8_t> InputReader::ReadByte() {
++  uint8_t b;
++  if (!buf_.ReadU8BigEndian(b)) {
++    return std::nullopt;
++  }
++  return {b};
++}
++
++std::optional<base::span<const uint8_t>> InputReader::ReadBytes(size_t n) {
++  return buf_.Read(n);
++}
++
++std::optional<std::string_view> InputReader::ReadString(size_t n) {
++  auto bytes = buf_.Read(n);
++  if (!bytes) {
++    return std::nullopt;
++  }
++  if (!base::IsStringUTF8(base::as_string_view(*bytes))) {
++    return std::nullopt;
++  }
++  return base::as_string_view(*bytes);
++}
++
++std::optional<uint64_t> InputReader::ReadCBORHeader(CBORType expected_type) {
++  auto pair = ReadTypeAndArgument();
++  if (!pair || pair->first != expected_type) {
++    return std::nullopt;
++  }
++  return pair->second;
++}
++
++std::optional<CBORHeader> InputReader::ReadCBORHeader() {
++  auto pair = ReadTypeAndArgument();
++  if (!pair) {
++    return std::nullopt;
++  }
++
++  const auto& [type, additional_info] = *pair;
++  switch (type) {
++    case CBORType::kSimpleValue: {
++      using SimpleValue = cbor::Value::SimpleValue;
++      if (additional_info == std::to_underlying(SimpleValue::TRUE_VALUE)) {
++        return {{true}};
++      } else if (additional_info ==
++                 std::to_underlying(SimpleValue::FALSE_VALUE)) {
++        return {{false}};
++      } else {
++        return std::nullopt;
++      }
++    }
++    case CBORType::kUnsignedInt:
++    case CBORType::kNegativeInt: {
++      std::optional<int64_t> value =
++          type == CBORType::kUnsignedInt
++              ? DecodeValueToUnsigned(additional_info)
++              : DecodeValueToNegative(additional_info);
++      if (!value) {
++        return std::nullopt;
++      }
++      return {{*value}};
++    }
++    case CBORType::kByteString:
++    case CBORType::kTextString: {
++      using StringInfo = CBORHeader::StringInfo;
++      using StringType = CBORHeader::StringInfo::StringType;
++
++      return {{StringInfo{.type = type == CBORType::kByteString
++                                      ? StringType::kByteString
++                                      : StringType::kTextString,
++                          .byte_length = additional_info}}};
++    }
++    case CBORType::kArray:
++    case CBORType::kMap: {
++      using ContainerInfo = CBORHeader::ContainerInfo;
++      using ContainerType = CBORHeader::ContainerInfo::ContainerType;
++
++      return {{ContainerInfo{.type = type == CBORType::kArray
++                                         ? ContainerType::kArray
++                                         : ContainerType::kMap,
++                             .size = additional_info}}};
++    }
++  }
++}
++
++// https://datatracker.ietf.org/doc/html/rfc8949.html#section-3
++std::optional<std::pair<CBORType, uint64_t>>
++InputReader::ReadTypeAndArgument() {
++  std::optional<uint8_t> first_byte = ReadByte();
++  if (!first_byte) {
++    return std::nullopt;
++  }
++
++  // There are more CBOR types in the standard than we accept. To avoid mishits
++  // during `static_cast<CBORType>`, it's safer to validate the type beforehand.
++  uint8_t type_byte = (*first_byte & cbor::constants::kMajorTypeMask) >>
++                      cbor::constants::kMajorTypeBitShift;
++  if (!std::ranges::contains(kAcceptedCBORTypes, type_byte,
++                             &std::to_underlying<CBORType>)) {
++    return std::nullopt;
++  }
++
++  CBORType type = static_cast<CBORType>(type_byte);
++  uint8_t b = *first_byte & cbor::constants::kAdditionalInformationMask;
++
++  if (b <= 23) {
++    return std::make_pair(type, b);
++  }
++  if (b == 24) {
++    auto content = ReadByte();
++    if (!content || *content < 24) {
++      return std::nullopt;
++    }
++    return std::make_pair(type, *content);
++  }
++  if (b == 25) {
++    uint16_t content;
++    if (!ReadBigEndian(&content) || content >> 8 == 0) {
++      return std::nullopt;
++    }
++    return std::make_pair(type, content);
++  }
++  if (b == 26) {
++    uint32_t content;
++    if (!ReadBigEndian(&content) || content >> 16 == 0) {
++      return std::nullopt;
++    }
++    return std::make_pair(type, content);
++  }
++  if (b == 27) {
++    uint64_t content;
++    if (!ReadBigEndian(&content) || content >> 32 == 0) {
++      return std::nullopt;
++    }
++    return std::make_pair(type, content);
++  }
++  return std::nullopt;
++}
++
++}  // namespace web_package
+--- a/components/web_package/input_reader.h
++++ b/components/web_package/input_reader.h
+@@ -0,0 +1,113 @@
++// Copyright 2022 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef COMPONENTS_WEB_PACKAGE_INPUT_READER_H_
++#define COMPONENTS_WEB_PACKAGE_INPUT_READER_H_
++
++#include <optional>
++#include <string_view>
++#include <variant>
++
++#include "base/containers/span.h"
++#include "base/containers/span_reader.h"
++#include "base/memory/stack_allocated.h"
++#include "base/types/id_type.h"
++
++namespace web_package {
++
++// https://datatracker.ietf.org/doc/html/rfc8949.html#section-3.1
++enum class CBORType {
++  kUnsignedInt = 0,
++  kNegativeInt = 1,
++  kByteString = 2,
++  kTextString = 3,
++  kArray = 4,
++  kMap = 5,
++  // kTag = 6,
++  kSimpleValue = 7,
++  // kFloatValue = 7,
++};
++
++struct CBORHeader {
++  struct StringInfo {
++    enum class StringType {
++      kByteString,
++      kTextString,
++    } type;
++    uint64_t byte_length;
++  };
++  struct ContainerInfo {
++    enum class ContainerType {
++      kArray,
++      kMap,
++    } type;
++    uint64_t size;
++  };
++
++  const std::variant<bool, int64_t, StringInfo, ContainerInfo> data;
++};
++
++// The maximum length of the CBOR item header (type and argument).
++// https://datatracker.ietf.org/doc/html/rfc8949.html#section-3
++// When the additional information (the low-order 5 bits of the first
++// byte) is 27, the argument's value is held in the following 8 bytes.
++constexpr uint64_t kMaxCBORItemHeaderSize = 9;
++
++// A utility class for reading various values from input buffer.
++class InputReader {
++  STACK_ALLOCATED();
++
++ public:
++  explicit InputReader(base::span<const uint8_t> buf);
++
++  InputReader(const InputReader&) = delete;
++  InputReader& operator=(const InputReader&) = delete;
++
++  ~InputReader();
++
++  size_t CurrentOffset() const { return buf_.num_read(); }
++  size_t Size() const { return buf_.remaining(); }
++
++  std::optional<uint8_t> ReadByte();
++
++  template <typename T>
++    requires(std::is_integral_v<T> && std::is_unsigned_v<T>)
++  bool ReadBigEndian(T* out) {
++    if constexpr (sizeof(T) == 1) {
++      return buf_.ReadU8BigEndian(*out);
++    } else if constexpr (sizeof(T) == 2) {
++      return buf_.ReadU16BigEndian(*out);
++    } else if constexpr (sizeof(T) == 4) {
++      return buf_.ReadU32BigEndian(*out);
++    } else {
++      static_assert(sizeof(T) == 8);
++      return buf_.ReadU64BigEndian(*out);
++    }
++  }
++
++  std::optional<base::span<const uint8_t>> ReadBytes(size_t n);
++
++  std::optional<std::string_view> ReadString(size_t n);
++
++  // Parses the type and argument of a CBOR item from the input head. If parsed
++  // successfully and the type matches `expected_type`, returns the argument.
++  // Otherwise returns nullopt.
++  std::optional<uint64_t> ReadCBORHeader(CBORType expected_type);
++
++  // Parses the type and argument of a CBOR item from the input head. If parsed
++  // successfully, returns type and:
++  //  * value for kUnsignedInt/kNegativeInt;
++  //  * value_size for kTextString/kByteString/kMap/kArray.
++  // Otherwise returns nullopt.
++  std::optional<CBORHeader> ReadCBORHeader();
++
++ private:
++  std::optional<std::pair<CBORType, uint64_t>> ReadTypeAndArgument();
++
++  base::SpanReader<const uint8_t> buf_;
++};
++
++}  // namespace web_package
++
++#endif  // COMPONENTS_WEB_PACKAGE_INPUT_READER_H_
 --- a/components/web_package/signed_web_bundles/ecdsa_p256_sha256_signature.cc
 +++ b/components/web_package/signed_web_bundles/ecdsa_p256_sha256_signature.cc
 @@ -9,7 +9,8 @@
@@ -134,7 +684,7 @@ ungoogle chromium patch from https://github.com/ungoogled-software/ungoogled-chr
  }  // namespace web_package
 --- a/components/web_package/signed_web_bundles/integrity_block_parser.cc
 +++ b/components/web_package/signed_web_bundles/integrity_block_parser.cc
-@@ -4,17 +4,19 @@
+@@ -4,16 +4,19 @@
  
  #include "components/web_package/signed_web_bundles/integrity_block_parser.h"
  
@@ -151,13 +701,13 @@ ungoogle chromium patch from https://github.com/ungoogled-software/ungoogled-chr
 +#include "base/strings/to_string.h"
  #include "base/types/expected.h"
  #include "base/types/expected_macros.h"
- #include "components/cbor/reader.h"
++#include "components/cbor/reader.h"
 +#include "components/cbor/writer.h"
 +#include "components/web_package/mojom/web_bundle_parser.mojom-forward.h"
  #include "components/web_package/mojom/web_bundle_parser.mojom.h"
  #include "components/web_package/signed_web_bundles/constants.h"
  #include "components/web_package/signed_web_bundles/ecdsa_p256_public_key.h"
-@@ -22,56 +24,11 @@
+@@ -21,56 +24,11 @@
  #include "components/web_package/signed_web_bundles/ed25519_public_key.h"
  #include "components/web_package/signed_web_bundles/ed25519_signature.h"
  #include "components/web_package/signed_web_bundles/integrity_block_attributes.h"
@@ -214,7 +764,7 @@ ungoogle chromium patch from https://github.com/ungoogled-software/ungoogled-chr
  IntegrityBlockParser::IntegrityBlockParser(
      mojom::BundleDataSource& data_source,
      WebBundleParser::ParseIntegrityBlockCallback callback)
-@@ -103,37 +60,103 @@ void IntegrityBlockParser::OnIntegrityBl
+@@ -102,37 +60,103 @@ void IntegrityBlockParser::OnIntegrityBl
      RunErrorCallback("Error reading the integrity block.");
      return;
    }
@@ -343,7 +893,7 @@ ungoogle chromium patch from https://github.com/ungoogled-software/ungoogled-chr
    }
  
    std::move(complete_callback_)
-@@ -141,13 +164,74 @@ void IntegrityBlockParser::OnIntegrityBl
+@@ -140,13 +164,74 @@ void IntegrityBlockParser::OnIntegrityBl
                            std::move(integrity_block), nullptr));
  }
  
@@ -462,7 +1012,7 @@ ungoogle chromium patch from https://github.com/ungoogled-software/ungoogled-chr
  
 --- a/components/web_package/signed_web_bundles/rust/BUILD.gn
 +++ b/components/web_package/signed_web_bundles/rust/BUILD.gn
-@@ -10,7 +10,6 @@ rust_static_library("signed_web_bundles_
+@@ -11,7 +11,6 @@ rust_static_library("signed_web_bundles_
    sources = [
      "constants.rs",
      "integrity_block.rs",
@@ -555,8 +1105,8 @@ ungoogle chromium patch from https://github.com/ungoogled-software/ungoogled-chr
    return digest;
  }
  
---- a/components/web_package/signed_web_bundles/signed_web_bundle_utils.cc
-+++ b/components/web_package/signed_web_bundles/signed_web_bundle_utils.cc
+--- a/components/web_package/signed_web_bundles/signed_web_bundle_utils.cc	
++++ b/components/web_package/signed_web_bundles/signed_web_bundle_utils.cc	
 @@ -5,18 +5,37 @@
  #include "components/web_package/signed_web_bundles/signed_web_bundle_utils.h"
  
@@ -601,120 +1151,993 @@ ungoogle chromium patch from https://github.com/ungoogled-software/ungoogled-chr
  }
  
  }  // namespace web_package
---- a/components/webapps/isolated_web_apps/bundle_operations/bundle_operations.cc
-+++ b/components/webapps/isolated_web_apps/bundle_operations/bundle_operations.cc
-@@ -79,16 +79,7 @@ void ReadSignedWebBundleIdInsecurely(
-     const base::FilePath& path,
-     base::OnceCallback<void(base::expected<web_package::SignedWebBundleId,
-                                            std::string>)> callback) {
--  UnsecureSignedWebBundleIdReader::GetWebBundleId(
--      path,
--      base::BindOnce([](base::expected<web_package::SignedWebBundleId,
--                                       UnusableSwbnFileError> result) {
--        return result.transform_error([](const UnusableSwbnFileError& error) {
--          return "Failed to read the integrity block of the "
--                 "signed web bundle: " +
--                 error.message();
+--- a/components/web_package/web_bundle_parser.cc
++++ b/components/web_package/web_bundle_parser.cc
+@@ -7,33 +7,175 @@
+ #include <algorithm>
+ #include <memory>
+ #include <optional>
+-#include <string>
+ #include <string_view>
+-#include <utility>
+-#include <vector>
+ 
+ #include "base/check.h"
+ #include "base/compiler_specific.h"
+-#include "base/containers/flat_map.h"
++#include "base/containers/span.h"
+ #include "base/functional/bind.h"
+ #include "base/functional/callback.h"
+ #include "base/logging.h"
+-#include "base/memory/raw_ref.h"
+ #include "base/memory/weak_ptr.h"
+ #include "base/notreached.h"
+-#include "base/numerics/safe_conversions.h"
+-#include "base/strings/strcat.h"
++#include "base/numerics/checked_math.h"
++#include "base/strings/string_number_conversions.h"
+ #include "base/strings/string_util.h"
+-#include "base/strings/string_view_util.h"
++#include "base/strings/stringprintf.h"
++#include "components/cbor/reader.h"
++#include "components/web_package/input_reader.h"
+ #include "components/web_package/mojom/web_bundle_parser.mojom.h"
+-#include "components/web_package/rust/web_package_rust.h"
+ #include "components/web_package/signed_web_bundles/integrity_block_parser.h"
++#include "components/web_package/web_bundle_utils.h"
+ #include "mojo/public/cpp/bindings/remote.h"
++#include "net/http/http_util.h"
+ 
+ namespace web_package {
+ 
+ namespace {
+ 
++// The number of bytes used to specify the length of the web bundle.
++// https://www.ietf.org/archive/id/draft-ietf-wpack-bundled-responses-01.html#name-trailing-length
++constexpr uint64_t kTrailingLengthNumBytes = 8;
++
++// The maximum size of the section-lengths CBOR item.
++constexpr uint64_t kMaxSectionLengthsCBORSize = 8192;
++
++// The maximum size of a metadata section allowed in this implementation.
++constexpr uint64_t kMaxMetadataSectionSize = 1 * 1024 * 1024;
++
++// The maximum size of the response header CBOR.
++constexpr uint64_t kMaxResponseHeaderLength = 512 * 1024;
++
++// The initial buffer size for reading an item from the response section.
++constexpr uint64_t kInitialBufferSizeForResponse = 4096;
++
++// The first byte of WebBundle format >=b2 (Array of length 5).
++constexpr uint8_t kBundleHeadByte = 0x85;
++// The first byte of WebBundle format b1 (Array of length 6).
++constexpr uint8_t kBundleB1HeadByte = 0x86;
++
++// CBOR of the magic string "🌐📦".
++// MetadataParser::ParseMagicBytes() checks the first byte (0x85) and this.
++//
++// The first 10 bytes of the web bundle format are:
++//   85                             -- Array of length 5
++//      48                          -- Byte string of length 8
++//         F0 9F 8C 90 F0 9F 93 A6  -- "🌐📦" in UTF-8
++const uint8_t kBundleMagicBytes[] = {
++    0x48, 0xF0, 0x9F, 0x8C, 0x90, 0xF0, 0x9F, 0x93, 0xA6,
++};
++
++// CBOR of the version string "b2\0\0".
++//   44               -- Byte string of length 4
++//       62 32 00 00  -- "b2\0\0"
++const uint8_t kVersionB2MagicBytes[] = {
++    0x44, 0x62, 0x32, 0x00, 0x00,
++};
++// CBOR of the version string "b1\0\0".
++//   44               -- Byte string of length 4
++//       62 31 00 00  -- "b1\0\0"
++const uint8_t kVersionB1MagicBytes[] = {
++    0x44, 0x62, 0x31, 0x00, 0x00,
++};
++
++// Section names.
++constexpr char kCriticalSection[] = "critical";
++constexpr char kIndexSection[] = "index";
++constexpr char kPrimarySection[] = "primary";
++constexpr char kResponsesSection[] = "responses";
++
++// A list of (section-name, length) pairs.
++using SectionLengths = std::vector<std::pair<std::string, uint64_t>>;
++
++// A map from section name to (offset, length) pair.
++using SectionOffsets = std::map<std::string, std::pair<uint64_t, uint64_t>>;
++
++bool IsMetadataSection(const std::string& name) {
++  return (name == kCriticalSection || name == kIndexSection ||
++          name == kPrimarySection);
++}
++
++// Parses a `section-lengths` CBOR item.
++// https://www.ietf.org/archive/id/draft-ietf-wpack-bundled-responses-01.html#name-bundle-sections
++//   section-lengths = [* (section-name: tstr, length: uint) ]
++std::optional<SectionLengths> ParseSectionLengths(
++    base::span<const uint8_t> data) {
++  cbor::Reader::DecoderError error;
++  std::optional<cbor::Value> value = cbor::Reader::Read(data, &error);
++  if (!value.has_value() || !value->is_array()) {
++    return std::nullopt;
++  }
++
++  const cbor::Value::ArrayValue& array = value->GetArray();
++  if (array.size() % 2 != 0) {
++    return std::nullopt;
++  }
++
++  SectionLengths result;
++  for (size_t i = 0; i < array.size(); i += 2) {
++    if (!array[i].is_string() || !array[i + 1].is_unsigned()) {
++      return std::nullopt;
++    }
++    result.emplace_back(array[i].GetString(), array[i + 1].GetUnsigned());
++  }
++  return result;
++}
++
++struct ParsedHeaders {
++  base::flat_map<std::string, std::string> headers;
++  base::flat_map<std::string, std::string> pseudos;
++};
++
++// https://www.ietf.org/archive/id/draft-ietf-wpack-bundled-responses-01.html#name-responses
++//   headers = {* bstr => bstr}
++std::optional<ParsedHeaders> ConvertCBORValueToHeaders(
++    const cbor::Value& headers_value) {
++  // |headers_value| of headers must be a map.
++  if (!headers_value.is_map()) {
++    return std::nullopt;
++  }
++
++  ParsedHeaders result;
++
++  for (const auto& item : headers_value.GetMap()) {
++    if (!item.first.is_bytestring() || !item.second.is_bytestring()) {
++      return std::nullopt;
++    }
++    std::string_view name = item.first.GetBytestringAsString();
++    std::string_view value = item.second.GetBytestringAsString();
++
++    // If name contains any upper-case or non-ASCII characters, return an error.
++    // This matches the requirement in Section 8.1.2 of [RFC7540].
++    if (!base::IsStringASCII(name) ||
++        std::ranges::any_of(name, base::IsAsciiUpper<char>)) {
++      return std::nullopt;
++    }
++
++    if (!name.empty() && name[0] == ':') {
++      // pseudos[name] must not exist, because CBOR maps cannot contain
++      // duplicate keys. This is ensured by cbor::Reader.
++      DCHECK(!result.pseudos.contains(name));
++      result.pseudos.insert(
++          std::make_pair(std::string(name), std::string(value)));
++      continue;
++    }
++
++    // Both name and value must be valid.
++    if (!net::HttpUtil::IsValidHeaderName(name) ||
++        !net::HttpUtil::IsValidHeaderValue(value)) {
++      return std::nullopt;
++    }
++
++    // headers[name] must not exist, because CBOR maps cannot contain duplicate
++    // keys. This is ensured by cbor::Reader.
++    DCHECK(!result.headers.contains(name));
++
++    result.headers.insert(
++        std::make_pair(std::string(name), std::string(value)));
++  }
++
++  return result;
++}
+ 
+ GURL ParseExchangeURL(std::string_view str, const GURL& base_url) {
+   DCHECK(base_url.is_empty() || base_url.is_valid());
+@@ -128,9 +270,7 @@ class WebBundleParser::MetadataParser
+       RunErrorCallback("Error reading bundle length.");
+       return;
+     }
+-    const uint64_t unsigned_file_length =
+-        base::checked_cast<uint64_t>(file_length);
+-    if (unsigned_file_length < rust::TRAILING_LENGTH_NUM_BYTES) {
++    if (static_cast<uint64_t>(file_length) < kTrailingLengthNumBytes) {
+       RunErrorCallback("Error reading bundle length.");
+       return;
+     }
+@@ -138,10 +278,9 @@ class WebBundleParser::MetadataParser
+     // Read the last 8 bytes of the file that correspond to the trailing length
+     // field of the web bundle.
+     data_source_->get()->Read(
+-        unsigned_file_length - rust::TRAILING_LENGTH_NUM_BYTES,
+-        rust::TRAILING_LENGTH_NUM_BYTES,
++        file_length - kTrailingLengthNumBytes, kTrailingLengthNumBytes,
+         base::BindOnce(&MetadataParser::ParseWebBundleLength,
+-                       weak_factory_.GetWeakPtr(), unsigned_file_length));
++                       weak_factory_.GetWeakPtr(), file_length));
+   }
+ 
+   void ParseWebBundleLength(const uint64_t file_length,
+@@ -156,20 +295,30 @@ class WebBundleParser::MetadataParser
+     // the start of the bundle, instead of assuming that the start of the file
+     // is also the start of the bundle. This allows the bundle to be appended to
+     // another format such as a generic self-extracting executable."
+-    // https://www.ietf.org/archive/id/draft-ietf-wpack-bundled-responses-01.html#name-trailing-length
+-    auto bundle_offset = rust::parse_trailing_length(*data, file_length);
+-    if (!bundle_offset.has_value()) {
+-      RunErrorCallback(bundle_offset.error().message);
++    // https://www.ietf.org/archive/id/draft-ietf-wpack-bundled-responses-01.html#section-4.1.1-3
++    InputReader input(*data);
++    uint64_t web_bundle_length;
++    if (!input.ReadBigEndian(&web_bundle_length)) {
++      RunErrorCallback("Error reading bundle length.");
++      return;
++    }
++
++    if (web_bundle_length > file_length) {
++      RunErrorCallback("Invalid bundle length.");
+       return;
+     }
+-    ReadMagicBytes(*bundle_offset);
++    const uint64_t web_bundle_offset = file_length - web_bundle_length;
++    ReadMagicBytes(web_bundle_offset);
+   }
+ 
+   void ReadMagicBytes(const uint64_t offset_in_stream) {
+     // First, we will parse the CBOR header of the top level array (1-byte),
+     // `magic`, `version`, and the CBOR header of `section-lengths`.
++    const uint64_t length = 1 + sizeof(kBundleMagicBytes) +
++                            sizeof(kVersionB2MagicBytes) +
++                            kMaxCBORItemHeaderSize;
+     data_source_->get()->Read(
+-        offset_in_stream, rust::INITIAL_BUNDLE_HEADER_BUFFER_SIZE,
++        offset_in_stream, length,
+         base::BindOnce(&MetadataParser::ParseMagicBytes,
+                        weak_factory_.GetWeakPtr(), offset_in_stream));
+   }
+@@ -182,23 +331,83 @@ class WebBundleParser::MetadataParser
+       return;
+     }
+ 
+-    auto res = rust::parse_magic_and_version(*data, offset_in_stream);
+-    if (!res.has_value()) {
+-      const auto& error = res.error();
+-      RunErrorCallback(error.message,
+-                       error.is_version_error
+-                           ? mojom::BundleParseErrorType::kVersionError
+-                           : mojom::BundleParseErrorType::kFormatError);
++    InputReader input(*data);
++
++    // Read the first byte denoting a CBOR array size. It must be equal to 0x85
++    // (5).
++    const auto array_size = input.ReadByte();
++    if (!array_size) {
++      RunErrorCallback("Missing CBOR array size byte.");
+       return;
+     }
+ 
+-    uint64_t next_offset = res->next_read_offset;
+-    uint64_t next_length = res->next_read_length;
++    // Let kBundleB1HeadByte pass this check, to report custom error message for
++    // b1 bundles.
++    if (*array_size != kBundleHeadByte && *array_size != kBundleB1HeadByte) {
++      RunErrorCallback("Wrong magic bytes.");
++      return;
++    }
++
++    // Check the magic bytes "48 F0 9F 8C 90 F0 9F 93 A6".
++    const auto magic = input.ReadBytes(sizeof(kBundleMagicBytes));
++    if (!magic || !std::ranges::equal(*magic, kBundleMagicBytes)) {
++      RunErrorCallback("Wrong magic bytes.");
++      return;
++    }
++
++    // Let version be the result of reading 5 bytes from stream.
++    const auto version = input.ReadBytes(sizeof(kVersionB2MagicBytes));
++    if (!version) {
++      RunErrorCallback("Cannot read version bytes.");
++      return;
++    }
++    if (!std::ranges::equal(*version, kVersionB2MagicBytes)) {
++      const char* message;
++      if (std::ranges::equal(*version, kVersionB1MagicBytes)) {
++        message =
++            "Bundle format version is 'b1' which is no longer supported."
++            " Currently supported version is: 'b2'";
++      } else {
++        message =
++            "Version error: bundle format does not correspond to the specifed "
++            "version. Currently supported version is: 'b2'";
++      }
++      RunErrorCallback(message, mojom::BundleParseErrorType::kVersionError);
++      return;
++    }
++    if (*array_size != kBundleHeadByte) {
++      RunErrorCallback("Wrong CBOR array size of the top-level structure");
++      return;
++    }
++
++    const auto section_lengths_length =
++        input.ReadCBORHeader(CBORType::kByteString);
++    if (!section_lengths_length) {
++      RunErrorCallback("Cannot parse the size of section-lengths.");
++      return;
++    }
++
++    // https://www.ietf.org/archive/id/draft-ietf-wpack-bundled-responses-01.html#name-top-level-structure
++    // "The section-lengths array is embedded in a byte string to facilitate
++    // reading it from a network. This byte string MUST be less than 8192
++    // (8*1024) bytes long, and parsers MUST NOT load any data from a
++    // section-lengths item longer than this."
++    if (*section_lengths_length >= kMaxSectionLengthsCBORSize) {
++      RunErrorCallback(
++          "The section-lengths CBOR must be smaller than 8192 bytes.");
++      return;
++    }
++
++    // In the next step, we will parse the content of `section-lengths`,
++    // and the CBOR header of `sections`.
++    const uint64_t length = *section_lengths_length + kMaxCBORItemHeaderSize;
++
++    offset_in_stream += input.CurrentOffset();
+     data_source_->get()->Read(
+-        next_offset, next_length,
++        offset_in_stream, length,
+         base::BindOnce(&MetadataParser::ParseBundleHeader,
+-                       weak_factory_.GetWeakPtr(), next_offset,
+-                       res->section_lengths_len));
++                       weak_factory_.GetWeakPtr(), offset_in_stream,
++                       *section_lengths_length));
+   }
+ 
+   void ParseBundleHeader(uint64_t offset_in_stream,
+@@ -208,39 +417,109 @@ class WebBundleParser::MetadataParser
+       RunErrorCallback("Error reading bundle header.");
+       return;
+     }
++    InputReader input(*data);
++
++    // webbundle = [
++    //    magic: h'F0 9F 8C 90 F0 9F 93 A6',
++    //    version: bytes .size 4,
++    //    section-lengths: bytes .cbor section-lengths,  <==== here
++    //    sections: [* any ],
++    //    length: bytes .size 8,  ; Big-endian number of bytes in the bundle.
++    // ]
++    const auto section_lengths_bytes = input.ReadBytes(section_lengths_length);
++    if (!section_lengths_bytes) {
++      RunErrorCallback("Cannot read section-lengths.");
++      return;
++    }
++    // https://www.ietf.org/archive/id/draft-ietf-wpack-bundled-responses-01.html#name-bundle-sections
++    //   section-lengths = [* (section-name: tstr, length: uint) ]
++    const auto section_lengths = ParseSectionLengths(*section_lengths_bytes);
++    if (!section_lengths) {
++      RunErrorCallback("Cannot parse section-lengths.");
++      return;
++    }
++
++    // webbundle = [
++    //    magic: h'F0 9F 8C 90 F0 9F 93 A6',
++    //    version: bytes .size 4,
++    //    section-lengths: bytes .cbor section-lengths,
++    //    sections: [* any ],  <==== here
++    //    length: bytes .size 8,  ; Big-endian number of bytes in the bundle.
++    // ]
++    const auto num_sections = input.ReadCBORHeader(CBORType::kArray);
++    if (!num_sections) {
++      RunErrorCallback("Cannot parse the number of sections.");
++      return;
++    }
+ 
+-    auto res = rust::parse_bundle_header(*data, section_lengths_length,
+-                                         offset_in_stream);
+-    if (!res.has_value()) {
+-      RunErrorCallback(res.error().message);
++    // "The sections array contains the sections' content. The length of this
++    // array MUST be exactly half the length of the section-lengths array, and
++    // parsers MUST NOT load any data if that is not the case."
++    if (*num_sections != section_lengths->size()) {
++      RunErrorCallback("Unexpected number of sections.");
+       return;
+     }
+ 
+-    responses_section_offset_ = res->responses_offset;
+-    responses_section_length_ = res->responses_length;
+-    metadata_sections_to_read_ = std::move(res->metadata_sections);
++    const uint64_t sections_start = offset_in_stream + input.CurrentOffset();
++    uint64_t current_offset = sections_start;
++
++    // Convert |section_lengths| to |section_offsets_|.
++    for (const auto& pair : *section_lengths) {
++      const std::string& name = pair.first;
++      const uint64_t length = pair.second;
++      bool added = section_offsets_
++                       .insert(std::make_pair(
++                           name, std::make_pair(current_offset, length)))
++                       .second;
++      if (!added) {
++        RunErrorCallback("Duplicated section.");
++        return;
++      }
++
++      if (!base::CheckAdd(current_offset, length)
++               .AssignIfValid(&current_offset)) {
++        RunErrorCallback("Integer overflow calculating section offsets.");
++        return;
++      }
++    }
++
++    // "The "responses" section MUST appear after the other three sections
++    // defined here, and parsers MUST NOT load any data if that is not the
++    // case."
++    if (section_lengths->empty() ||
++        section_lengths->back().first != kResponsesSection) {
++      RunErrorCallback("Responses section is not the last in section-lengths.");
++      return;
++    }
+ 
++    // Initialize |metadata_|.
+     metadata_ = mojom::BundleMetadata::New();
+     metadata_->version = mojom::BundleFormatVersion::kB2;
+ 
+-    ReadMetadataSections(/*section_index=*/0);
++    ReadMetadataSections(section_offsets_.begin());
+   }
+ 
+   // https://www.ietf.org/archive/id/draft-ietf-wpack-bundled-responses-01.html#name-bundle-sections
+-  void ReadMetadataSections(size_t section_index) {
+-    if (section_index < metadata_sections_to_read_.size()) {
+-      const auto& section = metadata_sections_to_read_[section_index];
+-      if (section.length > rust::MAX_METADATA_SECTION_SIZE) {
++  void ReadMetadataSections(SectionOffsets::const_iterator section_iter) {
++    for (; section_iter != section_offsets_.end(); ++section_iter) {
++      const auto& name = section_iter->first;
++      if (!IsMetadataSection(name)) {
++        continue;
++      }
++      const uint64_t section_offset = section_iter->second.first;
++      const uint64_t section_length = section_iter->second.second;
++      if (section_length > kMaxMetadataSectionSize) {
+         RunErrorCallback(
+             "Metadata sections larger than 1MB are not supported.");
+         return;
+       }
+ 
+       data_source_->get()->Read(
+-          section.offset, section.length,
++          section_offset, section_length,
+           base::BindOnce(&MetadataParser::ParseMetadataSection,
+-                         weak_factory_.GetWeakPtr(), section_index,
+-                         section.length));
++                         weak_factory_.GetWeakPtr(), section_iter,
++                         section_length));
++      // This loop will be resumed by ParseMetadataSection().
+       return;
+     }
+ 
+@@ -253,7 +532,7 @@ class WebBundleParser::MetadataParser
+     RunSuccessCallback();
+   }
+ 
+-  void ParseMetadataSection(size_t section_index,
++  void ParseMetadataSection(SectionOffsets::const_iterator section_iter,
+                             uint64_t expected_data_length,
+                             const std::optional<std::vector<uint8_t>>& data) {
+     if (!data || data->size() != expected_data_length) {
+@@ -261,56 +540,152 @@ class WebBundleParser::MetadataParser
+       return;
+     }
+ 
+-    const auto& name = metadata_sections_to_read_[section_index].name;
+-    if (name == rust::INDEX_SECTION) {
+-      auto res = rust::parse_index_section(*data, responses_section_offset_,
+-                                           responses_section_length_);
+-      if (!res.has_value()) {
+-        RunErrorCallback(res.error().message);
++    // Parse the section contents as a CBOR item.
++    cbor::Reader::DecoderError error;
++    std::optional<cbor::Value> section_value =
++        cbor::Reader::Read(*data, &error);
++    if (!section_value) {
++      RunErrorCallback(std::string("Error parsing section contents as CBOR: ") +
++                       cbor::Reader::ErrorCodeToString(error));
++      return;
++    }
++
++    const auto& name = section_iter->first;
++    // Note: Parse*Section() delete |this| on failure.
++    if (name == kIndexSection) {
++      if (!ParseIndexSection(*section_value)) {
+         return;
+       }
+-      std::vector<std::pair<GURL, mojom::BundleResponseLocationPtr>> requests;
+-      requests.reserve(res->size());
+-      for (const auto& entry : *res) {
+-        GURL parsed_url = ParseExchangeURL(entry.url, base_url_);
+-        if (!parsed_url.is_valid()) {
+-          std::string message = base::StrCat({"Index section: exchange URL \"",
+-                                              entry.url, "\" is not valid."});
+-          if (base_url_.is_empty()) {
+-            message += " (Relative URLs are not allowed in this context.)";
+-          }
+-          RunErrorCallback(message);
+-          return;
+-        }
+-        requests.emplace_back(
+-            std::move(parsed_url),
+-            mojom::BundleResponseLocation::New(entry.offset, entry.length));
+-      }
+-      metadata_->requests =
+-          base::flat_map<GURL, mojom::BundleResponseLocationPtr>(
+-              std::move(requests));
+-    } else if (name == rust::CRITICAL_SECTION) {
+-      if (auto res = rust::parse_critical_section(*data); !res.has_value()) {
+-        RunErrorCallback(res.error().message);
++    } else if (name == kCriticalSection) {
++      if (!ParseCriticalSection(*section_value)) {
+         return;
+       }
+-    } else if (name == rust::PRIMARY_SECTION) {
+-      auto res = rust::parse_primary_section(*data);
+-      if (!res.has_value()) {
+-        RunErrorCallback(res.error().message);
++    } else if (name == kPrimarySection) {
++      if (!ParsePrimarySection(*section_value)) {
+         return;
+       }
+-      GURL parsed_url = ParseExchangeURL(*res, base_url_);
+-      if (!parsed_url.is_valid()) {
+-        RunErrorCallback("Primary URL is not a valid exchange URL.");
+-        return;
+-      }
+-      metadata_->primary_url = std::move(parsed_url);
+     } else {
+       NOTREACHED();
+     }
+     // Read the next metadata section.
+-    ReadMetadataSections(section_index + 1);
++    ReadMetadataSections(++section_iter);
++  }
++
++  // https://www.ietf.org/archive/id/draft-ietf-wpack-bundled-responses-01.html#name-the-index-section
++  // The index section has the following structure:
++  //   index = {* whatwg-url => [ location-in-responses ] }
++  //   location-in-responses = (offset: uint, length: uint)
++  bool ParseIndexSection(const cbor::Value& section_value) {
++    // |section_value| of index section must be a map.
++    if (!section_value.is_map()) {
++      RunErrorCallback("Index section must be a map.");
++      return false;
++    }
++
++    base::flat_map<GURL, mojom::BundleResponseLocationPtr> requests;
++
++    auto responses_section = section_offsets_.find(kResponsesSection);
++    CHECK(responses_section != section_offsets_.end());
++    const uint64_t responses_section_offset = responses_section->second.first;
++    const uint64_t responses_section_length = responses_section->second.second;
++
++    // For each (url, responses) entry in the index map.
++    for (const auto& item : section_value.GetMap()) {
++      if (!item.first.is_string()) {
++        RunErrorCallback("Index section: key must be a string.");
++        return false;
++      }
++      if (!item.second.is_array()) {
++        RunErrorCallback("Index section: value must be an array.");
++        return false;
++      }
++      const std::string& url = item.first.GetString();
++      const cbor::Value::ArrayValue& responses_array = item.second.GetArray();
++
++      GURL parsed_url = ParseExchangeURL(url, base_url_);
++
++      if (!parsed_url.is_valid()) {
++        std::string message = base::StringPrintf(
++            "Index section: exchange URL \"%s\" is not valid.", url.c_str());
++        if (base_url_.is_empty()) {
++          message += " (Relative URLs are not allowed in this context.)";
++        }
++        RunErrorCallback(message);
++        return false;
++      }
++
++      if (responses_array.size() != 2) {
++        RunErrorCallback(
++            "Index section: the size of a response array per URL should be "
++            "exactly 2.");
++        return false;
++      }
++      if (!responses_array[0].is_unsigned() ||
++          !responses_array[1].is_unsigned()) {
++        RunErrorCallback(
++            "Index section: offset and length values must be unsigned.");
++        return false;
++      }
++      uint64_t offset = responses_array[0].GetUnsigned();
++      uint64_t length = responses_array[1].GetUnsigned();
++
++      uint64_t response_end;
++      if (!base::CheckAdd(offset, length).AssignIfValid(&response_end) ||
++          response_end > responses_section_length) {
++        RunErrorCallback("Index section: response out of range.");
++        return false;
++      }
++      uint64_t offset_within_stream = responses_section_offset + offset;
++
++      requests.insert(std::make_pair(
++          parsed_url,
++          mojom::BundleResponseLocation::New(offset_within_stream, length)));
++    }
++
++    metadata_->requests = std::move(requests);
++    return true;
++  }
++
++  // https://www.ietf.org/archive/id/draft-ietf-wpack-bundled-responses-01.html#critical-section
++  //   critical = [*tstr]
++  bool ParseCriticalSection(const cbor::Value& section_value) {
++    if (!section_value.is_array()) {
++      RunErrorCallback("Critical section must be an array.");
++      return false;
++    }
++    // "If the client has not implemented a section named by one of the items in
++    // this list, the client MUST fail to parse the bundle as a whole."
++    for (const cbor::Value& elem : section_value.GetArray()) {
++      if (!elem.is_string()) {
++        RunErrorCallback("Non-string element in the critical section.");
++        return false;
++      }
++      const auto& section_name = elem.GetString();
++      if (!IsMetadataSection(section_name) &&
++          section_name != kResponsesSection) {
++        RunErrorCallback("Unknown critical section.");
++        return false;
++      }
++    }
++    return true;
++  }
++
++  // https://github.com/WICG/webpackage/blob/main/extensions/primary-section.md
++  //  primary = whatwg-url
++  bool ParsePrimarySection(const cbor::Value& section_value) {
++    if (!section_value.is_string()) {
++      RunErrorCallback("Primary section must be a string.");
++      return false;
++    }
++
++    GURL parsed_url = ParseExchangeURL(section_value.GetString(), base_url_);
++
++    if (!parsed_url.is_valid()) {
++      RunErrorCallback("Primary URL is not a valid exchange URL.");
++      return false;
++    }
++    metadata_->primary_url = std::move(parsed_url);
++    return true;
+   }
+ 
+   void RunSuccessCallback() {
+@@ -319,14 +694,12 @@ class WebBundleParser::MetadataParser
+                             nullptr));
+   }
+ 
+-  void RunErrorCallback(std::string_view message,
++  void RunErrorCallback(const std::string& message,
+                         mojom::BundleParseErrorType error_type =
+                             mojom::BundleParseErrorType::kFormatError) {
+     DLOG(ERROR) << "Parsing web bundle error: " << message;
+-    // Avoids an extra temporary std::string allocation in Mojo's New().
+-    auto err = mojom::BundleMetadataParseError::New();
+-    err->type = error_type;
+-    err->message = message;
++    mojom::BundleMetadataParseErrorPtr err =
++        mojom::BundleMetadataParseError::New(error_type, message);
+     std::move(complete_callback_)
+         .Run(base::BindOnce(std::move(result_callback_), nullptr,
+                             std::move(err)));
+@@ -337,9 +710,7 @@ class WebBundleParser::MetadataParser
+   std::optional<uint64_t> start_reading_offset_;
+   ParseMetadataCallback result_callback_;
+   ParsingCompleteCallback complete_callback_;
+-  rs_std::Vec<rust::SectionOffsetEntry> metadata_sections_to_read_;
+-  uint64_t responses_section_offset_ = 0;
+-  uint64_t responses_section_length_ = 0;
++  SectionOffsets section_offsets_;
+   mojom::BundleMetadataPtr metadata_;
+   base::WeakPtrFactory<MetadataParser> weak_factory_{this};
+ };
+@@ -373,7 +744,7 @@ class WebBundleParser::ResponseParser
+       override {
+     CHECK(!result_callback_.is_null());
+     complete_callback_ = std::move(callback);
+-    StartWithBufferSize(rust::INITIAL_BUFFER_SIZE_FOR_RESPONSE);
++    StartWithBufferSize(kInitialBufferSizeForResponse);
+   }
+ 
+  private:
+@@ -384,36 +755,115 @@ class WebBundleParser::ResponseParser
+         base::BindOnce(&ResponseParser::ParseResponseHeader,
+                        weak_factory_.GetWeakPtr(), length));
+   }
++  // https://www.ietf.org/archive/id/draft-ietf-wpack-bundled-responses-01.html#name-responses
++  //   responses = [*response]
++  //   response = [headers: bstr .cbor headers, payload: bstr]
++  //   headers = {* bstr => bstr}
+   void ParseResponseHeader(uint64_t expected_data_length,
+                            const std::optional<std::vector<uint8_t>>& data) {
+     if (!data || data->size() != expected_data_length) {
+       RunErrorCallback("Error reading response header.");
+       return;
+     }
++    InputReader input(*data);
++
++    // |response| must be an array of length 2 (headers and payload).
++    auto num_elements = input.ReadCBORHeader(CBORType::kArray);
++    if (!num_elements || *num_elements != 2) {
++      RunErrorCallback("Array size of response must be 2.");
++      return;
++    }
+ 
+-    auto parse_res =
+-        rust::parse_response(*data, response_offset_, response_length_);
+-    if (!parse_res.has_value()) {
+-      RunErrorCallback(parse_res.error().message);
++    auto header_length = input.ReadCBORHeader(CBORType::kByteString);
++    if (!header_length) {
++      RunErrorCallback("Cannot parse response header length.");
+       return;
+     }
+-    if (parse_res->needs_more_data) {
++
++    // "The length of the headers byte string in a response MUST be less than
++    // 524288 (512*1024) bytes, and recipients MUST fail to load a response with
++    // longer headers"
++    if (*header_length >= kMaxResponseHeaderLength) {
++      RunErrorCallback("Response header is too big.");
++      return;
++    }
++
++    // If we don't have enough data for the headers and the CBOR header of the
++    // payload, re-read with a larger buffer size.
++    const uint64_t required_buffer_size = std::min(
++        input.CurrentOffset() + *header_length + kMaxCBORItemHeaderSize,
++        response_length_);
++    if (data->size() < required_buffer_size) {
+       DVLOG(1) << "Re-reading response header with a buffer of size "
+-               << parse_res->required_buffer_size;
+-      StartWithBufferSize(parse_res->required_buffer_size);
++               << required_buffer_size;
++      StartWithBufferSize(required_buffer_size);
++      return;
++    }
++
++    // Parse headers.
++    auto headers_bytes = input.ReadBytes(*header_length);
++    if (!headers_bytes) {
++      RunErrorCallback("Cannot read response headers.");
++      return;
++    }
++    cbor::Reader::DecoderError error;
++    std::optional<cbor::Value> headers_value =
++        cbor::Reader::Read(*headers_bytes, &error);
++    if (!headers_value) {
++      RunErrorCallback("Cannot parse response headers.");
++      return;
++    }
++
++    auto parsed_headers = ConvertCBORValueToHeaders(*headers_value);
++    if (!parsed_headers) {
++      RunErrorCallback("Cannot parse response headers.");
++      return;
++    }
++
++    // "Each response's headers MUST include a :status pseudo-header with
++    // exactly 3 ASCII decimal digits and MUST NOT include any other
++    // pseudo-headers."
++    const auto pseudo_status = parsed_headers->pseudos.find(":status");
++    if (parsed_headers->pseudos.size() != 1 ||
++        pseudo_status == parsed_headers->pseudos.end()) {
++      RunErrorCallback(
++          "Response headers map must have exactly one pseudo-header, :status.");
++      return;
++    }
++    int status;
++    const auto& status_str = pseudo_status->second;
++    if (status_str.size() != 3 ||
++        !std::ranges::all_of(status_str, base::IsAsciiDigit<char>) ||
++        !base::StringToInt(status_str, &status)) {
++      RunErrorCallback(":status must be 3 ASCII decimal digits.");
++      return;
++    }
++
++    // Parse payload.
++    auto payload_length = input.ReadCBORHeader(CBORType::kByteString);
++    if (!payload_length) {
++      RunErrorCallback("Cannot parse response payload length.");
++      return;
++    }
++
++    // "If a response's payload is not empty, its headers MUST include a
++    // Content-Type header (Section 8.3 of [I-D.ietf-httpbis-semantics])."
++    if (*payload_length > 0 &&
++        !parsed_headers->headers.contains("content-type")) {
++      RunErrorCallback("Non-empty response must have a content-type header.");
++      return;
++    }
++
++    if (input.CurrentOffset() + *payload_length != response_length_) {
++      RunErrorCallback("Unexpected payload length.");
+       return;
+     }
+ 
+     mojom::BundleResponsePtr response = mojom::BundleResponse::New();
+-    response->response_code = parse_res->response_code;
+-    response->response_headers = base::MakeFlatMap<std::string, std::string>(
+-        parse_res->headers, {}, [](const rust::HeaderEntry& header) {
+-          return std::make_pair(
+-              std::string(base::as_string_view(header.name.to_span())),
+-              std::string(base::as_string_view(header.value.to_span())));
 -        });
--      }).Then(std::move(callback)));
-+    std::move(callback);
- }
+-    response->payload_offset = parse_res->payload_offset;
+-    response->payload_length = parse_res->payload_length;
++    response->response_code = status;
++    response->response_headers = std::move(parsed_headers->headers);
++    response->payload_offset = response_offset_ + input.CurrentOffset();
++    response->payload_length = *payload_length;
+     RunSuccessCallback(std::move(response));
+   }
  
- void ValidateSignedWebBundleSignatures(
-@@ -96,20 +87,6 @@ void ValidateSignedWebBundleSignatures(
-     const base::FilePath& path,
-     const web_package::SignedWebBundleId& expected_web_bundle_id,
-     base::OnceCallback<void(IntegrityBlockResult)> callback) {
--  auto create_reader = base::BindOnce(
--      &SignedWebBundleReader::Create, path,
--      IwaOrigin(expected_web_bundle_id).origin().GetURL(),
--      /*verify_signatures=*/true,
--      base::BindOnce(&OnTrustAndSignaturesOfBundleChecked,
--                     browser_context->GetWeakPtr(), expected_web_bundle_id,
--                     std::move(callback)));
--
--  if (auto* provider = IwaClient::GetInstance()->GetRuntimeDataProvider()) {
--    provider->OnBestEffortRuntimeDataReady().Post(FROM_HERE,
--                                                  std::move(create_reader));
--  } else {
--    std::move(create_reader).Run();
--  }
- }
+@@ -423,15 +873,13 @@ class WebBundleParser::ResponseParser
+                             nullptr));
+   }
  
- void CloseBundle(content::BrowserContext* browser_context,
---- a/components/webapps/isolated_web_apps/reading/BUILD.gn
-+++ b/components/webapps/isolated_web_apps/reading/BUILD.gn
-@@ -14,8 +14,6 @@ source_set("reading") {
-     "response_reader_registry.h",
-     "response_reader_registry_factory.cc",
-     "response_reader_registry_factory.h",
--    "signed_web_bundle_reader.cc",
--    "signed_web_bundle_reader.h",
-     "validator.cc",
-     "validator.h",
+-  void RunErrorCallback(const std::string_view message,
++  void RunErrorCallback(const std::string& message,
+                         mojom::BundleParseErrorType error_type =
+                             mojom::BundleParseErrorType::kFormatError) {
+-    auto err = mojom::BundleResponseParseError::New();
+-    err->type = error_type;
+-    err->message = message;
+     std::move(complete_callback_)
+-        .Run(base::BindOnce(std::move(result_callback_), nullptr,
+-                            std::move(err)));
++        .Run(base::BindOnce(
++            std::move(result_callback_), nullptr,
++            mojom::BundleResponseParseError::New(error_type, message)));
+   }
+ 
+   const raw_ref<mojo::Remote<mojom::BundleDataSource>> data_source_;
+--- a/third_party/blink/renderer/core/BUILD.gn
++++ b/third_party/blink/renderer/core/BUILD.gn
+@@ -407,7 +407,6 @@ component("core") {
+   deps = [
+     ":font_resource",
+     ":generate_eventhandler_names",
+-    ":ift_custom_font_data",
+     ":make_deprecation_info",
+     ":xml_ffi",
+     "//base",
+@@ -463,7 +462,6 @@ component("core") {
+   allow_circular_includes_from = [
+     ":core_generated",
+     ":core_hot",
+-    ":ift_custom_font_data",
+     "//third_party/blink/renderer/core/animation",
+     "//third_party/blink/renderer/core/exported",
+     "//third_party/blink/renderer/core/probe",
+@@ -504,23 +502,6 @@ blink_core_sources("font_resource") {
+     "//third_party/blink/public/common",
+     "//third_party/blink/renderer/platform:font_rust_headers",
    ]
---- a/components/webapps/isolated_web_apps/reading/response_reader_factory.cc
-+++ b/components/webapps/isolated_web_apps/reading/response_reader_factory.cc
-@@ -45,19 +45,6 @@ void IsolatedWebAppResponseReaderFactory
-   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
-   DCHECK(!web_bundle_id.is_for_proxy_mode());
- 
--  auto create_reader = base::BindOnce(
--      &SignedWebBundleReader::Create, web_bundle_path,
--      IwaOrigin(web_bundle_id).origin().GetURL(), verify_signatures,
--      base::BindOnce(&IsolatedWebAppResponseReaderFactory::OnReaderCreated,
--                     weak_ptr_factory_.GetWeakPtr(), web_bundle_path,
--                     web_bundle_id, std::move(callback)));
+-}
 -
--  if (auto* provider = IwaClient::GetInstance()->GetRuntimeDataProvider()) {
--    provider->OnBestEffortRuntimeDataReady().Post(FROM_HERE,
--                                                  std::move(create_reader));
--  } else {
--    std::move(create_reader).Run();
--  }
+-# Like ":font_resource", css/ift_custom_font_data.cc includes
+-# //third_party/blink/renderer/platform:font_rust_headers, so it is kept on a
+-# headerless target. Its header (in core's sources) only forward declares the
+-# Crubit-backed types. It includes core headers, so ":core" lists it in
+-# allow_circular_includes_from.
+-blink_core_sources("ift_custom_font_data") {
+-  public = []
+-  sources = [ "css/ift_custom_font_data.cc" ]
+-
+-  deps = [
+-    ":font_resource_header",
+-    "//services/network/public/cpp",
+-    "//third_party/blink/public/common",
+-    "//third_party/blink/renderer/platform:font_rust_headers",
+-  ]
  }
  
- void IsolatedWebAppResponseReaderFactory::OnReaderCreated(
---- a/services/data_decoder/data_decoder_service.cc
-+++ b/services/data_decoder/data_decoder_service.cc
-@@ -63,9 +63,6 @@ void DataDecoderService::BindXmlParser(
- void DataDecoderService::BindWebBundleParserFactory(
-     mojo::PendingReceiver<web_package::mojom::WebBundleParserFactory>
-         receiver) {
--  mojo::MakeSelfOwnedReceiver(
--      std::make_unique<web_package::WebBundleParserFactory>(),
--      std::move(receiver));
+ # Certain sources should be compiled with heavy optimization enabled.
+--- a/third_party/blink/renderer/core/css/build.gni
++++ b/third_party/blink/renderer/core/css/build.gni
+@@ -531,7 +531,6 @@ blink_core_sources_css = [
+   "hash_tools.h",
+   "if_condition.cc",
+   "if_condition.h",
+-  "ift_custom_font_data.h",
+   "inline_css_style_declaration.cc",
+   "inline_css_style_declaration.h",
+   "invalidation/invalidation_flags.cc",
+@@ -936,7 +935,6 @@ blink_core_tests_css = [
+   "font_size_functions_test.cc",
+   "font_update_invalidation_test.cc",
+   "force_dark_test.cc",
+-  "ift_custom_font_data_test.cc",
+   "invalidation/invalidation_set_test.cc",
+   "invalidation/pending_invalidations_test.cc",
+   "invalidation/style_invalidator_test.cc",
+--- a/third_party/blink/renderer/core/css/remote_font_face_source.cc
++++ b/third_party/blink/renderer/core/css/remote_font_face_source.cc
+@@ -14,7 +14,6 @@
+ #include "third_party/blink/renderer/core/css/css_custom_font_data.h"
+ #include "third_party/blink/renderer/core/css/css_font_face.h"
+ #include "third_party/blink/renderer/core/css/font_face_set_document.h"
+-#include "third_party/blink/renderer/core/css/ift_custom_font_data.h"
+ #include "third_party/blink/renderer/core/dom/document.h"
+ #include "third_party/blink/renderer/core/frame/local_dom_window.h"
+ #include "third_party/blink/renderer/core/frame/local_frame.h"
+@@ -219,9 +218,6 @@ void RemoteFontFaceSource::NotifyFinishe
+   DCHECK(!custom_font_data_);
+   if (resource->PassedIntegrityChecks() || !check_integrity) {
+     custom_font_data_ = font->GetCustomFontData();
+-    if (RuntimeEnabledFeatures::IncrementalFontTransferEnabled()) {
+-      ift_custom_font_data_ = IftCustomFontData::MaybeCreate(this, *font);
+-    }
+   }
+   url_ = resource->Url().GetString();
+ 
+@@ -349,9 +345,6 @@ const SimpleFontData* RemoteFontFaceSour
+ 
+   histograms_.RecordFallbackTime();
+ 
+-  CustomFontData* custom_font_data =
+-      ift_custom_font_data_ ? ift_custom_font_data_.Get()
+-                            : MakeGarbageCollected<CustomFontData>();
+   return MakeGarbageCollected<SimpleFontData>(
+       custom_font_data_->GetFontPlatformData(
+           font_description.EffectiveFontSize(),
+@@ -368,7 +361,7 @@ const SimpleFontData* RemoteFontFaceSour
+           font_description.ResolveFontFeatures(),
+           font_description.Orientation(), font_description.VariationSettings(),
+           font_description.GetFontPalette()),
+-      custom_font_data);
++      MakeGarbageCollected<CustomFontData>());
  }
  
- void DataDecoderService::BindGzipper(
---- a/services/network/web_bundle/web_bundle_url_loader_factory.cc
-+++ b/services/network/web_bundle/web_bundle_url_loader_factory.cc
-@@ -586,25 +586,6 @@ bool WebBundleURLLoaderFactory::HasError
- 
- void WebBundleURLLoaderFactory::SetBundleStream(
-     mojo::ScopedDataPipeConsumerHandle body) {
--  if (HasError())
--    return;
--  mojo::PendingRemote<web_package::mojom::BundleDataSource> data_source;
--  source_ = std::make_unique<BundleDataSource>(
--      data_source.InitWithNewPipeAndPassReceiver(), std::move(body),
--      std::move(web_bundle_memory_quota_consumer_),
--      base::BindOnce(&WebBundleURLLoaderFactory::OnMemoryQuotaExceeded,
--                     weak_ptr_factory_.GetWeakPtr()),
--      base::BindOnce(&WebBundleURLLoaderFactory::OnDataCompleted,
--                     weak_ptr_factory_.GetWeakPtr()));
--
--  mojo::MakeSelfOwnedReceiver(std::make_unique<web_package::WebBundleParser>(
--                                  std::move(data_source), bundle_url_),
--                              parser_.BindNewPipeAndPassReceiver());
--
--  parser_->ParseMetadata(
--      /*offset=*/std::nullopt,
--      base::BindOnce(&WebBundleURLLoaderFactory::OnMetadataParsed,
--                     weak_ptr_factory_.GetWeakPtr()));
+ const SimpleFontData* RemoteFontFaceSource::CreateLoadingFallbackFontData(
+@@ -451,7 +444,6 @@ void RemoteFontFaceSource::Trace(Visitor
+   visitor->Trace(face_);
+   visitor->Trace(font_selector_);
+   visitor->Trace(custom_font_data_);
+-  visitor->Trace(ift_custom_font_data_);
+   CSSFontFaceSource::Trace(visitor);
+   FontResourceClient::Trace(visitor);
  }
+--- a/third_party/blink/renderer/core/css/remote_font_face_source.h
++++ b/third_party/blink/renderer/core/css/remote_font_face_source.h
+@@ -18,7 +18,6 @@ class CSSFontFace;
+ class Document;
+ class FontCustomPlatformData;
+ class FontSelector;
+-class IftCustomFontData;
  
- mojo::PendingRemote<mojom::URLLoaderClient>
+ class RemoteFontFaceSource final : public CSSFontFaceSource,
+                                    public FontResourceClient {
+@@ -158,8 +157,6 @@ class RemoteFontFaceSource final : publi
+ 
+   // |nullptr| if font is not loaded or failed to decode.
+   Member<const FontCustomPlatformData> custom_font_data_;
+-  // |nullptr| if font is not an IFT font.
+-  Member<IftCustomFontData> ift_custom_font_data_;
+   // |nullptr| if font is not loaded or failed to decode.
+   String url_;
+ 
 --- a/third_party/blink/renderer/core/loader/resource/font_resource.cc
 +++ b/third_party/blink/renderer/core/loader/resource/font_resource.cc
 @@ -44,7 +44,6 @@
@@ -807,7 +2230,36 @@ ungoogle chromium patch from https://github.com/ungoogled-software/ungoogled-chr
    bool cors_failed_;
 --- a/third_party/blink/renderer/platform/BUILD.gn
 +++ b/third_party/blink/renderer/platform/BUILD.gn
-@@ -186,6 +186,18 @@ group("make_platform_generated") {
+@@ -209,7 +209,6 @@ source_set("character_property_data") {
+ source_set("font_rust_headers") {
+   visibility += [ "//third_party/blink/renderer/core:*" ]
+   public = [
+-    "fonts/ift/ift_patcher.h",
+     "fonts/opentype/font_format_check.h",
+   ]
+   configs += [
+@@ -219,11 +218,9 @@ source_set("font_rust_headers") {
+     "//third_party/blink/renderer:non_test_config",
+   ]
+   public_deps = [
++    ":font_format_check",
+     ":platform_export",
+-    "fonts:font_format_bindings",
+-    "fonts:ift_patcher_bindings",
+     "//base",
+-    "//build/rust/crubit",
+     "//skia",
+     "//third_party/blink/renderer/platform/wtf",
+   ]
+@@ -233,7 +230,6 @@ source_set("font_rust_support") {
+   public = []
+   sources = [
+     "fonts/font_custom_platform_data.cc",
+-    "fonts/ift/ift_patcher.cc",
+     "fonts/opentype/font_format_check.cc",
+     "fonts/web_font_decoder.cc",
+     "fonts/web_font_typeface_factory.cc",
+@@ -258,6 +254,18 @@ source_set("font_rust_support") {
    ]
  }
  
@@ -818,53 +2270,65 @@ ungoogle chromium patch from https://github.com/ungoogled-software/ungoogled-chr
 +  cxx_bindings = [ crate_root ]
 +  deps = [
 +    "//third_party/rust/font_types/v0_12:lib",
-+    "//third_party/rust/read_fonts/v0_43:lib",
-+    "//third_party/rust/skrifa/v0_46:lib",
++    "//third_party/rust/read_fonts/v0_45:lib",
++    "//third_party/rust/skrifa/v0_48:lib",
 +  ]
 +}
 +
  rust_static_library("rustfft_ffi") {
    allow_unsafe = true  # Needed for FFI that underpins the `cxx` crate.
    crate_root = "audio/rustfft_ffi.rs"
-@@ -253,7 +265,6 @@ group("blink_platform_public_deps") {
-     "//third_party/boringssl",
-     "//third_party/libwebp",
-     "//third_party/ots",
--    "//third_party/woff2:woff2_dec",
-     "//ui/gfx/animation/keyframe",
-     "//url",
-     "//v8",
-@@ -713,8 +724,6 @@ component("platform") {
-     "fonts/generic_font_family_settings.cc",
-     "fonts/generic_font_family_settings.h",
-     "fonts/glyph_metrics_map.h",
--    "fonts/ift/ift_patcher.cc",
--    "fonts/ift/ift_patcher.h",
-     "fonts/opentype/color_table_lookup.cc",
-     "fonts/opentype/color_table_lookup.h",
-     "fonts/opentype/font_format_check.cc",
-@@ -1795,7 +1804,6 @@ component("platform") {
-     ":allow_discouraged_type",
-     ":blink_platform_public_deps",
-     ":platform_export",
--    "//build/rust/crubit",
-     "//components/language_detection/core",
-     "//gpu/command_buffer/client:raster_interface",
-     "//media/capture:capture_lib",
-@@ -1822,9 +1830,8 @@ component("platform") {
-     "//ui/native_theme/features",
+@@ -2305,7 +2313,6 @@ source_set("blink_platform_unittests_sou
+     "fonts/font_test.cc",
+     "fonts/font_test_utilities.cc",
+     "fonts/generic_font_family_settings_test.cc",
+-    "fonts/ift/ift_patcher_test.cc",
+     "fonts/opentype/color_table_lookup_test.cc",
+     "fonts/opentype/font_format_check_test.cc",
+     "fonts/opentype/font_settings_test.cc",
+@@ -2604,12 +2611,10 @@ source_set("blink_platform_unittests_sou
    ]
-   deps = [
+ 
+   deps += [
 +    ":font_format_check",
-     ":rustfft_ffi",
+     ":bridge_ice_controller_tests",
+     ":font_rust_headers",
+     ":rustfft_ffi_unittests",
 -    "fonts:font_format_bindings",
 -    "fonts:ift_patcher_bindings",
-     "//base:base_static",
-     "//base/allocator:buildflags",
-     "//build:chromecast_buildflags",
+-    "//build/rust/crubit",
+   ]
+ 
+   data_deps = [ ":blink_platform_unittests_data" ]
+--- a/third_party/blink/renderer/platform/fonts/BUILD.gn
++++ b/third_party/blink/renderer/platform/fonts/BUILD.gn
+@@ -1,23 +1,3 @@
+-# Copyright 2026 The Chromium Authors
+-# Use of this source code is governed by a BSD-style license that can be
+-# found in the LICENSE file.
+-
+-import("//build/rust/rust_static_library.gni")
+-
+-rust_static_library("font_format") {
+-  crate_root = "opentype/format_check.rs"
+-  sources = [ crate_root ]
+-  cpp_api_from_rust = {
+-    target_name = "font_format_bindings"
+-    cpp_namespace = "font_format"
+-  }
+-  deps = [
+-    "//third_party/rust/font_types/v0_12:lib",
+-    "//third_party/rust/read_fonts/v0_45:lib",
+-    "//third_party/rust/skrifa/v0_48:lib",
+-  ]
+-}
+-
+ rust_static_library("ift_patcher_rs") {
+   crate_root = "ift/ift_patcher.rs"
+   sources = [ crate_root ]
 --- a/third_party/blink/renderer/platform/fonts/font_custom_platform_data.cc
 +++ b/third_party/blink/renderer/platform/fonts/font_custom_platform_data.cc
-@@ -328,7 +328,8 @@ FontCustomPlatformData* FontCustomPlatfo
+@@ -356,7 +356,8 @@ FontCustomPlatformData* FontCustomPlatfo
      SharedBuffer* buffer,
      String& ots_parse_message) {
    DCHECK(buffer);
@@ -874,7 +2338,7 @@ ungoogle chromium patch from https://github.com/ungoogled-software/ungoogled-chr
    if (!decode_result.has_value()) {
      ots_parse_message = std::move(decode_result).error();
      return nullptr;
---- a/third_party/blink/renderer/platform/fonts/opentype/font_format_check.cc
+--- a/third_party/blink/renderer/platform/fonts/opentype/font_format_check.cc	
 +++ b/third_party/blink/renderer/platform/fonts/opentype/font_format_check.cc
 @@ -7,6 +7,7 @@
  #include "base/containers/span.h"
@@ -1291,3 +2755,121 @@ ungoogle chromium patch from https://github.com/ungoogled-software/ungoogled-chr
  }  // namespace blink
  
  #endif  // THIRD_PARTY_BLINK_RENDERER_PLATFORM_FONTS_WEB_FONT_DECODER_H_
+--- a/third_party/blink/renderer/platform/fonts/web_font_decoder_test.cc
++++ b/third_party/blink/renderer/platform/fonts/web_font_decoder_test.cc
+@@ -8,8 +8,6 @@
+ #include <utility>
+ 
+ #include "testing/gtest/include/gtest/gtest.h"
+-#include "third_party/blink/renderer/platform/fonts/ift/ift_patcher.h"
+-#include "third_party/blink/renderer/platform/testing/runtime_enabled_features_test_helpers.h"
+ #include "third_party/blink/renderer/platform/testing/unit_test_helpers.h"
+ #include "third_party/blink/renderer/platform/wtf/shared_buffer.h"
+ #include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
+@@ -18,26 +16,18 @@
+ 
+ namespace blink {
+ 
+-namespace {
+-
+-scoped_refptr<SharedBuffer> LoadFont(const String& path) {
+-  std::optional<Vector<char>> font_data =
+-      test::ReadFromFile(test::PlatformTestDataPath(path));
+-  CHECK(font_data.has_value());
+-  return SharedBuffer::Create(std::move(*font_data));
+-}
+-
+-}  // namespace
+-
+ // Regression test for a font that triggers a large number of OTS warnings
+ // during decoding. Without a bound on the accumulated error string, processing
+ // these warnings dominated decode time and made the OpenType math fuzzer time
+ // out. Verify that the reported error string stays within the budget.
+ TEST(WebFontDecoderTest, ErrorStringIsBoundedOnPathologicalFont) {
+-  scoped_refptr<SharedBuffer> font_buffer =
+-      LoadFont("open_type_math_support_fuzzer_timeout.ttf");
++  std::optional<Vector<char>> font_data = test::ReadFromFile(
++      test::PlatformTestDataPath("open_type_math_support_fuzzer_timeout.ttf"));
++  ASSERT_TRUE(font_data);
++
++  auto font_buffer = SharedBuffer::Create(std::move(*font_data));
+   base::expected<DecodedWebFont, String> decoded_result =
+-      DecodeWebFont(font_buffer.get());
++      DecodedWebFont::Create(font_buffer.get());
+ 
+   // Messages are accepted until the accumulated string reaches the ~4096 byte
+   // budget, so the result may overshoot by at most one final message. The
+@@ -49,71 +39,10 @@ TEST(WebFontDecoderTest, ErrorStringIsBo
+ }
+ 
+ TEST(WebFontDecoderTest, EmptyBufferIsError) {
+-  scoped_refptr<SharedBuffer> font_buffer = SharedBuffer::Create();
++  auto font_buffer = SharedBuffer::Create();
+   base::expected<DecodedWebFont, String> decoded_result =
+-      DecodeWebFont(font_buffer.get());
++      DecodedWebFont::Create(font_buffer.get());
+   ASSERT_FALSE(decoded_result.has_value());
+ }
+ 
+-TEST(WebFontDecoderTest, IftWoff2WithFeatureEnabledThenCreatesIftPatcher) {
+-  ScopedIncrementalFontTransferForTest scoped_ift(true);
+-  scoped_refptr<SharedBuffer> font_buffer = LoadFont("roboto-ift.woff2");
+-  base::expected<DecodedWebFont, String> decoded_result =
+-      DecodeWebFont(font_buffer.get());
+-
+-  ASSERT_TRUE(decoded_result.has_value());
+-  EXPECT_NE(decoded_result->sk_typeface, nullptr);
+-  EXPECT_NE(decoded_result->ift_patcher, nullptr);
+-  EXPECT_GT(decoded_result->decoded_size, 0u);
+-}
+-
+-TEST(WebFontDecoderTest, IftTtfWithFeatureEnabledThenCreatesIftPatcher) {
+-  ScopedIncrementalFontTransferForTest scoped_ift(true);
+-  scoped_refptr<SharedBuffer> font_buffer = LoadFont("roboto-ift.ttf");
+-  base::expected<DecodedWebFont, String> decoded_result =
+-      DecodeWebFont(font_buffer.get());
+-
+-  ASSERT_TRUE(decoded_result.has_value());
+-  EXPECT_NE(decoded_result->sk_typeface, nullptr);
+-  EXPECT_NE(decoded_result->ift_patcher, nullptr);
+-  EXPECT_GT(decoded_result->decoded_size, 0u);
+-}
+-
+-TEST(WebFontDecoderTest, IftFontWithFeatureDisabledThenIftPatcherIsNull) {
+-  ScopedIncrementalFontTransferForTest scoped_ift(false);
+-  scoped_refptr<SharedBuffer> font_buffer = LoadFont("roboto-ift.woff2");
+-  base::expected<DecodedWebFont, String> decoded_result =
+-      DecodeWebFont(font_buffer.get());
+-
+-  ASSERT_TRUE(decoded_result.has_value());
+-  EXPECT_NE(decoded_result->sk_typeface, nullptr);
+-  EXPECT_EQ(decoded_result->ift_patcher, nullptr);
+-  EXPECT_GT(decoded_result->decoded_size, 0u);
+-}
+-
+-TEST(WebFontDecoderTest, NonIftFontWithFeatureEnabledThenIftPatcherIsNull) {
+-  ScopedIncrementalFontTransferForTest scoped_ift(true);
+-  scoped_refptr<SharedBuffer> font_buffer =
+-      LoadFont("third_party/Roboto/roboto-regular.woff2");
+-  base::expected<DecodedWebFont, String> decoded_result =
+-      DecodeWebFont(font_buffer.get());
+-
+-  ASSERT_TRUE(decoded_result.has_value());
+-  EXPECT_NE(decoded_result->sk_typeface, nullptr);
+-  EXPECT_EQ(decoded_result->ift_patcher, nullptr);
+-  EXPECT_GT(decoded_result->decoded_size, 0u);
+-}
+-
+-TEST(WebFontDecoderTest, WoffFontWithFeatureEnabledThenIftPatcherIsNull) {
+-  ScopedIncrementalFontTransferForTest scoped_ift(true);
+-  scoped_refptr<SharedBuffer> font_buffer = LoadFont("Ahem.woff");
+-  base::expected<DecodedWebFont, String> decoded_result =
+-      DecodeWebFont(font_buffer.get());
+-
+-  ASSERT_TRUE(decoded_result.has_value());
+-  EXPECT_NE(decoded_result->sk_typeface, nullptr);
+-  EXPECT_EQ(decoded_result->ift_patcher, nullptr);
+-  EXPECT_GT(decoded_result->decoded_size, 0u);
+-}
+-
+ }  // namespace blink

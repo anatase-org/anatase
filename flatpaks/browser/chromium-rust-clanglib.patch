@@ -1,0 +1,48 @@
+diff -up chromium-157.0.8103.38/build/config/clang/BUILD.gn.than chromium-157.0.8103.38/build/config/clang/BUILD.gn
+--- chromium-157.0.8103.38/build/config/clang/BUILD.gn.than	2026-11-04 13:28:50.781598048 +0100
++++ chromium-157.0.8103.38/build/config/clang/BUILD.gn	2026-11-04 15:07:50.959537055 +0100
+@@ -205,19 +205,19 @@ template("clang_lib") {
+         _dir = "darwin"
+       } else if (is_linux || is_chromeos) {
+         if (current_cpu == "x64") {
+-          _dir = "x86_64-unknown-linux-gnu"
++          _dir = "x86_64-redhat-linux-gnu"
+         } else if (current_cpu == "x86") {
+-          _dir = "i386-unknown-linux-gnu"
++          _dir = "i386-redhat-linux-gnu"
+         } else if (current_cpu == "arm") {
+-          _dir = "armv7-unknown-linux-gnueabihf"
++          _dir = "armhf-redhat-linux-gnu"
+         } else if (current_cpu == "arm64") {
+-          _dir = "aarch64-unknown-linux-gnu"
++          _dir = "aarch64-redhat-linux-gnu"
+         } else if (current_cpu == "loong64") {
+           _dir = "loongarch64-unknown-linux-gnu"
+         } else if (current_cpu == "riscv64") {
+           _dir = "riscv64-unknown-linux-gnu"
+         } else if (current_cpu == "ppc64") {
+-          _dir = "ppc64le-unknown-linux-gnu"
++          _dir = "ppc64le-redhat-linux-gnu"
+         } else if (current_cpu == "s390x") {
+           _dir = "s390x-unknown-linux-gnu"
+         } else {
+diff -up chromium-157.0.8103.38/build/rust/rust_bindgen_generator.gni.than chromium-157.0.8103.38/build/rust/rust_bindgen_generator.gni
+--- chromium-157.0.8103.38/build/rust/rust_bindgen_generator.gni.than	2026-11-04 15:08:24.137069212 +0100
++++ chromium-157.0.8103.38/build/rust/rust_bindgen_generator.gni	2026-11-04 15:09:55.586524478 +0100
+@@ -22,14 +22,14 @@ if (!use_chromium_rust_toolchain &&
+ 
+ # On Windows, the libclang.dll is beside the bindgen.exe, otherwise it is in
+ # ../lib.
+-_libclang_path = rust_bindgen_root
++_libclang_path = clang_base_path
+ if (!use_chromium_rust_toolchain &&
+     (host_cpu == "ppc64" || host_cpu == "s390x")) {
+   _libclang_path = rust_sysroot_absolute + "/lib64"
+ } else if (host_os == "win") {
+   _libclang_path += "/bin"
+ } else {
+-  _libclang_path += "/lib"
++  _libclang_path += "/lib64"
+ }
+ 
+ # Template to build Rust/C bindings with bindgen.

@@ -1,0 +1,26 @@
+Ignore TypeScript Go compiler's bundled standard library files.
+
+Traceback (most recent call last):
+  File "/builddir/build/BUILD/chromium-157.0.8103.38/out/Release/../../tools/typescript/ts_library.py", line 366, in <module>
+    main(sys.argv[1:])
+  File "/builddir/build/BUILD/chromium-157.0.8103.38/out/Release/../../tools/typescript/ts_library.py", line 345, in main
+    raise AssertionError(error_msg)
+AssertionError: Undeclared dependencies to definition files encountered while building chrome/browser/resources/accessibility/reading_mode_gdocs_helper
+//out/Release/bundled:/libs/lib.es5.d.ts
+//out/Release/bundled:/libs/lib.es2015.d.ts
+//out/Release/bundled:/libs/lib.es2016.d.ts
+...
+
+diff -up chromium-157.0.8103.38/tools/typescript/validate_tsconfig.py.me chromium-157.0.8103.38/tools/typescript/validate_tsconfig.py
+--- chromium-157.0.8103.38/tools/typescript/validate_tsconfig.py.me	2026-11-12 02:11:20.077682578 -0500
++++ chromium-157.0.8103.38/tools/typescript/validate_tsconfig.py	2026-11-12 02:30:26.671026330 -0500
+@@ -311,6 +311,9 @@ def validateDefinitionDeps(
+ 
+   missing_inputs = []
+   for f in definitions_files:
++    if f.startswith('bundled:///libs/'):
++      continue
++
+     # File path relative to the current working directory.
+     f_from_cwd = os.path.relpath(f, _CWD).replace('\\', '/')
+     is_gen_file = f_from_cwd.startswith(gen_dir_from_build)

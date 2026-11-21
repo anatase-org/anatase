@@ -1,10 +1,35 @@
 # Disable Glic ("Gemini Live in Chrome"), ScreenAI, and associated AI-based
 # features.
 
-diff -up chromium-156.0.8078.35/chrome/browser/accessibility/BUILD.gn.disable-ai chromium-156.0.8078.35/chrome/browser/accessibility/BUILD.gn
---- chromium-156.0.8078.35/chrome/browser/accessibility/BUILD.gn.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/accessibility/BUILD.gn	2026-10-20 17:09:47.117654483 +0200
-@@ -59,7 +59,6 @@ source_set("accessibility") {
+--- a/chrome/browser/BUILD.gn
++++ b/chrome/browser/BUILD.gn
+@@ -2916,7 +2916,6 @@ source_set("browser") {
+       "//chrome/browser/profile_resetter:impl",
+       "//chrome/browser/record_replay",
+       "//chrome/browser/record_replay:impl",
+-      "//chrome/browser/screen_ai:screen_ai_service_router_factory",
+       "//chrome/browser/sharing_hub",
+       "//chrome/browser/sharing_hub:impl",
+       "//chrome/browser/smart_card",
+@@ -2965,7 +2964,6 @@ source_set("browser") {
+       "//chrome/browser/ui/waap:window_metrics_manager",
+       "//chrome/browser/ui/web_applications:impl",
+       "//chrome/browser/ui/webui/app_service_internals",
+-      "//chrome/browser/ui/webui/autofill_ml_internals",
+       "//chrome/browser/ui/webui/color_pipeline_internals",
+       "//chrome/browser/ui/webui/commerce",
+       "//chrome/browser/ui/webui/commerce:impl",
+@@ -3976,7 +3974,6 @@ source_set("browser") {
+       "//chrome/browser/lens/region_search",
+       "//chrome/browser/reading_list",
+       "//chrome/browser/safe_browsing",
+-      "//chrome/browser/screen_ai:screen_ai_service_router_factory",
+       "//chrome/browser/smart_card",
+       "//chrome/browser/support_tool",
+       "//chrome/browser/tab_group_sync:utils",
+--- a/chrome/browser/accessibility/BUILD.gn
++++ b/chrome/browser/accessibility/BUILD.gn
+@@ -60,7 +60,6 @@ source_set("accessibility") {
      public_deps += [
        "//chrome/browser/accessibility/live_caption",
        "//chrome/browser/profiles:profile_manager",
@@ -12,7 +37,7 @@ diff -up chromium-156.0.8078.35/chrome/browser/accessibility/BUILD.gn.disable-ai
        "//components/live_caption",
        "//components/pref_registry",
        "//ui/accessibility/platform",
-@@ -88,8 +87,6 @@ source_set("impl") {
+@@ -89,8 +88,6 @@ source_set("impl") {
  
    if (!is_android) {
      sources += [
@@ -20,16 +45,16 @@ diff -up chromium-156.0.8078.35/chrome/browser/accessibility/BUILD.gn.disable-ai
 -      "ax_main_node_annotator_controller_factory.cc",
        "embedded_a11y_extension_loader.cc",
        "invert_bubble_prefs.cc",
-       "page_colors_controller.cc",
+       "page_colors_controller_factory.cc",
 @@ -99,7 +96,6 @@ source_set("impl") {
        "//chrome/browser/accessibility/live_caption:impl",
        "//chrome/browser/extensions",
        "//chrome/browser/on_device_translation",
 -      "//chrome/browser/screen_ai:screen_ai_service_router_factory",
-       "//chrome/browser/ui",
        "//chrome/browser/ui/browser_window",
        "//chrome/browser/ui/views/frame:browser_view_header",
-@@ -246,9 +242,7 @@ if (!is_android) {
+       "//components/live_caption:live_translate",
+@@ -247,9 +243,7 @@ if (!is_android) {
      }
  
      deps += [
@@ -39,20 +64,18 @@ diff -up chromium-156.0.8078.35/chrome/browser/accessibility/BUILD.gn.disable-ai
      ]
  
      if (enable_screen_ai_browsertests) {
-diff -up chromium-156.0.8078.35/chrome/browser/accessibility/live_caption/BUILD.gn.disable-ai chromium-156.0.8078.35/chrome/browser/accessibility/live_caption/BUILD.gn
---- chromium-156.0.8078.35/chrome/browser/accessibility/live_caption/BUILD.gn.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/accessibility/live_caption/BUILD.gn	2026-10-20 17:09:47.118038780 +0200
+--- a/chrome/browser/accessibility/live_caption/BUILD.gn
++++ b/chrome/browser/accessibility/live_caption/BUILD.gn
 @@ -44,7 +44,6 @@ source_set("impl") {
      "//chrome/browser/accessibility",
      "//chrome/browser/extensions",
      "//chrome/browser/on_device_translation",
 -    "//chrome/browser/screen_ai:screen_ai_service_router_factory",
-     "//chrome/browser/ui",
      "//chrome/browser/ui/browser_window",
      "//components/live_caption",
-diff -up chromium-156.0.8078.35/chrome/browser/accessibility/tree_fixing/BUILD.gn.disable-ai chromium-156.0.8078.35/chrome/browser/accessibility/tree_fixing/BUILD.gn
---- chromium-156.0.8078.35/chrome/browser/accessibility/tree_fixing/BUILD.gn.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/accessibility/tree_fixing/BUILD.gn	2026-10-20 17:09:47.118319555 +0200
+     "//components/live_caption:constants",
+--- a/chrome/browser/accessibility/tree_fixing/BUILD.gn
++++ b/chrome/browser/accessibility/tree_fixing/BUILD.gn
 @@ -63,11 +63,9 @@ source_set("internal") {
    deps = [
      "//base",
@@ -65,26 +88,21 @@ diff -up chromium-156.0.8078.35/chrome/browser/accessibility/tree_fixing/BUILD.g
 -    "//services/screen_ai/public/mojom",
    ]
  }
-diff -up chromium-156.0.8078.35/chrome/browser/actor/actor_keyed_service.cc.disable-ai chromium-156.0.8078.35/chrome/browser/actor/actor_keyed_service.cc
---- chromium-156.0.8078.35/chrome/browser/actor/actor_keyed_service.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/actor/actor_keyed_service.cc	2026-10-20 17:09:47.118847319 +0200
-@@ -870,13 +870,6 @@ bool ActorKeyedService::IsActiveOnTab(co
+--- a/chrome/browser/actor/actor_keyed_service.cc
++++ b/chrome/browser/actor/actor_keyed_service.cc
+@@ -869,10 +869,6 @@ void ActorKeyedService::StopTask(TaskId
+ }
  
- ActorTask* ActorKeyedService::GetTaskFromTab(
-     const tabs::TabInterface& tab) const {
--  tabs::TabHandle handle = tab.GetHandle();
--  for (const auto& [task_id, task] : active_tasks_) {
--    if (task->HasTab(handle)) {
--      return task.get();
--    }
+ ActorTask* ActorKeyedService::GetTask(TaskId task_id) {
+-  auto task = active_tasks_.find(task_id);
+-  if (task != active_tasks_.end()) {
+-    return task->second.get();
 -  }
--
    return nullptr;
  }
  
-diff -up chromium-156.0.8078.35/chrome/browser/browser_process.h.disable-ai chromium-156.0.8078.35/chrome/browser/browser_process.h
---- chromium-156.0.8078.35/chrome/browser/browser_process.h.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/browser_process.h	2026-10-20 17:09:47.119445405 +0200
+--- a/chrome/browser/browser_process.h
++++ b/chrome/browser/browser_process.h
 @@ -331,8 +331,6 @@ class BrowserProcess {
    virtual void set_usb_system_tray_icon_for_test(
        std::unique_ptr<UsbSystemTrayIcon> icon) = 0;
@@ -94,9 +112,8 @@ diff -up chromium-156.0.8078.35/chrome/browser/browser_process.h.disable-ai chro
  #endif
  
    // Obtain the browser instance of OSCryptAsync, which should be used for data
-diff -up chromium-156.0.8078.35/chrome/browser/browser_process_impl.cc.disable-ai chromium-156.0.8078.35/chrome/browser/browser_process_impl.cc
---- chromium-156.0.8078.35/chrome/browser/browser_process_impl.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/browser_process_impl.cc	2026-10-20 17:09:47.120093661 +0200
+--- a/chrome/browser/browser_process_impl.cc
++++ b/chrome/browser/browser_process_impl.cc
 @@ -85,7 +85,6 @@
  #include "chrome/browser/serial/serial_policy_allowed_ports.h"
  #include "chrome/browser/shell_integration.h"
@@ -105,7 +122,7 @@ diff -up chromium-156.0.8078.35/chrome/browser/browser_process_impl.cc.disable-a
  #include "chrome/browser/ssl/secure_origin_prefs_observer.h"
  #include "chrome/browser/startup_data.h"
  #include "chrome/browser/status_icons/status_tray.h"
-@@ -261,12 +260,10 @@ void OnLocalStatePrefsLoaded();
+@@ -264,12 +263,10 @@ void OnLocalStatePrefsLoaded();
  #if BUILDFLAG(IS_CHROMEOS)
  #include "chrome/browser/chromeos/extensions/telemetry/chromeos_telemetry_extensions_browser_api_provider.h"
  #include "chrome/browser/hid/hid_pinned_notification.h"
@@ -118,7 +135,7 @@ diff -up chromium-156.0.8078.35/chrome/browser/browser_process_impl.cc.disable-a
  #include "chrome/browser/usb/usb_status_icon.h"
  #include "components/enterprise/browser/controller/chrome_browser_cloud_management_controller.h"
  #endif
-@@ -1368,12 +1365,6 @@ GlobalFeatures* BrowserProcessImpl::GetF
+@@ -1373,12 +1370,6 @@ GlobalFeatures* BrowserProcessImpl::GetF
    return features_.get();
  }
  
@@ -131,7 +148,7 @@ diff -up chromium-156.0.8078.35/chrome/browser/browser_process_impl.cc.disable-a
  
  DownloadRequestLimiter* BrowserProcessImpl::download_request_limiter() {
    DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
-@@ -1715,11 +1706,6 @@ void BrowserProcessImpl::PreMainMessageL
+@@ -1723,11 +1714,6 @@ void BrowserProcessImpl::PreMainMessageL
    soda_installer_impl_ = std::make_unique<speech::SodaInstallerImplChromeOS>();
  #endif  // BUILDFLAG(IS_CHROMEOS)
  
@@ -143,9 +160,8 @@ diff -up chromium-156.0.8078.35/chrome/browser/browser_process_impl.cc.disable-a
  
    base::FilePath user_data_dir;
    bool result = base::PathService::Get(chrome::DIR_USER_DATA, &user_data_dir);
-diff -up chromium-156.0.8078.35/chrome/browser/browser_process_impl.h.disable-ai chromium-156.0.8078.35/chrome/browser/browser_process_impl.h
---- chromium-156.0.8078.35/chrome/browser/browser_process_impl.h.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/browser_process_impl.h	2026-10-20 17:09:47.120584088 +0200
+--- a/chrome/browser/browser_process_impl.h
++++ b/chrome/browser/browser_process_impl.h
 @@ -58,9 +58,6 @@ class SiteIsolationPrefsObserver;
  class SystemNotificationHelper;
  class StartupData;
@@ -188,28 +204,8 @@ diff -up chromium-156.0.8078.35/chrome/browser/browser_process_impl.h.disable-ai
  #endif
  
    std::unique_ptr<BrowserProcessPlatformPart> platform_part_;
-diff -up chromium-156.0.8078.35/chrome/browser/BUILD.gn.disable-ai chromium-156.0.8078.35/chrome/browser/BUILD.gn
---- chromium-156.0.8078.35/chrome/browser/BUILD.gn.disable-ai	2026-10-20 17:09:46.910549833 +0200
-+++ chromium-156.0.8078.35/chrome/browser/BUILD.gn	2026-10-20 17:09:47.115553053 +0200
-@@ -2605,7 +2605,6 @@ source_set("browser") {
-       "//chrome/browser/profile_resetter:impl",
-       "//chrome/browser/record_replay",
-       "//chrome/browser/record_replay:impl",
--      "//chrome/browser/screen_ai:screen_ai_service_router_factory",
-       "//chrome/browser/sharing_hub",
-       "//chrome/browser/sharing_hub:impl",
-       "//chrome/browser/smart_card",
-@@ -2654,7 +2653,6 @@ source_set("browser") {
-       "//chrome/browser/ui/waap:window_metrics_manager",
-       "//chrome/browser/ui/web_applications:impl",
-       "//chrome/browser/ui/webui/app_service_internals",
--      "//chrome/browser/ui/webui/autofill_ml_internals",
-       "//chrome/browser/ui/webui/color_pipeline_internals",
-       "//chrome/browser/ui/webui/commerce",
-       "//chrome/browser/ui/webui/commerce:impl",
-diff -up chromium-156.0.8078.35/chrome/browser/chrome_browser_interface_binders.cc.disable-ai chromium-156.0.8078.35/chrome/browser/chrome_browser_interface_binders.cc
---- chromium-156.0.8078.35/chrome/browser/chrome_browser_interface_binders.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/chrome_browser_interface_binders.cc	2026-10-20 17:09:47.120968490 +0200
+--- a/chrome/browser/chrome_browser_interface_binders.cc
++++ b/chrome/browser/chrome_browser_interface_binders.cc
 @@ -91,8 +91,6 @@
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || \
@@ -258,10 +254,9 @@ diff -up chromium-156.0.8078.35/chrome/browser/chrome_browser_interface_binders.
  #endif
  
  #if BUILDFLAG(IS_WIN)
-diff -up chromium-156.0.8078.35/chrome/browser/chrome_browser_interface_binders_webui_parts_desktop.cc.disable-ai chromium-156.0.8078.35/chrome/browser/chrome_browser_interface_binders_webui_parts_desktop.cc
---- chromium-156.0.8078.35/chrome/browser/chrome_browser_interface_binders_webui_parts_desktop.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/chrome_browser_interface_binders_webui_parts_desktop.cc	2026-10-20 17:09:47.121399478 +0200
-@@ -456,9 +456,6 @@ void PopulateChromeWebUIFrameBindersPart
+--- a/chrome/browser/chrome_browser_interface_binders_webui_parts_desktop.cc
++++ b/chrome/browser/chrome_browser_interface_binders_webui_parts_desktop.cc
+@@ -446,9 +446,6 @@ void PopulateChromeWebUIFrameBindersPart
        ::mojom::app_service_internals::AppServiceInternalsPageHandler,
        AppServiceInternalsUI>(map);
  
@@ -271,10 +266,17 @@ diff -up chromium-156.0.8078.35/chrome/browser/chrome_browser_interface_binders_
  
    RegisterWebUIControllerInterfaceBinder<
        access_code_cast::mojom::PageHandlerFactory,
-diff -up chromium-156.0.8078.35/chrome/browser/chrome_content_browser_client.cc.disable-ai chromium-156.0.8078.35/chrome/browser/chrome_content_browser_client.cc
---- chromium-156.0.8078.35/chrome/browser/chrome_content_browser_client.cc.disable-ai	2026-10-20 17:09:46.915549911 +0200
-+++ chromium-156.0.8078.35/chrome/browser/chrome_content_browser_client.cc	2026-10-20 17:09:47.122250321 +0200
-@@ -5686,9 +5686,6 @@ ChromeContentBrowserClient::CreateCommit
+--- a/chrome/browser/chrome_content_browser_client.cc
++++ b/chrome/browser/chrome_content_browser_client.cc
+@@ -1418,6 +1418,7 @@ base::FilePath GetModulePath(
+ #endif  // BUILDFLAG(IS_WIN) && !defined(COMPONENT_BUILD) &&
+         // !defined(ADDRESS_SANITIZER)
+ 
++[[maybe_unused]]
+ void MaybeAddCondition(
+     std::unique_ptr<content::CommitDeferringCondition> maybe_condition,
+     std::vector<std::unique_ptr<content::CommitDeferringCondition>>*
+@@ -5749,9 +5750,6 @@ ChromeContentBrowserClient::CreateCommit
        &conditions);
  #endif
  
@@ -284,10 +286,9 @@ diff -up chromium-156.0.8078.35/chrome/browser/chrome_content_browser_client.cc.
  
    return conditions;
  }
-diff -up chromium-156.0.8078.35/chrome/browser/component_updater/BUILD.gn.disable-ai chromium-156.0.8078.35/chrome/browser/component_updater/BUILD.gn
---- chromium-156.0.8078.35/chrome/browser/component_updater/BUILD.gn.disable-ai	2026-10-20 17:09:46.918035707 +0200
-+++ chromium-156.0.8078.35/chrome/browser/component_updater/BUILD.gn	2026-10-20 17:09:47.123077844 +0200
-@@ -225,13 +225,6 @@ source_set("impl") {
+--- a/chrome/browser/component_updater/BUILD.gn
++++ b/chrome/browser/component_updater/BUILD.gn
+@@ -234,13 +234,6 @@ source_set("impl") {
      ]
    }
  
@@ -301,9 +302,8 @@ diff -up chromium-156.0.8078.35/chrome/browser/component_updater/BUILD.gn.disabl
  
    if (use_minikin_hyphenation) {
      sources += [ "hyphenation_component_installer.cc" ]
-diff -up chromium-156.0.8078.35/chrome/browser/component_updater/registration.cc.disable-ai chromium-156.0.8078.35/chrome/browser/component_updater/registration.cc
---- chromium-156.0.8078.35/chrome/browser/component_updater/registration.cc.disable-ai	2026-10-20 17:09:46.794353663 +0200
-+++ chromium-156.0.8078.35/chrome/browser/component_updater/registration.cc	2026-10-20 17:09:47.123234894 +0200
+--- a/chrome/browser/component_updater/registration.cc
++++ b/chrome/browser/component_updater/registration.cc
 @@ -64,8 +64,6 @@
  
  #if BUILDFLAG(IS_ANDROID)
@@ -313,7 +313,7 @@ diff -up chromium-156.0.8078.35/chrome/browser/component_updater/registration.cc
  #endif  // BUILDFLAG(IS_ANDROID)
  
  #if !BUILDFLAG(IS_ANDROID)
-@@ -202,9 +200,6 @@ void RegisterComponentsForUpdate() {
+@@ -206,9 +204,6 @@ void RegisterComponentsForUpdate() {
    RegisterRealTimeUrlChecksAllowlistComponent(cus);
  #endif  // BUIDLFLAG(IS_ANDROID)
  
@@ -323,62 +323,8 @@ diff -up chromium-156.0.8078.35/chrome/browser/component_updater/registration.cc
  
    RegisterCommerceHeuristicsComponent(cus);
  
-diff -up chromium-156.0.8078.35/chrome/browser/glic/glic_selection_observer.cc.disable-ai chromium-156.0.8078.35/chrome/browser/glic/glic_selection_observer.cc
---- chromium-156.0.8078.35/chrome/browser/glic/glic_selection_observer.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/glic/glic_selection_observer.cc	2026-10-20 17:09:47.123658022 +0200
-@@ -1269,20 +1269,6 @@ void GlicSelectionObserver::OnAskGeminiW
-   }
- 
-   std::string skill_prompt;
--  auto* tab_interface =
--      tabs::TabInterface::MaybeGetFromContents(web_contents());
--  if (tab_interface) {
--    if (auto* observer = skills::SkillsUpdateObserver::From(tab_interface)) {
--      if (const auto* list = observer->contextual_skills()) {
--        for (const auto& s : list->skills()) {
--          if (s.id() == skill.id) {
--            skill_prompt = s.prompt();
--            break;
--          }
--        }
--      }
--    }
--  }
- 
-   if (skill_prompt.empty()) {
-     Profile* profile =
-@@ -1303,28 +1289,6 @@ void GlicSelectionObserver::OnAskGeminiW
- std::vector<GlicSelectionWidgetDelegate::SkillOption>
- GlicSelectionObserver::GetContextualSkills() {
-   std::vector<GlicSelectionWidgetDelegate::SkillOption> result;
--  if (!features::kGlicSelectionPromptSkills.Get()) {
--    return result;
--  }
--  auto* tab_interface =
--      tabs::TabInterface::MaybeGetFromContents(web_contents());
--  if (!tab_interface) {
--    return result;
--  }
--  auto* observer = skills::SkillsUpdateObserver::From(tab_interface);
--  if (!observer) {
--    return result;
--  }
--  const auto* list = observer->contextual_skills();
--  if (!list) {
--    return result;
--  }
--  for (const auto& skill : list->skills()) {
--    if (!skill.id().empty() && !skill.name().empty()) {
--      result.emplace_back(
--          skills::Skill(skill.id(), skill.name(), skill.icon(), ""));
--    }
--  }
-   return result;
- }
- 
-diff -up chromium-156.0.8078.35/chrome/browser/glic/host/glic_skills_manager_impl.cc.disable-ai chromium-156.0.8078.35/chrome/browser/glic/host/glic_skills_manager_impl.cc
---- chromium-156.0.8078.35/chrome/browser/glic/host/glic_skills_manager_impl.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/glic/host/glic_skills_manager_impl.cc	2026-10-20 17:09:47.124113166 +0200
+--- a/chrome/browser/glic/host/glic_skills_manager_impl.cc
++++ b/chrome/browser/glic/host/glic_skills_manager_impl.cc
 @@ -504,39 +504,6 @@ bool GlicSkillsClientSession::Require1PS
  
  void GlicSkillsClientSession::UpdateSkillPreviews(
@@ -419,114 +365,50 @@ diff -up chromium-156.0.8078.35/chrome/browser/glic/host/glic_skills_manager_imp
  }
  
  void GlicSkillsClientSession::NotifyContextualSkillsChanged(
-diff -up chromium-156.0.8078.35/chrome/browser/navigation_predictor/navigation_predictor.cc.disable-ai chromium-156.0.8078.35/chrome/browser/navigation_predictor/navigation_predictor.cc
---- chromium-156.0.8078.35/chrome/browser/navigation_predictor/navigation_predictor.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/navigation_predictor/navigation_predictor.cc	2026-10-20 17:09:47.124547431 +0200
-@@ -18,8 +18,6 @@
- #include "base/time/default_tick_clock.h"
- #include "chrome/browser/navigation_predictor/navigation_predictor_keyed_service.h"
- #include "chrome/browser/navigation_predictor/navigation_predictor_keyed_service_factory.h"
--#include "chrome/browser/navigation_predictor/preloading_model_keyed_service.h"
--#include "chrome/browser/navigation_predictor/preloading_model_keyed_service_factory.h"
- #include "chrome/browser/preloading/preloading_prefs.h"
+--- a/chrome/browser/navigation_predictor/navigation_predictor.cc
++++ b/chrome/browser/navigation_predictor/navigation_predictor.cc
+@@ -15,8 +15,6 @@
+ #include "base/metrics/field_trial_params.h"
+ #include "base/rand_util.h"
+ #include "base/system/sys_info.h"
+-#include "chrome/browser/navigation_predictor/navigation_predictor_keyed_service.h"
+-#include "chrome/browser/navigation_predictor/navigation_predictor_keyed_service_factory.h"
  #include "chrome/browser/profiles/profile.h"
  #include "components/no_state_prefetch/browser/no_state_prefetch_manager.h"
-@@ -105,10 +103,6 @@ base::TimeDelta MLModelExecutionTimerSta
-       blink::features::kPreloadingModelTimerStartDelay.Get());
- }
+ #include "content/public/browser/navigation_handle.h"
+@@ -276,21 +274,6 @@ void NavigationPredictor::ReportNewAncho
+     anchors_.erase(anchor_id);
+   }
  
--base::TimeDelta MLModelExecutionTimerInterval() {
--  return base::Milliseconds(
--      blink::features::kPreloadingModelTimerInterval.Get());
--}
- 
- base::TimeDelta MLModelMaxHoverTime() {
-   return blink::features::kPreloadingModelMaxHoverTime.Get();
-@@ -415,80 +409,6 @@ void NavigationPredictor::ProcessPointer
- }
- 
- void NavigationPredictor::OnMLModelExecutionTimerFired() {
--  // Check whether preloading is enabled or not.
--  Profile* profile =
--      Profile::FromBrowserContext(render_frame_host().GetBrowserContext());
--  if (prefetch::IsSomePreloadingEnabled(*profile->GetPrefs()) !=
--      content::PreloadingEligibility::kEligible) {
--    return;
--  }
+-  if (!new_predictions.empty() && MaySendTraffic()) {
+-    NavigationPredictorKeyedService* service =
+-        NavigationPredictorKeyedServiceFactory::GetForProfile(
+-            Profile::FromBrowserContext(
+-                render_frame_host().GetBrowserContext()));
+-    CHECK(service, base::NotFatalUntil::M161);
+-    content::WebContents* web_contents =
+-        content::WebContents::FromRenderFrameHost(&render_frame_host());
 -
--  // Execute the model.
--  PreloadingModelKeyedService* model_service =
--      PreloadingModelKeyedServiceFactory::GetForProfile(profile);
--  if (!model_service) {
--    return;
--  }
--
--  if (!ml_model_candidate_.has_value()) {
--    return;
--  }
--  auto it = anchors_.find(ml_model_candidate_.value());
--  if (it == anchors_.end()) {
--    return;
--  }
--
--  AnchorElementData& anchor = it->second;
--
--  PreloadingModelKeyedService::Inputs inputs;
--  inputs.contains_image = anchor.contains_image;
--  inputs.font_size = anchor.font_size;
--  inputs.has_text_sibling = anchor.has_text_sibling;
--  inputs.is_bold = anchor.is_bold_font;
--  inputs.is_in_iframe = anchor.is_in_iframe;
--  inputs.is_url_incremented_by_one = anchor.is_url_incremented_by_one;
--  inputs.navigation_start_to_link_logged =
--      anchor.first_report_timestamp - navigation_start_;
--  auto path_info = GetUrlPathLengthDepthAndHash(anchor.target_url);
--  inputs.path_length = path_info.path_length;
--  inputs.path_depth = path_info.path_depth;
--  inputs.percent_clickable_area = anchor.ratio_area;
--  inputs.percent_vertical_distance =
--      static_cast<int>(anchor.ratio_distance_root_top * 100);
--
--  inputs.is_same_host = anchor.is_same_host;
--  auto to_timedelta = [this](std::optional<base::TimeTicks> ts) {
--    return ts.has_value() ? NowTicks() - ts.value() : base::TimeDelta();
--  };
--  // TODO(329691634): Using the real viewport entry time for
--  // `entered_viewport_to_left_viewport` produces low quality results.
--  // We could remove it from the model, if we can't get this to be useful.
--  inputs.entered_viewport_to_left_viewport = base::TimeDelta();
--  inputs.hover_dwell_time = to_timedelta(anchor.pointer_over_timestamp);
--  inputs.pointer_hovering_over_count = anchor.pointer_hovering_over_count;
--  if (model_score_callback_) {
--    std::move(model_score_callback_).Run(inputs);
--  }
--
--  content::PreloadingData* preloading_data =
--      content::PreloadingData::GetOrCreateForWebContents(
--          content::WebContents::FromRenderFrameHost(&render_frame_host()));
--  preloading_data->OnPreloadingHeuristicsModelInput(
--      anchor.target_url,
--      base::BindOnce(&RecordMetricsForModelTraining, inputs,
--                     render_frame_host().GetPageUkmSourceId()));
--  model_service->Score(
--      &scoring_model_task_tracker_, inputs,
--      base::BindOnce(&NavigationPredictor::OnPreloadingHeuristicsModelDone,
--                     weak_ptr_factory_.GetWeakPtr(), anchor.target_url));
--
--  if (inputs.hover_dwell_time < MLModelMaxHoverTime() &&
--      !ml_model_execution_timer_.IsRunning()) {
--    ml_model_execution_timer_.Start(
--        FROM_HERE, MLModelExecutionTimerInterval(),
--        base::BindOnce(&NavigationPredictor::OnMLModelExecutionTimerFired,
--                       base::Unretained(this)));
+-    service->OnPredictionUpdated(
+-        web_contents, document_url,
+-        NavigationPredictorKeyedService::PredictionSource::
+-            kAnchorElementsParsedFromWebPage,
+-        new_predictions);
 -  }
  }
  
- void NavigationPredictor::SetModelScoreCallbackForTesting(
-diff -up chromium-156.0.8078.35/chrome/browser/page_content_annotations/page_content_annotations_service_factory.cc.disable-ai chromium-156.0.8078.35/chrome/browser/page_content_annotations/page_content_annotations_service_factory.cc
---- chromium-156.0.8078.35/chrome/browser/page_content_annotations/page_content_annotations_service_factory.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/page_content_annotations/page_content_annotations_service_factory.cc	2026-10-20 17:09:47.124907010 +0200
-@@ -120,62 +120,6 @@ PageContentAnnotationsServiceFactory::~P
+ // static
+--- a/chrome/browser/page_content_annotations/page_content_annotations_service_factory.cc
++++ b/chrome/browser/page_content_annotations/page_content_annotations_service_factory.cc
+@@ -62,6 +62,7 @@ bool IsEphemeralProfile(Profile* profile
+   return entry && entry->IsEphemeral();
+ }
+ 
++[[maybe_unused]]
+ bool ShouldEnablePageContentAnnotations(Profile* profile) {
+   if (IsRunningInAppMode()) {
+     // The annotations we provide cannot provide any benefit to users in kiosk
+@@ -120,62 +121,6 @@ PageContentAnnotationsServiceFactory::~P
  std::unique_ptr<KeyedService>
  PageContentAnnotationsServiceFactory::BuildServiceInstanceForBrowserContext(
      content::BrowserContext* context) const {
@@ -589,9 +471,8 @@ diff -up chromium-156.0.8078.35/chrome/browser/page_content_annotations/page_con
    return nullptr;
  }
  
-diff -up chromium-156.0.8078.35/chrome/browser/password_manager/password_change_delegate_impl.cc.disable-ai chromium-156.0.8078.35/chrome/browser/password_manager/password_change_delegate_impl.cc
---- chromium-156.0.8078.35/chrome/browser/password_manager/password_change_delegate_impl.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/password_manager/password_change_delegate_impl.cc	2026-10-20 17:09:47.125266785 +0200
+--- a/chrome/browser/password_manager/password_change_delegate_impl.cc
++++ b/chrome/browser/password_manager/password_change_delegate_impl.cc
 @@ -342,12 +342,6 @@ void PasswordChangeDelegateImpl::StartPa
            &PasswordChangeDelegateImpl::OnLoginStateCheckedWithoutPIResult,
            weak_ptr_factory_.GetWeakPtr()));
@@ -605,23 +486,23 @@ diff -up chromium-156.0.8078.35/chrome/browser/password_manager/password_change_
  }
  
  void PasswordChangeDelegateImpl::OnLoginStateCheckedWithoutPIResult(
-diff -up chromium-156.0.8078.35/chrome/browser/pdf/BUILD.gn.disable-ai chromium-156.0.8078.35/chrome/browser/pdf/BUILD.gn
---- chromium-156.0.8078.35/chrome/browser/pdf/BUILD.gn.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/pdf/BUILD.gn	2026-10-20 17:09:47.125608663 +0200
-@@ -251,10 +251,7 @@ if (!is_android) {
+--- a/chrome/browser/pdf/BUILD.gn
++++ b/chrome/browser/pdf/BUILD.gn
+@@ -250,12 +250,9 @@ if (!is_android) {
        deps += [
          "//chrome/browser/download:test_support",
          "//chrome/browser/permissions",
 -        "//chrome/browser/screen_ai:screen_ai_install_state",
 -        "//chrome/browser/screen_ai:screen_ai_service_router_factory",
          "//chrome/browser/ui:browser_manager_service",
+         "//chrome/common/extensions/api",
+         "//extensions/browser:test_support",
 -        "//services/screen_ai/public/cpp:utilities",
          "//ui/accessibility:test_support",
        ]
  
-diff -up chromium-156.0.8078.35/chrome/browser/pdf/pdf_extension_util.cc.disable-ai chromium-156.0.8078.35/chrome/browser/pdf/pdf_extension_util.cc
---- chromium-156.0.8078.35/chrome/browser/pdf/pdf_extension_util.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/pdf/pdf_extension_util.cc	2026-10-20 17:09:47.125931368 +0200
+--- a/chrome/browser/pdf/pdf_extension_util.cc
++++ b/chrome/browser/pdf/pdf_extension_util.cc
 @@ -142,7 +142,6 @@ base::DictValue GetPdfViewerStrings() {
        {"rotationStateLabel90", IDS_PDF_ROTATION_STATE_LABEL_90},
        {"rotationStateLabel180", IDS_PDF_ROTATION_STATE_LABEL_180},
@@ -630,9 +511,8 @@ diff -up chromium-156.0.8078.35/chrome/browser/pdf/pdf_extension_util.cc.disable
        {"sidebarLabel", IDS_PDF_SIDEBAR_LABEL},
        {"thumbnailPageAriaLabel", IDS_PDF_THUMBNAIL_PAGE_ARIA_LABEL},
        {"tooltipAttachments", IDS_PDF_TOOLTIP_ATTACHMENTS},
-diff -up chromium-156.0.8078.35/chrome/browser/permissions/BUILD.gn.disable-ai chromium-156.0.8078.35/chrome/browser/permissions/BUILD.gn
---- chromium-156.0.8078.35/chrome/browser/permissions/BUILD.gn.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/permissions/BUILD.gn	2026-10-20 17:09:47.126341654 +0200
+--- a/chrome/browser/permissions/BUILD.gn
++++ b/chrome/browser/permissions/BUILD.gn
 @@ -45,12 +45,6 @@ source_set("permissions") {
      "prediction_service/language_detection_observer.h",
      "prediction_service/passage_embedder_delegate.cc",
@@ -646,9 +526,8 @@ diff -up chromium-156.0.8078.35/chrome/browser/permissions/BUILD.gn.disable-ai c
      "prediction_service/prediction_service_factory.cc",
      "prediction_service/prediction_service_factory.h",
      "prediction_service/prediction_service_request.cc",
-diff -up chromium-156.0.8078.35/chrome/browser/permissions/chrome_permissions_client.cc.disable-ai chromium-156.0.8078.35/chrome/browser/permissions/chrome_permissions_client.cc
---- chromium-156.0.8078.35/chrome/browser/permissions/chrome_permissions_client.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/permissions/chrome_permissions_client.cc	2026-10-20 17:09:47.126790464 +0200
+--- a/chrome/browser/permissions/chrome_permissions_client.cc
++++ b/chrome/browser/permissions/chrome_permissions_client.cc
 @@ -32,7 +32,6 @@
  #include "chrome/browser/permissions/permission_actions_history_factory.h"
  #include "chrome/browser/permissions/permission_decision_auto_blocker_factory.h"
@@ -657,7 +536,7 @@ diff -up chromium-156.0.8078.35/chrome/browser/permissions/chrome_permissions_cl
  #include "chrome/browser/permissions/pref_based_quiet_permission_ui_selector.h"
  #include "chrome/browser/permissions/quiet_notification_permission_ui_config.h"
  #include "chrome/browser/permissions/system/system_permission_settings.h"
-@@ -554,8 +553,6 @@ ChromePermissionsClient::CreatePermissio
+@@ -556,8 +555,6 @@ ChromePermissionsClient::CreatePermissio
  #endif
    selectors.emplace_back(std::make_unique<PrefBasedQuietPermissionUiSelector>(
        Profile::FromBrowserContext(browser_context)));
@@ -666,7 +545,7 @@ diff -up chromium-156.0.8078.35/chrome/browser/permissions/chrome_permissions_cl
    return selectors;
  }
  
-@@ -577,8 +574,6 @@ void ChromePermissionsClient::OnPromptRe
+@@ -579,8 +576,6 @@ void ChromePermissionsClient::OnPromptRe
  
    Profile* profile =
        Profile::FromBrowserContext(web_contents->GetBrowserContext());
@@ -675,9 +554,8 @@ diff -up chromium-156.0.8078.35/chrome/browser/permissions/chrome_permissions_cl
  
    if (request_type == permissions::RequestType::kNotifications) {
      if (action == permissions::PermissionAction::GRANTED &&
-diff -up chromium-156.0.8078.35/chrome/browser/permissions/prediction_service/passage_embedder_delegate.cc.disable-ai chromium-156.0.8078.35/chrome/browser/permissions/prediction_service/passage_embedder_delegate.cc
---- chromium-156.0.8078.35/chrome/browser/permissions/prediction_service/passage_embedder_delegate.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/permissions/prediction_service/passage_embedder_delegate.cc	2026-10-20 17:09:47.127337631 +0200
+--- a/chrome/browser/permissions/prediction_service/passage_embedder_delegate.cc
++++ b/chrome/browser/permissions/prediction_service/passage_embedder_delegate.cc
 @@ -26,18 +26,6 @@ PassageEmbedderDelegate::PassageEmbedder
      : profile_(profile) {}
  
@@ -697,9 +575,8 @@ diff -up chromium-156.0.8078.35/chrome/browser/permissions/prediction_service/pa
    PermissionUmaUtil::RecordPassageEmbedderMetadataValid(false);
    return nullptr;
  }
-diff -up chromium-156.0.8078.35/chrome/browser/permissions/prediction_service/permissions_ai_ui_selector.cc.disable-ai chromium-156.0.8078.35/chrome/browser/permissions/prediction_service/permissions_ai_ui_selector.cc
---- chromium-156.0.8078.35/chrome/browser/permissions/prediction_service/permissions_ai_ui_selector.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/permissions/prediction_service/permissions_ai_ui_selector.cc	2026-10-20 17:09:47.127753162 +0200
+--- a/chrome/browser/permissions/prediction_service/permissions_ai_ui_selector.cc
++++ b/chrome/browser/permissions/prediction_service/permissions_ai_ui_selector.cc
 @@ -810,7 +810,7 @@ void PermissionsAiUiSelector::ExecuteOnD
      ModelExecutionData model_data) {
    VLOG(1) << "[PermissionsAI] ExecuteOnDeviceAivXModel";
@@ -709,10 +586,19 @@ diff -up chromium-156.0.8078.35/chrome/browser/permissions/prediction_service/pe
    if (prediction_model_handler_provider) {
      permissions::RequestType request_type =
          model_data.request_metadata.request_type;
-diff -up chromium-156.0.8078.35/chrome/browser/prefs/browser_prefs.cc.disable-ai chromium-156.0.8078.35/chrome/browser/prefs/browser_prefs.cc
---- chromium-156.0.8078.35/chrome/browser/prefs/browser_prefs.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/prefs/browser_prefs.cc	2026-10-20 17:09:47.129034282 +0200
-@@ -1788,9 +1788,6 @@ void RegisterLocalState(PrefRegistrySimp
+--- a/chrome/browser/prefs/BUILD.gn
++++ b/chrome/browser/prefs/BUILD.gn
+@@ -396,7 +396,6 @@ source_set("impl") {
+       "//chrome/browser/desktop_to_mobile_promos:utils",
+       "//chrome/browser/device_identity",
+       "//chrome/browser/new_tab_page",
+-      "//chrome/browser/screen_ai:prefs",
+       "//chrome/browser/search_engine_choice",
+       "//chrome/browser/search_engines",
+       "//chrome/browser/sharing_hub",
+--- a/chrome/browser/prefs/browser_prefs.cc
++++ b/chrome/browser/prefs/browser_prefs.cc
+@@ -1927,9 +1927,6 @@ void RegisterLocalState(PrefRegistrySimp
    DeviceOAuth2TokenStoreDesktop::RegisterPrefs(registry);
  #endif
  
@@ -722,21 +608,9 @@ diff -up chromium-156.0.8078.35/chrome/browser/prefs/browser_prefs.cc.disable-ai
  
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_ANDROID)
    PlatformAuthPolicyObserver::RegisterPrefs(registry);
-diff -up chromium-156.0.8078.35/chrome/browser/prefs/BUILD.gn.disable-ai chromium-156.0.8078.35/chrome/browser/prefs/BUILD.gn
---- chromium-156.0.8078.35/chrome/browser/prefs/BUILD.gn.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/prefs/BUILD.gn	2026-10-20 17:09:47.128291911 +0200
-@@ -389,7 +389,6 @@ source_set("impl") {
-       "//chrome/browser/desktop_to_mobile_promos:utils",
-       "//chrome/browser/device_identity",
-       "//chrome/browser/new_tab_page",
--      "//chrome/browser/screen_ai:prefs",
-       "//chrome/browser/search_engine_choice",
-       "//chrome/browser/search_engines",
-       "//chrome/browser/sharing_hub",
-diff -up chromium-156.0.8078.35/chrome/browser/profiles/BUILD.gn.disable-ai chromium-156.0.8078.35/chrome/browser/profiles/BUILD.gn
---- chromium-156.0.8078.35/chrome/browser/profiles/BUILD.gn.disable-ai	2026-10-20 17:09:46.920803931 +0200
-+++ chromium-156.0.8078.35/chrome/browser/profiles/BUILD.gn	2026-10-20 17:09:47.129488889 +0200
-@@ -915,7 +915,6 @@ source_set("profiles_extra_parts_impl")
+--- a/chrome/browser/profiles/BUILD.gn
++++ b/chrome/browser/profiles/BUILD.gn
+@@ -933,7 +933,6 @@ source_set("profiles_extra_parts_impl")
    } else {
      deps += [
        "//chrome/browser/accessibility/phrase_segmentation",
@@ -744,7 +618,7 @@ diff -up chromium-156.0.8078.35/chrome/browser/profiles/BUILD.gn.disable-ai chro
        "//chrome/browser/apps/app_service",
        "//chrome/browser/autofill",
        "//chrome/browser/badging",
-@@ -930,7 +929,6 @@ source_set("profiles_extra_parts_impl")
+@@ -947,7 +946,6 @@ source_set("profiles_extra_parts_impl")
        "//chrome/browser/profile_resetter",
        "//chrome/browser/record_replay",
        "//chrome/browser/record_replay:impl",
@@ -752,34 +626,17 @@ diff -up chromium-156.0.8078.35/chrome/browser/profiles/BUILD.gn.disable-ai chro
        "//chrome/browser/search",
        "//chrome/browser/search_engine_choice",
        "//chrome/browser/sharing_hub",
-diff -up chromium-156.0.8078.35/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc.disable-ai chromium-156.0.8078.35/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc
---- chromium-156.0.8078.35/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc.disable-ai	2026-10-20 17:09:46.921544684 +0200
-+++ chromium-156.0.8078.35/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc	2026-10-20 17:09:47.132022027 +0200
-@@ -134,7 +134,6 @@
- #include "chrome/browser/metrics/profile_metrics_service_factory.h"
- #include "chrome/browser/metrics/variations/google_groups_manager_factory.h"
- #include "chrome/browser/navigation_predictor/navigation_predictor_keyed_service_factory.h"
--#include "chrome/browser/navigation_predictor/preloading_model_keyed_service_factory.h"
- #include "chrome/browser/navigation_predictor/search_engine_preconnector.h"
- #include "chrome/browser/navigation_predictor/search_engine_preconnector_keyed_service_factory.h"
- #include "chrome/browser/net/dns_probe_service_factory.h"
-@@ -395,7 +394,6 @@
+--- a/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc
++++ b/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc
+@@ -396,7 +396,6 @@
  #include "chrome/browser/record_replay/task_parameters_extractor_factory.h"
  #include "chrome/browser/record_replay/task_service_factory.h"
  #include "chrome/browser/record_replay/task_store_factory.h"
 -#include "chrome/browser/screen_ai/screen_ai_service_router_factory.h"
- #include "chrome/browser/search/instant_service_factory.h"
  #include "chrome/browser/search_engine_choice/search_engine_choice_dialog_service_factory.h"
  #include "chrome/browser/speech/speech_recognition_client_browser_interface_factory.h"
-@@ -1185,7 +1183,6 @@ void ChromeBrowserMainExtraPartsProfiles
- #if BUILDFLAG(CHROME_ROOT_STORE_CERT_MANAGEMENT_UI)
-   net::ServerCertificateDatabaseServiceFactory::GetInstance();
- #endif
--  PreloadingModelKeyedServiceFactory::GetInstance();
- #if BUILDFLAG(ENABLE_DICE_SUPPORT)
-   HistorySyncOptinServiceFactory::GetInstance();
-   ProfileManagementDisclaimerServiceFactory::GetInstance();
-@@ -1248,9 +1245,6 @@ void ChromeBrowserMainExtraPartsProfiles
+ #include "chrome/browser/speech/speech_recognition_service_factory.h"
+@@ -1230,9 +1229,6 @@ void ChromeBrowserMainExtraPartsProfiles
    // TODO(b/502297163): Implement for Android.
    OneTimePermissionsTrackerFactory::GetInstance();
  #endif
@@ -789,7 +646,7 @@ diff -up chromium-156.0.8078.35/chrome/browser/profiles/chrome_browser_main_extr
    OptimizationGuideGlobalStateHolderKeyedServiceFactory::GetInstance();
    OptimizationGuideKeyedServiceFactory::GetInstance();
    origin_gating::OriginGatingServiceFactory::GetInstance();
-@@ -1348,7 +1342,6 @@ void ChromeBrowserMainExtraPartsProfiles
+@@ -1328,7 +1324,6 @@ void ChromeBrowserMainExtraPartsProfiles
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_WIN)
    policy::UserPolicyOidcSigninServiceFactory::GetInstance();
  #endif
@@ -797,7 +654,7 @@ diff -up chromium-156.0.8078.35/chrome/browser/profiles/chrome_browser_main_extr
    PredictionServiceFactory::GetInstance();
    predictors::AutocompleteActionPredictorFactory::GetInstance();
    predictors::LoadingPredictorFactory::GetInstance();
-@@ -1431,10 +1424,6 @@ void ChromeBrowserMainExtraPartsProfiles
+@@ -1412,10 +1407,6 @@ void ChromeBrowserMainExtraPartsProfiles
    SafetyHubMenuNotificationServiceFactory::GetInstance();
  #if !BUILDFLAG(IS_ANDROID)
    SafetyHubHatsServiceFactory::GetInstance();
@@ -808,7 +665,7 @@ diff -up chromium-156.0.8078.35/chrome/browser/profiles/chrome_browser_main_extr
  #endif
  #if BUILDFLAG(IS_CHROMEOS)
    if (ash::features::IsScannerEnabled()) {
-@@ -1558,7 +1547,6 @@ void ChromeBrowserMainExtraPartsProfiles
+@@ -1539,7 +1530,6 @@ void ChromeBrowserMainExtraPartsProfiles
    TopSitesFactory::GetInstance();
    translate::TranslateRankerFactory::GetInstance();
  #if !BUILDFLAG(IS_ANDROID)
@@ -816,10 +673,9 @@ diff -up chromium-156.0.8078.35/chrome/browser/profiles/chrome_browser_main_extr
    TriggeredProfileResetterFactory::GetInstance();
  #endif
    ttc::TtcKeyedServiceFactory::GetInstance();
-diff -up chromium-156.0.8078.35/chrome/browser/profiles/off_the_record_profile_impl.cc.disable-ai chromium-156.0.8078.35/chrome/browser/profiles/off_the_record_profile_impl.cc
---- chromium-156.0.8078.35/chrome/browser/profiles/off_the_record_profile_impl.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/profiles/off_the_record_profile_impl.cc	2026-10-20 17:09:47.132825618 +0200
-@@ -229,11 +229,6 @@ void OffTheRecordProfileImpl::Init() {
+--- a/chrome/browser/profiles/off_the_record_profile_impl.cc
++++ b/chrome/browser/profiles/off_the_record_profile_impl.cc
+@@ -240,11 +240,6 @@ void OffTheRecordProfileImpl::Init() {
    // AccessibilityLabelsService has a default prefs behavior in incognito.
    AccessibilityLabelsService::InitOffTheRecordPrefs(this);
  
@@ -831,10 +687,9 @@ diff -up chromium-156.0.8078.35/chrome/browser/profiles/off_the_record_profile_i
  
    // The ad service might not be available for some irregular profiles, like the
    // System Profile.
-diff -up chromium-156.0.8078.35/chrome/browser/profiles/profile_impl.cc.disable-ai chromium-156.0.8078.35/chrome/browser/profiles/profile_impl.cc
---- chromium-156.0.8078.35/chrome/browser/profiles/profile_impl.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/profiles/profile_impl.cc	2026-10-20 17:09:47.133708564 +0200
-@@ -923,11 +923,6 @@ void ProfileImpl::DoFinalInit(CreateMode
+--- a/chrome/browser/profiles/profile_impl.cc
++++ b/chrome/browser/profiles/profile_impl.cc
+@@ -928,33 +928,8 @@ void ProfileImpl::DoFinalInit(CreateMode
    // The password settings service needs to start listening to settings
    // changes from Google Mobile Services, as early as possible.
    PasswordManagerSettingsServiceFactory::GetForProfile(this);
@@ -845,32 +700,32 @@ diff -up chromium-156.0.8078.35/chrome/browser/profiles/profile_impl.cc.disable-
 -  }
  #endif  // BUILDFLAG(IS_ANDROID)
  
-   // The announcement notification  service might not be available for some
-diff -up chromium-156.0.8078.35/chrome/browser/profiles/profile_manager.cc.disable-ai chromium-156.0.8078.35/chrome/browser/profiles/profile_manager.cc
---- chromium-156.0.8078.35/chrome/browser/profiles/profile_manager.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/profiles/profile_manager.cc	2026-10-20 17:09:47.134733395 +0200
-@@ -51,7 +51,6 @@
- #include "chrome/browser/buildflags.h"
- #include "chrome/browser/lifetime/application_lifetime.h"
- #include "chrome/browser/navigation_predictor/navigation_predictor_keyed_service_factory.h"
--#include "chrome/browser/navigation_predictor/preloading_model_keyed_service_factory.h"
- #include "chrome/browser/prefs/incognito_mode_prefs.h"
- #include "chrome/browser/profiles/delete_profile_helper.h"
- #include "chrome/browser/profiles/keep_alive/profile_keep_alive_types.h"
-@@ -1603,9 +1602,6 @@ void ProfileManager::DoFinalInitForServi
-   // Ensure NavigationPredictorKeyedService is started.
-   NavigationPredictorKeyedServiceFactory::GetForProfile(profile);
+-  if (features::IsLazyOptimizationGuideModelsEnabled() && IsRegularProfile()) {
+-    // Warm up Optimization Guide model services after startup so that model
+-    // observers register and downloads start soon after startup, without
+-    // blocking profile creation. Guest and OTR profiles skip this warmup on
+-    // purpose so these services are created on first use there.
+-    AfterStartupTaskUtils::PostTask(
+-        FROM_HERE, content::GetUIThreadTaskRunner({}),
+-        base::BindOnce(
+-            [](base::WeakPtr<Profile> profile) {
+-              if (!profile || profile->ShutdownStarted()) {
+-                return;
+-              }
+-              AutocompleteScoringModelServiceFactory::GetForProfile(
+-                  profile.get());
+-              OnDeviceTailModelServiceFactory::GetForProfile(profile.get());
+-              PredictionModelHandlerProviderFactory::GetForBrowserContext(
+-                  profile.get());
+-            },
+-            GetWeakPtr()));
+-  }
  
--  // Ensure PreloadingModelKeyedService is started.
--  PreloadingModelKeyedServiceFactory::GetForProfile(profile);
--
-   IdentityManagerFactory::GetForProfile(profile)->OnNetworkInitialized();
-   AccountReconcilorFactory::GetForProfile(profile);
- #if BUILDFLAG(IS_ANDROID)
-diff -up chromium-156.0.8078.35/chrome/browser/resources/pdf/pdf_viewer.html.disable-ai chromium-156.0.8078.35/chrome/browser/resources/pdf/pdf_viewer.html
---- chromium-156.0.8078.35/chrome/browser/resources/pdf/pdf_viewer.html.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/resources/pdf/pdf_viewer.html	2026-10-20 17:09:47.136247873 +0200
-@@ -102,10 +102,6 @@ import {AnnotationMode} from './constant
+   // The announcement notification  service might not be available for some
+   // irregular profiles, like the System Profile.
+--- a/chrome/browser/resources/pdf/pdf_viewer.html
++++ b/chrome/browser/resources/pdf/pdf_viewer.html
+@@ -103,10 +103,6 @@ import {AnnotationMode} from './constant
        </cr-page-selector>
      ` : ''}
    </if>
@@ -881,9 +736,8 @@ diff -up chromium-156.0.8078.35/chrome/browser/resources/pdf/pdf_viewer.html.dis
  </div>
  
  ${this.showErrorDialog ? html`<viewer-error-dialog id="error-dialog">
-diff -up chromium-156.0.8078.35/chrome/browser/skills/BUILD.gn.disable-ai chromium-156.0.8078.35/chrome/browser/skills/BUILD.gn
---- chromium-156.0.8078.35/chrome/browser/skills/BUILD.gn.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/skills/BUILD.gn	2026-10-20 17:09:47.136620563 +0200
+--- a/chrome/browser/skills/BUILD.gn
++++ b/chrome/browser/skills/BUILD.gn
 @@ -62,13 +62,9 @@ source_set("public") {
  source_set("ui") {
    sources = [
@@ -898,9 +752,8 @@ diff -up chromium-156.0.8078.35/chrome/browser/skills/BUILD.gn.disable-ai chromi
        "skills_ui_window_controller.cc",
      ]
    }
-diff -up chromium-156.0.8078.35/chrome/browser/speech/chrome_speech_recognition_service.cc.disable-ai chromium-156.0.8078.35/chrome/browser/speech/chrome_speech_recognition_service.cc
---- chromium-156.0.8078.35/chrome/browser/speech/chrome_speech_recognition_service.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/speech/chrome_speech_recognition_service.cc	2026-10-20 17:09:47.137036664 +0200
+--- a/chrome/browser/speech/chrome_speech_recognition_service.cc
++++ b/chrome/browser/speech/chrome_speech_recognition_service.cc
 @@ -59,18 +59,6 @@ ChromeSpeechRecognitionService::ChromeSp
      soda_installer_observer_.Observe(soda_installer);
    }
@@ -963,9 +816,8 @@ diff -up chromium-156.0.8078.35/chrome/browser/speech/chrome_speech_recognition_
  
    BindSodaRecognizer(std::move(receiver), std::move(client), std::move(options),
                       std::move(callback));
-diff -up chromium-156.0.8078.35/chrome/browser/speech/speech_recognition_client_browser_interface.cc.disable-ai chromium-156.0.8078.35/chrome/browser/speech/speech_recognition_client_browser_interface.cc
---- chromium-156.0.8078.35/chrome/browser/speech/speech_recognition_client_browser_interface.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/speech/speech_recognition_client_browser_interface.cc	2026-10-20 17:09:47.137351352 +0200
+--- a/chrome/browser/speech/speech_recognition_client_browser_interface.cc
++++ b/chrome/browser/speech/speech_recognition_client_browser_interface.cc
 @@ -67,15 +67,6 @@ SpeechRecognitionClientBrowserInterface:
    if (speech::SodaInstaller::GetInstance()) {
      soda_installer_observation_.Observe(speech::SodaInstaller::GetInstance());
@@ -1034,28 +886,8 @@ diff -up chromium-156.0.8078.35/chrome/browser/speech/speech_recognition_client_
    } else {
      if (speech::SodaInstaller::GetInstance()) {
        is_installed = speech::SodaInstaller::GetInstance()->IsSodaInstalled(
-diff -up chromium-156.0.8078.35/chrome/browser/ui/BUILD.gn.disable-ai chromium-156.0.8078.35/chrome/browser/ui/BUILD.gn
---- chromium-156.0.8078.35/chrome/browser/ui/BUILD.gn.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/ui/BUILD.gn	2026-10-20 17:09:47.138284584 +0200
-@@ -2438,7 +2438,6 @@ static_library("ui") {
-       "//chrome/browser/lens/region_search",
-       "//chrome/browser/reading_list",
-       "//chrome/browser/safe_browsing",
--      "//chrome/browser/screen_ai:screen_ai_service_router_factory",
-       "//chrome/browser/smart_card",
-       "//chrome/browser/support_tool",
-       "//chrome/browser/tab_group_sync:utils",
-@@ -3934,7 +3933,6 @@ static_library("ui") {
-       "//chrome/browser/ui/views/zoom",
-       "//chrome/browser/ui/webauthn:impl",
-       "//chrome/browser/ui/webui/app_service_internals",
--      "//chrome/browser/ui/webui/autofill_ml_internals",
-       "//chrome/browser/ui/webui/side_panel/customize_chrome",
-       "//chrome/browser/ui/window_metadata",
-       "//chrome/browser/ui/window_name_prompt",
-diff -up chromium-156.0.8078.35/chrome/browser/ui/pdf/BUILD.gn.disable-ai chromium-156.0.8078.35/chrome/browser/ui/pdf/BUILD.gn
---- chromium-156.0.8078.35/chrome/browser/ui/pdf/BUILD.gn.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/ui/pdf/BUILD.gn	2026-10-20 17:09:47.138822519 +0200
+--- a/chrome/browser/ui/pdf/BUILD.gn
++++ b/chrome/browser/ui/pdf/BUILD.gn
 @@ -6,7 +6,6 @@ import("//pdf/features.gni")
  import("//services/screen_ai/buildflags/features.gni")
  
@@ -1072,10 +904,17 @@ diff -up chromium-156.0.8078.35/chrome/browser/ui/pdf/BUILD.gn.disable-ai chromi
      "//chrome/browser/ui/tab_contents",
      "//chrome/browser/ui/user_education",
      "//chrome/common",
-diff -up chromium-156.0.8078.35/chrome/browser/ui/pdf/chrome_pdf_document_helper_client.cc.disable-ai chromium-156.0.8078.35/chrome/browser/ui/pdf/chrome_pdf_document_helper_client.cc
---- chromium-156.0.8078.35/chrome/browser/ui/pdf/chrome_pdf_document_helper_client.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/ui/pdf/chrome_pdf_document_helper_client.cc	2026-10-20 17:09:47.139120273 +0200
-@@ -229,22 +229,3 @@ void ChromePDFDocumentHelperClient::SetP
+--- a/chrome/browser/ui/pdf/chrome_pdf_document_helper_client.cc
++++ b/chrome/browser/ui/pdf/chrome_pdf_document_helper_client.cc
+@@ -88,6 +88,7 @@ bool MaybeShowFeaturePromo(const base::F
+   return true;
+ }
+ 
++[[maybe_unused]]
+ void MaybeHideSearchifyFeaturePromo(tabs::TabInterface* tab_interface) {
+   auto* user_education_interface = BrowserUserEducationInterface::From(
+       tab_interface->GetBrowserWindowInterface());
+@@ -229,22 +230,3 @@ void ChromePDFDocumentHelperClient::SetP
    }
  }
  
@@ -1098,9 +937,8 @@ diff -up chromium-156.0.8078.35/chrome/browser/ui/pdf/chrome_pdf_document_helper
 -  tab_subscriptions_.push_back(tab->RegisterWillDeactivate(
 -      base::BindRepeating(&MaybeHideSearchifyFeaturePromo)));
 -}
-diff -up chromium-156.0.8078.35/chrome/browser/ui/pdf/chrome_pdf_document_helper_client.h.disable-ai chromium-156.0.8078.35/chrome/browser/ui/pdf/chrome_pdf_document_helper_client.h
---- chromium-156.0.8078.35/chrome/browser/ui/pdf/chrome_pdf_document_helper_client.h.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/ui/pdf/chrome_pdf_document_helper_client.h	2026-10-20 17:09:47.139286624 +0200
+--- a/chrome/browser/ui/pdf/chrome_pdf_document_helper_client.h
++++ b/chrome/browser/ui/pdf/chrome_pdf_document_helper_client.h
 @@ -32,7 +32,6 @@ class ChromePDFDocumentHelperClient : pu
    void OnSaveURL() override;
    void SetPluginCanSave(content::RenderFrameHost& render_frame_host,
@@ -1109,10 +947,9 @@ diff -up chromium-156.0.8078.35/chrome/browser/ui/pdf/chrome_pdf_document_helper
  
    void OnPdfTextExtracted(content::GlobalRenderFrameHostId render_frame_host_id,
                            const std::u16string& text);
-diff -up chromium-156.0.8078.35/chrome/browser/ui/tabs/public/tab_features.h.disable-ai chromium-156.0.8078.35/chrome/browser/ui/tabs/public/tab_features.h
---- chromium-156.0.8078.35/chrome/browser/ui/tabs/public/tab_features.h.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/ui/tabs/public/tab_features.h	2026-10-20 17:09:47.139705738 +0200
-@@ -220,12 +220,6 @@ namespace web_app {
+--- a/chrome/browser/ui/tabs/public/tab_features.h
++++ b/chrome/browser/ui/tabs/public/tab_features.h
+@@ -274,12 +274,6 @@ namespace web_app {
  class WindowManagementContentSettingObserver;
  }  // namespace web_app
  
@@ -1125,9 +962,9 @@ diff -up chromium-156.0.8078.35/chrome/browser/ui/tabs/public/tab_features.h.dis
  namespace sync_sessions {
  class SyncSessionsRouterTabHelper;
  }  // namespace sync_sessions
-@@ -779,10 +773,6 @@ class TabFeatures {
-   std::unique_ptr<contextual_tasks::ContextualTasksTabVisitTracker>
-       contextual_tasks_tab_visit_tracker_;
+@@ -870,10 +864,6 @@ class TabFeatures {
+   std::unique_ptr<contextual_tasks::SearchJourneyTabFeature>
+       search_journey_tab_feature_;
  
 -#if !BUILDFLAG(IS_ANDROID)
 -  std::unique_ptr<skills::SkillsUpdateObserver> skills_update_observer_;
@@ -1136,10 +973,9 @@ diff -up chromium-156.0.8078.35/chrome/browser/ui/tabs/public/tab_features.h.dis
  #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
    std::unique_ptr<metrics::DesktopSessionDurationObserver>
        desktop_session_duration_observer_;
-diff -up chromium-156.0.8078.35/chrome/browser/ui/tabs/tab_features.cc.disable-ai chromium-156.0.8078.35/chrome/browser/ui/tabs/tab_features.cc
---- chromium-156.0.8078.35/chrome/browser/ui/tabs/tab_features.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/ui/tabs/tab_features.cc	2026-10-20 17:09:47.140387632 +0200
-@@ -506,11 +506,6 @@ void TabFeatures::Init(TabInterface& tab
+--- a/chrome/browser/ui/tabs/tab_features.cc
++++ b/chrome/browser/ui/tabs/tab_features.cc
+@@ -715,11 +715,6 @@ void TabFeatures::Init(TabInterface& tab
            GetUserDataFactory().CreateInstance<actor::ui::ActorUiTabController>(
                tab, tab, actor::ActorKeyedService::Get(profile));
      }
@@ -1151,7 +987,7 @@ diff -up chromium-156.0.8078.35/chrome/browser/ui/tabs/tab_features.cc.disable-a
    }  // IsInNormalWindow() end.
  
    if (base::FeatureList::IsEnabled(features::kGlicActor)) {
-@@ -814,10 +809,6 @@ void TabFeatures::Init(TabInterface& tab
+@@ -1056,10 +1051,6 @@ void TabFeatures::Init(TabInterface& tab
    }
  #endif
  
@@ -1162,10 +998,9 @@ diff -up chromium-156.0.8078.35/chrome/browser/ui/tabs/tab_features.cc.disable-a
    if (base::FeatureList::IsEnabled(features::kIndigo)) {
      indigo_page_action_controller_ =
          std::make_unique<indigo::IndigoPageActionController>(
-diff -up chromium-156.0.8078.35/chrome/browser/ui/views/user_education/browser_user_education_service.cc.disable-ai chromium-156.0.8078.35/chrome/browser/ui/views/user_education/browser_user_education_service.cc
---- chromium-156.0.8078.35/chrome/browser/ui/views/user_education/browser_user_education_service.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/ui/views/user_education/browser_user_education_service.cc	2026-10-20 17:09:47.141124695 +0200
-@@ -1082,40 +1082,6 @@ void MaybeRegisterChromeFeaturePromos(
+--- a/chrome/browser/ui/views/user_education/browser_user_education_service.cc
++++ b/chrome/browser/ui/views/user_education/browser_user_education_service.cc
+@@ -1149,40 +1149,6 @@ void MaybeRegisterChromeFeaturePromos(
                         "Triggered when the PDF Viewer opens.")));
  #endif  // BUILDFLAG(ENABLE_PDF_INK2)
  
@@ -1206,21 +1041,19 @@ diff -up chromium-156.0.8078.35/chrome/browser/ui/views/user_education/browser_u
  
    // kIPHLensOverlayFeature:
    registry.RegisterFeature(std::move(
-diff -up chromium-156.0.8078.35/chrome/browser/ui/webui/BUILD.gn.disable-ai chromium-156.0.8078.35/chrome/browser/ui/webui/BUILD.gn
---- chromium-156.0.8078.35/chrome/browser/ui/webui/BUILD.gn.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/ui/webui/BUILD.gn	2026-10-20 17:09:47.141678392 +0200
-@@ -114,7 +114,6 @@ source_set("configs") {
-       "//chrome/browser/actor/ui:actor_overlay_web_view",
+--- a/chrome/browser/ui/webui/BUILD.gn
++++ b/chrome/browser/ui/webui/BUILD.gn
+@@ -116,7 +116,6 @@ source_set("configs") {
+       "//chrome/browser/ui/tabs/tab_group_home",
        "//chrome/browser/ui/webui/access_code_cast",
        "//chrome/browser/ui/webui/app_service_internals",
 -      "//chrome/browser/ui/webui/autofill_ml_internals",
        "//chrome/browser/ui/webui/color_pipeline_internals",
+       "//chrome/browser/ui/webui/commerce",
        "//chrome/browser/ui/webui/critical_actions",
-       "//chrome/browser/ui/webui/infobar_internals",
-diff -up chromium-156.0.8078.35/chrome/browser/ui/webui/chrome_web_ui_configs.cc.disable-ai chromium-156.0.8078.35/chrome/browser/ui/webui/chrome_web_ui_configs.cc
---- chromium-156.0.8078.35/chrome/browser/ui/webui/chrome_web_ui_configs.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/ui/webui/chrome_web_ui_configs.cc	2026-10-20 17:09:47.142058709 +0200
-@@ -354,7 +354,6 @@ void RegisterChromeWebUIConfigs() {
+--- a/chrome/browser/ui/webui/chrome_web_ui_configs.cc
++++ b/chrome/browser/ui/webui/chrome_web_ui_configs.cc
+@@ -365,7 +365,6 @@ void RegisterChromeWebUIConfigs() {
    map.AddWebUIConfig(std::make_unique<media_router::AccessCodeCastUIConfig>());
    map.AddWebUIConfig(std::make_unique<actor::ui::ActorOverlayUIConfig>());
    map.AddWebUIConfig(std::make_unique<AppServiceInternalsUIConfig>());
@@ -1228,9 +1061,26 @@ diff -up chromium-156.0.8078.35/chrome/browser/ui/webui/chrome_web_ui_configs.cc
    map.AddWebUIConfig(std::make_unique<BookmarksSidePanelUIConfig>());
    map.AddWebUIConfig(std::make_unique<BookmarksUIConfig>());
    map.AddWebUIConfig(std::make_unique<ColorPipelineInternalsUIConfig>());
-diff -up chromium-156.0.8078.35/chrome/browser/ui/webui/settings/accessibility_main_handler.cc.disable-ai chromium-156.0.8078.35/chrome/browser/ui/webui/settings/accessibility_main_handler.cc
---- chromium-156.0.8078.35/chrome/browser/ui/webui/settings/accessibility_main_handler.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/ui/webui/settings/accessibility_main_handler.cc	2026-10-20 17:09:47.142771034 +0200
+--- a/chrome/browser/ui/webui/settings/BUILD.gn
++++ b/chrome/browser/ui/webui/settings/BUILD.gn
+@@ -66,7 +66,6 @@ source_set("settings") {
+     "//chrome/browser/profile_resetter",
+     "//chrome/browser/profile_resetter:profile_reset_report_proto",
+     "//chrome/browser/profiles:profile",
+-    "//chrome/browser/screen_ai:screen_ai_install_state",
+     "//chrome/browser/themes",
+     "//chrome/browser/ui/safety_hub",
+     "//chrome/browser/ui/search_engines",
+@@ -704,7 +703,6 @@ if (!is_android) {
+       ]
+       deps += [
+         "//chrome/browser/profiles",
+-        "//chrome/browser/screen_ai:screen_ai_install_state",
+         "//ui/accessibility",
+       ]
+     }
+--- a/chrome/browser/ui/webui/settings/accessibility_main_handler.cc
++++ b/chrome/browser/ui/webui/settings/accessibility_main_handler.cc
 @@ -35,11 +35,6 @@ void AccessibilityMainHandler::RegisterM
        base::BindRepeating(
            &AccessibilityMainHandler::HandleCheckAccessibilityImageLabels,
@@ -1295,9 +1145,8 @@ diff -up chromium-156.0.8078.35/chrome/browser/ui/webui/settings/accessibility_m
  }
  
  void AccessibilityMainHandler::HandleGetScreenReaderState(
-diff -up chromium-156.0.8078.35/chrome/browser/ui/webui/settings/accessibility_main_handler.h.disable-ai chromium-156.0.8078.35/chrome/browser/ui/webui/settings/accessibility_main_handler.h
---- chromium-156.0.8078.35/chrome/browser/ui/webui/settings/accessibility_main_handler.h.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/ui/webui/settings/accessibility_main_handler.h	2026-10-20 17:09:47.142925997 +0200
+--- a/chrome/browser/ui/webui/settings/accessibility_main_handler.h
++++ b/chrome/browser/ui/webui/settings/accessibility_main_handler.h
 @@ -19,8 +19,7 @@ namespace settings {
  // Settings handler for the main accessibility settings page,
  // chrome://settings/accessibility.
@@ -1329,29 +1178,9 @@ diff -up chromium-156.0.8078.35/chrome/browser/ui/webui/settings/accessibility_m
  };
  
  }  // namespace settings
-diff -up chromium-156.0.8078.35/chrome/browser/ui/webui/settings/BUILD.gn.disable-ai chromium-156.0.8078.35/chrome/browser/ui/webui/settings/BUILD.gn
---- chromium-156.0.8078.35/chrome/browser/ui/webui/settings/BUILD.gn.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/ui/webui/settings/BUILD.gn	2026-10-20 17:09:47.142455715 +0200
-@@ -62,7 +62,6 @@ source_set("settings") {
-     "//chrome/browser/permissions/system",
-     "//chrome/browser/profile_resetter",
-     "//chrome/browser/profiles:profile",
--    "//chrome/browser/screen_ai:screen_ai_install_state",
-     "//chrome/browser/themes",
-     "//chrome/browser/ui/safety_hub",
-     "//chrome/browser/ui/search_engines",
-@@ -680,7 +679,6 @@ if (!is_android) {
-       ]
-       deps += [
-         "//chrome/browser/profiles",
--        "//chrome/browser/screen_ai:screen_ai_install_state",
-         "//ui/accessibility",
-       ]
-     }
-diff -up chromium-156.0.8078.35/chrome/browser/ui/webui/side_panel/read_anything/BUILD.gn.disable-ai chromium-156.0.8078.35/chrome/browser/ui/webui/side_panel/read_anything/BUILD.gn
---- chromium-156.0.8078.35/chrome/browser/ui/webui/side_panel/read_anything/BUILD.gn.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/ui/webui/side_panel/read_anything/BUILD.gn	2026-10-20 17:09:47.143104559 +0200
-@@ -36,7 +36,6 @@ source_set("read_anything") {
+--- a/chrome/browser/ui/webui/side_panel/read_anything/BUILD.gn
++++ b/chrome/browser/ui/webui/side_panel/read_anything/BUILD.gn
+@@ -39,7 +39,6 @@ source_set("read_anything") {
      "//chrome/browser/profiles:profile",
      "//chrome/browser/resources/side_panel/read_anything:resources",
      "//chrome/browser/resources/side_panel/shared:resources_grit",
@@ -1359,10 +1188,9 @@ diff -up chromium-156.0.8078.35/chrome/browser/ui/webui/side_panel/read_anything
      "//chrome/browser/speech",
      "//chrome/browser/translate",
      "//chrome/browser/ui:accelerator_table",
-diff -up chromium-156.0.8078.35/chrome/browser/ui/webui/side_panel/read_anything/read_anything_untrusted_page_handler.cc.disable-ai chromium-156.0.8078.35/chrome/browser/ui/webui/side_panel/read_anything/read_anything_untrusted_page_handler.cc
---- chromium-156.0.8078.35/chrome/browser/ui/webui/side_panel/read_anything/read_anything_untrusted_page_handler.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/browser/ui/webui/side_panel/read_anything/read_anything_untrusted_page_handler.cc	2026-10-20 17:09:47.143582610 +0200
-@@ -19,8 +19,6 @@
+--- a/chrome/browser/ui/webui/side_panel/read_anything/read_anything_untrusted_page_handler.cc
++++ b/chrome/browser/ui/webui/side_panel/read_anything/read_anything_untrusted_page_handler.cc
+@@ -21,8 +21,6 @@
  #include "chrome/browser/dom_distiller/dom_distiller_service_factory.h"
  #include "chrome/browser/language/language_model_manager_factory.h"
  #include "chrome/browser/profiles/profile.h"
@@ -1371,7 +1199,15 @@ diff -up chromium-156.0.8078.35/chrome/browser/ui/webui/side_panel/read_anything
  #include "chrome/browser/speech/extension_api/tts_engine_extension_api.h"
  #include "chrome/browser/translate/chrome_translate_client.h"
  #include "chrome/browser/ui/read_anything/read_anything_controller.h"
-@@ -478,14 +476,6 @@ ReadAnythingUntrustedPageHandler::ReadAn
+@@ -436,7 +434,6 @@ ReadAnythingUntrustedPageHandler::ReadAn
+       web_ui_(web_ui),
+       receiver_(this, std::move(receiver)),
+       page_(std::move(page)),
+-      use_screen_ai_service_(use_screen_ai_service),
+ #if BUILDFLAG(IS_CHROMEOS)
+       extension_wrapper_(std::move(extension_wrapper)),
+ #endif
+@@ -485,14 +482,6 @@ ReadAnythingUntrustedPageHandler::ReadAn
    prefs_lang = language::ExtractBaseLanguage(prefs_lang);
    SetDefaultLanguageCode(prefs_lang);
  
@@ -1386,10 +1222,19 @@ diff -up chromium-156.0.8078.35/chrome/browser/ui/webui/side_panel/read_anything
  
    if (features::IsReadAnythingWithReadabilityEnabled() &&
        !features::IsReadAnythingReadAloudPhraseHighlightingEnabled()) {
-diff -up chromium-156.0.8078.35/chrome/renderer/BUILD.gn.disable-ai chromium-156.0.8078.35/chrome/renderer/BUILD.gn
---- chromium-156.0.8078.35/chrome/renderer/BUILD.gn.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/renderer/BUILD.gn	2026-10-20 17:09:47.144053919 +0200
-@@ -346,8 +346,6 @@ static_library("renderer") {
+--- a/chrome/browser/ui/webui/side_panel/read_anything/read_anything_untrusted_page_handler.h
++++ b/chrome/browser/ui/webui/side_panel/read_anything/read_anything_untrusted_page_handler.h
+@@ -490,7 +490,6 @@ class ReadAnythingUntrustedPageHandler :
+   // The translation state last sent to the page, or nullopt if none has been
+   // sent yet.
+   std::optional<bool> last_sent_is_translated_;
+-  const bool use_screen_ai_service_;
+ 
+ #if BUILDFLAG(IS_CHROMEOS)
+   // The ChromeOS language pack manager can't handle more than one language
+--- a/chrome/renderer/BUILD.gn
++++ b/chrome/renderer/BUILD.gn
+@@ -347,8 +347,6 @@ static_library("renderer") {
      deps += [ "//chrome/common/wallet:mojo_bindings" ]
    } else {
      sources += [
@@ -1398,7 +1243,7 @@ diff -up chromium-156.0.8078.35/chrome/renderer/BUILD.gn.disable-ai chromium-156
        "accessibility/phrase_segmentation/base_phrase_segmenter.cc",
        "accessibility/phrase_segmentation/base_phrase_segmenter.h",
        "accessibility/phrase_segmentation/dependency_parser_model.cc",
-@@ -364,23 +362,6 @@ static_library("renderer") {
+@@ -365,23 +363,6 @@ static_library("renderer") {
        "accessibility/phrase_segmentation/tokenized_sentence.h",
        "accessibility/phrase_segmentation/tokenizer.cc",
        "accessibility/phrase_segmentation/tokenizer.h",
@@ -1422,7 +1267,7 @@ diff -up chromium-156.0.8078.35/chrome/renderer/BUILD.gn.disable-ai chromium-156
        "media/chrome_speech_recognition_client.cc",
        "media/chrome_speech_recognition_client.h",
        "password_manager/remote_actor_credential_sharing_extension.cc",
-@@ -398,7 +379,6 @@ static_library("renderer") {
+@@ -394,7 +375,6 @@ static_library("renderer") {
        "//components/record_replay/content/renderer",
        "//components/trusted_vault",
        "//services/screen_ai/buildflags",
@@ -1430,21 +1275,20 @@ diff -up chromium-156.0.8078.35/chrome/renderer/BUILD.gn.disable-ai chromium-156
        "//services/strings",
        "//third_party/re2",
        "//third_party/tensorflow-text",
-diff -up chromium-156.0.8078.35/chrome/renderer/chrome_render_frame_observer.cc.disable-ai chromium-156.0.8078.35/chrome/renderer/chrome_render_frame_observer.cc
---- chromium-156.0.8078.35/chrome/renderer/chrome_render_frame_observer.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/renderer/chrome_render_frame_observer.cc	2026-10-20 17:09:47.144502641 +0200
-@@ -88,7 +88,6 @@
+--- a/chrome/renderer/chrome_render_frame_observer.cc
++++ b/chrome/renderer/chrome_render_frame_observer.cc
+@@ -89,7 +89,6 @@
  #include "url/url_constants.h"
  
  #if !BUILDFLAG(IS_ANDROID)
 -#include "chrome/renderer/accessibility/read_anything/read_anything_app_controller.h"
- #include "chrome/renderer/searchbox/searchbox_extension.h"
  #endif  // !BUILDFLAG(IS_ANDROID)
  
-@@ -385,14 +384,6 @@ void ChromeRenderFrameObserver::DidClear
-     SearchBoxExtension::Install(render_frame()->GetWebFrame());
-   }
+ #if BUILDFLAG(SAFE_BROWSING_AVAILABLE)
+@@ -396,14 +395,6 @@ void ChromeRenderFrameObserver::DidClear
+ #endif
  
+ #if !BUILDFLAG(IS_ANDROID)
 -  // Install ReadAnythingAppController on render frames with the Read Anything
 -  // url, which is chrome-untrusted. ReadAnythingAppController installs v8
 -  // bindings in the chrome.readingMode namespace which are consumed by
@@ -1456,48 +1300,35 @@ diff -up chromium-156.0.8078.35/chrome/renderer/chrome_render_frame_observer.cc.
  #endif  // !BUILDFLAG(IS_ANDROID)
  #if BUILDFLAG(ENABLE_GUEST_VIEW) && !BUILDFLAG(ENABLE_EXTENSIONS_CORE)
    guest_view::SlimWebViewBindings::MaybeInstall(*render_frame());
-diff -up chromium-156.0.8078.35/chrome/test/BUILD.gn.disable-ai chromium-156.0.8078.35/chrome/test/BUILD.gn
---- chromium-156.0.8078.35/chrome/test/BUILD.gn.disable-ai	2026-10-20 17:09:46.922795453 +0200
-+++ chromium-156.0.8078.35/chrome/test/BUILD.gn	2026-10-20 17:09:47.145277166 +0200
-@@ -1891,9 +1891,6 @@ if (!is_android) {
-       "//chrome/browser/safe_browsing:blocking_page_platform_test_support",
+--- a/chrome/test/BUILD.gn
++++ b/chrome/test/BUILD.gn
+@@ -1463,7 +1463,6 @@ if (!is_android) {
+       "//chrome/browser/renderer_context_menu:browser_tests",
+       "//chrome/browser/renderer_host:browser_tests",
        "//chrome/browser/safe_browsing:browser_tests",
-       "//chrome/browser/safe_browsing:verdict_cache_manager_factory",
 -      "//chrome/browser/screen_ai:browser_tests",
--      "//chrome/browser/screen_ai:screen_ai_install_state",
--      "//chrome/browser/screen_ai:screen_ai_service_router_factory",
-       "//chrome/browser/search",
        "//chrome/browser/search:browser_tests",
-       "//chrome/browser/search:test_support",
-@@ -2537,8 +2534,6 @@ if (!is_android) {
-       "//services/preferences/public/cpp",
-       "//services/preferences/public/cpp/tracked",
-       "//services/preferences/tracked:features",
--      "//services/screen_ai/public/cpp:utilities",
--      "//services/screen_ai/public/mojom",
-       "//services/service_manager/public/cpp",
-       "//services/strings",
-       "//services/test/echo/public/mojom",
-@@ -6309,7 +6304,6 @@ test("unit_tests") {
+       "//chrome/browser/search_engines:browser_tests",
+       "//chrome/browser/send_tab_to_self:browser_tests",
+@@ -3390,7 +3389,6 @@ test("unit_tests") {
      # TODO(crbug.com/417513088): Maybe merge with the non-android `deps`
      # declaration above?
      deps += [
 -      "../browser/screen_ai:screen_ai_install_state",
        "//chrome:packed_resources",
-       "//chrome/browser/apps/app_service",
-       "//chrome/browser/apps/app_service:app_registry_cache_waiter",
-@@ -6348,7 +6342,6 @@ test("unit_tests") {
-       "//chrome/browser/profile_resetter:fake_profile_resetter",
+       "//chrome/browser/apps/app_service:unit_tests",
+       "//chrome/browser/apps/app_service/app_icon:unit_tests",
+@@ -3405,7 +3403,6 @@ test("unit_tests") {
+       "//chrome/browser/omnibox:unit_tests",
        "//chrome/browser/profile_resetter:unit_tests",
        "//chrome/browser/resources/new_tab_page_instant:resources_grit",
 -      "//chrome/browser/screen_ai:unit_tests",
-       "//chrome/browser/search/background",
        "//chrome/browser/search_engine_choice:unit_tests",
        "//chrome/browser/sensor:unit_tests",
-diff -up chromium-156.0.8078.35/chrome/utility/BUILD.gn.disable-ai chromium-156.0.8078.35/chrome/utility/BUILD.gn
---- chromium-156.0.8078.35/chrome/utility/BUILD.gn.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/utility/BUILD.gn	2026-10-20 17:09:47.146600184 +0200
-@@ -153,7 +153,6 @@ static_library("utility") {
+       "//chrome/browser/support_tool:unit_tests",
+--- a/chrome/utility/BUILD.gn
++++ b/chrome/utility/BUILD.gn
+@@ -150,7 +150,6 @@ static_library("utility") {
        "//components/user_data_importer/content",
        "//components/user_data_importer/utility:bookmarks",
        "//services/proxy_resolver:lib",
@@ -1505,9 +1336,8 @@ diff -up chromium-156.0.8078.35/chrome/utility/BUILD.gn.disable-ai chromium-156.
      ]
    }
  
-diff -up chromium-156.0.8078.35/chrome/utility/services.cc.disable-ai chromium-156.0.8078.35/chrome/utility/services.cc
---- chromium-156.0.8078.35/chrome/utility/services.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/chrome/utility/services.cc	2026-10-20 17:09:47.146947839 +0200
+--- a/chrome/utility/services.cc
++++ b/chrome/utility/services.cc
 @@ -70,8 +70,6 @@
  #include "components/mirroring/service/mirroring_service.h"
  #include "services/proxy_resolver/proxy_resolver_factory_impl.h"  // nogncheck
@@ -1536,9 +1366,18 @@ diff -up chromium-156.0.8078.35/chrome/utility/services.cc.disable-ai chromium-1
  #endif  // !BUILDFLAG(IS_ANDROID)
  
  #if BUILDFLAG(ENABLE_MEDIA_REMOTING_REDIRECTION)
-diff -up chromium-156.0.8078.35/components/autofill/core/browser/foundations/autofill_manager.cc.disable-ai chromium-156.0.8078.35/components/autofill/core/browser/foundations/autofill_manager.cc
---- chromium-156.0.8078.35/components/autofill/core/browser/foundations/autofill_manager.cc.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/components/autofill/core/browser/foundations/autofill_manager.cc	2026-10-20 17:09:47.147598715 +0200
+--- a/components/BUILD.gn
++++ b/components/BUILD.gn
+@@ -645,7 +645,6 @@ test("components_unittests") {
+       "//components/one_time_tokens/core/browser:unit_tests",
+       "//components/page_info:unit_tests",
+       "//components/password_manager/core/browser/actor_login:unit_tests",
+-      "//components/permissions/prediction_service:unit_tests",
+       "//components/privacy_sandbox/privacy_sandbox_attestations:unit_tests",
+       "//components/safety_check:unit_tests",
+       "//components/security_interstitials/content:unit_tests",
+--- a/components/autofill/core/browser/foundations/autofill_manager.cc
++++ b/components/autofill/core/browser/foundations/autofill_manager.cc
 @@ -164,8 +164,6 @@ struct AutofillManager::AsyncContext {
  
    std::vector<FormData> forms;
@@ -1599,21 +1438,9 @@ diff -up chromium-156.0.8078.35/components/autofill/core/browser/foundations/aut
  }
  
  }  // namespace autofill
-diff -up chromium-156.0.8078.35/components/BUILD.gn.disable-ai chromium-156.0.8078.35/components/BUILD.gn
---- chromium-156.0.8078.35/components/BUILD.gn.disable-ai	2026-10-20 17:09:46.924231964 +0200
-+++ chromium-156.0.8078.35/components/BUILD.gn	2026-10-20 17:09:47.147217409 +0200
-@@ -639,7 +639,6 @@ test("components_unittests") {
-       "//components/one_time_tokens/core/browser:unit_tests",
-       "//components/page_info:unit_tests",
-       "//components/password_manager/core/browser/actor_login:unit_tests",
--      "//components/permissions/prediction_service:unit_tests",
-       "//components/privacy_sandbox/privacy_sandbox_attestations:unit_tests",
-       "//components/safety_check:unit_tests",
-       "//components/security_interstitials/content:unit_tests",
-diff -up chromium-156.0.8078.35/components/page_content_annotations/content/BUILD.gn.disable-ai chromium-156.0.8078.35/components/page_content_annotations/content/BUILD.gn
---- chromium-156.0.8078.35/components/page_content_annotations/content/BUILD.gn.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/components/page_content_annotations/content/BUILD.gn	2026-10-20 17:09:47.148056768 +0200
-@@ -75,8 +75,6 @@ source_set("page_embeddings") {
+--- a/components/page_content_annotations/content/BUILD.gn
++++ b/components/page_content_annotations/content/BUILD.gn
+@@ -81,8 +81,6 @@ source_set("page_embeddings") {
    sources = [
      "embeddings_candidate_generator.cc",
      "embeddings_candidate_generator.h",
@@ -1622,9 +1449,8 @@ diff -up chromium-156.0.8078.35/components/page_content_annotations/content/BUIL
      "page_embeddings_service.cc",
      "page_embeddings_service.h",
    ]
-diff -up chromium-156.0.8078.35/components/pdf/renderer/pdf_view_web_plugin_client.h.disable-ai chromium-156.0.8078.35/components/pdf/renderer/pdf_view_web_plugin_client.h
---- chromium-156.0.8078.35/components/pdf/renderer/pdf_view_web_plugin_client.h.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/components/pdf/renderer/pdf_view_web_plugin_client.h	2026-10-20 17:09:47.148412437 +0200
+--- a/components/pdf/renderer/pdf_view_web_plugin_client.h
++++ b/components/pdf/renderer/pdf_view_web_plugin_client.h
 @@ -12,7 +12,6 @@
  #include "base/memory/weak_ptr.h"
  #include "mojo/public/cpp/bindings/remote.h"
@@ -1642,9 +1468,8 @@ diff -up chromium-156.0.8078.35/components/pdf/renderer/pdf_view_web_plugin_clie
  
    base::WeakPtrFactory<PdfViewWebPluginClient> weak_factory_{this};
  };
-diff -up chromium-156.0.8078.35/services/screen_ai/buildflags/features.gni.disable-ai chromium-156.0.8078.35/services/screen_ai/buildflags/features.gni
---- chromium-156.0.8078.35/services/screen_ai/buildflags/features.gni.disable-ai	2026-10-14 00:13:09.000000000 +0200
-+++ chromium-156.0.8078.35/services/screen_ai/buildflags/features.gni	2026-10-20 17:09:47.148697659 +0200
+--- a/services/screen_ai/buildflags/features.gni
++++ b/services/screen_ai/buildflags/features.gni
 @@ -6,15 +6,13 @@ import("//build/config/sanitizers/saniti
  
  declare_args() {

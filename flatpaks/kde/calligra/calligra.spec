@@ -8,8 +8,8 @@
 #global external_lilypond_fonts 1
 
 Name:    calligra 
-Version: 26.08.2
-Release: 2%{?dist}
+Version: 26.08.3
+Release: 1%{?dist}
 Summary: An integrated office suite
 
 License: GPL-2.0-or-later AND GPL-3.0-or-later AND (GPL-2.0-only OR GPL-3.0-only) AND LGPL-2.0-only AND LGPL-2.1-only AND LGPL-2.0-or-later AND LGPL-2.1-or-later AND BSD-3-Clause AND BSD-2-Clause
@@ -512,6 +512,9 @@ done
 
 
 %changelog
+* Sun Nov 08 2026 Steve Cossette <farchord@gmail.com> - 26.08.3-1
+- 26.08.3
+
 * Fri Oct 23 2026 Jan Grulich <jgrulich@redhat.com> - 26.08.2-2
 - Rebuild (qt6)
 

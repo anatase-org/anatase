@@ -1,26 +1,11 @@
-ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-chromium/pull/4003
 
---- a/chrome/browser/BUILD.gn
-+++ b/chrome/browser/BUILD.gn
-@@ -1016,7 +1016,6 @@ source_set("core") {
-     "//chrome/browser/preloading/search_preload:feature",
-     "//chrome/browser/privacy_sandbox:headers",
-     "//chrome/browser/private_ai",
--    "//chrome/browser/private_verification_tokens",
-     "//chrome/browser/profiles:misc",
-     "//chrome/browser/profiles:profile_io_data",
-     "//chrome/browser/profiles:profiles_extra_parts",
-@@ -2248,7 +2247,6 @@ source_set("browser") {
-     "//chrome/browser/preloading/search_preload",
-     "//chrome/browser/privacy",
-     "//chrome/browser/privacy_sandbox:impl",
--    "//chrome/browser/private_verification_tokens",
-     "//chrome/browser/profiles:misc",
-     "//chrome/browser/profiles:profile_util_impl",
-     "//chrome/browser/profiles:profiles_extra_parts_impl",
+pulled from https://github.com/ungoogled-software/ungoogled-chromium/pull/4003
+
+This is not part of the official ungoogled-chromium patch set
+
 --- a/chrome/browser/browsing_data/BUILD.gn
 +++ b/chrome/browser/browsing_data/BUILD.gn
-@@ -125,7 +125,6 @@ source_set("impl") {
+@@ -128,7 +128,6 @@ source_set("impl") {
      "//chrome/browser/preloading/prefetch/no_state_prefetch",
      "//chrome/browser/preloading/prefetch/search_prefetch",
      "//chrome/browser/privacy_sandbox:headers",
@@ -28,7 +13,7 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
      "//chrome/browser/profiles/keep_alive",
      "//chrome/browser/reading_list",
      "//chrome/browser/safe_browsing",
-@@ -269,7 +268,6 @@ source_set("unit_tests") {
+@@ -276,7 +275,6 @@ source_set("unit_tests") {
      "//chrome/browser/payments/browser_binding:browser_bound_key_deleter",
      "//chrome/browser/payments/browser_binding:test_support",
      "//chrome/browser/permissions",
@@ -36,7 +21,7 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
      "//chrome/browser/reading_list",
      "//chrome/browser/safe_browsing:verdict_cache_manager_factory",
      "//chrome/browser/segmentation_platform",
-@@ -298,7 +296,6 @@ source_set("unit_tests") {
+@@ -307,7 +305,6 @@ source_set("unit_tests") {
      "//components/privacy_sandbox:privacy_sandbox_settings_headers",
      "//components/privacy_sandbox/privacy_sandbox_attestations",
      "//components/privacy_sandbox/privacy_sandbox_attestations:test_support",
@@ -85,7 +70,7 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
  }
 --- a/chrome/browser/browsing_data/chrome_browsing_data_remover_delegate.cc
 +++ b/chrome/browser/browsing_data/chrome_browsing_data_remover_delegate.cc
-@@ -726,29 +726,6 @@ void ChromeBrowsingDataRemoverDelegate::
+@@ -732,29 +732,6 @@ void ChromeBrowsingDataRemoverDelegate::
  #endif  // BUILDFLAG(IS_CHROMEOS)
    }
  
@@ -115,9 +100,45 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
  
    //////////////////////////////////////////////////////////////////////////////
    // DATA_TYPE_CONTENT_SETTINGS
+--- a/chrome/browser/browsing_data/chrome_browsing_data_remover_delegate_factory.cc
++++ b/chrome/browser/browsing_data/chrome_browsing_data_remover_delegate_factory.cc
+@@ -30,7 +30,6 @@
+ #include "chrome/browser/permissions/permission_decision_auto_blocker_factory.h"
+ #include "chrome/browser/preloading/prefetch/no_state_prefetch/no_state_prefetch_manager_factory.h"
+ #include "chrome/browser/preloading/prefetch/search_prefetch/search_prefetch_service_factory.h"
+-#include "chrome/browser/private_verification_tokens/private_verification_tokens_service_factory.h"
+ #include "chrome/browser/profiles/profile.h"
+ #include "chrome/browser/reading_list/reading_list_model_factory.h"
+ #include "chrome/browser/safe_browsing/verdict_cache_manager_factory.h"
+@@ -107,7 +106,6 @@ ChromeBrowsingDataRemoverDelegateFactory
+   DependsOn(PermissionActionsHistoryFactory::GetInstance());
+   DependsOn(PermissionDecisionAutoBlockerFactory::GetInstance());
+   DependsOn(prerender::NoStatePrefetchManagerFactory::GetInstance());
+-  DependsOn(PrivateVerificationTokensServiceFactory::GetInstance());
+   DependsOn(ProtocolHandlerRegistryFactory::GetInstance());
+   DependsOn(ReadingListModelFactory::GetInstance());
+   DependsOn(safe_browsing::VerdictCacheManagerFactory::GetInstance());
+--- a/chrome/browser/BUILD.gn
++++ b/chrome/browser/BUILD.gn
+@@ -1182,7 +1182,6 @@ source_set("core") {
+     "//chrome/browser/preloading/search_preload:feature",
+     "//chrome/browser/privacy_sandbox:headers",
+     "//chrome/browser/private_ai",
+-    "//chrome/browser/private_verification_tokens",
+     "//chrome/browser/profiles:misc",
+     "//chrome/browser/profiles:profile_io_data",
+     "//chrome/browser/profiles:profiles_extra_parts",
+@@ -2431,7 +2430,6 @@ source_set("browser") {
+     "//chrome/browser/preloading/search_preload",
+     "//chrome/browser/privacy",
+     "//chrome/browser/privacy_sandbox:impl",
+-    "//chrome/browser/private_verification_tokens",
+     "//chrome/browser/profiles:misc",
+     "//chrome/browser/profiles:profile_util_impl",
+     "//chrome/browser/profiles:profiles_extra_parts_impl",
 --- a/chrome/browser/chrome_content_browser_client.cc
 +++ b/chrome/browser/chrome_content_browser_client.cc
-@@ -6193,21 +6193,6 @@ ChromeContentBrowserClient::CreateURLLoa
+@@ -6260,22 +6260,6 @@ ChromeContentBrowserClient::CreateURLLoa
      result.push_back(std::move(signin_throttle));
    }
  
@@ -136,20 +157,21 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
 -      }
 -    }
 -  }
- 
+-
    if (auto contextual_tasks_throttle =
            contextual_tasks::ContextualTasksURLLoaderThrottle::MaybeCreate(
+               profile, wc_getter)) {
 --- a/chrome/browser/component_updater/BUILD.gn
 +++ b/chrome/browser/component_updater/BUILD.gn
-@@ -151,7 +151,6 @@ source_set("impl") {
-     "//chrome/browser/net",
+@@ -157,7 +157,6 @@ source_set("impl") {
+     "//chrome/browser/net:key_pinning_proto",
      "//chrome/browser/page_load_metrics",
      "//chrome/browser/permissions",
 -    "//chrome/browser/private_verification_tokens",
      "//chrome/browser/profiles:profile",
      "//chrome/browser/update_client",
      "//chrome/common",
-@@ -167,7 +166,6 @@ source_set("impl") {
+@@ -174,7 +173,6 @@ source_set("impl") {
      "//components/permissions",
      "//components/privacy_sandbox:features",
      "//components/privacy_sandbox/privacy_sandbox_attestations",
@@ -194,15 +216,15 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
  }  // namespace component_updater
 --- a/chrome/browser/devtools/BUILD.gn
 +++ b/chrome/browser/devtools/BUILD.gn
-@@ -433,7 +433,6 @@ static_library("devtools") {
-       "//chrome/app:command_ids",
+@@ -445,7 +445,6 @@ static_library("devtools") {
        "//chrome/browser/badging",
        "//chrome/browser/custom_handlers",
+       "//chrome/browser/origin_gating",
 -      "//chrome/browser/private_verification_tokens",
        "//chrome/browser/ui:browser_window_header",
        "//chrome/browser/ui/media_router",
        "//chrome/browser/ui/startup",
-@@ -446,7 +445,6 @@ static_library("devtools") {
+@@ -458,7 +457,6 @@ static_library("devtools") {
        "//components/origin_gating/core",
        "//components/payments/content",
        "//components/privacy_sandbox/privacy_sandbox_attestations",
@@ -210,7 +232,7 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
        "//components/security_state/content",
        "//components/subresource_filter/content/browser",
        "//components/web_package",
-@@ -672,7 +670,6 @@ if (enable_devtools_frontend) {
+@@ -692,7 +690,6 @@ if (enable_devtools_frontend) {
        "//chrome/browser/prefs:util",
        "//chrome/browser/preloading:prefs",
        "//chrome/browser/preloading:test_support",
@@ -218,7 +240,7 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
        "//chrome/browser/search_engines",
        "//chrome/browser/sync/test/integration:sync_integration_test_support",
        "//chrome/browser/ui/autofill",
-@@ -683,7 +680,6 @@ if (enable_devtools_frontend) {
+@@ -704,7 +701,6 @@ if (enable_devtools_frontend) {
        "//components/infobars/content",
        "//components/javascript_dialogs",
        "//components/language/core/browser",
@@ -226,11 +248,103 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
        "//components/ukm:test_support",
        "//content/test:test_support",
        "//testing/gtest",
+--- a/chrome/browser/devtools/inspector_protocol_config.json
++++ b/chrome/browser/devtools/inspector_protocol_config.json
+@@ -49,9 +49,8 @@
+             },
+             {
+                 "domain": "Storage",
+-                "include": ["runBounceTrackingMitigations", "getPrivateVerificationTokens", "getPrivateVerificationTokensIssuerConfigs", "clearPrivateVerificationTokens", "deletePrivateVerificationToken", "setPrivateVerificationTokensTracking"],
+-                "include_events": ["privateVerificationTokensUpdated"],
+-                "async": ["runBounceTrackingMitigations", "getPrivateVerificationTokens", "clearPrivateVerificationTokens", "deletePrivateVerificationToken"]
++                "include": ["runBounceTrackingMitigations"],
++                "async": ["runBounceTrackingMitigations"]
+             },
+             {
+                 "domain": "SystemInfo",
+--- a/chrome/browser/devtools/protocol/DEPS
++++ b/chrome/browser/devtools/protocol/DEPS
+@@ -15,10 +15,4 @@ specific_include_rules = {
+   "devtools_iwa_browsertest\\.cc": [
+     "+components/web_package/signed_web_bundles"
+   ],
+-  "storage_handler\\.cc": [
+-    "+components/private_verification_tokens/common",
+-  ],
+-  "devtools_protocol_browsertest\\.cc": [
+-    "+components/private_verification_tokens/common",
+-  ],
+ }
+--- a/chrome/browser/devtools/protocol/devtools_protocol_browsertest.cc
++++ b/chrome/browser/devtools/protocol/devtools_protocol_browsertest.cc
+@@ -2480,51 +2480,6 @@ IN_PROC_BROWSER_TEST_F(DevToolsProtocolT
+     EXPECT_TRUE(first_token->FindDouble("creationTime").has_value());
+   }
+ 
+-  // 3. Verify getPrivateVerificationTokensIssuerConfigs.
+-  {
+-    SendCommandSync("Storage.getPrivateVerificationTokensIssuerConfigs");
+-    ASSERT_TRUE(result());
+-    EXPECT_THAT(result()->FindList("configs"),
+-                testing::Pointee(testing::IsEmpty()));
+-
+-    base::DictValue custom_issuer;
+-    custom_issuer.Set("issuerRequestUrl", "https://issuer.example.com/issue");
+-    custom_issuer.Set("version", 1);
+-    custom_issuer.Set("publicKey",
+-                      base::Base64Encode(std::vector<uint8_t>{1, 2, 3, 4}));
+-    custom_issuer.Set("publicKeyProof",
+-                      base::Base64Encode(std::vector<uint8_t>{5, 6, 7}));
+-    custom_issuer.Set("batchSize", 7);
+-    custom_issuer.Set("expiration", "2147483647");
+-    base::ListValue redeemers;
+-    redeemers.Append("https://redeemer1.example.com");
+-    redeemers.Append("https://redeemer2.example.com");
+-    custom_issuer.Set("redeemers", std::move(redeemers));
+-    custom_issuer.Set("deploymentId", "test-deployment-id");
+-
+-    pvt_service_->SetIssuerConfig(
+-        private_verification_tokens::PrivateVerificationTokensIssuerConfig::
+-            CreateWithCustomIssuer(/*base_config=*/nullptr,
+-                                   std::move(custom_issuer)));
+-
+-    SendCommandSync("Storage.getPrivateVerificationTokensIssuerConfigs");
+-    ASSERT_TRUE(result());
+-    const base::ListValue* configs_list = result()->FindList("configs");
+-    ASSERT_THAT(configs_list, testing::Pointee(testing::SizeIs(1)));
+-
+-    const base::DictValue* first_config = configs_list->front().GetIfDict();
+-    ASSERT_TRUE(first_config);
+-    EXPECT_THAT(first_config->FindString("issuerOrigin"),
+-                testing::Pointee(testing::Eq(issuer_origin.Serialize())));
+-    const base::ListValue* redeemer_origins =
+-        first_config->FindList("redeemerOrigins");
+-    ASSERT_TRUE(redeemer_origins);
+-    EXPECT_EQ(*redeemer_origins, base::ListValue()
+-                                     .Append("https://redeemer1.example.com")
+-                                     .Append("https://redeemer2.example.com"));
+-  }
+-
+-  // 4. Delete one token by ID.
+   {
+     base::DictValue params;
+     params.Set("tokenId", first_token_id);
+@@ -2539,7 +2494,7 @@ IN_PROC_BROWSER_TEST_F(DevToolsProtocolT
+                 testing::Pointee(testing::SizeIs(2)));
+   }
+ 
+-  // 5. Clear all tokens for the issuer.
++  // 4. Clear all tokens for the issuer.
+   {
+     base::DictValue params;
+     params.Set("issuerOrigin", issuer_origin.Serialize());
 --- a/chrome/browser/devtools/protocol/storage_handler.cc
 +++ b/chrome/browser/devtools/protocol/storage_handler.cc
-@@ -9,54 +9,22 @@
+@@ -7,56 +7,26 @@
+ #include <memory>
+ #include <string>
  #include <utility>
- #include <vector>
+-#include <vector>
  
 -#include "base/base64.h"
  #include "base/check.h"
@@ -241,6 +355,8 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
 -#include "chrome/browser/private_verification_tokens/private_verification_tokens_service.h"
 -#include "chrome/browser/private_verification_tokens/private_verification_tokens_service_factory.h"
 -#include "chrome/browser/profiles/profile.h"
++#include "chrome/browser/first_party_sets/first_party_sets_policy_service.h"
++#include "chrome/browser/first_party_sets/first_party_sets_policy_service_factory.h"
  #include "chrome/browser/profiles/profile_manager.h"
 -#include "components/private_verification_tokens/common/private_verification_tokens_database.h"
  #include "content/public/browser/btm_service.h"
@@ -264,6 +380,7 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
 -}
 -
 -}  // namespace
++#include "net/first_party_sets/first_party_set_entry.h"
  
  StorageHandler::StorageHandler(content::WebContents* web_contents,
                                 protocol::UberDispatcher* dispatcher)
@@ -283,7 +400,7 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
  // TODO: crbug.com/380896828 - move CDP support for BTM to //content.
  void StorageHandler::RunBounceTrackingMitigations(
      std::unique_ptr<RunBounceTrackingMitigationsCallback> callback) {
-@@ -82,152 +50,3 @@ void StorageHandler::GotDeletedSites(
+@@ -82,152 +52,3 @@ void StorageHandler::GotDeletedSites(
        std::make_unique<protocol::Array<protocol::String>>(sites);
    callback->sendSuccess(std::move(deleted_sites));
  }
@@ -462,7 +579,7 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
   public:
    StorageHandler(content::WebContents* web_contents,
                   protocol::UberDispatcher* dispatcher);
-@@ -31,41 +24,14 @@ class StorageHandler : public protocol::
+@@ -31,41 +24,19 @@ class StorageHandler : public protocol::
    ~StorageHandler() override;
  
   private:
@@ -491,7 +608,11 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
 -  void OnTokensStored() override;
 -  void OnTokensDeleted() override;
 -  void OnShutdown() override;
--
++
++
++
++
+ 
    static void GotDeletedSites(
        std::unique_ptr<RunBounceTrackingMitigationsCallback> callback,
        const std::vector<std::string>& sites);
@@ -506,17 +627,7 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
  #endif  // CHROME_BROWSER_DEVTOOLS_PROTOCOL_STORAGE_HANDLER_H_
 --- a/chrome/browser/private_verification_tokens/BUILD.gn
 +++ b/chrome/browser/private_verification_tokens/BUILD.gn
-@@ -8,9 +8,7 @@ static_library("private_verification_tok
-     "//chrome/browser:*",
-     "//chrome/browser/browsing_data:*",
-     "//chrome/browser/component_updater:*",
--    "//chrome/browser/devtools:*",
-     "//chrome/browser/profiles:profiles_extra_parts_impl",
--    "//chrome/test:*",
-   ]
- 
-   sources = [
-@@ -28,12 +26,6 @@ static_library("private_verification_tok
+@@ -52,12 +52,6 @@ source_set("impl") {
      "//chrome/browser/profiles:profile",
      "//components/content_settings/core/browser",
      "//components/keyed_service/core",
@@ -529,7 +640,7 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
      "//content/public/browser",
      "//net",
      "//services/network/public/cpp",
-@@ -53,10 +45,6 @@ source_set("browser_tests") {
+@@ -77,10 +71,6 @@ source_set("browser_tests") {
      "//chrome/test:test_support",
      "//chrome/test/base:chrome_test_utils",
      "//components/content_settings/core/common",
@@ -540,7 +651,7 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
      "//net:test_support",
      "//services/network:test_support",
      "//url",
-@@ -77,13 +65,6 @@ source_set("unit_tests") {
+@@ -101,13 +91,7 @@ source_set("unit_tests") {
      "//chrome/test:test_support",
      "//components/content_settings/core/browser",
      "//components/content_settings/core/common",
@@ -549,14 +660,14 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
 -    "//components/private_verification_tokens/common:private_verification_tokens_issuer_config",
 -    "//components/private_verification_tokens/common:private_verification_tokens_metrics",
 -    "//components/private_verification_tokens/common:private_verification_tokens_parameters",
--    "//components/private_verification_tokens/common:test_support",
+     "//components/private_verification_tokens/common:test_support",
 -    "//components/private_verification_tokens/common/athm_ffi:athm_ffi_bindings",
      "//content/test:test_support",
      "//net",
      "//services/network:test_support",
 --- a/chrome/browser/profiles/BUILD.gn
 +++ b/chrome/browser/profiles/BUILD.gn
-@@ -811,7 +811,6 @@ source_set("profiles_extra_parts_impl")
+@@ -829,7 +829,6 @@ source_set("profiles_extra_parts_impl")
      "//chrome/browser/privacy_sandbox:headers",
      "//chrome/browser/private_ai",
      "//chrome/browser/private_insights",
@@ -566,7 +677,7 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
      "//chrome/browser/reduce_accept_language",
 --- a/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc
 +++ b/chrome/browser/profiles/chrome_browser_main_extra_parts_profiles.cc
-@@ -1360,7 +1360,6 @@ void ChromeBrowserMainExtraPartsProfiles
+@@ -1335,7 +1335,6 @@ void ChromeBrowserMainExtraPartsProfiles
    PrivacyMetricsServiceFactory::GetInstance();
    PrivacySandboxServiceFactory::GetInstance();
    PrivacySandboxSettingsFactory::GetInstance();
@@ -576,26 +687,25 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
    ProfilePasswordStoreFactory::GetInstance();
 --- a/chrome/test/BUILD.gn
 +++ b/chrome/test/BUILD.gn
-@@ -1869,8 +1869,6 @@ if (!is_android) {
-       "//chrome/browser/privacy_sandbox:headers",
-       "//chrome/browser/privacy_sandbox:test_support",
-       "//chrome/browser/private_ai",
--      "//chrome/browser/private_verification_tokens",
+@@ -1453,7 +1453,6 @@ if (!is_android) {
+       "//chrome/browser/preloading/prerender:browser_tests",
+       "//chrome/browser/preloading/search_preload:browser_tests",
+       "//chrome/browser/privacy_sandbox:browser_tests",
 -      "//chrome/browser/private_verification_tokens:browser_tests",
-       "//chrome/browser/profile_resetter",
        "//chrome/browser/profile_resetter:browser_tests",
-       "//chrome/browser/profiles",
-@@ -5043,7 +5041,6 @@ test("unit_tests") {
+       "//chrome/browser/profiles:browser_tests",
+       "//chrome/browser/push_messaging:browser_tests",
+@@ -2857,7 +2856,6 @@ test("unit_tests") {
      "//chrome/browser/preloading/prerender:unit_tests",
      "//chrome/browser/privacy_sandbox:unit_tests",
      "//chrome/browser/private_ai:unit_tests",
 -    "//chrome/browser/private_verification_tokens:unit_tests",
-     "//chrome/browser/profiles",
-     "//chrome/browser/profiles:misc",
-     "//chrome/browser/profiles:profile_downloader",
+     "//chrome/browser/profiles:unit_tests",
+     "//chrome/browser/push_messaging:unit_tests",
+     "//chrome/browser/pwc:unit_tests",
 --- a/components/BUILD.gn
 +++ b/components/BUILD.gn
-@@ -313,7 +313,6 @@ test("components_unittests") {
+@@ -315,7 +315,6 @@ test("components_unittests") {
      "//components/power_metrics:unit_tests",
      "//components/prefs:unit_tests",
      "//components/privacy_sandbox:unit_tests",
@@ -622,3 +732,80 @@ ungoogled chromium patch from https://github.com/ungoogled-software/ungoogled-ch
      "//mojo/public/cpp/base:protobuf_support",
      "//services/network/public/cpp",
      "//testing/gmock",
+--- a/components/private_verification_tokens/BUILD.gn
++++ b/components/private_verification_tokens/BUILD.gn
+@@ -22,7 +22,6 @@ source_set("unit_tests") {
+   if (enable_rust) {
+     deps += [
+       "//components/private_verification_tokens/common:privacy_pass_athm_batch_request_unittest",
+-      "//components/private_verification_tokens/common/athm_ffi:privacy_pass_unittests",
+     ]
+   }
+ }
+--- a/components/private_verification_tokens/common/BUILD.gn
++++ b/components/private_verification_tokens/common/BUILD.gn
+@@ -194,7 +194,6 @@ source_set("test_support") {
+   sources = [ "private_verification_tokens_test_util.h" ]
+   public_deps = [
+     "//base",
+-    "//components/private_verification_tokens/common/athm_ffi:athm_ffi_bindings",
+   ]
+ }
+ 
+@@ -209,7 +208,6 @@ if (enable_rust) {
+     public_deps = [
+       ":private_verification_tokens_issuer_config",
+       "//base",
+-      "//components/private_verification_tokens/common/athm_ffi:athm_ffi_bindings",
+     ]
+   }
+ 
+@@ -222,7 +220,6 @@ if (enable_rust) {
+       ":private_verification_tokens_parameters",
+       ":private_verification_tokens_public_key",
+       "//base",
+-      "//components/private_verification_tokens/common/athm_ffi:athm_ffi_bindings",
+       "//testing/gmock",
+       "//testing/gtest",
+       "//url",
+--- a/content/browser/devtools/protocol_config.json
++++ b/content/browser/devtools/protocol_config.json
+@@ -192,7 +192,7 @@
+             },
+             {
+                 "domain": "Storage",
+-                "exclude": ["runBounceTrackingMitigations", "getPrivateVerificationTokens", "getPrivateVerificationTokensIssuerConfigs", "clearPrivateVerificationTokens", "deletePrivateVerificationToken", "setPrivateVerificationTokensTracking"],
++                "exclude": ["runBounceTrackingMitigations", "getPrivateVerificationTokens", "clearPrivateVerificationTokens", "deletePrivateVerificationToken", "setPrivateVerificationTokensTracking"],
+                 "async": ["getUsageAndQuota", "clearDataForOrigin", "clearDataForStorageKey", "getCookies", "setCookies", "clearCookies", "overrideQuotaForOrigin", "getTrustTokens", "clearTrustTokens", "getStorageBucketList"]
+             },
+             {
+--- a/third_party/blink/public/devtools_protocol/domains/Storage.pdl
++++ b/third_party/blink/public/devtools_protocol/domains/Storage.pdl
+@@ -58,14 +58,6 @@ experimental domain Storage
+       # Base64-encoded serialized token.
+       string token
+ 
+-  # Configuration for a Private Verification Tokens issuer.
+-  experimental type PrivateVerificationTokensIssuerConfig extends object
+-    properties
+-      # Origin of the token issuer.
+-      string issuerOrigin
+-      # Origins authorized to redeem tokens from this issuer.
+-      array of string redeemerOrigins
+-
+ 
+ 
+   type StorageBucketsDurability extends string
+@@ -242,12 +234,6 @@ experimental domain Storage
+     returns
+       array of PrivateVerificationToken tokens
+ 
+-  # Returns the configured Private Verification Tokens issuers and their redeemer
+-  # origins.
+-  experimental command getPrivateVerificationTokensIssuerConfigs
+-    returns
+-      array of PrivateVerificationTokensIssuerConfig configs
+-
+   # Removes all Private Verification Tokens issued by the provided issuerOrigin.
+   experimental command clearPrivateVerificationTokens
+     parameters

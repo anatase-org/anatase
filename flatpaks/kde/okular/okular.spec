@@ -14,8 +14,8 @@
 
 Name:    okular
 Summary: A document viewer
-Version: 26.08.2
-Release: 2%{?dist}
+Version: 26.08.3
+Release: 1%{?dist}
 
 License: GPL-2.0-only
 URL:     https://www.kde.org/applications/graphics/okular/
@@ -221,6 +221,9 @@ appstream-util validate-relax --nonet %{buildroot}%{_kf6_metainfodir}/org.kde.ok
 
 
 %changelog
+* Sun Nov 08 2026 Steve Cossette <farchord@gmail.com> - 26.08.3-1
+- 26.08.3
+
 * Fri Oct 23 2026 Jan Grulich <jgrulich@redhat.com> - 26.08.2-2
 - Rebuild (qt6)
 

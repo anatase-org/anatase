@@ -13,10 +13,6 @@
 %global system_build_flags 0
 
 %global numjobs %{_smp_build_ncpus}
-%ifarch x86_64
-# FTBFS workaround for OOM on x86_64
-%global numjobs 16
-%endif
 
 # official builds have less debugging and go faster... but we have to shut some things off.
 %global official_build 1
@@ -53,13 +49,9 @@
 %global build_headless 0
 %endif
 
-# Temporarily disable system_esbuild by default for the epel build
-# re-enable it once esbuild has been updated
+# enable|disable system esbuild
 %global system_esbuild 1
 %global esbuild_version 0.28.2
-%if 0%{?rhel}
-%global system_esbuild 1
-%endif
 
 # set nodejs_version
 %global nodejs_version v22.22.0
@@ -71,10 +63,6 @@
 %endif
 
 %global system_gn 1
-# epel9 needs newer gn
-%if 0%{?rhel} == 9
-%global system_gn 0
-%endif
 
 # enable gtk4 for fedora and el>9
 %global gtk_version 4
@@ -255,7 +243,7 @@
 %endif
 
 Name:	chromium
-Version: 156.0.8078.79
+Version: 157.0.8103.78
 Release: 1%{?dist}
 Summary: A WebKit (Blink) powered web browser that Google doesn't want you to use
 Url: http://www.chromium.org/Home
@@ -276,7 +264,7 @@ Patch22: chromium-131-fix-qt-ui.patch
 # Workaround for build error: ERROR Unresolved dependencies.
 #//chrome/test:captured_sites_interactive_tests(//build/toolchain/linux/unbundle:default)
 #  needs //third_party/libpng:libpng_for_testonly(//build/toolchain/linux/unbundle:default)
-Patch23: chromium-152-build-error-libpng_for_testonly.patch
+Patch23: chromium-build-error-libpng_for_testonly.patch
 
 # patch from Melvin - melvin@pixilab.se
 Patch24: glibc-2.42-baud-rate-fix.patch
@@ -284,8 +272,8 @@ Patch24: glibc-2.42-baud-rate-fix.patch
 # fix FTBFS with old pipewire on fedora < 44 and epel
 Patch25: chromium-153-ftbfs-pipewire-api.patch
 
-# Disable Eula popup
-Patch26: chromium-disable-eula-popup.patch
+# fix FTBFS with TypeScript Go
+Patch26: chromium-typescript-vendor.patch
 
 # disable enterprise_companion_integration_tests due to Unresolved dependencies
 Patch31: chromium-145-disable-enterprise_companion_integration_tests.patch
@@ -294,7 +282,7 @@ Patch31: chromium-145-disable-enterprise_companion_integration_tests.patch
 Patch92: chromium-138-checkversion-nodejs.patch
 
 # fix build error
-Patch93: chromium-141-csss_style_sheet.patch
+Patch93: chromium-csss_style_sheet.patch
 
 # revert the patch to fix the build error: "ld.lld: error: undefined symbol: __sanitizer_set_death_callback"
 Patch94: chromium-148-v8-sanitize-build-error.patch
@@ -370,7 +358,7 @@ Patch356: chromium-141-use_libcxx_modules.patch
 Patch357: chromium-134-type-mismatch-error.patch
 
 # set clang_lib path
-Patch358: chromium-144-rust-clanglib.patch
+Patch358: chromium-rust-clanglib.patch
 
 # fix FTBFS with rustc 1.95
 Patch359: chromium-148-rust-1.95-bytemuck-ftbfs.patch
@@ -423,6 +411,12 @@ Source28: https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-%{esbuild_ve
 Source29: https://registry.npmjs.org/@esbuild/linux-ppc64/-/linux-ppc64-%{esbuild_version}.tgz
 Source30: https://registry.npmjs.org/@esbuild/linux-arm64/-/linux-arm64-%{esbuild_version}.tgz
 %endif
+
+# License - Apache-2.0, https://github.com/microsoft/TypeScript?tab=Apache-2.0-1-ov-file
+# curl -fL https://github.com/microsoft/TypeScript/archive/refs/tags/v7.0.2.tar.gz -o TypeScript-7.0.2.tar.gz
+Source31: https://src.fedoraproject.org/repo/pkgs/chromium/TypeScript-7.0.2.tar.gz/sha512/ab381b5d7bf16463f75a19b9b517d8ed94699f14fd49746e72df3f23381df6a1debb057b1d9c939a3d393952ad684dc9200cb964195ba6d62efb6a1536bc835a/TypeScript-7.0.2.tar.gz
+# vendor archive created by create-typesctipt-archive.sh
+Source32: https://src.fedoraproject.org/repo/pkgs/chromium/TypeScript-7.0.2-vendor-archive.tar.gz/sha512/015fcc73bda7a0f9c6b6b1bfbc2dae0f4cbf0bace8e95261c81adce93742632982f72acd71be6ed3b71ffc2a91b2674e65b9efbf031e4949bd2775d4dc18e930/TypeScript-7.0.2-vendor-archive.tar.gz
 
 BuildRequires: golang
 BuildRequires: clang
@@ -712,7 +706,7 @@ Provides: bundled(skia)
 Provides: bundled(SMHasher) = 0
 Provides: bundled(snappy) = 1.1.4.head
 Provides: bundled(speech-dispatcher) = 0.7.1
-Provides: bundled(sqlite) = 3.17patched
+Provides: bundled(sqlite) = 3.53.4
 Provides: bundled(superfasthash) = 0
 Provides: bundled(talloc) = 2.0.1
 Provides: bundled(usrsctp) = 0
@@ -791,7 +785,7 @@ Qt6 UI for chromium.
 %patch -P24 -p1 -b .glibc-2.42-baud-rate-fix
 %endif
 %patch -P25 -p1 -b .ftbfs-pipewire-api
-%patch -P26 -p1 -b .disable-eula-popup
+%patch -P26 -p1 -b .typescript-vendor
 %patch -P31 -p1 -b .disable-enterprise_companion_integration_tests
 
 %patch -P92 -p1 -b .nodejs-checkversion
@@ -837,9 +831,7 @@ Qt6 UI for chromium.
 
 %patch -P358 -p1 -b .rust-clang_lib
 
-%if 0%{?fedora} > 41 || (0%{?rhel} == 10 && 0%{?rhel_minor_version} > 2)
 %patch -P359 -p1 -b .ftbfs-with-rustc-1.95
-%endif
 
 %if 0%{?flatpak}
 %patch -P500 -p1 -b .flatpak-initial-sandbox
@@ -1023,7 +1015,22 @@ sed -i "s/Linux x86_64/Linux %{_arch}/" components/embedder_support/user_agent_u
 ln -sf %{_includedir}/simdutf.h third_party/simdutf/simdutf.h
 %endif
 
+# Prepare TypeScript Go sources before entering the build stage.
+ver=7.0.2
+tar xf %{SOURCE31}
+tar xf %{SOURCE32} -C TypeScript-$ver/tsc
+pushd TypeScript-$ver/tsc/internal/bundled/libs
+patch -p2 < ../../../../../third_party/typescript/linux-amd64/3pp/patches/typescript_native_preview.patch
+popd
+
 %build
+
+# Build tsgo and replace bundle binary
+ver=7.0.2
+pushd TypeScript-$ver/tsc
+go build  -o tsgo ./cmd/tsgo
+popd
+cp -a TypeScript-$ver/tsc/tsgo  third_party/typescript/linux-amd64/src/lib/tsc
 
 # reduce warnings
 FLAGS=' -Wno-deprecated-declarations -Wno-unknown-warning-option -Wno-unused-command-line-argument'
@@ -1155,7 +1162,7 @@ CHROMIUM_CORE_GN_DEFINES+=' use_system_libffi=true'
 # drop unrar
 CHROMIUM_CORE_GN_DEFINES+=' safe_browsing_use_unrar=false'
 CHROMIUM_CORE_GN_DEFINES+=' v8_enable_backtrace=true'
-CHROMIUM_CORE_GN_DEFINES+=' v8_use_metagen_instance_types=false'
+CHROMIUM_CORE_GN_DEFINES+=' v8_use_metagen=false'
 # disable devtools buildle
 CHROMIUM_CORE_GN_DEFINES+=' devtools_bundle=false'
 
@@ -1510,8 +1517,321 @@ fi
 %endif
 
 %changelog
+* Thu Nov 12 2026 Than Ngo <than@redhat.com> - 157.0.8103.78-1
+- Update to 157.0.8103.78, include 83 security fixes
+  * CVE-2026-126885: Use after free in ServiceWorker
+  * CVE-2026-126895: Use after free in CSS
+  * CVE-2026-126879: Use after free in Layout
+  * CVE-2026-126846: Use after free in Skia
+  * CVE-2026-126911: Use after free in Accessibility
+  * CVE-2026-126864: Use after free in V8
+  * CVE-2026-126889: Off-by-one error in V8
+  * CVE-2026-126859: Link following in FileSystem
+  * CVE-2026-126886: Use after free in Frames
+  * CVE-2026-126887: Use after free in Animation
+  * CVE-2026-126870: Uninitialized resource in ANGLE
+  * CVE-2026-126912: Buffer overflow in Skia
+  * CVE-2026-126919: Use after free in BrowserTag
+  * CVE-2026-126878: Information leak in Core
+  * CVE-2026-126909: Use after free in Passwords
+  * CVE-2026-126847: Type confusion in V8
+  * CVE-2026-126853: Uninitialized resource in Skia
+  * CVE-2026-126865: Use after free in DOM
+  * CVE-2026-126916: Integer overflow in V8
+  * CVE-2026-126903: Improper state validation in ANGLE
+  * CVE-2026-126910: Type confusion in V8
+  * CVE-2026-126842: Use after free in ANGLE
+  * CVE-2026-126898: Uninitialized resource in Skia
+  * CVE-2026-126871: Out of bounds read in Skia
+  * CVE-2026-126875: Missing authorization in V8
+  * CVE-2026-126862: Improper input validation in Core
+  * CVE-2026-126900: Use after free in CSS
+  * CVE-2026-126904: Use after free in Compositing
+  * CVE-2026-126907: Uninitialized resource in Media
+  * CVE-2026-126851: Use after free in Accessibility
+  * CVE-2026-126845: Uninitialized resource in GPU
+  * CVE-2026-126881: Improper initialization in Media
+  * CVE-2026-126867: Use after free in Browser
+  * CVE-2026-126863: Use after free in HTML
+  * CVE-2026-126896: Missing authorization in V8
+  * CVE-2026-126869: Use after free in Frames
+  * CVE-2026-126858: Uninitialized resource in ANGLE
+  * CVE-2026-126891: Use after free in V8
+  * CVE-2026-126874: Type confusion in V8
+  * CVE-2026-126876: Integer overflow in Skia
+  * CVE-2026-126918: Use after free in Layout
+  * CVE-2026-126866: Incorrect authorization in Extensions
+  * CVE-2026-126844: Uninitialized resource in Skia
+  * CVE-2026-126884: Out of bounds read in Skia
+  * CVE-2026-126894: Out of bounds read in Skia
+  * CVE-2026-126861: Use after free in Media
+  * CVE-2026-126917: Memory corruption in V8
+  * CVE-2026-126856: Incomplete cleanup in Cache
+  * CVE-2026-126905: Incomplete cleanup in V8
+  * CVE-2026-126873: Use after free in Extensions
+  * CVE-2026-126922: Out of bounds read in Skia
+  * CVE-2026-126914: Uninitialized resource in Skia
+  * CVE-2026-126880: Type confusion in V8
+  * CVE-2026-126872: Incorrect authorization in FileSystem
+  * CVE-2026-126877: Use after free in Dawn
+  * CVE-2026-126888: Buffer overflow in Turbolev
+  * CVE-2026-126843: Type confusion in Turbolev
+  * CVE-2026-126854: Incorrect authorization in Layout
+  * CVE-2026-126892: Use after free in MediaStream
+  * CVE-2026-126897: Type confusion in V8
+  * CVE-2026-126857: Out of bounds read in Skia
+  * CVE-2026-126883: Use after free in Core
+  * CVE-2026-126840: Out of bounds write in Network
+  * CVE-2026-126848: Uninitialized resource in Skia
+  * CVE-2026-126882: Information leak in Skia
+  * CVE-2026-126906: Race condition in Extensions
+  * CVE-2026-126915: Use of uninitialized variable in Skia
+  * CVE-2026-126893: Out of bounds write in V8
+  * CVE-2026-126855: Missing authorization in ImageCapture
+  * CVE-2026-126908: Type confusion in V8
+  * CVE-2026-126849: Type confusion in V8
+  * CVE-2026-126901: Use after free in PDF
+  * CVE-2026-126852: Use after free in MediaStream
+  * CVE-2026-126850: Incorrect authorization in SiteIsolation
+  * CVE-2026-126841: Out of bounds read in Skia
+  * CVE-2026-126902: Incorrect reference resolution in Browser
+  * CVE-2026-126868: Type confusion in V8
+  * CVE-2026-126921: Use after free in Accessibility
+  * CVE-2026-126913: Out of bounds read in Compositing
+  * CVE-2026-126890: Out of bounds read in Media
+  * CVE-2026-126860: Incorrect authorization in FileSystem
+  * CVE-2026-126920: Information leak in Skia
+  * CVE-2026-126899: Use after free in Elements
+
+* Mon Nov 09 2026 Than Ngo <than@redhat.com> - 157.0.8103.50-1
+- Update to 157.0.8103.50, include 9 security fixes
+  * CVE-2026-125345: Uninitialized resource in WebGL
+  * CVE-2026-125347: Incorrect authorization in FileSystem
+  * CVE-2026-125343: Buffer overflow in Compositing
+  * CVE-2026-125348: Out of bounds write in GPU
+  * CVE-2026-125344: Type confusion in V8
+  * CVE-2026-125350: Use after free in XML
+  * CVE-2026-125349: Uninitialized resource in GPU
+  * CVE-2026-125342: Uninitialized resource in GPU
+
+* Wed Nov 04 2026 Than Ngo <than@redhat.com> - 157.0.8103.38-1
+- Update to 157.0.8103.38, include 213 security fixes
+  * CVE-2026-121029: Incorrect authorization in ORB
+  * CVE-2026-121030: Incorrect authorization in DevTools
+  * CVE-2026-121031: Missing authorization in PDF
+  * CVE-2026-121032: Out of bounds read in Skia
+  * CVE-2026-121033: Uninitialized resource in GPU
+  * CVE-2026-121034: Use after free in Views
+  * CVE-2026-121035: Use after free in Prerender
+  * CVE-2026-121036: Use after free in CSS
+  * CVE-2026-121037: Out of bounds write in ANGLE
+  * CVE-2026-121038: Information leak in Compositing
+  * CVE-2026-121039: Incorrect authorization in Proxy Auth
+  * CVE-2026-121040: Incorrect authorization in Core
+  * CVE-2026-121041: Missing authorization in Input
+  * CVE-2026-121042: Incorrect authorization in Permissions
+  * CVE-2026-121043: UI misrepresentation in Payments
+  * CVE-2026-121044: Use after free in Layout
+  * CVE-2026-121045: UI misrepresentation in Browser
+  * CVE-2026-121046: Incorrect authorization in WebAppInstalls
+  * CVE-2026-121047: Buffer overflow in Media
+  * CVE-2026-121048: Race condition in V8
+  * CVE-2026-121049: Out of bounds read in V8
+  * CVE-2026-121050: Race condition in Mobile
+  * CVE-2026-121051: UI misrepresentation in iOSWeb
+  * CVE-2026-121052: Use after free in GPU
+  * CVE-2026-121053: UI misrepresentation in Transactions Platform
+  * CVE-2026-121054: Improper state validation in XML
+  * CVE-2026-121055: Incomplete cleanup in DevTools
+  * CVE-2026-121057: Type confusion in V8
+  * CVE-2026-121059: Information leak in Core
+  * CVE-2026-121060: Incorrect authorization in FileSystem
+  * CVE-2026-121061: Use after free in Modularization
+  * CVE-2026-121062: Incorrect authorization in API
+  * CVE-2026-121063: Incorrect authorization in CacheStorage
+  * CVE-2026-121064: Improper input validation in Performance
+  * CVE-2026-121065: Incorrect authorization in DevTools
+  * CVE-2026-121066: Incorrect authorization in Extensions
+  * CVE-2026-121067: UI misrepresentation in PermissionElement
+  * CVE-2026-121068: Type confusion in V8
+  * CVE-2026-121069: Use after free in Track
+  * CVE-2026-121070: Use after free in WTF
+  * CVE-2026-121071: Incorrect authorization in FileSystem
+  * CVE-2026-121072: Uninitialized resource in Skia
+  * CVE-2026-121073: Use after free in Network
+  * CVE-2026-121074: Memory corruption in GPU
+  * CVE-2026-121075: Missing authorization in DevTools
+  * CVE-2026-121076: Use after free in WebXR
+  * CVE-2026-121077: Use after free in Mobile
+  * CVE-2026-121078: Type confusion in V8
+  * CVE-2026-121079: Race condition in V8
+  * CVE-2026-121080: Use after free in Codecs
+  * CVE-2026-121081: UI misrepresentation in Passwords
+  * CVE-2026-121082: Type confusion in V8
+  * CVE-2026-121083: Use after free in Compositing
+  * CVE-2026-121084: Out of bounds read in Skia
+  * CVE-2026-121085: Incorrect authorization in WebUI
+  * CVE-2026-121086: Buffer overflow in Skia
+  * CVE-2026-121087: Improper input validation in Mobile
+  * CVE-2026-121088: Missing authorization in PerformanceAPIs
+  * CVE-2026-121089: Use after free in WebGPU
+  * CVE-2026-121090: Improper privilege management in Navigation
+  * CVE-2026-121091: Incorrect authorization in Permissions
+  * CVE-2026-121092: Uncontrolled recursion in SVG
+  * CVE-2026-121093: Out of bounds read in Animation
+  * CVE-2026-121094: Type confusion in V8
+  * CVE-2026-121095: Uninitialized resource in WebGL
+  * CVE-2026-121096: Incomplete cleanup in V8
+  * CVE-2026-121097: Use after free in Printing
+  * CVE-2026-121098: Improper state validation in GPU
+  * CVE-2026-121099: Information leak in PrivateTokens
+  * CVE-2026-121100: Use after free in DOM
+  * CVE-2026-121101: Missing authorization in DevTools
+  * CVE-2026-121102: Missing authorization in BackgroundFetch
+  * CVE-2026-121103: Incorrect authorization in Extensions
+  * CVE-2026-121104: Incorrect authorization in FileSystem
+  * CVE-2026-121105: Information leak in Network
+  * CVE-2026-121106: Information leak in Omnibox
+  * CVE-2026-121107: Incorrect authorization in BackgroundFetch
+  * CVE-2026-121108: Confused deputy in BackgroundFetch
+  * CVE-2026-121109: Inadequate encryption strength in SSL
+  * CVE-2026-121110: UI misrepresentation in Shopping
+  * CVE-2026-121111: Incorrect authorization in HID
+  * CVE-2026-121112: Out of bounds read in Permissions
+  * CVE-2026-121113: Buffer overflow in PDFium
+  * CVE-2026-121114: Use after free in TabStrip
+  * CVE-2026-121115: Improper input validation in Shopping
+  * CVE-2026-121116: Missing authorization in WebView
+  * CVE-2026-121117: Use after free in Paint
+  * CVE-2026-121118: Use after free in SVG
+  * CVE-2026-121119: Use after free in Controls
+  * CVE-2026-121120: Improper input validation in Prerender
+  * CVE-2026-121121: UI misrepresentation in PageInfo
+  * CVE-2026-121122: UI misrepresentation in Prompts
+  * CVE-2026-121123: Use after free in Canvas
+  * CVE-2026-121124: Improper adherence to coding standards in XML
+  * CVE-2026-121125: Information leak in ServiceWorker
+  * CVE-2026-121126: Use after free in Core
+  * CVE-2026-121127: Use after free in WebAudio
+  * CVE-2026-121128: Use after free in Scheduling
+  * CVE-2026-121129: Use after free in WebRTC
+  * CVE-2026-121130: Observable discrepancy in Forms
+  * CVE-2026-121131: Use after free in Mobile
+  * CVE-2026-121132: Information leak in V8
+  * CVE-2026-121133: Incorrect reference resolution in Images
+  * CVE-2026-121134: Information loss in BackgroundFetch
+  * CVE-2026-121135: Security issue in Platform
+  * CVE-2026-121136: Missing authorization in DevTools
+  * CVE-2026-121137: Type confusion in DevTools
+  * CVE-2026-121138: Observable discrepancy in CORS
+  * CVE-2026-121140: Out of bounds read in Internals
+  * CVE-2026-121141: Improper input validation in Editing
+  * CVE-2026-121142: Incorrect authorization in Network
+  * CVE-2026-121143: Uninitialized resource in GPU
+  * CVE-2026-121148: Use after free in ANGLE
+  * CVE-2026-121156: Buffer overflow in Dawn
+  * CVE-2026-121157: Incorrect authorization in Chromoting
+  * CVE-2026-121158: Information leak in Paint
+  * CVE-2026-121159: Incorrect authorization in History
+  * CVE-2026-121160: Out of bounds read in Skia
+  * CVE-2026-121161: Information leak in BackgroundFetch
+  * CVE-2026-121162: UI misrepresentation in Notifications
+  * CVE-2026-121163: Improper input validation in Browser
+  * CVE-2026-121164: Incorrect authorization in Views
+  * CVE-2026-121165: UI misrepresentation in Mobile
+  * CVE-2026-121166: Type confusion in PDFium
+  * CVE-2026-121167: Incorrect authorization in Permissions
+  * CVE-2026-121168: Improper resource exposure in DevTools
+  * CVE-2026-121169: Missing authorization in DevTools
+  * CVE-2026-121170: Improper resource control in WebCodecs
+  * CVE-2026-121171: Confused deputy in DevTools
+  * CVE-2026-121172: Incorrect authorization in Isolated
+  * CVE-2026-121173: Uninitialized resource in WebGL
+  * CVE-2026-121174: Missing authorization in BackgroundFetch
+  * CVE-2026-121175: Improper resource exposure in ORB
+  * CVE-2026-121176: Uninitialized resource in Media
+  * CVE-2026-121177: UI misrepresentation in PageInfo
+  * CVE-2026-121178: Use after free in Aura
+  * CVE-2026-121179: Use after free in PDFium
+  * CVE-2026-121180: Buffer overflow in Media
+  * CVE-2026-121181: Use after free in Editing
+  * CVE-2026-121182: Use after free in DOM
+  * CVE-2026-121183: Incorrect authorization in Extensions
+  * CVE-2026-121184: Out of bounds read in Media
+  * CVE-2026-121185: Use after free in PictureInPicture
+  * CVE-2026-121186: UI misrepresentation in Passwords
+  * CVE-2026-121187: Observable discrepancy in Paint
+  * CVE-2026-121188: Use after free in PerformanceAPIs
+  * CVE-2026-121189: Use after free in Browser
+  * CVE-2026-121190: UI misrepresentation in Extensions
+  * CVE-2026-121193: Incorrect authorization in Extensions
+  * CVE-2026-121194: Missing authorization in SiteIsolation
+  * CVE-2026-121195: Incorrect authorization in TrustedTypes
+  * CVE-2026-121196: Privilege elevation in Mobile
+  * CVE-2026-121197: Out of bounds read in ANGLE
+  * CVE-2026-121198: Confused deputy in WebUI
+  * CVE-2026-121199: Missing authorization in Chromoting
+  * CVE-2026-121200: Incorrect reference resolution in DevTools
+  * CVE-2026-121201: Use after free in Animation
+  * CVE-2026-121202: Use after free in Autofill
+  * CVE-2026-121203: Use after free in Geometry
+  * CVE-2026-121204: Incomplete cleanup in DevTools
+  * CVE-2026-121205: Incorrect authorization in CORS
+  * CVE-2026-121206: UI misrepresentation in Isolated
+  * CVE-2026-121207: Uninitialized resource in Dawn
+  * CVE-2026-121208: Out of bounds read in Media
+  * CVE-2026-121209: UI misrepresentation in Input
+  * CVE-2026-121210: Type confusion in V8
+  * CVE-2026-121211: Use after free in PowerBookmarks
+  * CVE-2026-121212: Incorrect authorization in Core
+  * CVE-2026-121213: Uninitialized resource in Images
+  * CVE-2026-121214: Use after free in Passwords
+  * CVE-2026-121215: UI misrepresentation in Bluetooth
+  * CVE-2026-121216: UI misrepresentation in UI
+  * CVE-2026-121217: Use after free in Streaming
+  * CVE-2026-121218: Type confusion in V8
+  * CVE-2026-121219: Integer overflow in GPU
+  * CVE-2026-121220: Incorrect authorization in Core
+  * CVE-2026-121221: Type confusion in V8
+  * CVE-2026-121222: Incorrect authorization in Forms
+  * CVE-2026-121223: Observable discrepancy in Media
+  * CVE-2026-121224: Security issue in Desktop
+  * CVE-2026-121225: Incorrect authorization in Permissions
+  * CVE-2026-121226: Type confusion in V8
+  * CVE-2026-121227: Uninitialized resource in Skia
+  * CVE-2026-121228: Type confusion in V8
+  * CVE-2026-121229: Memory corruption in ANGLE
+  * CVE-2026-121230: Race condition in ANGLE
+  * CVE-2026-121231: Incorrect authorization in DevTools
+  * CVE-2026-121232: Incorrect authorization in Core
+  * CVE-2026-121233: Type confusion in CacheStorage
+  * CVE-2026-121234: Privilege elevation in Contacts
+  * CVE-2026-121235: Information leak in Paint
+  * CVE-2026-121236: Improper input validation in Network
+  * CVE-2026-121237: Improper state validation in FileSystem
+  * CVE-2026-121238: Use after free in Source
+  * CVE-2026-121239: Information leak in Core
+  * CVE-2026-121240: Improper input validation in Variations
+  * CVE-2026-121241: Use after free in Navigation
+  * CVE-2026-121242: Improper input validation in WebPackaging
+  * CVE-2026-121243: Information leak in Frames
+  * CVE-2026-121244: UI misrepresentation in FileAPI
+  * CVE-2026-121245: Race condition in Autofill
+  * CVE-2026-121246: Use after free in WebGL
+  * CVE-2026-121247: Buffer overflow in Dawn
+  * CVE-2026-121248: Incorrect authorization in API
+  * CVE-2026-121249: Buffer overflow in ANGLE
+  * CVE-2026-121250: Use after free in Extensions
+  * CVE-2026-121251: Missing authorization in V8
+  * CVE-2026-121252: Incorrect authorization in Core
+  * CVE-2026-121253: Missing authorization in DevTools
+  * CVE-2026-121254: Information leak in Select
+  * CVE-2026-121255: Incorrect authorization in Autofill AI
+  * CVE-2026-121256: Use of released resource in GPU
+  * CVE-2026-121257: Use after free in TabStrip
+
 * Fri Oct 30 2026 Than Ngo <than@redhat.com> - 156.0.8078.79-1
-- Update to 156.0.8078.73, include 21 security fixes
+- Update to 156.0.8078.79, include 21 security fixes
   * CVE-2026-119260: Use after free in Frames
   * CVE-2026-119261: Improper input validation in Skia
   * CVE-2026-119262: Improper input validation in V8

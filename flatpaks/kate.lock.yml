@@ -1,10 +1,10 @@
 kde/kate:
-  upstream-sha: ff885ae59d778a34f8baceb5999a6356e7949637
+  upstream-sha: e1cece9747b57471cc79be66f2f1308adc160740
 kde/konsole:
-  upstream-sha: 1ff399c0d84b6785e803d73dc69fbf0c4ceec43b
+  upstream-sha: d1964e9427c9e8532602a3b0b4ec5a8977f018e7
 kde/markdownpart:
-  upstream-sha: c3eb1d51b0e469aa778466453fbaf72af44c7b52
+  upstream-sha: 93ed912d78ef3e9f656124777b85a1736c9d47f5
 kde/svgpart:
-  upstream-sha: d57ac49a8d291adb3247f5bc7b4f7bcf876e3dfc
+  upstream-sha: 497815e943cf73db879ceb6ce6c001fab1dcce46
 kde/qtkeychain:
   upstream-sha: 7f88933cd96b93420652f9cbaee851dce8549c26

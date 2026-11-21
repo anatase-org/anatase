@@ -1,0 +1,45 @@
+diff -up chromium-157.0.8103.38/chrome/test/BUILD.gn.me chromium-157.0.8103.38/chrome/test/BUILD.gn
+--- chromium-157.0.8103.38/chrome/test/BUILD.gn.me	2026-11-04 10:49:01.080817714 +0100
++++ chromium-157.0.8103.38/chrome/test/BUILD.gn	2026-11-04 10:51:24.266052678 +0100
+@@ -4319,7 +4319,7 @@ if (!is_android) {
+         "//testing/gtest",
+         "//third_party/hunspell",
+         "//third_party/icu",
+-        "//third_party/libpng:libpng_for_testonly",
++        "//third_party/libpng",
+         "//ui/base:test_support",
+         "//ui/events:test_support",
+         "//ui/ozone",
+@@ -4951,7 +4951,7 @@ if (!is_android) {
+       "//testing/gtest",
+       "//third_party/hunspell",
+       "//third_party/icu",
+-      "//third_party/libpng:libpng_for_testonly",
++      "//third_party/libpng",
+       "//ui/base:test_support",
+       "//ui/resources:ui_test_pak",
+       "//ui/views",
+diff -up chromium-157.0.8103.38/tools/imagediff/BUILD.gn.me chromium-157.0.8103.38/tools/imagediff/BUILD.gn
+--- chromium-157.0.8103.38/tools/imagediff/BUILD.gn.me	2026-11-04 10:51:38.218181946 +0100
++++ chromium-157.0.8103.38/tools/imagediff/BUILD.gn	2026-11-04 10:51:50.050435652 +0100
+@@ -48,7 +48,7 @@ if (current_toolchain == imagediff_toolc
+     deps = [
+       "//base",
+       "//build/win:default_exe_manifest",
+-      "//third_party/libpng:libpng_for_testonly",
++      "//third_party/libpng",
+       "//third_party/zlib",
+     ]
+   }
+diff -up chromium-157.0.8103.38/ui/gfx/BUILD.gn.me chromium-157.0.8103.38/ui/gfx/BUILD.gn
+--- chromium-157.0.8103.38/ui/gfx/BUILD.gn.me	2026-11-04 10:52:00.047509928 +0100
++++ chromium-157.0.8103.38/ui/gfx/BUILD.gn	2026-11-04 10:52:10.689515260 +0100
+@@ -899,7 +899,7 @@ test("gfx_unittests") {
+     "//skia:skcms",
+     "//testing/gtest",
+     "//third_party/icu:icuuc",
+-    "//third_party/libpng:libpng_for_testonly",
++    "//third_party/libpng",
+     "//third_party/zlib",
+     "//ui/base",
+     "//ui/gfx/animation",

@@ -5,13 +5,17 @@ NOTE: Multiple Bazel 8 files have a "cpu:ppc" bug, where it should read "cpu:ppc
 This causes various toolchain failures of the form:
 
 While resolving toolchains for target @@rules_python+//python:current_py_toolchain
-	@@bazel_tools//tools/python:toolchain_type
+        @@bazel_tools//tools/python:toolchain_type
 
-Index: chromium-156.0.8078.35/third_party/xnnpack/BUILD.gn
-===================================================================
---- chromium-156.0.8078.35.orig/third_party/xnnpack/BUILD.gn
-+++ chromium-156.0.8078.35/third_party/xnnpack/BUILD.gn
-@@ -2252,6 +2252,298 @@ if (current_cpu == "x64" || current_cpu
+This requires a one-time edit of two files in the Bazel cache directory to resolve:
+        external/rules_python+/python/versions.bzl
+        external/rules_python++python+pythons_hub/BUILD.bazel
+
+diff --git a/third_party/xnnpack/BUILD.gn b/third_party/xnnpack/BUILD.gn
+index 7bd25c8..22a25e2 100644
+--- a/third_party/xnnpack/BUILD.gn
++++ b/third_party/xnnpack/BUILD.gn
+@@ -2282,6 +2282,300 @@ if (current_cpu == "x64" || current_cpu == "x86") {
        ":xx-transposev_riscv64_standalone",
      ]
    }
@@ -37,6 +41,7 @@ Index: chromium-156.0.8078.35/third_party/xnnpack/BUILD.gn
 +      ":f16-vcos_ppc64",
 +      ":f16-vexp_ppc64",
 +      ":f16-vgelu_ppc64",
++      ":f16-vhswish_ppc64",
 +      ":f16-vlog_ppc64",
 +      ":f16-vsin_ppc64",
 +      ":f16-vsqrt_ppc64",
@@ -183,6 +188,7 @@ Index: chromium-156.0.8078.35/third_party/xnnpack/BUILD.gn
 +      ":f16-vcos_ppc64_standalone",
 +      ":f16-vexp_ppc64_standalone",
 +      ":f16-vgelu_ppc64_standalone",
++      ":f16-vhswish_ppc64_standalone",
 +      ":f16-vlog_ppc64_standalone",
 +      ":f16-vsin_ppc64_standalone",
 +      ":f16-vsqrt_ppc64_standalone",
@@ -310,34 +316,10 @@ Index: chromium-156.0.8078.35/third_party/xnnpack/BUILD.gn
  } else {
    xnnpack_deps = []
    if (build_with_internal_optimization_guide) {
-@@ -70177,6 +70469,8203 @@ if (current_cpu == "riscv64") {
-       cflags = []
- 
-       sources = [
-+        "src/include/xnnpack.h",
-+        "src/src/xx-transposev/xx-transposev-1x1-scalar-memcpy.c",
-+      ]
-+
-+      configs -= [ "//build/config/compiler:chromium_code" ]
-+      configs += [ "//build/config/compiler:no_chromium_code" ]
-+      configs += [ "//build/config/sanitizers:cfi_icall_generalize_pointers" ]
-+      configs += [ ":xnnpack_private_config" ]
-+
-+      deps = [
-+        "//third_party/cpuinfo",
-+        "//third_party/fp16",
-+        "//third_party/fxdiv",
-+        "//third_party/pthreadpool:pthreadpool_standalone",
-+      ]
-+
-+      public_configs = [ ":xnnpack_public_config" ]
-+
-+      if (!(is_android && use_order_profiling)) {
-+        assert_no_deps = [ "//base" ]
-+      }
-+    }
-+  }
-+}
+@@ -71232,3 +71526,8259 @@ if (current_cpu == "riscv64") {
+     }
+   }
+ }
 +
 +if (current_cpu == "ppc64") {
 +  if (build_with_chromium) {
@@ -1243,6 +1225,8 @@ Index: chromium-156.0.8078.35/third_party/xnnpack/BUILD.gn
 +        "src/include/xnnpack.h",
 +        "src/src/f16-vbinary/gen/f16-vadd-scalar-u1.c",
 +        "src/src/f16-vbinary/gen/f16-vaddc-scalar-u1.c",
++        "src/src/f16-vbinary/gen/f16-vmul-scalar-u1.c",
++        "src/src/f16-vbinary/gen/f16-vmulc-scalar-u1.c",
 +      ]
 +
 +      configs -= [ "//build/config/compiler:chromium_code" ]
@@ -1270,6 +1254,8 @@ Index: chromium-156.0.8078.35/third_party/xnnpack/BUILD.gn
 +        "src/include/xnnpack.h",
 +        "src/src/f16-vbinary/gen/f16-vadd-scalar-u1.c",
 +        "src/src/f16-vbinary/gen/f16-vaddc-scalar-u1.c",
++        "src/src/f16-vbinary/gen/f16-vmul-scalar-u1.c",
++        "src/src/f16-vbinary/gen/f16-vmulc-scalar-u1.c",
 +      ]
 +
 +      configs -= [ "//build/config/compiler:chromium_code" ]
@@ -1435,6 +1421,61 @@ Index: chromium-156.0.8078.35/third_party/xnnpack/BUILD.gn
 +      sources = [
 +        "src/include/xnnpack.h",
 +        "src/src/f16-vgelu/gen/f16-vgelu-scalar-rational-6-4-div.c",
++      ]
++
++      configs -= [ "//build/config/compiler:chromium_code" ]
++      configs += [ "//build/config/compiler:no_chromium_code" ]
++      configs += [ "//build/config/sanitizers:cfi_icall_generalize_pointers" ]
++      configs += [ ":xnnpack_private_config" ]
++
++      deps = [
++        "//third_party/cpuinfo",
++        "//third_party/fp16",
++        "//third_party/fxdiv",
++        "//third_party/pthreadpool:pthreadpool_standalone",
++      ]
++
++      public_configs = [ ":xnnpack_public_config" ]
++
++      if (!(is_android && use_order_profiling)) {
++        assert_no_deps = [ "//base" ]
++      }
++    }
++  }
++
++  if (build_with_chromium) {
++    source_set("f16-vhswish_ppc64") {
++      cflags = []
++
++      sources = [
++        "src/include/xnnpack.h",
++        "src/src/f16-vhswish/gen/f16-vhswish-scalar-u1.c",
++      ]
++
++      configs -= [ "//build/config/compiler:chromium_code" ]
++      configs += [ "//build/config/compiler:no_chromium_code" ]
++      configs += [ "//build/config/sanitizers:cfi_icall_generalize_pointers" ]
++      configs += [ ":xnnpack_private_config" ]
++
++      deps = [
++        "//third_party/cpuinfo",
++        "//third_party/fp16",
++        "//third_party/fxdiv",
++        "//third_party/pthreadpool",
++      ]
++
++      public_configs = [ ":xnnpack_public_config" ]
++    }
++  }
++
++  # This is a target that cannot depend on //base.
++  if (build_with_internal_optimization_guide) {
++    source_set("f16-vhswish_ppc64_standalone") {
++      cflags = []
++
++      sources = [
++        "src/include/xnnpack.h",
++        "src/src/f16-vhswish/gen/f16-vhswish-scalar-u1.c",
 +      ]
 +
 +      configs -= [ "//build/config/compiler:chromium_code" ]
@@ -7626,6 +7667,7 @@ Index: chromium-156.0.8078.35/third_party/xnnpack/BUILD.gn
 +      sources = [
 +        "src/include/xnnpack.h",
 +        "src/src/x16-packw/gen/x16-packw-x16-gemm-gio-scalar.c",
++        "src/src/x16-packw/gen/x16-packw-x16-gemm-goi-scalar-int-u4.c",
 +        "src/src/x16-packw/gen/x16-packw-x32-gemm-gio-scalar.c",
 +        "src/src/x16-packw/gen/x16-packw-x8-gemm-gio-scalar.c",
 +      ]
@@ -7654,6 +7696,7 @@ Index: chromium-156.0.8078.35/third_party/xnnpack/BUILD.gn
 +      sources = [
 +        "src/include/xnnpack.h",
 +        "src/src/x16-packw/gen/x16-packw-x16-gemm-gio-scalar.c",
++        "src/src/x16-packw/gen/x16-packw-x16-gemm-goi-scalar-int-u4.c",
 +        "src/src/x16-packw/gen/x16-packw-x32-gemm-gio-scalar.c",
 +        "src/src/x16-packw/gen/x16-packw-x8-gemm-gio-scalar.c",
 +      ]
@@ -8200,7 +8243,6 @@ Index: chromium-156.0.8078.35/third_party/xnnpack/BUILD.gn
 +        "src/src/x8-packw/gen/x8-packw-x16-gemm-gio-scalar.c",
 +        "src/src/x8-packw/gen/x8-packw-x16-gemm-goi-scalar-u2.c",
 +        "src/src/x8-packw/gen/x8-packw-x32-gemm-gio-scalar.c",
-+        "src/src/x8-packw/gen/x8-packw-x32-gemm-goi-scalar-u2.c",
 +        "src/src/x8-packw/gen/x8-packw-x4-gemm-gio-scalar.c",
 +        "src/src/x8-packw/gen/x8-packw-x4-gemm-goi-scalar-u2.c",
 +        "src/src/x8-packw/gen/x8-packw-x8-gemm-gio-scalar.c",
@@ -8233,7 +8275,6 @@ Index: chromium-156.0.8078.35/third_party/xnnpack/BUILD.gn
 +        "src/src/x8-packw/gen/x8-packw-x16-gemm-gio-scalar.c",
 +        "src/src/x8-packw/gen/x8-packw-x16-gemm-goi-scalar-u2.c",
 +        "src/src/x8-packw/gen/x8-packw-x32-gemm-gio-scalar.c",
-+        "src/src/x8-packw/gen/x8-packw-x32-gemm-goi-scalar-u2.c",
 +        "src/src/x8-packw/gen/x8-packw-x4-gemm-gio-scalar.c",
 +        "src/src/x8-packw/gen/x8-packw-x4-gemm-goi-scalar-u2.c",
 +        "src/src/x8-packw/gen/x8-packw-x8-gemm-gio-scalar.c",
@@ -8511,6 +8552,27 @@ Index: chromium-156.0.8078.35/third_party/xnnpack/BUILD.gn
 +      cflags = []
 +
 +      sources = [
-         "src/include/xnnpack.h",
-         "src/src/xx-transposev/xx-transposev-1x1-scalar-memcpy.c",
-       ]
++        "src/include/xnnpack.h",
++        "src/src/xx-transposev/xx-transposev-1x1-scalar-memcpy.c",
++      ]
++
++      configs -= [ "//build/config/compiler:chromium_code" ]
++      configs += [ "//build/config/compiler:no_chromium_code" ]
++      configs += [ "//build/config/sanitizers:cfi_icall_generalize_pointers" ]
++      configs += [ ":xnnpack_private_config" ]
++
++      deps = [
++        "//third_party/cpuinfo",
++        "//third_party/fp16",
++        "//third_party/fxdiv",
++        "//third_party/pthreadpool:pthreadpool_standalone",
++      ]
++
++      public_configs = [ ":xnnpack_public_config" ]
++
++      if (!(is_android && use_order_profiling)) {
++        assert_no_deps = [ "//base" ]
++      }
++    }
++  }
++}
