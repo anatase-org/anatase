@@ -53,8 +53,8 @@
 #   - update options in /etc/kernel/cmdline
 #   - cover both UEFI and BIOS case
 
-CMDLINE_ARGS_NVIDIA="rd.driver.blacklist=nouveau rd.driver.blacklist=nova-core"
-CMDLINE_ARGS_ALWAYS_REMOVE="nomodeset gfxpayload=vga=normal nouveau.modeset=0 nvidia-drm.modeset=1 nvidia-drm.fbdev=1 modprobe.blacklist=nouveau initcall_blacklist=simpledrm_platform_driver_init"
+CMDLINE_ARGS_NVIDIA="rd.driver.blacklist=nouveau,nova-core"
+CMDLINE_ARGS_ALWAYS_REMOVE="nomodeset nouveau.modeset=0 nvidia-drm.modeset=1 nvidia-drm.fbdev=1 modprobe.blacklist=nouveau"
 
 print_usage() {
 cat <<EOF
@@ -65,7 +65,7 @@ Boot loaders supported:
   - grub 2 with BootLoaderSpec patches (el8, el9, fedora)
   - systemd-boot (fedora)
 
-Usage: nvidia-update-boot post|preun
+Usage: nvidia-boot-update post|preun
     post        Adjust necessary kernel command line options
     preun       Remove all kernel command line options
 
@@ -91,7 +91,7 @@ check() {
 
     elif [ ! -f /etc/default/grub ] && [ -f /etc/kernel/cmdline ]; then
 
-      # systemd-boot is installed, differnt path than Grub 2 with BootLoaderSpec patches
+      # systemd-boot is installed, different path than Grub 2 with BootLoaderSpec patches
       BLS_ENTRIES=/boot/efi/loader/entries
 
     else
@@ -103,107 +103,110 @@ check() {
   fi
 }
 
-post() {
-
-  # Edit GRUB configuration file
-  if [ -v GRUB_CFG ]; then
-
-    if [ -z "${GRUB_CMDLINE_LINUX}" ]; then
-      echo GRUB_CMDLINE_LINUX=\""$CMDLINE_ARGS_NVIDIA"\" >> /etc/default/grub
-    else
-      for param in $CMDLINE_ARGS_NVIDIA; do
-        echo ${GRUB_CMDLINE_LINUX} | grep -q $param
-        [ $? -eq 1 ] && GRUB_CMDLINE_LINUX="${GRUB_CMDLINE_LINUX} ${param}"
-      done
-      for param in $CMDLINE_ARGS_ALWAYS_REMOVE; do
-        echo ${GRUB_CMDLINE_LINUX} | grep -q $param
-        [ $? -eq 0 ] && GRUB_CMDLINE_LINUX="$(echo ${GRUB_CMDLINE_LINUX} | sed -e "s/ $param//g")"
-      done
-      sed -i -e "s|^GRUB_CMDLINE_LINUX=.*|GRUB_CMDLINE_LINUX=\"${GRUB_CMDLINE_LINUX}\"|g" /etc/default/grub
-    fi
-
-    grub2-mkconfig -o $GRUB_CFG &>/dev/null
-
-  fi
-
-  # Edit BootLoaderSpec entries
-  if [ -v BLS_ENTRIES ]; then
-
-    for config_file in $BLS_ENTRIES/*.conf; do
-      for param in $CMDLINE_ARGS_NVIDIA; do
-        grep -q $param $config_file
-        [ $? -eq 1 ] && sed -i -e "s|^options.*|& $param|" $config_file
-      done
-      for param in $CMDLINE_ARGS_ALWAYS_REMOVE; do
-        grep -q $param $config_file
-        [ $? -eq 0 ] && sed -i -e "s| $param||" $config_file
-      done
-    done
-
-  fi
-
-  # Edit /etc/kernel/cmdline
-  if [ -f /etc/kernel/cmdline ]; then
-    for param in $CMDLINE_ARGS_NVIDIA; do
-      grep -q $param /etc/kernel/cmdline
-      [ $? -eq 1 ] && sed -i -e "s|^.*|& $param|" /etc/kernel/cmdline
-    done
-    for param in $CMDLINE_ARGS_ALWAYS_REMOVE; do
-      grep -q $param /etc/kernel/cmdline
-      [ $? -eq 0 ] && sed -i -e "s| $param||" /etc/kernel/cmdline
-    done
-  fi
+# Print the kernel command line $1 without the parameters in $2 and with the
+# ones in $3. Comma separated values are lists, both in the command line and in
+# the parameters: "key=b" is found in, and removed from, "key=a,b", and adding
+# "key=a,b" to "key=a" only adds "key=b".
+edit_args() {
+  printf '%s\n' "$1" | awk -v remove="$2" -v add="$3" '
+    # Find the flag k (empty v) or the value v of k, deleting it if del is set.
+    function find(k, v, del,    j, x, n, l, rest, hit, found) {
+      for (j = 1; j <= nargs; j++) {
+        if (v == "") {
+          if (a[j] == k) {
+            found = 1
+            if (del) a[j] = ""
+          }
+        } else if (index(a[j], k "=") == 1) {
+          n = split(substr(a[j], length(k) + 2), l, ",")
+          rest = ""; hit = 0
+          for (x = 1; x <= n; x++) {
+            if (l[x] == v) {
+              found = hit = 1
+              if (del) continue
+            }
+            rest = rest (rest == "" ? "" : ",") l[x]
+          }
+          if (del && hit) a[j] = (rest == "") ? "" : k "=" rest
+        }
+      }
+      return found
+    }
+    # Run find() on a parameter, return what of it was not found.
+    function each(param, del,    k, n, l, x, missing) {
+      k = param; sub(/=.*/, "", k)
+      if (k == param) return find(k, "", del) ? "" : param
+      n = split(substr(param, length(k) + 2), l, ",")
+      missing = ""
+      for (x = 1; x <= n; x++)
+        if (!find(k, l[x], del)) missing = missing (missing == "" ? "" : ",") l[x]
+      return (missing == "") ? "" : k "=" missing
+    }
+    {
+      nargs = split($0, a, " ")
+      n = split(remove, p, " ")
+      for (i = 1; i <= n; i++) each(p[i], 1)
+      n = split(add, p, " ")
+      for (i = 1; i <= n; i++) if ((m = each(p[i], 0)) != "") a[++nargs] = m
+      out = ""
+      for (i = 1; i <= nargs; i++) if (a[i] != "") out = out (out == "" ? "" : " ") a[i]
+      print out
+    }'
 }
 
-preun() {
+# Escape a string for the replacement part of a sed "s|||" expression.
+sed_escape() {
+  printf '%s\n' "$1" | sed -e 's/[|&\\]/\\&/g'
+}
+
+# Remove the parameters in $1 and add the ones in $2 everywhere the kernel
+# command line is stored.
+update() {
 
   # Edit GRUB configuration file
-  if [ -v GRUB_CFG ]; then
+  if [ -n "${GRUB_CFG}" ]; then
 
-    for param in $CMDLINE_ARGS_NVIDIA; do
-      echo ${GRUB_CMDLINE_LINUX} | grep -q $param
-      [ $? -eq 0 ] && GRUB_CMDLINE_LINUX="$(echo ${GRUB_CMDLINE_LINUX} | sed -e "s/ $param//g")"
-    done
-    sed -i -e "s|^GRUB_CMDLINE_LINUX=.*|GRUB_CMDLINE_LINUX=\"${GRUB_CMDLINE_LINUX}\"|g" /etc/default/grub
+    args=$(sed_escape "$(edit_args "${GRUB_CMDLINE_LINUX}" "$1" "$2")")
+    if grep -q '^GRUB_CMDLINE_LINUX=' /etc/default/grub; then
+      sed -i -e "s|^GRUB_CMDLINE_LINUX=.*|GRUB_CMDLINE_LINUX=\"${args}\"|" /etc/default/grub
+    else
+      echo "GRUB_CMDLINE_LINUX=\"${args}\"" >> /etc/default/grub
+    fi
 
-    grub2-mkconfig -o $GRUB_CFG &>/dev/null
+    grub2-mkconfig -o "${GRUB_CFG}" >/dev/null 2>&1
 
   fi
 
   # Edit BootLoaderSpec entries
-  if [ -v BLS_ENTRIES ]; then
+  if [ -n "${BLS_ENTRIES}" ]; then
 
-    for config_file in $BLS_ENTRIES/*.conf; do
-      for param in $CMDLINE_ARGS_NVIDIA; do
-        grep -q $param $config_file
-        [ $? -eq 0 ] && sed -i -e "s| $param||" $config_file
-      done
+    for config_file in "${BLS_ENTRIES}"/*.conf; do
+      grep -q '^options' "${config_file}" 2>/dev/null || continue
+      args=$(sed_escape "$(edit_args "$(sed -n -e 's/^options[[:space:]]*//p' "${config_file}")" "$1" "$2")")
+      sed -i -e "s|^options.*|options ${args}|" "${config_file}"
     done
 
   fi
 
   # Edit /etc/kernel/cmdline
   if [ -f /etc/kernel/cmdline ]; then
-    for param in $CMDLINE_ARGS_NVIDIA; do
-      grep -q $param /etc/kernel/cmdline
-      [ $? -eq 0 ] && sed -i -e "s| $param||" /etc/kernel/cmdline
-    done
+    args=$(edit_args "$(cat /etc/kernel/cmdline)" "$1" "$2")
+    printf '%s\n' "${args}" > /etc/kernel/cmdline
   fi
 }
 
 case "$1" in
   post)
     check
-    post
-    exit 0
+    update "${CMDLINE_ARGS_ALWAYS_REMOVE}" "${CMDLINE_ARGS_NVIDIA}"
     ;;
   preun)
     check
-    preun
-    exit 0
+    update "${CMDLINE_ARGS_NVIDIA}" ""
     ;;
   *)
     print_usage
-    exit 0
     ;;
 esac
+
+exit 0

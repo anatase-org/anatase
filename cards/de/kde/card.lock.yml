@@ -3,7 +3,7 @@ plasma-setup:
   patch-sha: 01fff9675c9344200b8b00ba0541b730dac9b1ed
 kwin:
   patch-sha: 3e528155d822d41285a509d09751a88fa956267f
-  upstream-sha: 3a92024c2d14ab56d21fb0c2c67ad46980e10f14
+  upstream-sha: 8a802224334aaab7373a463e67818418584e7624
 plasma-mobile:
   patch-sha: db5fae30e56962c69f95dcd4ad48d267e4e4e31c
   upstream-sha: 737e1905004e816b0b24249759fff0f001c116c5

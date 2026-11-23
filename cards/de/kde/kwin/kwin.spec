@@ -1,6 +1,6 @@
 Name:    kwin
 Version: 6.8.3
-Release: 1%{?dist}
+Release: 2%{?dist}
 Summary: KDE Window manager
 
 License: BSD-2-Clause AND BSD-3-Clause AND CC0-1.0 AND GPL-2.0-only AND GPL-2.0-or-later AND GPL-3.0-only AND GPL-3.0-or-later AND LGPL-2.0-only AND LGPL-2.0-or-later AND LGPL-2.1-only AND LGPL-2.1-or-later AND LGPL-3.0-only AND (GPL-2.0-only OR GPL-3.0-only) AND (LGPL-2.1-only OR LGPL-3.0-only) AND MIT
@@ -15,6 +15,13 @@ Source1: http://download.kde.org/%{stable_kf6}/plasma/%{maj_ver_kf6}.%{min_ver_k
 Source10: macros.kwin.in
 
 ## upstream patches
+# input: only init backends after InputRedirection
+# https://invent.kde.org/plasma/kwin/-/commit/19404161bc367b87b794361915b85a14c034ec63
+Patch0:         19404161bc367b87b794361915b85a14c034ec63.patch
+
+# backends/libinput: only process device add events on startup
+# https://invent.kde.org/plasma/kwin/-/commit/47f038220448a57e3b071b9d1d70c835e7387128
+Patch1:         47f038220448a57e3b071b9d1d70c835e7387128.patch
 
 
 ## proposed patches
@@ -125,6 +132,7 @@ Requires:       qt6-qtmultimedia%{?_isa}
 Requires:       qt6-qtdeclarative%{?_isa}
 Requires:       aurorae%{?_isa}
 Requires:       iio-sensor-proxy%{?_isa}
+Requires:       plasma-milou%{?_isa}
 
 # Before kwin was split out from kde-workspace into a subpackage
 Conflicts:      kde-workspace%{?_isa} < 4.11.14-2
@@ -294,6 +302,9 @@ sed -i \
 
 
 %changelog
+* Mon Nov 23 2026 Steve Cossette <farchord@gmail.com> - 6.8.3-2
+- Added two cherry-picked upstream patches
+
 * Thu Nov 12 2026 Steve Cossette <farchord@gmail.com> - 6.8.3-1
 - 6.8.3
 

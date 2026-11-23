@@ -5,8 +5,8 @@
 %global __brp_strip %{nil}
 
 Name:           nvidia-kmod-common
-Version:        620.70.06
-Release:        1%{?dist}
+Version:        620.73.04
+Release:        2%{?dist}
 Summary:        Common file for NVIDIA's proprietary driver kernel modules
 Epoch:          3
 License:        NVIDIA License
@@ -26,7 +26,6 @@ BuildRequires:  systemd-rpm-macros
 
 Requires:       nvidia-modprobe
 Requires:       nvidia-kmod = %{?epoch:%{epoch}:}%{version}
-Provides:       nvidia-kmod-common = %{?epoch:%{epoch}:}%{version}
 Obsoletes:      cuda-nvidia-kmod-common < %{?epoch:%{epoch}:}%{version}
 
 Requires:       (nvidia-driver-selinux if selinux-policy-targeted)
@@ -77,6 +76,14 @@ fi ||:
 %{_udevrulesdir}/60-nvidia.rules
 
 %changelog
+* Mon Nov 23 2026 Simone Caronni <negativo17@gmail.com> - 3:620.73.04-2
+- Handle comma separated kernel parameters in nvidia-boot-update.
+- Stop removing obsolete gfxpayload and initcall_blacklist parameters.
+- Drop redundant unversioned-release self Provides.
+
+* Fri Nov 20 2026 Simone Caronni <negativo17@gmail.com> - 3:620.73.04-1
+- Update to 620.73.04.
+
 * Wed Nov 04 2026 Simone Caronni <negativo17@gmail.com> - 3:620.70.06-1
 - Update to 620.70.06.
 
